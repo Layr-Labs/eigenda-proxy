@@ -53,12 +53,30 @@ func (e EigenDAStore) Get(ctx context.Context, key []byte) ([]byte, error) {
 
 // Put disperses a blob for some pre-image and returns the associated RLP encoded certificate commit.
 func (e EigenDAStore) Put(ctx context.Context, value []byte) (comm []byte, err error) {
-	cert, err := e.client.PutBlob(ctx, value)
+	daCert, err := e.client.PutBlob(ctx, value)
 	if err != nil {
 		return nil, err
 	}
 
-	bytes, err := rlp.EncodeToBytes(cert)
+	qids := make([]uint32, len(daCert.BlobVerificationProof.QuorumIndexes))
+	for i, qid := range daCert.BlobVerificationProof.QuorumIndexes {
+		qids[i] = uint32(qid)
+	}
+
+	proxyCert := eigenda.Cert{
+		BatchHeaderHash:      daCert.BlobVerificationProof.BatchMetadata.BatchHeaderHash,
+		BlobIndex:            daCert.BlobVerificationProof.BlobIndex,
+		ReferenceBlockNumber: daCert.BlobVerificationProof.BatchMetadata.ConfirmationBlockNumber,
+		QuorumIDs:            qids,
+		BlobCommitment:       daCert.BlobHeader.Commitment,
+	}
+
+	err = e.verifier.Verify(proxyCert, value)
+	if err != nil {
+		return nil, err
+	}
+
+	bytes, err := rlp.EncodeToBytes(proxyCert)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode DA cert to RLP format: %w", err)
 	}

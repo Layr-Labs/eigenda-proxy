@@ -32,6 +32,7 @@ func init() {
 
 // Use of single port makes tests incapable of running in parallel
 const (
+	privateKey  = "SIGNER_PRIVATE_KEY"
 	transport   = "http"
 	serviceName = "eigenda_proxy"
 	host        = "127.0.0.1"
@@ -48,6 +49,12 @@ type TestSuite struct {
 func createTestSuite(t *testing.T) (TestSuite, func()) {
 	ctx := context.Background()
 
+	// load signer key from environment
+	pk := os.Getenv(privateKey)
+	if pk == "" {
+		t.Fatal("SIGNER_PRIVATE_KEY environment variable not set")
+	}
+
 	log := oplog.NewLogger(os.Stdout, oplog.CLIConfig{
 		Level:  log.LevelDebug,
 		Format: oplog.FormatLogFmt,
@@ -62,6 +69,7 @@ func createTestSuite(t *testing.T) (TestSuite, func()) {
 			StatusQueryTimeout:       time.Minute * 45,
 			StatusQueryRetryInterval: time.Second * 1,
 			DisableTLS:               false,
+			SignerPrivateKeyHex:      pk,
 		},
 	}
 
