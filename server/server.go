@@ -142,10 +142,17 @@ func (svr *Server) Health(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (svr *Server) HandleGet(w http.ResponseWriter, r *http.Request) error {
+	ctx := context.Background()
+
 	domain, err := ReadDomainFilter(r)
 	if err != nil {
 		svr.WriteBadRequest(w, invalidDomain)
 		return err
+	}
+
+	actor := ReadActor(r)
+	if actor != "" {
+		ctx = context.WithValue(ctx, "actor", actor)
 	}
 
 	key := path.Base(r.URL.Path)
@@ -156,7 +163,7 @@ func (svr *Server) HandleGet(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	input, err := svr.store.Get(r.Context(), comm, domain)
+	input, err := svr.store.Get(ctx, comm, domain)
 	if err != nil && errors.Is(err, ErrNotFound) {
 		svr.WriteNotFound(w, err.Error())
 		return err
@@ -222,6 +229,11 @@ func ReadDomainFilter(r *http.Request) (common.DomainType, error) {
 	}
 
 	return dt, nil
+}
+
+func ReadActor(r *http.Request) string {
+	query := r.URL.Query()
+	return query.Get("actor")
 }
 
 func (svr *Server) Store() store.Store {

@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
-	eigendacommon "github.com/Layr-Labs/eigenda-proxy/common"
+	"github.com/Layr-Labs/eigenda-proxy/fault"
 	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/api/clients/codecs"
 	grpccommon "github.com/Layr-Labs/eigenda/api/grpc/common"
@@ -23,6 +23,7 @@ import (
 const (
 	MemStoreFlagName   = "memstore.enabled"
 	ExpirationFlagName = "memstore.expiration"
+	FaultFlagName      = "memstore.fault-config"
 
 	DefaultPruneInterval = 500 * time.Millisecond
 )
@@ -30,6 +31,7 @@ const (
 type MemStoreConfig struct {
 	Enabled        bool
 	BlobExpiration time.Duration
+	FaultCfg       *fault.Config
 }
 
 // MemStore is a simple in-memory store for blobs which uses an expiration
@@ -102,33 +104,20 @@ func (e *MemStore) pruneExpired() {
 }
 
 // Get fetches a value from the store.
-func (e *MemStore) Get(ctx context.Context, commit []byte, domain eigendacommon.DomainType) ([]byte, error) {
+func (e *MemStore) Get(ctx context.Context, commit []byte, domain common.DomainType) ([]byte, error) {
 	e.reads += 1
 	e.Lock()
 	defer e.Unlock()
 
-	var cert common.Certificate
-	err := rlp.DecodeBytes(commit, &cert)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode DA cert to RLP format: %w", err)
-	}
-
-	var encodedBlob []byte
-	var exists bool
-	if encodedBlob, exists = e.store[string(commit)]; !exists {
-		return nil, fmt.Errorf("commitment key not found")
-	}
-
-	// Don't need to do this really since it's a mock store
-	err = e.verifier.VerifyCommitment(cert.BlobHeader.Commitment, encodedBlob)
+	encodedBlob, err := e.fetch(ctx, commit)
 	if err != nil {
 		return nil, err
 	}
 
 	switch domain {
-	case eigendacommon.BinaryDomain:
+	case common.BinaryDomain:
 		return e.codec.DecodeBlob(encodedBlob)
-	case eigendacommon.PolyDomain:
+	case common.PolyDomain:
 		return encodedBlob, nil
 	default:
 		return nil, fmt.Errorf("unexpected domain type: %d", domain)
@@ -207,6 +196,81 @@ func (e *MemStore) Put(ctx context.Context, value []byte) ([]byte, error) {
 	e.keyStarts[certStr] = time.Now()
 
 	return certBytes, nil
+}
+
+func (e *MemStore) honestFetch(commit []byte) ([]byte, error) {
+	var cert common.Certificate
+	err := rlp.DecodeBytes(commit, &cert)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode DA cert to RLP format: %w", err)
+	}
+
+	var encodedBlob []byte
+	var exists bool
+	if encodedBlob, exists = e.store[string(commit)]; !exists {
+		return nil, fmt.Errorf("commitment key not found")
+	}
+
+	// Don't need to do this really since it's a mock store
+	err = e.verifier.VerifyCommitment(cert.BlobHeader.Commitment, encodedBlob)
+	if err != nil {
+		return nil, err
+	}
+
+	return encodedBlob, nil
+}
+
+func (e *MemStore) byzantineFetch(commit []byte) ([]byte, error) {
+	var cert common.Certificate
+	err := rlp.DecodeBytes(commit, &cert)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode DA cert to RLP format: %w", err)
+	}
+
+	var encodedBlob []byte
+	var exists bool
+	if encodedBlob, exists = e.store[string(commit)]; !exists {
+		return nil, fmt.Errorf("commitment key not found")
+	}
+
+	// flip a bit in the bob to simulate Byzantine behavior
+	encodedBlob[0] = ^encodedBlob[0]
+
+	return encodedBlob, nil
+}
+
+func (e *MemStore) fetch(ctx context.Context, commit []byte) ([]byte, error) {
+	if e.cfg.FaultCfg == nil {
+		return e.honestFetch(commit)
+	}
+
+	actor := ctx.Value("actor").(string)
+
+	if actor == "" {
+		return nil, fmt.Errorf("actor not found in context")
+	}
+
+	if _, exists := e.cfg.FaultCfg.Actors[actor]; !exists {
+		return nil, fmt.Errorf("actor not found in fault config")
+	}
+
+	behavior := e.cfg.FaultCfg.Actors[actor]
+
+	switch behavior.Mode {
+	case fault.Honest:
+		return e.honestFetch(commit)
+	case fault.Byzantine:
+		return e.byzantineFetch(commit)
+
+	case fault.IntervalByzantine:
+		if e.reads%int(behavior.Interval) == 0 {
+			return e.byzantineFetch(commit)
+		}
+
+		return e.honestFetch(commit)
+	default:
+		return nil, fmt.Errorf("unexpected actor mode: %d", behavior.Mode)
+	}
 }
 
 func (e *MemStore) Stats() *common.Stats {

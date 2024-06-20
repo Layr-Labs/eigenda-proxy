@@ -19,7 +19,8 @@ const (
 
 // TODO: Add support for custom http client option
 type Config struct {
-	URL string
+	Actor string
+	URL   string
 }
 
 // ProxyClient is an interface for communicating with the EigenDA proxy server
@@ -74,6 +75,10 @@ func (c *client) GetData(ctx context.Context, cert *common.Certificate, domain c
 	b = eigenda.Commitment(b).Encode()
 
 	url := fmt.Sprintf("%s/get/0x%x?domain=%s", c.cfg.URL, b, domain.String())
+
+	if c.cfg.Actor != "" {
+		url = fmt.Sprintf("%s&actor=%s", url, c.cfg.Actor)
+	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
