@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/eigenda"
+	"github.com/Layr-Labs/eigenda-proxy/fault"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/server"
 	"github.com/Layr-Labs/eigenda-proxy/store"
@@ -35,7 +36,7 @@ type TestSuite struct {
 	Server *server.Server
 }
 
-func CreateTestSuite(t *testing.T, useMemory bool) (TestSuite, func()) {
+func CreateTestSuite(t *testing.T, useMemory bool, fc *fault.Config) (TestSuite, func()) {
 
 	ctx := context.Background()
 
@@ -78,6 +79,7 @@ func CreateTestSuite(t *testing.T, useMemory bool) (TestSuite, func()) {
 	memstoreCfg := store.MemStoreConfig{
 		Enabled:        useMemory,
 		BlobExpiration: 14 * 24 * time.Hour,
+		FaultCfg:       fc,
 	}
 
 	store, err := server.LoadStore(

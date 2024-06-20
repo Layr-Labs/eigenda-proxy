@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/client"
+	"github.com/Layr-Labs/eigenda-proxy/fault"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/e2e"
@@ -26,7 +27,7 @@ func TestPlasmaClient(t *testing.T) {
 
 	t.Parallel()
 
-	ts, kill := e2e.CreateTestSuite(t, useMemory())
+	ts, kill := e2e.CreateTestSuite(t, useMemory(), nil)
 	defer kill()
 
 	daClient := op_plasma.NewDAClient(ts.Address(), false, false)
@@ -56,7 +57,7 @@ func TestProxyClient(t *testing.T) {
 
 	t.Parallel()
 
-	ts, kill := e2e.CreateTestSuite(t, useMemory())
+	ts, kill := e2e.CreateTestSuite(t, useMemory(), nil)
 	defer kill()
 
 	cfg := &client.Config{
@@ -101,4 +102,58 @@ func TestProxyClient(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, decodedBlob, preimage)
+}
+
+func TestProxyClientWithFaultMode(t *testing.T) {
+	if !runIntegrationTests && !runTestnetIntegrationTests {
+		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	}
+
+	t.Parallel()
+
+	fc := &fault.Config{
+		Actors: map[string]fault.Behavior{
+			"sequencer": {
+				Mode: fault.Honest,
+			},
+
+			"challenger": {
+				Mode: fault.Byzantine,
+			},
+		},
+	}
+
+	ts, kill := e2e.CreateTestSuite(t, useMemory(), fc)
+	defer kill()
+
+	cfg := &client.Config{
+		Actor: "sequencer",
+		URL:   ts.Address(),
+	}
+	sequencerClient := client.New(cfg)
+
+	cfg2 := &client.Config{
+		Actor: "challenger",
+		URL:   ts.Address(),
+	}
+	challengerClient := client.New(cfg2)
+
+	// 1 - write arbitrary data to EigenDA
+
+	var testPreimage = []byte("inter-subjective and not objective!")
+
+	t.Log("Setting input data on proxy server...")
+	blobInfo, err := sequencerClient.SetData(ts.Ctx, testPreimage)
+	require.NoError(t, err)
+
+	// 2 - fetch data from EigenDA for generated commitment key
+	t.Log("Getting input data from proxy server...")
+	preimage, err := sequencerClient.GetData(ts.Ctx, blobInfo, common.BinaryDomain)
+	require.NoError(t, err)
+	require.Equal(t, testPreimage, preimage)
+
+	// 3 - fetch iFFT representation of preimage
+	preimage, err = challengerClient.GetData(ts.Ctx, blobInfo, common.PolyDomain)
+	require.NoError(t, err)
+	require.NotEqual(t, testPreimage, preimage)
 }

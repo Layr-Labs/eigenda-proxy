@@ -31,6 +31,7 @@ const (
 type MemStoreConfig struct {
 	Enabled        bool
 	BlobExpiration time.Duration
+	FaultCfgPath   string
 	FaultCfg       *fault.Config
 }
 
@@ -285,8 +286,19 @@ func (e *MemStore) Stats() *common.Stats {
 func ReadConfig(ctx *cli.Context) MemStoreConfig {
 	cfg := MemStoreConfig{
 		/* Required Flags */
+		FaultCfgPath:   ctx.String(FaultFlagName),
 		Enabled:        ctx.Bool(MemStoreFlagName),
 		BlobExpiration: ctx.Duration(ExpirationFlagName),
+	}
+
+	// load fault cfg
+	if cfg.FaultCfgPath != "" {
+		faultCfg, err := fault.LoadConfig(cfg.FaultCfgPath)
+		if err != nil {
+			panic(fmt.Errorf("failed to load fault config: %w", err))
+		}
+
+		cfg.FaultCfg = faultCfg
 	}
 	return cfg
 }

@@ -113,7 +113,7 @@ func TestOptimism(gt *testing.T) {
 		gt.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
 	}
 
-	proxyTS, close := e2e.CreateTestSuite(gt, true)
+	proxyTS, close := e2e.CreateTestSuite(gt, true, nil)
 	defer close()
 
 	t := actions.NewDefaultTesting(gt)

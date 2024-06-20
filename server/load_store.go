@@ -30,6 +30,10 @@ func LoadStore(cfg CLIConfig, ctx context.Context, log log.Logger) (store.Store,
 	}
 
 	if cfg.MemStoreCfg.Enabled {
+		if cfg.MemStoreCfg.FaultCfg != nil {
+			log.Info("Using fault mode for memstore")
+		}
+
 		log.Info("Using memstore backend")
 		return store.NewMemStore(ctx, &cfg.MemStoreCfg, verifier, log, maxBlobLength)
 	}
