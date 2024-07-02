@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	proxy_common "github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	"github.com/ethereum/go-ethereum/log"
@@ -52,7 +53,7 @@ func TestGetSet(t *testing.T) {
 	key, err := ms.Put(ctx, expected)
 	assert.NoError(t, err)
 
-	actual, err := ms.Get(ctx, key, BinaryDomain)
+	actual, err := ms.Get(ctx, key, proxy_common.BinaryDomain)
 	assert.NoError(t, err)
 	assert.Equal(t, actual, expected)
 }
@@ -98,7 +99,7 @@ func TestExpiration(t *testing.T) {
 	// sleep 1 second and verify that older blob entries are removed
 	time.Sleep(time.Second * 1)
 
-	_, err = ms.Get(ctx, key, BinaryDomain)
+	_, err = ms.Get(ctx, key, proxy_common.BinaryDomain)
 	assert.Error(t, err)
 
 }

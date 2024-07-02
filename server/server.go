@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/ethereum-optimism/optimism/op-service/rpc"
 	"github.com/ethereum/go-ethereum/log"
@@ -33,7 +34,7 @@ const (
 
 type Store interface {
 	// Get retrieves the given key if it's present in the key-value data store.
-	Get(ctx context.Context, key []byte, domain DomainType) ([]byte, error)
+	Get(ctx context.Context, key []byte, domain common.DomainType) ([]byte, error)
 	// Put inserts the given value into the key-value data store.
 	Put(ctx context.Context, value []byte) (key []byte, err error)
 	// Stats returns the current usage metrics of the key-value data store.

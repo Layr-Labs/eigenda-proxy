@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	proxy_common "github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/fault"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -107,7 +108,7 @@ func (e *MemStore) pruneExpired() {
 }
 
 // Get fetches a value from the store.
-func (e *MemStore) Get(ctx context.Context, commit []byte, domain DomainType) ([]byte, error) {
+func (e *MemStore) Get(ctx context.Context, commit []byte, domain proxy_common.DomainType) ([]byte, error) {
 	e.reads += 1
 	e.RLock()
 	defer e.RUnlock()
@@ -118,9 +119,9 @@ func (e *MemStore) Get(ctx context.Context, commit []byte, domain DomainType) ([
 	}
 
 	switch domain {
-	case BinaryDomain:
+	case proxy_common.BinaryDomain:
 		return e.codec.DecodeBlob(encodedBlob)
-	case PolyDomain:
+	case proxy_common.PolyDomain:
 		return encodedBlob, nil
 	default:
 		return nil, fmt.Errorf("unexpected domain type: %d", domain)

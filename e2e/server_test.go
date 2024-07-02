@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/client"
+	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/fault"
-	"github.com/Layr-Labs/eigenda-proxy/server"
 
 	"github.com/Layr-Labs/eigenda-proxy/e2e"
 	"github.com/Layr-Labs/eigenda/api/clients/codecs"
@@ -86,12 +86,12 @@ func TestProxyClient(t *testing.T) {
 
 	// 2 - fetch data from EigenDA for generated commitment key
 	t.Log("Getting input data from proxy server...")
-	preimage, err := daClient.GetData(ts.Ctx, blobInfo, server.BinaryDomain)
+	preimage, err := daClient.GetData(ts.Ctx, blobInfo, common.BinaryDomain)
 	require.NoError(t, err)
 	require.Equal(t, testPreimage, preimage)
 
 	// 3 - fetch iFFT representation of preimage
-	iFFTPreimage, err := daClient.GetData(ts.Ctx, blobInfo, server.PolyDomain)
+	iFFTPreimage, err := daClient.GetData(ts.Ctx, blobInfo, common.PolyDomain)
 	require.NoError(t, err)
 	require.NotEqual(t, preimage, iFFTPreimage)
 
@@ -149,12 +149,12 @@ func TestProxyClientWithFaultMode(t *testing.T) {
 
 	// 2 - fetch data from EigenDA for generated commitment key
 	t.Log("Getting input data from proxy server...")
-	preimage, err := sequencerClient.GetData(ts.Ctx, blobInfo, server.BinaryDomain)
+	preimage, err := sequencerClient.GetData(ts.Ctx, blobInfo, common.BinaryDomain)
 	require.NoError(t, err)
 	require.Equal(t, testPreimage, preimage)
 
 	// 3 - fetch iFFT representation of preimage
-	preimage, err = challengerClient.GetData(ts.Ctx, blobInfo, server.PolyDomain)
+	preimage, err = challengerClient.GetData(ts.Ctx, blobInfo, common.PolyDomain)
 	require.NoError(t, err)
 	require.NotEqual(t, testPreimage, preimage)
 }

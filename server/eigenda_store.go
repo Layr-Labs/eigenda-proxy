@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	proxy_common "github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/ethereum/go-ethereum/log"
@@ -41,7 +42,7 @@ func NewEigenDAStore(ctx context.Context, client *clients.EigenDAClient, v *veri
 
 // Get fetches a blob from DA using certificate fields and verifies blob
 // against commitment to ensure data is valid and non-tampered.
-func (e EigenDAStore) Get(ctx context.Context, key []byte, domain DomainType) ([]byte, error) {
+func (e EigenDAStore) Get(ctx context.Context, key []byte, domain proxy_common.DomainType) ([]byte, error) {
 	var cert verify.Certificate
 	err := rlp.DecodeBytes(key, &cert)
 	if err != nil {
@@ -64,9 +65,9 @@ func (e EigenDAStore) Get(ctx context.Context, key []byte, domain DomainType) ([
 	}
 
 	switch domain {
-	case BinaryDomain:
+	case proxy_common.BinaryDomain:
 		return decodedBlob, nil
-	case PolyDomain:
+	case proxy_common.PolyDomain:
 		return encodedBlob, nil
 	default:
 		return nil, fmt.Errorf("unexpected domain type: %d", domain)
