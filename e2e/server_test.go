@@ -6,8 +6,8 @@ import (
 
 	"github.com/Layr-Labs/eigenda-proxy/client"
 	"github.com/Layr-Labs/eigenda-proxy/fault"
+	"github.com/Layr-Labs/eigenda-proxy/server"
 
-	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/e2e"
 	"github.com/Layr-Labs/eigenda/api/clients/codecs"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/wait"
@@ -66,7 +66,7 @@ func TestProxyClient(t *testing.T) {
 	daClient := client.New(cfg)
 	t.Log("Waiting for client to establish connection with plasma server...")
 	// wait for server to come online after starting
-	wait.For(ts.Ctx, time.Second*1, func() (bool, error) {
+	err := wait.For(ts.Ctx, time.Second*1, func() (bool, error) {
 		err := daClient.Health()
 		if err != nil {
 			return false, nil
@@ -74,6 +74,7 @@ func TestProxyClient(t *testing.T) {
 
 		return true, nil
 	})
+	require.NoError(t, err)
 
 	// 1 - write arbitrary data to EigenDA
 
@@ -85,12 +86,12 @@ func TestProxyClient(t *testing.T) {
 
 	// 2 - fetch data from EigenDA for generated commitment key
 	t.Log("Getting input data from proxy server...")
-	preimage, err := daClient.GetData(ts.Ctx, blobInfo, common.BinaryDomain)
+	preimage, err := daClient.GetData(ts.Ctx, blobInfo, server.BinaryDomain)
 	require.NoError(t, err)
 	require.Equal(t, testPreimage, preimage)
 
 	// 3 - fetch iFFT representation of preimage
-	iFFTPreimage, err := daClient.GetData(ts.Ctx, blobInfo, common.PolyDomain)
+	iFFTPreimage, err := daClient.GetData(ts.Ctx, blobInfo, server.PolyDomain)
 	require.NoError(t, err)
 	require.NotEqual(t, preimage, iFFTPreimage)
 
@@ -148,12 +149,12 @@ func TestProxyClientWithFaultMode(t *testing.T) {
 
 	// 2 - fetch data from EigenDA for generated commitment key
 	t.Log("Getting input data from proxy server...")
-	preimage, err := sequencerClient.GetData(ts.Ctx, blobInfo, common.BinaryDomain)
+	preimage, err := sequencerClient.GetData(ts.Ctx, blobInfo, server.BinaryDomain)
 	require.NoError(t, err)
 	require.Equal(t, testPreimage, preimage)
 
 	// 3 - fetch iFFT representation of preimage
-	preimage, err = challengerClient.GetData(ts.Ctx, blobInfo, common.PolyDomain)
+	preimage, err = challengerClient.GetData(ts.Ctx, blobInfo, server.PolyDomain)
 	require.NoError(t, err)
 	require.NotEqual(t, testPreimage, preimage)
 }

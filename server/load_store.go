@@ -2,14 +2,16 @@ package server
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/Layr-Labs/eigenda-proxy/store"
+	"github.com/Layr-Labs/eigenda-proxy/fault"
 	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/ethereum/go-ethereum/log"
 )
 
-func LoadStore(cfg CLIConfig, ctx context.Context, log log.Logger) (store.Store, error) {
+func LoadStore(cfg CLIConfig, ctx context.Context, log log.Logger) (Store, error) {
+	log.Info("Using eigenda backend")
 	daCfg := cfg.EigenDAConfig
 	vCfg := daCfg.VerificationCfg()
 
@@ -29,24 +31,37 @@ func LoadStore(cfg CLIConfig, ctx context.Context, log log.Logger) (store.Store,
 		return nil, err
 	}
 
-	if cfg.MemStoreCfg.Enabled {
-		if cfg.MemStoreCfg.FaultCfg != nil {
-			log.Info("Using fault mode for memstore")
+	if cfg.EigenDAConfig.MemstoreEnabled {
+
+		var fc *fault.Config
+		log.Info("Using memstore backend")
+
+		if cfg.EigenDAConfig.FaultConfigPath != "" {
+			faultCfg, err := fault.LoadConfig(cfg.EigenDAConfig.FaultConfigPath)
+			if err != nil {
+				panic(fmt.Errorf("failed to load fault config: %w", err))
+			}
+
+			fc = faultCfg
 		}
 
-		log.Info("Using memstore backend")
-		return store.NewMemStore(ctx, &cfg.MemStoreCfg, verifier, log, maxBlobLength)
+		return NewMemStore(ctx, verifier, log, maxBlobLength, cfg.EigenDAConfig.MemstoreBlobExpiration, fc)
 	}
 
-	log.Info("Using eigenda backend")
+	log.Info("Using EigenDA backend")
 	client, err := clients.NewEigenDAClient(log, daCfg.ClientConfig)
 	if err != nil {
 		return nil, err
 	}
-	return store.NewEigenDAStore(
+	return NewEigenDAStore(
 		ctx,
 		client,
 		verifier,
-		maxBlobLength,
+		log,
+		&EigenDAStoreConfig{
+			MaxBlobSizeBytes:     maxBlobLength,
+			EthConfirmationDepth: cfg.EigenDAConfig.EthConfirmationDepth,
+			StatusQueryTimeout:   cfg.EigenDAConfig.ClientConfig.StatusQueryTimeout,
+		},
 	)
 }

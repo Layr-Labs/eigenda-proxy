@@ -7,11 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Layr-Labs/eigenda-proxy/eigenda"
 	"github.com/Layr-Labs/eigenda-proxy/fault"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/server"
-	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/ethereum/go-ethereum/log"
 
@@ -52,40 +50,40 @@ func CreateTestSuite(t *testing.T, useMemory bool, fc *fault.Config) (TestSuite,
 		t.Fatal("ETHEREUM_RPC environment variable is not set")
 	}
 
+	var pollInterval time.Duration
+	if useMemory {
+		pollInterval = time.Second * 1
+	} else {
+		pollInterval = time.Minute * 1
+	}
+
 	log := oplog.NewLogger(os.Stdout, oplog.CLIConfig{
 		Level:  log.LevelDebug,
 		Format: oplog.FormatLogFmt,
 		Color:  true,
 	}).New("role", svcName)
 
-	eigendaCfg := eigenda.Config{
+	eigendaCfg := server.Config{
 		ClientConfig: clients.EigenDAClientConfig{
 			RPC:                      holeskyDA,
 			StatusQueryTimeout:       time.Minute * 45,
-			StatusQueryRetryInterval: time.Second * 1,
+			StatusQueryRetryInterval: pollInterval,
 			DisableTLS:               false,
 			SignerPrivateKeyHex:      pk,
 		},
 		EthRPC:                 ethRPC,
 		SvcManagerAddr:         "0xD4A7E1Bd8015057293f0D0A557088c286942e84b", // incompatible with non holeskly networks
-		CacheDir:               "../operator-setup/resources/SRSTables",
-		G1Path:                 "../operator-setup/resources/g1_abbr.point",
-		G2Path:                 "../test/resources/kzg/g2.point", // do we need this?
+		CacheDir:               "../resources/SRSTables",
+		G1Path:                 "../resources/g1.point",
 		MaxBlobLength:          "90kib",
-		G2PowerOfTauPath:       "../operator-setup/resources/kzg/g2_abbr.point.powerOf2",
+		G2PowerOfTauPath:       "../resources/g2.point.powerOf2",
 		PutBlobEncodingVersion: 0x00,
-	}
-
-	memstoreCfg := store.MemStoreConfig{
-		Enabled:        useMemory,
-		BlobExpiration: 14 * 24 * time.Hour,
-		FaultCfg:       fc,
+		MemstoreEnabled:        useMemory,
 	}
 
 	store, err := server.LoadStore(
 		server.CLIConfig{
 			EigenDAConfig: eigendaCfg,
-			MemStoreCfg:   memstoreCfg,
 			MetricsCfg:    opmetrics.CLIConfig{},
 		},
 		ctx,
