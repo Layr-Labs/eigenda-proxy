@@ -1,0 +1,8 @@
+{
+    "sequencer": {
+        "mode": "honest"
+    },
+    "challenger": {
+        "mode": "byzantine"
+    }
+}

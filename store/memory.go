@@ -4,14 +4,16 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"math/big"
 	"sync"
 	"time"
 
+	"github.com/Layr-Labs/eigenda-proxy/fault"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
-	"github.com/Layr-Labs/eigenda-proxy/fault"
+	eigendacommon "github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/api/clients/codecs"
 	grpccommon "github.com/Layr-Labs/eigenda/api/grpc/common"
@@ -105,7 +107,7 @@ func (e *MemStore) pruneExpired() {
 }
 
 // Get fetches a value from the store.
-func (e *MemStore) Get(ctx context.Context, commit []byte, domain common.DomainType) ([]byte, error) {
+func (e *MemStore) Get(ctx context.Context, commit []byte, domain eigendacommon.DomainType) ([]byte, error) {
 	e.reads += 1
 	e.Lock()
 	defer e.Unlock()
@@ -116,9 +118,9 @@ func (e *MemStore) Get(ctx context.Context, commit []byte, domain common.DomainT
 	}
 
 	switch domain {
-	case common.BinaryDomain:
+	case eigendacommon.BinaryDomain:
 		return e.codec.DecodeBlob(encodedBlob)
-	case common.PolyDomain:
+	case eigendacommon.PolyDomain:
 		return encodedBlob, nil
 	default:
 		return nil, fmt.Errorf("unexpected domain type: %d", domain)
@@ -150,35 +152,44 @@ func (e *MemStore) Put(ctx context.Context, value []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	mockBatchHeaderHash := crypto.Keccak256Hash(entropy)
+	mockBatchRoot := crypto.Keccak256Hash(entropy)
+	blockNum, _ := rand.Int(rand.Reader, big.NewInt(1000))
 
-	// only filling out commitment fields for now
+	num := uint32(blockNum.Uint64())
+
 	cert := &common.Certificate{
 		BlobHeader: &disperser.BlobHeader{
 			Commitment: &grpccommon.G1Commitment{
 				X: commitment.X.Marshal(),
 				Y: commitment.Y.Marshal(),
 			},
-			// DataLength: ,
-			// BlobQuorumParams: ,
+			DataLength: uint32(len(encodedVal)),
+			BlobQuorumParams: []*disperser.BlobQuorumParam{
+				{
+					QuorumNumber:                    1,
+					AdversaryThresholdPercentage:    29,
+					ConfirmationThresholdPercentage: 30,
+					ChunkLength:                     300,
+				},
+			},
 		},
 		BlobVerificationProof: &disperser.BlobVerificationProof{
 			BatchMetadata: &disperser.BatchMetadata{
 				BatchHeader: &disperser.BatchHeader{
-					// BatchRoot: ,
-					// QuorumNumbers: ,
-					// QuorumSignedPercentages: ,
-					// ReferenceBlockNumber: ,
+					BatchRoot:               mockBatchRoot[:],
+					QuorumNumbers:           []byte{0x1, 0x0},
+					QuorumSignedPercentages: []byte{0x60, 0x90},
+					ReferenceBlockNumber:    num,
 				},
-				// SignatoryRecordHash: ,
-				// Fee: ,
-				// ConfirmationBlockNumber: ,
-				BatchHeaderHash: mockBatchHeaderHash[:],
+				SignatoryRecordHash:     mockBatchRoot[:],
+				Fee:                     []byte{},
+				ConfirmationBlockNumber: num,
+				BatchHeaderHash:         []byte{},
 			},
-			// BatchId: ,
-			// BlobIndex: ,
-			// InclusionProof: ,
-			// QuorumIndexes: ,
+			BatchId:        69,
+			BlobIndex:      420,
+			InclusionProof: entropy,
+			QuorumIndexes:  []byte{0x1, 0x0},
 		},
 	}
 
@@ -186,7 +197,10 @@ func (e *MemStore) Put(ctx context.Context, value []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	certStr := string(certBytes)
+	// construct key
+	bytesKeys := append([]byte{0x4}, cert.BlobVerificationProof.InclusionProof...)
+
+	certStr := string(bytesKeys)
 
 	if _, exists := e.store[certStr]; exists {
 		return nil, fmt.Errorf("commitment key already exists")
@@ -206,9 +220,11 @@ func (e *MemStore) honestFetch(commit []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to decode DA cert to RLP format: %w", err)
 	}
 
+	bytesKeys := append([]byte{0x4}, cert.BlobVerificationProof.InclusionProof...)
+
 	var encodedBlob []byte
 	var exists bool
-	if encodedBlob, exists = e.store[string(commit)]; !exists {
+	if encodedBlob, exists = e.store[string(bytesKeys)]; !exists {
 		return nil, fmt.Errorf("commitment key not found")
 	}
 
