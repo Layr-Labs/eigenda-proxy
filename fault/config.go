@@ -25,7 +25,7 @@ type Config struct {
 }
 
 func LoadConfig(path string) (*Config, error) {
-	jsonFile, err := os.Open(path)
+	jsonFile, err := os.Open(path) // #nosec G304
 	if err != nil {
 		return nil, err
 	}
