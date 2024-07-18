@@ -53,7 +53,7 @@ func TestGetSet(t *testing.T) {
 
 	actual, err := ms.Get(ctx, key)
 	assert.NoError(t, err)
-	assert.Equal(t, actual, expected)
+	assert.Equal(t, expected, actual)
 }
 
 func TestExpiration(t *testing.T) {
