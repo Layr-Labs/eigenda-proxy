@@ -132,7 +132,7 @@ We also provide network-specific example env configuration files in `.env.exampl
 
 ## Running via Docker
 
-Container can be built via running `make build-docker`.
+Container can be built via running `make docker-build`.
 
 ## Commitment Schemas
 
