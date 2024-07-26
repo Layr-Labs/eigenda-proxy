@@ -37,10 +37,11 @@ const (
 	MemstoreFlagName           = "memstore.enabled"
 	MemstoreExpirationFlagName = "memstore.expiration"
 	// S3 flags
-	S3BucketFlagName          = "s3.bucket"
-	S3EndpointFlagName        = "s3.endpoint"
-	S3AccessKeyIDFlagName     = "s3.access-key-id" // #nosec G101
-	S3AccessKeySecretFlagName = "s3.access-key-secret" // #nosec G101
+	S3BucketFlagName          = "s3-bucket"
+	S3PathFlagName            = "s3-path"
+	S3EndpointFlagName        = "s3-endpoint"
+	S3AccessKeyIDFlagName     = "s3-access-key-id" // #nosec G101
+	S3AccessKeySecretFlagName = "s3-access-key-secret" // #nosec G101
 )
 
 const BytesPerSymbol = 31
@@ -133,6 +134,7 @@ func ReadConfig(ctx *cli.Context) Config {
 	cfg := Config{
 		S3Config: store.S3Config{
 			Bucket: ctx.String(S3BucketFlagName),
+			Path: ctx.String(S3PathFlagName),
 			Endpoint: ctx.String(S3EndpointFlagName),
 			AccessKeyID: ctx.String(S3AccessKeyIDFlagName),
 			AccessKeySecret: ctx.String(S3AccessKeySecretFlagName),
@@ -186,9 +188,9 @@ func (cfg *Config) Check() error {
 		return fmt.Errorf("eth confirmation depth is set for certificate verification, but Eth RPC or SvcManagerAddr is not set")
 	}
 
-	if cfg.S3Config.Endpoint != "" && (cfg.S3Config.AccessKeyID == "" || cfg.S3Config.AccessKeySecret == "") {
-		return fmt.Errorf("s3 endpoint is set, but access key id or access key secret is not set")
-	}
+	// if cfg.S3Config.Endpoint != "" && (cfg.S3Config.AccessKeyID == "" || cfg.S3Config.AccessKeySecret == "") {
+	// 	return fmt.Errorf("s3 endpoint is set, but access key id or access key secret is not set")
+	// }
 
 	if !cfg.MemstoreEnabled && cfg.ClientConfig.RPC == "" {
 		return fmt.Errorf("eigenda disperser rpc url is not set")
@@ -309,6 +311,11 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			Name:    S3BucketFlagName,
 			Usage:   "bucket name for S3 storage",
 			EnvVars: prefixEnvVars("S3_BUCKET"),
+		},
+		&cli.StringFlag{
+			Name:    S3PathFlagName,
+			Usage:   "s3 path for S3 storage",
+			EnvVars: prefixEnvVars("S3_PATH"),
 		},
 		&cli.StringFlag{
 			Name:    S3EndpointFlagName,

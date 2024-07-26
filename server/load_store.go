@@ -12,9 +12,9 @@ import (
 func LoadStoreRouter(cfg CLIConfig, ctx context.Context, log log.Logger) (*store.Router, error) {
 	var err error
 	var s3 *store.S3Store
-	if cfg.S3Config.Bucket != "" && cfg.S3Config.Endpoint != "" {
+	if cfg.EigenDAConfig.S3Config.Bucket != "" && cfg.EigenDAConfig.S3Config.Endpoint != "" {
 		log.Info("Using S3 backend")
-		s3, err = store.NewS3(cfg.S3Config)
+		s3, err = store.NewS3(cfg.EigenDAConfig.S3Config)
 		if err != nil {
 			return nil, err
 		}
