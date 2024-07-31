@@ -76,6 +76,12 @@ func NewMemStore(ctx context.Context, verifier *verify.Verifier, l log.Logger, m
 	return store, nil
 }
 
+func (e *MemStore) SetFaultConfig(fc *FaultConfig) {
+	e.Lock()
+	defer e.Unlock()
+	e.faultCfg = fc
+}
+
 func (e *MemStore) EventLoop(ctx context.Context) {
 	timer := time.NewTicker(DefaultPruneInterval)
 
@@ -131,7 +137,7 @@ func (e *MemStore) Get(ctx context.Context, commit []byte) ([]byte, error) {
 
 	switch behavior.Mode {
 		case Honest:
-			return encodedBlob, nil
+			return decodedBlob, nil
 		case Byzantine:
 			return e.corruptBlob(decodedBlob), nil
 

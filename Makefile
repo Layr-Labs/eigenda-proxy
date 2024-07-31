@@ -38,11 +38,11 @@ clean:
 test:
 	go test -v ./... -parallel 4 
 
-e2e-test: stop-minio run-minio
+e2e-test: run-minio
 	$(E2ETEST) && \
 	make stop-minio
 
-holesky-test: stop-minio run-minio
+holesky-test: run-minio
 	$(HOLESKYTEST) && \
 	make stop-minio
 

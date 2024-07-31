@@ -95,6 +95,14 @@ func TestProxyClient(t *testing.T) {
 }
 
 func TestProxyServerFaultMode(t *testing.T) {
+	if !runIntegrationTests {
+		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	}
+
+	if runTestnetIntegrationTests {
+		t.Skip("Skipping test since fault mode is only supported for memstore implementations")
+	}
+
 	fc := &store.FaultConfig{
 		Actors: map[string]store.Behavior{
 			"sequencer": {
@@ -197,6 +205,10 @@ func TestProxyClientWithOversizedBlob(t *testing.T) {
 }
 
 func TestProxyClient_MultiSameContentBlobs_SameBatch(t *testing.T) {
+	if !runIntegrationTests && !runTestnetIntegrationTests {
+		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	}
+
 	t.Parallel()
 
 	ts, kill := e2e.CreateTestSuite(t, useMemory(), false, nil)

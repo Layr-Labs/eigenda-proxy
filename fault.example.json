@@ -1,6 +1,6 @@
 {
     "all": {
         "mode": "interval_byzantine",
-        "interval": 2
+        "interval": 1
     }
 }

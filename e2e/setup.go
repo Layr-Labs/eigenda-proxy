@@ -120,6 +120,11 @@ func CreateTestSuite(t *testing.T, useMemory bool, useS3 bool, fc *store.FaultCo
 		ctx,
 		log,
 	)
+
+	if fc != nil {
+		store.GetMemStore().SetFaultConfig(fc)
+	}
+
 	require.NoError(t, err)
 	server := server.NewServer(host, 0, store, log, metrics.NoopMetrics)
 
