@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-
-	"github.com/Layr-Labs/eigenda-proxy/common"
 )
 
 // TODO: Add support for custom http client option
@@ -19,7 +17,7 @@ type Config struct {
 // ProxyClient is an interface for communicating with the EigenDA proxy server
 type ProxyClient interface {
 	Health() error
-	GetData(ctx context.Context, cert []byte, domain common.DomainType) ([]byte, error)
+	GetData(ctx context.Context, cert []byte) ([]byte, error)
 	SetData(ctx context.Context, b []byte) ([]byte, error)
 }
 
@@ -60,8 +58,8 @@ func (c *client) Health() error {
 }
 
 // GetData fetches blob data associated with a DA certificate
-func (c *client) GetData(ctx context.Context, comm []byte, domain common.DomainType) ([]byte, error) {
-	url := fmt.Sprintf("%s/get/0x%x?domain=%s&commitment_mode=simple", c.cfg.URL, comm, domain.String())
+func (c *client) GetData(ctx context.Context, comm []byte) ([]byte, error) {
+	url := fmt.Sprintf("%s/get/0x%x?commitment_mode=simple", c.cfg.URL, comm)
 
 	if c.cfg.Actor != "" {
 		url = fmt.Sprintf("%s&actor=%s", url, c.cfg.Actor)
@@ -80,11 +78,17 @@ func (c *client) GetData(ctx context.Context, comm []byte, domain common.DomainT
 
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("received unexpected response code: %d", resp.StatusCode)
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
 	}
 
-	return io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("received error response, code=%d, msg = %s", resp.StatusCode, string(b))
+	}
+
+	return b, nil
+
 }
 
 // SetData writes raw byte data to DA and returns the respective certificate
@@ -100,13 +104,14 @@ func (c *client) SetData(ctx context.Context, b []byte) ([]byte, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("failed to store data: %v", resp.StatusCode)
-	}
 
 	b, err = io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to store data: %v, err = %s", resp.StatusCode, string(b))
 	}
 
 	if len(b) == 0 {

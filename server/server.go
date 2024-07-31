@@ -11,9 +11,12 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
+	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/ethereum-optimism/optimism/op-service/rpc"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/log"
 )
 
@@ -49,20 +52,20 @@ type Stats struct {
 type Server struct {
 	log        log.Logger
 	endpoint   string
-	store      Store
+	router      *store.Router
 	m          metrics.Metricer
 	tls        *rpc.ServerTLSConfig
 	httpServer *http.Server
 	listener   net.Listener
 }
 
-func NewServer(host string, port int, store Store, log log.Logger, m metrics.Metricer) *Server {
+func NewServer(host string, port int, router *store.Router, log log.Logger, m metrics.Metricer) *Server {
 	endpoint := net.JoinHostPort(host, strconv.Itoa(port))
 	return &Server{
 		m:        m,
 		log:      log,
 		endpoint: endpoint,
-		store:    store,
+		router:    router,
 		httpServer: &http.Server{
 			Addr:              endpoint,
 			ReadHeaderTimeout: 10 * time.Second,
@@ -82,11 +85,13 @@ func WithMetrics(handleFn func(http.ResponseWriter, *http.Request) error, m metr
 	}
 }
 
+// WithLogging is a middleware that logs the request method and URL.
 func WithLogging(handleFn func(http.ResponseWriter, *http.Request) error, log log.Logger) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Info("request", "method", r.Method, "url", r.URL)
 		err := handleFn(w, r)
-		if err != nil {
+		if err != nil { // #nosec G104
+			w.Write([]byte(err.Error()))
 			log.Error(err.Error())
 		}
 	}
@@ -155,13 +160,7 @@ func (svr *Server) Health(w http.ResponseWriter, r *http.Request) error {
 
 func (svr *Server) HandleGet(w http.ResponseWriter, r *http.Request) error {
 	ctx := context.Background()
-
-	domain, err := ReadDomainFilter(r)
-	if err != nil {
-		svr.WriteBadRequest(w, invalidDomain)
-		return err
-	}
-	commitmentType, err := ReadCommitmentMode(r)
+	ct, err := ReadCommitmentMode(r)
 	if err != nil {
 		svr.WriteBadRequest(w, invalidCommitmentMode)
 		return err
@@ -173,14 +172,14 @@ func (svr *Server) HandleGet(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	key := path.Base(r.URL.Path)
-	comm, err := StringToCommitment(key, commitmentType)
+	comm, err := commitments.StringToDecodedCommitment(key, ct)
 	if err != nil {
-		svr.log.Info("failed to decode commitment", "err", err, "key", key)
+		svr.log.Info("failed to decode commitment", "err", err, "commitment", comm)
 		w.WriteHeader(http.StatusBadRequest)
 		return err
 	}
 
-	input, err := svr.store.Get(ctx, comm, domain)
+	input, err := svr.router.Get(ctx, comm, ct)
 	if err != nil && errors.Is(err, ErrNotFound) {
 		svr.WriteNotFound(w, err.Error())
 		return err
@@ -196,7 +195,7 @@ func (svr *Server) HandleGet(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (svr *Server) HandlePut(w http.ResponseWriter, r *http.Request) error {
-	commitmentType, err := ReadCommitmentMode(r)
+	ct, err := ReadCommitmentMode(r)
 	if err != nil {
 		svr.WriteBadRequest(w, invalidCommitmentMode)
 		return err
@@ -204,23 +203,45 @@ func (svr *Server) HandlePut(w http.ResponseWriter, r *http.Request) error {
 
 	input, err := io.ReadAll(r.Body)
 	if err != nil {
+		svr.log.Error("Failed to read request body", "err", err)
 		w.WriteHeader(http.StatusBadRequest)
 		return err
 	}
 
-	var comm []byte
-	if comm, err = svr.store.Put(r.Context(), input); err != nil {
-		svr.WriteInternalError(w, err)
-		return err
+	key := path.Base(r.URL.Path)
+	var commitment []byte
+
+	if len(key) > 0 && key != "put" { // commitment key already provided (keccak256)
+		comm, err := commitments.StringToDecodedCommitment(key, ct)
+		if err != nil {
+			svr.log.Info("failed to decode commitment", "err", err, "key", key)
+			w.WriteHeader(http.StatusBadRequest)
+			return err
+		}
+
+		commitment, err = svr.router.PutWithKey(context.Background(), comm, input)
+		if err != nil {
+			svr.log.Info("failed to put with key", "err", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return err
+		}
+
+	} else { // without
+		commitment, err = svr.router.PutWithoutKey(context.Background(), input)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return err
+		}
 	}
 
-	comm, err = EncodeCommitment(comm, commitmentType)
+	comm, err := commitments.EncodeCommitment(commitment, ct)
 	if err != nil {
+		svr.log.Info("failed to encode commitment", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return err
 	}
 
-	fmt.Printf("write cert: %x\n", comm)
+	svr.log.Info(fmt.Sprintf("write commitment: %x\n", comm))
 	// write out encoded commitment
 	svr.WriteResponse(w, comm)
 	return nil
@@ -259,6 +280,40 @@ func (svr *Server) Port() int {
 	return port
 }
 
-func (svr *Server) Store() Store {
-	return svr.store
+func ReadCommitmentMode(r *http.Request) (commitments.CommitmentMode, error) {
+	query := r.URL.Query()
+	key := query.Get(CommitmentModeKey)
+	if key == "" { // default
+		commit := path.Base(r.URL.Path)
+		if len(commit) > 0 && commit != "put" { // provided commitment in request params
+			decodedCommit, err := hexutil.Decode(commit)
+			if err != nil {
+				return commitments.SimpleCommitmentMode, err
+			}
+
+			switch decodedCommit[0] {
+			case byte(commitments.GenericCommitmentType):
+				return commitments.OptimismAltDA, nil
+
+			case byte(commitments.Keccak256CommitmentType):
+				return commitments.OptimismGeneric, nil
+
+			default:
+				return commitments.SimpleCommitmentMode, fmt.Errorf("unknown commit byte prefix")
+	
+			}
+		}
+
+		return commitments.OptimismAltDA, nil
+	}
+
+	return commitments.StringToCommitmentMode(key)
+}
+
+func (svr *Server) GetMemStats() *store.Stats {
+	return svr.router.GetMemStore().Stats()
+}
+
+func (svr *Server) GetS3Stats() *store.Stats {
+	return svr.router.GetS3Store().Stats()
 }

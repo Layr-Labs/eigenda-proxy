@@ -2,10 +2,10 @@ package server
 
 import (
 	"fmt"
-	"math"
 	"runtime"
 	"time"
 
+	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/utils"
 	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/api/clients"
@@ -38,16 +38,23 @@ const (
 	MemstoreFlagName           = "memstore.enabled"
 	MemstoreExpirationFlagName = "memstore.expiration"
 	FaultConfigPath            = "memstore.fault-config-path"
+	// S3 flags
+	S3BucketFlagName          = "s3.bucket"
+	S3EndpointFlagName        = "s3.endpoint"
+	S3AccessKeyIDFlagName     = "s3.access-key-id" // #nosec G101
+	S3AccessKeySecretFlagName = "s3.access-key-secret" // #nosec G101
 )
 
 const BytesPerSymbol = 31
 const MaxCodingRatio = 8
 
-var MaxSRSPoints = math.Pow(2, 28)
+var MaxSRSPoints = 1 << 28 // 2^28
 
 var MaxAllowedBlobSize = uint64(MaxSRSPoints * BytesPerSymbol / MaxCodingRatio)
 
 type Config struct {
+	S3Config store.S3Config
+
 	ClientConfig clients.EigenDAClientConfig
 
 	// The blob encoding version to use when writing blobs from the high level interface.
@@ -56,20 +63,21 @@ type Config struct {
 	// ETH vars
 	EthRPC               string
 	SvcManagerAddr       string
-	EthConfirmationDepth uint64
+	EthConfirmationDepth int64
 
 	// KZG vars
 	CacheDir string
 
 	G1Path string
 	G2Path string
+	G2PowerOfTauPath string
 
+	// Size constraints
 	MaxBlobLength      string
 	maxBlobLengthBytes uint64
 
-	G2PowerOfTauPath string
 
-	// Memstore Config params
+	// Memstore
 	MemstoreEnabled        bool
 	MemstoreBlobExpiration time.Duration
 	FaultConfigPath        string
@@ -83,7 +91,7 @@ func (c *Config) GetMaxBlobLength() (uint64, error) {
 		}
 
 		if numBytes > MaxAllowedBlobSize {
-			return 0, fmt.Errorf("excluding disperser constraints on max blob size, SRS points constrain the maxBlobLength configuration parameter to be less than than ~1 GB (%d bytes)", MaxAllowedBlobSize)
+			return 0, fmt.Errorf("excluding disperser constraints on max blob size, SRS points constrain the maxBlobLength configuration parameter to be less than than %d bytes", MaxAllowedBlobSize)
 		}
 
 		c.maxBlobLengthBytes = numBytes
@@ -95,17 +103,15 @@ func (c *Config) GetMaxBlobLength() (uint64, error) {
 func (c *Config) VerificationCfg() *verify.Config {
 	numBytes, err := c.GetMaxBlobLength()
 	if err != nil {
-		panic(fmt.Errorf("Check() was not called on config object, err is not nil: %w", err))
+		panic(fmt.Errorf("failed to read max blob length: %w", err))
 	}
-
-	numPointsNeeded := uint64(math.Ceil(float64(numBytes) / BytesPerSymbol))
 
 	kzgCfg := &kzg.KzgConfig{
 		G1Path:          c.G1Path,
 		G2PowerOf2Path:  c.G2PowerOfTauPath,
 		CacheDir:        c.CacheDir,
-		SRSOrder:        numPointsNeeded,
-		SRSNumberToLoad: numPointsNeeded,
+		SRSOrder:        268435456, // 2 ^ 32 
+		SRSNumberToLoad: numBytes / 32, // # of fp.Elements
 		NumWorker:       uint64(runtime.GOMAXPROCS(0)),
 	}
 
@@ -121,16 +127,21 @@ func (c *Config) VerificationCfg() *verify.Config {
 		RPCURL:               c.EthRPC,
 		SvcManagerAddr:       c.SvcManagerAddr,
 		KzgConfig:            kzgCfg,
-		EthConfirmationDepth: c.EthConfirmationDepth,
+		EthConfirmationDepth: uint64(c.EthConfirmationDepth),
 	}
 
 }
 
-// NewConfig parses the Config from the provided flags or environment variables.
+// ReadConfig parses the Config from the provided flags or environment variables.
 func ReadConfig(ctx *cli.Context) Config {
 	cfg := Config{
+		S3Config: store.S3Config{
+			Bucket: ctx.String(S3BucketFlagName),
+			Endpoint: ctx.String(S3EndpointFlagName),
+			AccessKeyID: ctx.String(S3AccessKeyIDFlagName),
+			AccessKeySecret: ctx.String(S3AccessKeySecretFlagName),
+		},
 		ClientConfig: clients.EigenDAClientConfig{
-			/* Required Flags */
 			RPC:                          ctx.String(EigenDADisperserRPCFlagName),
 			StatusQueryRetryInterval:     ctx.Duration(StatusQueryRetryIntervalFlagName),
 			StatusQueryTimeout:           ctx.Duration(StatusQueryTimeoutFlagName),
@@ -147,20 +158,47 @@ func ReadConfig(ctx *cli.Context) Config {
 		MaxBlobLength:          ctx.String(MaxBlobLengthFlagName),
 		SvcManagerAddr:         ctx.String(SvcManagerAddrFlagName),
 		EthRPC:                 ctx.String(EthRPCFlagName),
-		EthConfirmationDepth:   ctx.Uint64(EthConfirmationDepthFlagName),
+		EthConfirmationDepth:   ctx.Int64(EthConfirmationDepthFlagName),
 		MemstoreEnabled:        ctx.Bool(MemstoreFlagName),
 		MemstoreBlobExpiration: ctx.Duration(MemstoreExpirationFlagName),
 		FaultConfigPath:        ctx.String(FaultConfigPath),
 	}
-	cfg.ClientConfig.WaitForFinalization = (cfg.EthConfirmationDepth != 0)
+	cfg.ClientConfig.WaitForFinalization = (cfg.EthConfirmationDepth < 0)
+
 	return cfg
 }
 
-func (m Config) Check() error {
-	_, err := m.GetMaxBlobLength()
+// Check ... verifies that configuration values are adequately set
+func (cfg *Config) Check() error {
+	l, err := cfg.GetMaxBlobLength()
 	if err != nil {
 		return err
 	}
+
+	if l == 0 {
+		return fmt.Errorf("max blob length is 0")
+	}
+
+	if cfg.SvcManagerAddr != "" && cfg.EthRPC == "" {
+		return fmt.Errorf("svc manager address is set, but Eth RPC is not set")
+	}
+
+	if cfg.EthRPC != "" && cfg.SvcManagerAddr == "" {
+		return fmt.Errorf("eth rpc is set, but svc manager address is not set")
+	}
+	
+	if cfg.EthConfirmationDepth >= 0 && (cfg.SvcManagerAddr == "" || cfg.EthRPC == "") {
+		return fmt.Errorf("eth confirmation depth is set for certificate verification, but Eth RPC or SvcManagerAddr is not set")
+	}
+
+	if cfg.S3Config.Endpoint != "" && (cfg.S3Config.AccessKeyID == "" || cfg.S3Config.AccessKeySecret == "") {
+		return fmt.Errorf("s3 endpoint is set, but access key id or access key secret is not set")
+	}
+
+	if !cfg.MemstoreEnabled && cfg.ClientConfig.RPC == "" {
+		return fmt.Errorf("eigenda disperser rpc url is not set")
+	}
+
 	return nil
 }
 
@@ -255,11 +293,11 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			Usage:   "The deployed EigenDA service manager address. The list can be found here: https://github.com/Layr-Labs/eigenlayer-middleware/?tab=readme-ov-file#current-mainnet-deployment",
 			EnvVars: prefixEnvVars("SERVICE_MANAGER_ADDR"),
 		},
-		&cli.Uint64Flag{
+		&cli.Int64Flag{
 			Name:    EthConfirmationDepthFlagName,
-			Usage:   "The number of Ethereum blocks of confirmation that the DA briging transaction must have before it is assumed by the proxy to be final. The value of `0` indicates that the proxy should wait for weak-subjectivity finalization (12-14 minutes).",
+			Usage:   "The number of Ethereum blocks of confirmation that the DA batch submission tx must have before it is assumed by the proxy to be final. The value of `0` indicates that the proxy shouldn't wait for any confirmations.",
 			EnvVars: prefixEnvVars("ETH_CONFIRMATION_DEPTH"),
-			Value:   6,
+			Value:   -1,
 		},
 		&cli.BoolFlag{
 			Name:    MemstoreFlagName,
@@ -277,5 +315,27 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			Usage:   "Path to the fault configuration file.",
 			EnvVars: []string{"MEMSTORE_FAULT_CONFIG_PATH"},
 		},
-	}
+		&cli.StringFlag{
+			Name:    S3BucketFlagName,
+			Usage:   "bucket name for S3 storage",
+			EnvVars: prefixEnvVars("S3_BUCKET"),
+		},
+		&cli.StringFlag{
+			Name:    S3EndpointFlagName,
+			Usage:   "endpoint for S3 storage",
+			Value:   "",
+			EnvVars: prefixEnvVars("S3_ENDPOINT"),
+		},
+		&cli.StringFlag{
+			Name:    S3AccessKeyIDFlagName,
+			Usage:   "access key id for S3 storage",
+			Value:   "",
+			EnvVars: prefixEnvVars("S3_ACCESS_KEY_ID"),
+		}, &cli.StringFlag{
+			Name:    S3AccessKeySecretFlagName,
+			Usage:   "access key secret for S3 storage",
+			Value:   "",
+			EnvVars: prefixEnvVars("S3_ACCESS_KEY_SECRET"),
+	},
+}
 }

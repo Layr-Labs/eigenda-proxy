@@ -1,4 +1,4 @@
-package server
+package store
 
 import (
 	"context"
@@ -8,8 +8,7 @@ import (
 	"sync"
 	"time"
 
-	proxy_common "github.com/Layr-Labs/eigenda-proxy/common"
-	"github.com/Layr-Labs/eigenda-proxy/fault"
+	"github.com/Layr-Labs/eigenda-proxy/utils"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 
@@ -33,7 +32,7 @@ type MemStoreConfig struct {
 	BlobExpiration       time.Duration
 	EthConfirmationDepth uint64
 	FaultCfgPath         string
-	FaultCfg             *fault.Config
+	FaultCfg             *FaultConfig
 }
 
 // MemStore is a simple in-memory store for blobs which uses an expiration
@@ -41,7 +40,7 @@ type MemStoreConfig struct {
 // EigenDA operators.
 type MemStore struct {
 	sync.RWMutex
-	faultCfg *fault.Config
+	faultCfg *FaultConfig
 
 	l         log.Logger
 	keyStarts map[string]time.Time
@@ -51,13 +50,13 @@ type MemStore struct {
 
 	maxBlobSizeBytes uint64
 	blobExpiration   time.Duration
-	reads            int
+	reads            *utils.AtomicInt64
 }
 
 var _ Store = (*MemStore)(nil)
 
 // NewMemStore ... constructor
-func NewMemStore(ctx context.Context, verifier *verify.Verifier, l log.Logger, maxBlobSizeBytes uint64, blobExpiration time.Duration, fc *fault.Config) (*MemStore, error) {
+func NewMemStore(ctx context.Context, verifier *verify.Verifier, l log.Logger, maxBlobSizeBytes uint64, blobExpiration time.Duration, fc *FaultConfig) (*MemStore, error) {
 	store := &MemStore{
 		faultCfg:         fc,
 		l:                l,
@@ -67,10 +66,10 @@ func NewMemStore(ctx context.Context, verifier *verify.Verifier, l log.Logger, m
 		codec:            codecs.NewIFFTCodec(codecs.NewDefaultBlobCodec()),
 		maxBlobSizeBytes: maxBlobSizeBytes,
 		blobExpiration:   blobExpiration,
+		reads: 		  utils.NewAtomicInt64(0),
 	}
 
 	if store.blobExpiration != 0 {
-		l.Info("memstore expiration enabled", "time", store.blobExpiration)
 		go store.EventLoop(ctx)
 	}
 
@@ -96,35 +95,54 @@ func (e *MemStore) pruneExpired() {
 	e.Lock()
 	defer e.Unlock()
 
-	for commit, dur := range e.keyStarts {
+	for cert, dur := range e.keyStarts {
 		if time.Since(dur) >= e.blobExpiration {
-			delete(e.keyStarts, commit)
-			delete(e.store, commit)
+			delete(e.keyStarts, cert)
+			delete(e.store, cert)
 
-			e.l.Info("blob pruned", "commit", commit)
+			e.l.Info("blob expired and pruned from RAM", "key", fmt.Sprintf("%x", cert))
 		}
 	}
 
 }
 
 // Get fetches a value from the store.
-func (e *MemStore) Get(ctx context.Context, commit []byte, domain proxy_common.DomainType) ([]byte, error) {
-	e.reads += 1
+func (e *MemStore) Get(ctx context.Context, commit []byte) ([]byte, error) {
 	e.RLock()
-	defer e.RUnlock()
+	defer func(){
+		e.reads.Increment()
+		e.RUnlock()
+	}()
 
-	encodedBlob, err := e.fetch(ctx, commit)
+	behavior, err := e.GetReturnBehavior(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	switch domain {
-	case proxy_common.BinaryDomain:
-		return e.codec.DecodeBlob(encodedBlob)
-	case proxy_common.PolyDomain:
-		return encodedBlob, nil
-	default:
-		return nil, fmt.Errorf("unexpected domain type: %d", domain)
+	// iFFT or generic encoded blob
+	encodedBlob, err := e.fetch(commit)
+	if err != nil {
+		return nil, err
+	}
+	decodedBlob, err := e.codec.DecodeBlob(encodedBlob)
+	if err != nil {
+		return nil, err
+	}
+
+	switch behavior.Mode {
+		case Honest:
+			return encodedBlob, nil
+		case Byzantine:
+			return e.corruptBlob(decodedBlob), nil
+
+		case IntervalByzantine:
+			if (e.reads.ValueUnsignedInt() >= behavior.Interval) && (e.reads.ValueUnsignedInt() % behavior.Interval == 0) {
+				return e.corruptBlob(decodedBlob), nil
+			}
+			return decodedBlob, nil
+
+		default:
+			return nil, fmt.Errorf("unknown fault mode")
 	}
 }
 
@@ -148,6 +166,9 @@ func (e *MemStore) Put(ctx context.Context, value []byte) ([]byte, error) {
 	}
 
 	// generate batch header hash
+	// TODO: generate a real batch header hash based on the randomly generated batch header fields
+	// this will be useful in integrations like nitro where the batch header hash isn't persisted to the inbox tx calldata
+	// requiring any actor running canonical derivation to recompute it when querying a blob
 	entropy := make([]byte, 10)
 	_, err = rand.Read(entropy)
 	if err != nil {
@@ -199,8 +220,7 @@ func (e *MemStore) Put(ctx context.Context, value []byte) ([]byte, error) {
 		return nil, err
 	}
 	// construct key
-	bytesKeys := append([]byte{0x4}, cert.BlobVerificationProof.InclusionProof...)
-
+	bytesKeys := cert.BlobVerificationProof.InclusionProof
 	certStr := string(bytesKeys)
 
 	if _, exists := e.store[certStr]; exists {
@@ -214,88 +234,70 @@ func (e *MemStore) Put(ctx context.Context, value []byte) ([]byte, error) {
 	return certBytes, nil
 }
 
-func (e *MemStore) honestFetch(commit []byte) ([]byte, error) {
+// fetch reads the actual data from the store
+func (e *MemStore) fetch(commit []byte) ([]byte, error) {
 	var cert verify.Certificate
 	err := rlp.DecodeBytes(commit, &cert)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode DA cert to RLP format: %w", err)
 	}
 
-	bytesKeys := append([]byte{0x4}, cert.BlobVerificationProof.InclusionProof...)
+	bytesKeys := cert.BlobVerificationProof.InclusionProof
 
 	var encodedBlob []byte
 	var exists bool
 	if encodedBlob, exists = e.store[string(bytesKeys)]; !exists {
 		return nil, fmt.Errorf("commitment key not found")
 	}
-
-	// Don't need to do this really since it's a mock store
-	err = e.verifier.VerifyCommitment(cert.BlobHeader.Commitment, encodedBlob)
-	if err != nil {
-		return nil, err
-	}
-
+	
 	return encodedBlob, nil
 }
 
-func (e *MemStore) byzantineFetch(commit []byte) ([]byte, error) {
-	var cert verify.Certificate
-	err := rlp.DecodeBytes(commit, &cert)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode DA cert to RLP format: %w", err)
-	}
-
-	var encodedBlob []byte
-	var exists bool
-	if encodedBlob, exists = e.store[string(commit)]; !exists {
-		return nil, fmt.Errorf("commitment key not found")
-	}
-
-	// flip a bit in the bob to simulate Byzantine behavior
-	encodedBlob[0] = ^encodedBlob[0]
-
-	return encodedBlob, nil
-}
-
-func (e *MemStore) fetch(ctx context.Context, commit []byte) ([]byte, error) {
+func (e *MemStore) GetReturnBehavior(ctx context.Context) (*Behavior, error){
 	if e.faultCfg == nil {
-		return e.honestFetch(commit)
+		return &Behavior{
+			Mode: Honest,
+		}, nil
 	}
 
-	actor := ctx.Value("actor").(string)
+	actor, ok := ctx.Value("actor").(string)
+	if !ok {
+		actor = ""
+	}
+
+	if actor == "" && !e.faultCfg.AllPolicyExists() {
+		return nil, fmt.Errorf("actor not found in context nor is `all` policy configured")
+	}
 
 	if actor == "" {
-		return nil, fmt.Errorf("actor not found in context")
+		actor = AllPolicyKey
 	}
 
-	if _, exists := e.faultCfg.Actors[actor]; !exists {
+	 behavior, exists := e.faultCfg.Actors[actor]
+	 
+	 if !exists {
 		return nil, fmt.Errorf("actor not found in fault config")
 	}
 
-	behavior := e.faultCfg.Actors[actor]
-
-	switch behavior.Mode {
-	case fault.Honest:
-		return e.honestFetch(commit)
-	case fault.Byzantine:
-		return e.byzantineFetch(commit)
-
-	case fault.IntervalByzantine:
-		if e.reads%int(behavior.Interval) == 0 {
-			return e.byzantineFetch(commit)
-		}
-
-		return e.honestFetch(commit)
-	default:
-		return nil, fmt.Errorf("unexpected actor mode: %d", behavior.Mode)
-	}
+	return &behavior, nil
 }
+
+func (e *MemStore) corruptBlob(b []byte) []byte {
+		// flip 3 bits in the blob to corrupt the original data
+		b[0] = ^b[0]
+		mid := len(b) / 2
+		b[mid] = ^b[mid]
+		end := len(b) - 1
+		b[end] = ^b[end]
+		return b
+}
+
 
 func (e *MemStore) Stats() *Stats {
 	e.RLock()
 	defer e.RUnlock()
 	return &Stats{
-		Entries: len(e.store),
-		Reads:   e.reads,
+		Entries: uint(len(e.store)),
+		Reads:   e.reads.ValueUnsignedInt(),
 	}
 }

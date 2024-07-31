@@ -1,8 +1,6 @@
 {
-    "sequencer": {
-        "mode": "honest"
-    },
-    "challenger": {
-        "mode": "byzantine"
+    "all": {
+        "mode": "interval_byzantine",
+        "interval": 2
     }
 }

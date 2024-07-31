@@ -1,4 +1,4 @@
-package server
+package store
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	proxy_common "github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/ethereum/go-ethereum/log"
@@ -42,7 +41,7 @@ func NewEigenDAStore(ctx context.Context, client *clients.EigenDAClient, v *veri
 
 // Get fetches a blob from DA using certificate fields and verifies blob
 // against commitment to ensure data is valid and non-tampered.
-func (e EigenDAStore) Get(ctx context.Context, key []byte, domain proxy_common.DomainType) ([]byte, error) {
+func (e EigenDAStore) Get(ctx context.Context, key []byte) ([]byte, error) {
 	var cert verify.Certificate
 	err := rlp.DecodeBytes(key, &cert)
 	if err != nil {
@@ -64,20 +63,17 @@ func (e EigenDAStore) Get(ctx context.Context, key []byte, domain proxy_common.D
 		return nil, err
 	}
 
-	switch domain {
-	case proxy_common.BinaryDomain:
-		return decodedBlob, nil
-	case proxy_common.PolyDomain:
-		return encodedBlob, nil
-	default:
-		return nil, fmt.Errorf("unexpected domain type: %d", domain)
-	}
+	return decodedBlob, nil
 }
 
 // Put disperses a blob for some pre-image and returns the associated RLP encoded certificate commit.
 func (e EigenDAStore) Put(ctx context.Context, value []byte) (comm []byte, err error) {
-	if uint64(len(value)) > e.cfg.MaxBlobSizeBytes {
-		return nil, fmt.Errorf("blob is larger than max blob size: blob length %d, max blob size %d", len(value), e.cfg.MaxBlobSizeBytes)
+	encodedBlob, err := e.client.GetCodec().EncodeBlob(value)
+	if err != nil {
+		return nil, fmt.Errorf("EigenDA client failed to re-encode blob: %w", err)
+	}
+	if uint64(len(encodedBlob)) > e.cfg.MaxBlobSizeBytes {
+		return nil, fmt.Errorf("encoded blob is larger than max blob size: blob length %d, max blob size %d", len(value), e.cfg.MaxBlobSizeBytes)
 	}
 
 	dispersalStart := time.Now()
@@ -87,10 +83,7 @@ func (e EigenDAStore) Put(ctx context.Context, value []byte) (comm []byte, err e
 	}
 	cert := (*verify.Certificate)(blobInfo)
 
-	encodedBlob, err := e.client.GetCodec().EncodeBlob(value)
-	if err != nil {
-		return nil, fmt.Errorf("EigenDA client failed to re-encode blob: %w", err)
-	}
+
 	err = e.verifier.VerifyCommitment(cert.BlobHeader.Commitment, encodedBlob)
 	if err != nil {
 		return nil, err
@@ -99,7 +92,7 @@ func (e EigenDAStore) Put(ctx context.Context, value []byte) (comm []byte, err e
 	dispersalDuration := time.Since(dispersalStart)
 	remainingTimeout := e.cfg.StatusQueryTimeout - dispersalDuration
 
-	ticker := time.NewTicker(12 * time.Second)
+	ticker := time.NewTicker(12 * time.Second) // avg. eth block time
 	defer ticker.Stop()
 	ctx, cancel := context.WithTimeout(context.Background(), remainingTimeout)
 	defer cancel()
@@ -108,11 +101,12 @@ func (e EigenDAStore) Put(ctx context.Context, value []byte) (comm []byte, err e
 	for !done {
 		select {
 		case <-ctx.Done():
-			return nil, ctx.Err()
+			return nil, fmt.Errorf("timed out when trying to verify the DA certificate for a blob batch after dispersal")
 		case <-ticker.C:
 			err = e.verifier.VerifyCert(cert)
 			if err == nil {
 				done = true
+
 			} else if !errors.Is(err, verify.ErrBatchMetadataHashNotFound) {
 				return nil, err
 			} else {
