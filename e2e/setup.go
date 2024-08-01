@@ -99,11 +99,13 @@ func CreateTestSuite(t *testing.T, useMemory bool, useS3 bool, fc *store.FaultCo
 		cfg = server.CLIConfig{
 			EigenDAConfig: eigendaCfg,
 			S3Config: store.S3Config{
-				Profiling: true,
-				Bucket:  bucketName,
-				Endpoint: "localhost:4566",
-				AccessKeySecret:   "minioadmin",
-				AccessKeyID: "minioadmin",
+				Profiling:        true,
+				Bucket:           bucketName,
+				Path:             "",
+				Endpoint:         "localhost:4566",
+				AccessKeySecret:  "minioadmin",
+				AccessKeyID:      "minioadmin",
+				S3CredentialType: store.S3CredentialStatic,
 			},
 		}
 	} else {
@@ -151,7 +153,6 @@ func (ts *TestSuite) Address() string {
 
 	return fmt.Sprintf("%s://%s:%d", transport, host, port)
 }
-
 
 func createS3Bucket(bucketName string) {
 	// Initialize minio client object.

@@ -39,9 +39,11 @@ const (
 	MemstoreExpirationFlagName = "memstore.expiration"
 	FaultConfigPath            = "memstore.fault-config-path"
 	// S3 flags
-	S3BucketFlagName          = "s3.bucket"
+	S3CredentialTypeFlagName  = "s3.credential-type" // #nosec G101
+	S3BucketFlagName          = "s3.bucket"          // #nosec G101
+	S3PathFlagName            = "s3.path"
 	S3EndpointFlagName        = "s3.endpoint"
-	S3AccessKeyIDFlagName     = "s3.access-key-id" // #nosec G101
+	S3AccessKeyIDFlagName     = "s3.access-key-id"     // #nosec G101
 	S3AccessKeySecretFlagName = "s3.access-key-secret" // #nosec G101
 )
 
@@ -67,7 +69,6 @@ type Config struct {
 
 	// KZG vars
 	CacheDir string
-
 	G1Path string
 	G2Path string
 	G2PowerOfTauPath string
@@ -110,7 +111,7 @@ func (c *Config) VerificationCfg() *verify.Config {
 		G1Path:          c.G1Path,
 		G2PowerOf2Path:  c.G2PowerOfTauPath,
 		CacheDir:        c.CacheDir,
-		SRSOrder:        268435456, // 2 ^ 32 
+		SRSOrder:        268435456,     // 2 ^ 32
 		SRSNumberToLoad: numBytes / 32, // # of fp.Elements
 		NumWorker:       uint64(runtime.GOMAXPROCS(0)),
 	}
@@ -136,10 +137,12 @@ func (c *Config) VerificationCfg() *verify.Config {
 func ReadConfig(ctx *cli.Context) Config {
 	cfg := Config{
 		S3Config: store.S3Config{
-			Bucket: ctx.String(S3BucketFlagName),
-			Endpoint: ctx.String(S3EndpointFlagName),
-			AccessKeyID: ctx.String(S3AccessKeyIDFlagName),
-			AccessKeySecret: ctx.String(S3AccessKeySecretFlagName),
+			S3CredentialType: toS3CredentialType(ctx.String(S3CredentialTypeFlagName)),
+			Bucket:           ctx.String(S3BucketFlagName),
+			Path:             ctx.String(S3PathFlagName),
+			Endpoint:         ctx.String(S3EndpointFlagName),
+			AccessKeyID:      ctx.String(S3AccessKeyIDFlagName),
+			AccessKeySecret:  ctx.String(S3AccessKeySecretFlagName),
 		},
 		ClientConfig: clients.EigenDAClientConfig{
 			RPC:                          ctx.String(EigenDADisperserRPCFlagName),
@@ -168,6 +171,17 @@ func ReadConfig(ctx *cli.Context) Config {
 	return cfg
 }
 
+func toS3CredentialType(s string) store.S3CredentialType {
+	switch s {
+	case string(store.S3CredentialStatic):
+		return store.S3CredentialStatic
+	case string(store.S3CredentialIAM):
+		return store.S3CredentialIAM
+	default:
+		return store.S3CredentialUnknown
+	}
+}
+
 // Check ... verifies that configuration values are adequately set
 func (cfg *Config) Check() error {
 	l, err := cfg.GetMaxBlobLength()
@@ -186,13 +200,18 @@ func (cfg *Config) Check() error {
 	if cfg.EthRPC != "" && cfg.SvcManagerAddr == "" {
 		return fmt.Errorf("eth rpc is set, but svc manager address is not set")
 	}
-	
+
 	if cfg.EthConfirmationDepth >= 0 && (cfg.SvcManagerAddr == "" || cfg.EthRPC == "") {
 		return fmt.Errorf("eth confirmation depth is set for certificate verification, but Eth RPC or SvcManagerAddr is not set")
 	}
 
-	if cfg.S3Config.Endpoint != "" && (cfg.S3Config.AccessKeyID == "" || cfg.S3Config.AccessKeySecret == "") {
-		return fmt.Errorf("s3 endpoint is set, but access key id or access key secret is not set")
+	if cfg.S3Config.S3CredentialType == store.S3CredentialUnknown {
+		return fmt.Errorf("s3 credential type must be set")
+	}
+	if cfg.S3Config.S3CredentialType == store.S3CredentialStatic {
+		if cfg.S3Config.Endpoint != "" && (cfg.S3Config.AccessKeyID == "" || cfg.S3Config.AccessKeySecret == "") {
+			return fmt.Errorf("s3 endpoint is set, but access key id or access key secret is not set")
+		}
 	}
 
 	if !cfg.MemstoreEnabled && cfg.ClientConfig.RPC == "" {
@@ -316,9 +335,19 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			EnvVars: []string{"MEMSTORE_FAULT_CONFIG_PATH"},
 		},
 		&cli.StringFlag{
+			Name:    S3CredentialTypeFlagName,
+			Usage:   "The way to authenticate to S3, options are [iam, static]",
+			EnvVars: prefixEnvVars("S3_CREDENTIAL_TYPE"),
+		},
+		&cli.StringFlag{
 			Name:    S3BucketFlagName,
 			Usage:   "bucket name for S3 storage",
 			EnvVars: prefixEnvVars("S3_BUCKET"),
+		},
+		&cli.StringFlag{
+			Name:    S3PathFlagName,
+			Usage:   "path for S3 storage",
+			EnvVars: prefixEnvVars("S3_PATH"),
 		},
 		&cli.StringFlag{
 			Name:    S3EndpointFlagName,
@@ -336,6 +365,6 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			Usage:   "access key secret for S3 storage",
 			Value:   "",
 			EnvVars: prefixEnvVars("S3_ACCESS_KEY_SECRET"),
-	},
-}
+		},
+	}
 }
