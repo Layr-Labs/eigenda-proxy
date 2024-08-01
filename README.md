@@ -12,6 +12,7 @@ Features:
 * Performs KZG verification during dispersal to ensure that DA certificates returned from the EigenDA disperser have correct KZG commitments.
 * Performs DA certificate verification during dispersal to ensure that DA certificates have been properly bridged to Ethereum by the disperser.
 * Performs DA certificate verification during retrieval to ensure that data represented by bad DA certificates do not become part of the canonical chain.
+* Compatibility with Optimism's alt-da commitment type with eigenda backend.
 * Compatibility with Optimism's keccak-256 commitment type with S3 storage.
 
 In order to disperse to the EigenDA network in production, or at high throughput on testnet, please register your authentication ethereum address through [this form](https://forms.gle/3QRNTYhSMacVFNcU8). Your EigenDA authentication keypair address should not be associated with any funds anywhere.
@@ -25,7 +26,7 @@ In order to disperse to the EigenDA network in production, or at high throughput
 | `--eigenda-disable-point-verification-mode` | `false` | `$EIGENDA_PROXY_DISABLE_POINT_VERIFICATION_MODE` | Disable point verification mode. This mode performs IFFT on data before writing and FFT on data after reading. Disabling requires supplying the entire blob for verification against the KZG commitment. |
 | `--eigenda-disable-tls` | `false` | `$EIGENDA_PROXY_GRPC_DISABLE_TLS` | Disable TLS for gRPC communication with the EigenDA disperser. Default is false. |
 | `--eigenda-disperser-rpc` |  | `$EIGENDA_PROXY_EIGENDA_DISPERSER_RPC` | RPC endpoint of the EigenDA disperser. |
-| `--eigenda-eth-confirmation-depth` | `6` | `$EIGENDA_PROXY_ETH_CONFIRMATION_DEPTH` | The number of Ethereum blocks of confirmation that the DA bridging transaction must have before it is assumed by the proxy to be final. If set negative the proxy will always wait for blob finalization. |
+| `--eigenda-eth-confirmation-depth` | `-1` | `$EIGENDA_PROXY_ETH_CONFIRMATION_DEPTH` | The number of Ethereum blocks of confirmation that the DA bridging transaction must have before it is assumed by the proxy to be final. If set negative the proxy will always wait for blob finalization. |
 | `--eigenda-eth-rpc` |  | `$EIGENDA_PROXY_ETH_RPC` | JSON RPC node endpoint for the Ethereum network used for finalizing DA blobs. See available list here: https://docs.eigenlayer.xyz/eigenda/networks/ |
 | `--eigenda-g1-path` | `"resources/g1.point"` | `$EIGENDA_PROXY_TARGET_KZG_G1_PATH` | Directory path to g1.point file. |
 | `--eigenda-g2-tau-path` | `"resources/g2.point.powerOf2"` | `$EIGENDA_PROXY_TARGET_G2_TAU_PATH` | Directory path to g2.point.powerOf2 file. |
@@ -42,6 +43,7 @@ In order to disperse to the EigenDA network in production, or at high throughput
 | `--log.pid` | `false` | `$EIGENDA_PROXY_LOG_PID` | Show pid in the log. |
 | `--memstore.enabled` | `false` | `$MEMSTORE_ENABLED` | Whether to use mem-store for DA logic. |
 | `--memstore.expiration` | `25m0s` | `$MEMSTORE_EXPIRATION` | Duration that a mem-store blob/commitment pair are allowed to live. |
+| `--memstore.fault-config-path` | `""` | `$MEMSTORE_FAULT_CONFIG_PATH` | Path to fault config json file. 
 | `--metrics.addr` | `"0.0.0.0"` | `$EIGENDA_PROXY_METRICS_ADDR` | Metrics listening address. |
 | `--metrics.enabled` | `false` | `$EIGENDA_PROXY_METRICS_ENABLED` | Enable the metrics server. |
 | `--metrics.port` | `7300` | `$EIGENDA_PROXY_METRICS_PORT` | Metrics listening port. |
@@ -59,14 +61,47 @@ In order to disperse to the EigenDA network in production, or at high throughput
 In order for the EigenDA Proxy to avoid a trust assumption on the EigenDA disperser, the proxy offers a DA cert verification feature which ensures that:
 
 1. The DA cert's batch hash can be computed locally and matches the one persisted on-chain in the `ServiceManager` contract
-2. The DA cert's blob inclusion proof can be merkalized to generate the proper batch root
+2. The DA cert's blob inclusion proof can be successfully verified against the blob-batch merkle root
 3. The DA cert's quorum params are adequately defined and expressed when compared to their on-chain counterparts
+4. The DA cert's quorum ids map to valid quorums
 
 To target this feature, use the CLI flags `--eigenda-svc-manager-addr`, `--eigenda-eth-rpc`.
+
+
+#### Soft Confirmations
+
+An optional `--eigenda-eth-confirmation-depth` flag can be provided to specify a number of ETH block confirmations to wait before verifying the blob certificate. This allows for blobs to be accredited upon `confirmation` versus waiting (e.g, 25-30m) for `finalization`. The following integer expressions are supported:
+`-1`: Wait for blob finalization
+`0`: Verify the cert immediately upon blob confirmation and return the blob
+`N where N>0`: Wait `N` blocks before verifying the cert and returning the blob
 
 ### In-Memory Backend
 
 An ephemeral memory store backend can be used for faster feedback testing when testing rollup integrations. To target this feature, use the CLI flags `--memstore.enabled`, `--memstore.expiration`.
+
+
+### Fault Mode
+
+Memstore also supports a configurable fault mode which allows for blob content corruption when reading. This is key for testing sequencer resiliency against incorrect batches as well as testing dispute resolution where an optimistic rollup commitment poster produces a machine state hash irrespective of the actual intended execution.
+
+The configuration lives as a json file with path specified via `--memstore.fault-config-path` CLI flag. It looks like so:
+```
+{
+    "all": {
+        "mode": "honest",
+        "interval": 1
+    },
+    "challenger": {
+        "mode": "byzantine",
+    },
+}
+```
+
+Each key refers to an `actor` with context being shared via the http request and processed accordingly by the server. The following modes are currently supported:
+- `honest`: returns the actual blob contents that were persisted to memory
+- `interval_byzantine`: blob contents are corrupted every `n` of reads
+- `byzantine`: blob contents are corrupted for every read
+
 
 ## Metrics
 

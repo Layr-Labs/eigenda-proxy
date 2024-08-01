@@ -136,12 +136,12 @@ func (e *MemStore) Get(ctx context.Context, commit []byte) ([]byte, error) {
 	}
 
 	switch behavior.Mode {
-		case Honest:
+		case HonestMode:
 			return decodedBlob, nil
-		case Byzantine:
+		case ByzantineFaultMode:
 			return e.corruptBlob(decodedBlob), nil
 
-		case IntervalByzantine:
+		case IntervalByzFaultMode:
 			if (e.reads.ValueUnsignedInt() >= behavior.Interval) && (e.reads.ValueUnsignedInt() % behavior.Interval == 0) {
 				return e.corruptBlob(decodedBlob), nil
 			}
@@ -262,7 +262,7 @@ func (e *MemStore) fetch(commit []byte) ([]byte, error) {
 func (e *MemStore) GetReturnBehavior(ctx context.Context) (*Behavior, error){
 	if e.faultCfg == nil {
 		return &Behavior{
-			Mode: Honest,
+			Mode: HonestMode,
 		}, nil
 	}
 

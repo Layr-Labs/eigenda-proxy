@@ -9,9 +9,9 @@ import (
 type Mode int
 
 const (
-	Honest = iota
-	Byzantine
-	IntervalByzantine
+	HonestMode = iota
+	ByzantineFaultMode
+	IntervalByzFaultMode
 	Unknown
 
 	AllPolicyKey = "all"
@@ -20,11 +20,11 @@ const (
 func StringToMode(s string) Mode {
 	switch s {
 	case "honest":
-		return Honest
+		return HonestMode
 	case "byzantine":
-		return Byzantine
+		return ByzantineFaultMode
 	case "interval_byzantine":
-		return IntervalByzantine
+		return IntervalByzFaultMode
 	default:
 		return Unknown
 	}

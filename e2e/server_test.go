@@ -106,11 +106,11 @@ func TestProxyServerFaultMode(t *testing.T) {
 	fc := &store.FaultConfig{
 		Actors: map[string]store.Behavior{
 			"sequencer": {
-				Mode: store.Honest,
+				Mode: store.HonestMode,
 			},
 
 			"challenger": {
-				Mode: store.Byzantine,
+				Mode: store.ByzantineFaultMode,
 			},
 		},
 	}

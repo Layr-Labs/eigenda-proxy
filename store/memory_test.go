@@ -90,7 +90,7 @@ func TestByzantineReading(t *testing.T) {
 		&FaultConfig{
 			Actors: map[string]Behavior{
 				"all": {
-					Mode:     Byzantine,
+					Mode:     ByzantineFaultMode,
 				},
 			},
 		},
@@ -139,7 +139,7 @@ func TestIntervalByzantineReading(t *testing.T) {
 		&FaultConfig{
 			Actors: map[string]Behavior{
 				"all": {
-					Mode:     IntervalByzantine,
+					Mode:     IntervalByzFaultMode,
 					Interval: 1,
 				},
 			},
