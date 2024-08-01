@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Layr-Labs/eigenda-proxy/utils"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 
@@ -19,14 +20,27 @@ import (
 )
 
 const (
+	MemStoreFlagName   = "memstore.enabled"
+	ExpirationFlagName = "memstore.expiration"
+	FaultFlagName      = "memstore.fault-config"
+
 	DefaultPruneInterval = 500 * time.Millisecond
 )
+
+type MemStoreConfig struct {
+	Enabled              bool
+	BlobExpiration       time.Duration
+	EthConfirmationDepth uint64
+	FaultCfgPath         string
+	FaultCfg             *FaultConfig
+}
 
 // MemStore is a simple in-memory store for blobs which uses an expiration
 // time to evict blobs to best emulate the ephemeral nature of blobs dispersed to
 // EigenDA operators.
 type MemStore struct {
 	sync.RWMutex
+	faultCfg *FaultConfig
 
 	l         log.Logger
 	keyStarts map[string]time.Time
@@ -36,14 +50,15 @@ type MemStore struct {
 
 	maxBlobSizeBytes uint64
 	blobExpiration   time.Duration
-	reads            int
+	reads            *utils.AtomicInt64
 }
 
 var _ Store = (*MemStore)(nil)
 
 // NewMemStore ... constructor
-func NewMemStore(ctx context.Context, verifier *verify.Verifier, l log.Logger, maxBlobSizeBytes uint64, blobExpiration time.Duration) (*MemStore, error) {
+func NewMemStore(ctx context.Context, verifier *verify.Verifier, l log.Logger, maxBlobSizeBytes uint64, blobExpiration time.Duration, fc *FaultConfig) (*MemStore, error) {
 	store := &MemStore{
+		faultCfg:         fc,
 		l:                l,
 		keyStarts:        make(map[string]time.Time),
 		store:            make(map[string][]byte),
@@ -51,14 +66,20 @@ func NewMemStore(ctx context.Context, verifier *verify.Verifier, l log.Logger, m
 		codec:            codecs.NewIFFTCodec(codecs.NewDefaultBlobCodec()),
 		maxBlobSizeBytes: maxBlobSizeBytes,
 		blobExpiration:   blobExpiration,
+		reads: 		  utils.NewAtomicInt64(0),
 	}
 
 	if store.blobExpiration != 0 {
-		l.Info("memstore expiration enabled", "time", store.blobExpiration)
 		go store.EventLoop(ctx)
 	}
 
 	return store, nil
+}
+
+func (e *MemStore) SetFaultConfig(fc *FaultConfig) {
+	e.Lock()
+	defer e.Unlock()
+	e.faultCfg = fc
 }
 
 func (e *MemStore) EventLoop(ctx context.Context) {
@@ -80,12 +101,12 @@ func (e *MemStore) pruneExpired() {
 	e.Lock()
 	defer e.Unlock()
 
-	for commit, dur := range e.keyStarts {
+	for cert, dur := range e.keyStarts {
 		if time.Since(dur) >= e.blobExpiration {
-			delete(e.keyStarts, commit)
-			delete(e.store, commit)
+			delete(e.keyStarts, cert)
+			delete(e.store, cert)
 
-			e.l.Info("blob pruned", "commit", commit)
+			e.l.Info("blob expired and pruned from RAM", "key", fmt.Sprintf("%x", cert))
 		}
 	}
 
@@ -93,29 +114,42 @@ func (e *MemStore) pruneExpired() {
 
 // Get fetches a value from the store.
 func (e *MemStore) Get(ctx context.Context, commit []byte) ([]byte, error) {
-	e.reads += 1
 	e.RLock()
-	defer e.RUnlock()
+	defer func(){
+		e.reads.Increment()
+		e.RUnlock()
+	}()
 
-	var cert verify.Certificate
-	err := rlp.DecodeBytes(commit, &cert)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode DA cert to RLP format: %w", err)
-	}
-
-	var encodedBlob []byte
-	var exists bool
-	if encodedBlob, exists = e.store[string(cert.BlobVerificationProof.InclusionProof)]; !exists {
-		return nil, fmt.Errorf("commitment key not found")
-	}
-
-	// Don't need to do this really since it's a mock store
-	err = e.verifier.VerifyCommitment(cert.BlobHeader.Commitment, encodedBlob)
+	behavior, err := e.GetReturnBehavior(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return e.codec.DecodeBlob(encodedBlob)
+	// iFFT or generic encoded blob
+	encodedBlob, err := e.fetch(commit)
+	if err != nil {
+		return nil, err
+	}
+	decodedBlob, err := e.codec.DecodeBlob(encodedBlob)
+	if err != nil {
+		return nil, err
+	}
+
+	switch behavior.Mode {
+		case HonestMode:
+			return decodedBlob, nil
+		case ByzantineFaultMode:
+			return e.corruptBlob(decodedBlob), nil
+
+		case IntervalByzFaultMode:
+			if (e.reads.ValueUnsignedInt() >= behavior.Interval) && (e.reads.ValueUnsignedInt() % behavior.Interval == 0) {
+				return e.corruptBlob(decodedBlob), nil
+			}
+			return decodedBlob, nil
+
+		default:
+			return nil, fmt.Errorf("unknown fault mode")
+	}
 }
 
 // Put inserts a value into the store.
@@ -138,6 +172,9 @@ func (e *MemStore) Put(ctx context.Context, value []byte) ([]byte, error) {
 	}
 
 	// generate batch header hash
+	// TODO: generate a real batch header hash based on the randomly generated batch header fields
+	// this will be useful in integrations like nitro where the batch header hash isn't persisted to the inbox tx calldata
+	// requiring any actor running canonical derivation to recompute it when querying a blob
 	entropy := make([]byte, 10)
 	_, err = rand.Read(entropy)
 	if err != nil {
@@ -190,7 +227,6 @@ func (e *MemStore) Put(ctx context.Context, value []byte) ([]byte, error) {
 	}
 	// construct key
 	bytesKeys := cert.BlobVerificationProof.InclusionProof
-
 	certStr := string(bytesKeys)
 
 	if _, exists := e.store[certStr]; exists {
@@ -204,11 +240,70 @@ func (e *MemStore) Put(ctx context.Context, value []byte) ([]byte, error) {
 	return certBytes, nil
 }
 
+// fetch reads the actual data from the store
+func (e *MemStore) fetch(commit []byte) ([]byte, error) {
+	var cert verify.Certificate
+	err := rlp.DecodeBytes(commit, &cert)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode DA cert to RLP format: %w", err)
+	}
+
+	bytesKeys := cert.BlobVerificationProof.InclusionProof
+
+	var encodedBlob []byte
+	var exists bool
+	if encodedBlob, exists = e.store[string(bytesKeys)]; !exists {
+		return nil, fmt.Errorf("commitment key not found")
+	}
+	
+	return encodedBlob, nil
+}
+
+func (e *MemStore) GetReturnBehavior(ctx context.Context) (*Behavior, error){
+	if e.faultCfg == nil {
+		return &Behavior{
+			Mode: HonestMode,
+		}, nil
+	}
+
+	actor, ok := ctx.Value("actor").(string)
+	if !ok {
+		actor = ""
+	}
+
+	if actor == "" && !e.faultCfg.AllPolicyExists() {
+		return nil, fmt.Errorf("actor not found in context nor is `all` policy configured")
+	}
+
+	if actor == "" {
+		actor = AllPolicyKey
+	}
+
+	 behavior, exists := e.faultCfg.Actors[actor]
+	 
+	 if !exists {
+		return nil, fmt.Errorf("actor not found in fault config")
+	}
+
+	return &behavior, nil
+}
+
+func (e *MemStore) corruptBlob(b []byte) []byte {
+		// flip 3 bits in the blob to corrupt the original data
+		b[0] = ^b[0]
+		mid := len(b) / 2
+		b[mid] = ^b[mid]
+		end := len(b) - 1
+		b[end] = ^b[end]
+		return b
+}
+
+
 func (e *MemStore) Stats() *Stats {
 	e.RLock()
 	defer e.RUnlock()
 	return &Stats{
-		Entries: len(e.store),
-		Reads:   e.reads,
+		Entries: uint(len(e.store)),
+		Reads:   e.reads.ValueUnsignedInt(),
 	}
 }

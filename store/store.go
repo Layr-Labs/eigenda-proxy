@@ -4,8 +4,8 @@ import "context"
 
 
 type Stats struct {
-	Entries int
-	Reads   int
+	Entries uint
+	Reads   uint
 }
 
 type Store interface {

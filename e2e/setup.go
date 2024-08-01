@@ -37,7 +37,7 @@ type TestSuite struct {
 	Server *server.Server
 }
 
-func CreateTestSuite(t *testing.T, useMemory bool, useS3 bool) (TestSuite, func()) {
+func CreateTestSuite(t *testing.T, useMemory bool, useS3 bool, fc *store.FaultConfig) (TestSuite, func()) {
 
 	ctx := context.Background()
 
@@ -122,6 +122,11 @@ func CreateTestSuite(t *testing.T, useMemory bool, useS3 bool) (TestSuite, func(
 		ctx,
 		log,
 	)
+
+	if fc != nil {
+		store.GetMemStore().SetFaultConfig(fc)
+	}
+
 	require.NoError(t, err)
 	server := server.NewServer(host, 0, store, log, metrics.NoopMetrics)
 
@@ -164,10 +169,8 @@ func createS3Bucket(bucketName string) {
 		panic(err)
 	}
 
-	location := "us-east-1"
-
 	ctx := context.Background()
-	err = minioClient.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{Region: location})
+	err = minioClient.MakeBucket(ctx, bucketName, minio.MakeBucketOptions{Region: "us-east-1"})
 	if err != nil {
 		// Check to see if we already own this bucket (which happens if you run this twice)
 		exists, errBucketExists := minioClient.BucketExists(ctx, bucketName)

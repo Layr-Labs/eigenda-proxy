@@ -26,7 +26,7 @@ type Config struct {
 
 type Verifier struct {
 	verifyCert bool
-	kzgProver     *prover.Prover
+	kzgProver  *prover.Prover
 	cv         *CertVerifier
 }
 

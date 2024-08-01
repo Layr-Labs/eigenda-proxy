@@ -9,6 +9,7 @@ import (
 
 	"github.com/Layr-Labs/eigenda-proxy/client"
 	"github.com/Layr-Labs/eigenda-proxy/e2e"
+	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/utils"
 	op_plasma "github.com/ethereum-optimism/optimism/op-plasma"
 	"github.com/stretchr/testify/require"
@@ -25,7 +26,7 @@ func TestOptimismClientWithS3Backend(t *testing.T) {
 
 	t.Parallel()
 
-	ts, kill := e2e.CreateTestSuite(t, useMemory(), true)
+	ts, kill := e2e.CreateTestSuite(t, useMemory(), true, nil)
 	defer kill()
 
 	daClient := op_plasma.NewDAClient(ts.Address(), false, true)
@@ -49,7 +50,7 @@ func TestOptimismClientWithEigenDABackend(t *testing.T) {
 
 	t.Parallel()
 
-	ts, kill := e2e.CreateTestSuite(t, useMemory(), true)
+	ts, kill := e2e.CreateTestSuite(t, useMemory(), true, nil)
 	defer kill()
 
 	daClient := op_plasma.NewDAClient(ts.Address(), false, false)
@@ -73,7 +74,7 @@ func TestProxyClient(t *testing.T) {
 
 	t.Parallel()
 
-	ts, kill := e2e.CreateTestSuite(t, useMemory(), false)
+	ts, kill := e2e.CreateTestSuite(t, useMemory(), false, nil)
 	defer kill()
 
 	cfg := &client.Config{
@@ -93,6 +94,57 @@ func TestProxyClient(t *testing.T) {
 	require.Equal(t, testPreimage, preimage)
 }
 
+func TestProxyServerFaultMode(t *testing.T) {
+	if !runIntegrationTests {
+		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	}
+
+	if runTestnetIntegrationTests {
+		t.Skip("Skipping test since fault mode is only supported for memstore implementations")
+	}
+
+	fc := &store.FaultConfig{
+		Actors: map[string]store.Behavior{
+			"sequencer": {
+				Mode: store.HonestMode,
+			},
+
+			"challenger": {
+				Mode: store.ByzantineFaultMode,
+			},
+		},
+	}
+
+	ts, kill := e2e.CreateTestSuite(t, useMemory(), false, fc)
+	defer kill()
+
+	cfg := &client.Config{
+		Actor: "sequencer",
+		URL:   ts.Address(),
+	}
+	sequencerClient := client.New(cfg)
+
+	cfg2 := &client.Config{
+		Actor: "challenger",
+		URL:   ts.Address(),
+	}
+	challengerClient := client.New(cfg2)
+
+	var testPreimage = []byte("inter-subjective and not objective!")
+
+	blobInfo, err := sequencerClient.SetData(ts.Ctx, testPreimage)
+	require.NoError(t, err)
+
+	preimage, err := sequencerClient.GetData(ts.Ctx, blobInfo)
+	require.NoError(t, err)
+	require.Equal(t, testPreimage, preimage)
+
+	preimage, err = challengerClient.GetData(ts.Ctx, blobInfo)
+	require.NoError(t, err)
+	require.NotEqual(t, testPreimage, preimage)
+
+}
+
 func TestProxyClientWithLargeBlob(t *testing.T) {
 	if !runIntegrationTests && !runTestnetIntegrationTests {
 		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
@@ -100,7 +152,7 @@ func TestProxyClientWithLargeBlob(t *testing.T) {
 
 	t.Parallel()
 
-	ts, kill := e2e.CreateTestSuite(t, useMemory(), false)
+	ts, kill := e2e.CreateTestSuite(t, useMemory(), false, nil)
 	defer kill()
 
 	cfg := &client.Config{
@@ -127,15 +179,15 @@ func TestProxyClientWithOversizedBlob(t *testing.T) {
 
 	t.Parallel()
 
-	ts, kill := e2e.CreateTestSuite(t, useMemory(), false)
+	ts, kill := e2e.CreateTestSuite(t, useMemory(), false, nil)
 	defer kill()
 
 	cfg := &client.Config{
 		URL: ts.Address(),
 	}
 	daClient := client.New(cfg)
-	//  2MB blob
-	testPreimage := []byte(e2e.RandString(200000000))
+	//  32MB blob
+	testPreimage := []byte(e2e.RandString(32_0000_000))
 
 	t.Log("Setting input data on proxy server...")
 	blobInfo, err := daClient.SetData(ts.Ctx, testPreimage)
@@ -143,11 +195,8 @@ func TestProxyClientWithOversizedBlob(t *testing.T) {
 	require.Error(t, err)
 
 	oversizedError := false
-	if strings.Contains(err.Error(), "blob is larger than max blob size") {
-		oversizedError = true
-	}
-
-	if strings.Contains(err.Error(), "blob size cannot exceed 2 MiB") {
+	if strings.Contains(err.Error(), "blob is larger than max blob size") || 
+		strings.Contains(err.Error(), "blob size cannot exceed") {
 		oversizedError = true
 	}
 
@@ -156,12 +205,13 @@ func TestProxyClientWithOversizedBlob(t *testing.T) {
 }
 
 func TestProxyClient_MultiSameContentBlobs_SameBatch(t *testing.T) {
-	t.Skip("Skipping test until fix is applied to holesky")
-
+	if !runIntegrationTests && !runTestnetIntegrationTests {
+		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	}
 
 	t.Parallel()
 
-	ts, kill := e2e.CreateTestSuite(t, useMemory(), false)
+	ts, kill := e2e.CreateTestSuite(t, useMemory(), false, nil)
 	defer kill()
 
 	cfg := &client.Config{
@@ -171,7 +221,7 @@ func TestProxyClient_MultiSameContentBlobs_SameBatch(t *testing.T) {
 	errChan := make(chan error, 10)
 	var wg sync.WaitGroup
 
-	// disperse 10 blobs with the same content in the same batch
+	// disperse 10 blobs with the same content into the same batch
 	for i := 0; i < 4; i ++ {
 		wg.Add(1)
 		go func(){

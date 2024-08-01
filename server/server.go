@@ -144,12 +144,18 @@ func (svr *Server) Health(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (svr *Server) HandleGet(w http.ResponseWriter, r *http.Request) error {
-
+	ctx := context.Background()
 	ct, err := ReadCommitmentMode(r)
 	if err != nil {
 		svr.WriteBadRequest(w, invalidCommitmentMode)
 		return err
 	}
+
+	actor := ReadActor(r)
+	if actor != "" {
+		ctx = context.WithValue(ctx, "actor", actor)
+	}
+
 	key := path.Base(r.URL.Path)
 	comm, err := commitments.StringToDecodedCommitment(key, ct)
 	if err != nil {
@@ -158,7 +164,7 @@ func (svr *Server) HandleGet(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 
-	input, err := svr.router.Get(r.Context(), comm, ct)
+	input, err := svr.router.Get(ctx, comm, ct)
 	if err != nil && errors.Is(err, ErrNotFound) {
 		svr.WriteNotFound(w, err.Error())
 		return err
@@ -245,6 +251,11 @@ func (svr *Server) WriteNotFound(w http.ResponseWriter, msg string) {
 func (svr *Server) WriteBadRequest(w http.ResponseWriter, msg string) {
 	svr.log.Info("bad request", "msg", msg)
 	w.WriteHeader(http.StatusBadRequest)
+}
+
+func ReadActor(r *http.Request) string {
+	query := r.URL.Query()
+	return query.Get("actor")
 }
 
 func (svr *Server) Port() int {

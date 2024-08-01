@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"math"
 	"runtime"
 	"time"
 
@@ -30,12 +29,15 @@ const (
 	PutBlobEncodingVersionFlagName       = "eigenda-put-blob-encoding-version"
 	DisablePointVerificationModeFlagName = "eigenda-disable-point-verification-mode"
 	// Kzg flags
-	G1PathFlagName             = "eigenda-g1-path"
-	G2TauFlagName              = "eigenda-g2-tau-path"
-	CachePathFlagName          = "eigenda-cache-path"
-	MaxBlobLengthFlagName      = "eigenda-max-blob-length"
+	G1PathFlagName        = "eigenda-g1-path"
+	G2TauFlagName         = "eigenda-g2-tau-path"
+	CachePathFlagName     = "eigenda-cache-path"
+	MaxBlobLengthFlagName = "eigenda-max-blob-length"
+
+	// Memstore flags
 	MemstoreFlagName           = "memstore.enabled"
 	MemstoreExpirationFlagName = "memstore.expiration"
+	FaultConfigPath            = "memstore.fault-config-path"
 	// S3 flags
 	S3CredentialTypeFlagName  = "s3.credential-type" // #nosec G101
 	S3BucketFlagName          = "s3.bucket"          // #nosec G101
@@ -48,7 +50,7 @@ const (
 const BytesPerSymbol = 31
 const MaxCodingRatio = 8
 
-var MaxSRSPoints = math.Pow(2, 28)
+var MaxSRSPoints = 1 << 28 // 2^28
 
 var MaxAllowedBlobSize = uint64(MaxSRSPoints * BytesPerSymbol / MaxCodingRatio)
 
@@ -67,17 +69,19 @@ type Config struct {
 
 	// KZG vars
 	CacheDir string
-	G1Path   string
-	G2Path   string
+	G1Path string
+	G2Path string
+	G2PowerOfTauPath string
 
+	// Size constraints
 	MaxBlobLength      string
 	maxBlobLengthBytes uint64
 
-	G2PowerOfTauPath string
 
-	// Memstore Config params
+	// Memstore
 	MemstoreEnabled        bool
 	MemstoreBlobExpiration time.Duration
+	FaultConfigPath        string
 }
 
 func (c *Config) GetMaxBlobLength() (uint64, error) {
@@ -88,7 +92,7 @@ func (c *Config) GetMaxBlobLength() (uint64, error) {
 		}
 
 		if numBytes > MaxAllowedBlobSize {
-			return 0, fmt.Errorf("excluding disperser constraints on max blob size, SRS points constrain the maxBlobLength configuration parameter to be less than than ~1 GB (%d bytes)", MaxAllowedBlobSize)
+			return 0, fmt.Errorf("excluding disperser constraints on max blob size, SRS points constrain the maxBlobLength configuration parameter to be less than than %d bytes", MaxAllowedBlobSize)
 		}
 
 		c.maxBlobLengthBytes = numBytes
@@ -100,7 +104,7 @@ func (c *Config) GetMaxBlobLength() (uint64, error) {
 func (c *Config) VerificationCfg() *verify.Config {
 	numBytes, err := c.GetMaxBlobLength()
 	if err != nil {
-		panic(fmt.Errorf("Check() was not called on config object, err is not nil: %w", err))
+		panic(fmt.Errorf("failed to read max blob length: %w", err))
 	}
 
 	kzgCfg := &kzg.KzgConfig{
@@ -129,7 +133,7 @@ func (c *Config) VerificationCfg() *verify.Config {
 
 }
 
-// NewConfig parses the Config from the provided flags or environment variables.
+// ReadConfig parses the Config from the provided flags or environment variables.
 func ReadConfig(ctx *cli.Context) Config {
 	cfg := Config{
 		S3Config: store.S3Config{
@@ -160,6 +164,7 @@ func ReadConfig(ctx *cli.Context) Config {
 		EthConfirmationDepth:   ctx.Int64(EthConfirmationDepthFlagName),
 		MemstoreEnabled:        ctx.Bool(MemstoreFlagName),
 		MemstoreBlobExpiration: ctx.Duration(MemstoreExpirationFlagName),
+		FaultConfigPath:        ctx.String(FaultConfigPath),
 	}
 	cfg.ClientConfig.WaitForFinalization = (cfg.EthConfirmationDepth < 0)
 
@@ -323,6 +328,11 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			Usage:   "Duration that a mem-store blob/commitment pair are allowed to live.",
 			Value:   25 * time.Minute,
 			EnvVars: []string{"MEMSTORE_EXPIRATION"},
+		},
+		&cli.StringFlag{
+			Name:    FaultConfigPath,
+			Usage:   "Path to the fault configuration file.",
+			EnvVars: []string{"MEMSTORE_FAULT_CONFIG_PATH"},
 		},
 		&cli.StringFlag{
 			Name:    S3CredentialTypeFlagName,

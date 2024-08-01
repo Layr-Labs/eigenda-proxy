@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/verify"
@@ -23,15 +24,13 @@ func LoadStoreRouter(cfg CLIConfig, ctx context.Context, log log.Logger) (*store
 	daCfg := cfg.EigenDAConfig
 	vCfg := daCfg.VerificationCfg()
 
+	if cfg.EigenDAConfig.MemstoreEnabled {
+		vCfg.Verify = false
+	}
+
 	verifier, err := verify.NewVerifier(vCfg, log)
 	if err != nil {
 		return nil, err
-	}
-
-	if vCfg.Verify {
-		log.Info("Certificate verification with Ethereum enabled")
-	} else {
-		log.Warn("Verification disabled")
 	}
 
 	maxBlobLength, err := daCfg.GetMaxBlobLength()
@@ -40,13 +39,33 @@ func LoadStoreRouter(cfg CLIConfig, ctx context.Context, log log.Logger) (*store
 	}
 	var memstore *store.MemStore
 	if cfg.EigenDAConfig.MemstoreEnabled {
-		log.Info("Using memstore backend for eigenda")
-		memstore, err = store.NewMemStore(ctx, verifier, log, maxBlobLength, cfg.EigenDAConfig.MemstoreBlobExpiration)
+		faultMode := cfg.EigenDAConfig.FaultConfigPath != ""
+		expiration := cfg.EigenDAConfig.MemstoreBlobExpiration
+
+		log.Info("Using memstore backend", "fault_mode", faultMode, "expiration", expiration.String())
+		var fc *store.FaultConfig
+
+		if faultMode {
+			faultCfg, err := store.LoadFaultConfig(cfg.EigenDAConfig.FaultConfigPath)
+			if err != nil {
+				panic(fmt.Errorf("failed to load fault config: %w", err))
+			}
+
+			fc = faultCfg
+		}
+
+		memstore, err = store.NewMemStore(ctx, verifier, log, maxBlobLength, expiration, fc)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		log.Info("Using EigenDA backend")
+	}
+
+	if vCfg.Verify {
+		log.Info("Certificate verification with Ethereum enabled")
+	} else {
+		log.Warn("Verification disabled")
 	}
 
 	client, err := clients.NewEigenDAClient(log, daCfg.ClientConfig)
