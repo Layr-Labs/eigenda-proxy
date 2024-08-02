@@ -15,39 +15,42 @@ LDFLAGS := -ldflags "$(LDFLAGSSTRING)"
 E2ETEST = INTEGRATION=true go test -timeout 1m -v ./e2e -parallel 4 -deploy-config ../.devnet/devnetL1.json
 HOLESKYTEST = TESTNET=true go test -timeout 50m -v ./e2e  -parallel 4 -deploy-config ../.devnet/devnetL1.json
 
+help: ## Prints this help message
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
+
 .PHONY: eigenda-proxy
-eigenda-proxy:
+eigenda-proxy: ## Builds the eigenda-proxy binary
 	env GO111MODULE=on GOOS=$(TARGETOS) GOARCH=$(TARGETARCH) go build -v $(LDFLAGS) -o ./bin/eigenda-proxy ./cmd/server
 
 .PHONY: docker-build
-docker-build:
+docker-build: ## Builds eigenda-proxy Docker image
 	@docker build -t $(APP_NAME) .
 
-run-minio:
+run-minio: ## Runs Minio server in Docker
 	docker run -p 4566:9000 -d -e "MINIO_ROOT_USER=minioadmin" -e "MINIO_ROOT_PASSWORD=minioadmin" --name minio minio/minio server /data
 
-stop-minio:
+stop-minio: ## Stops and removes Minio Docker container
 	docker stop minio && docker rm minio
 
-run-server:
+run-server: ## Runs the eigenda-proxy server
 	./bin/eigenda-proxy
 
-clean:
+clean: ## Cleans up built eigenda-proxy binary under folder bin/
 	rm bin/eigenda-proxy
 
-test:
+test: ## Runs tests
 	go test -v ./... -parallel 4 
 
-e2e-test: run-minio
+e2e-test: run-minio ## Runs end-to-end tests
 	$(E2ETEST) && \
 	make stop-minio
 
-holesky-test: run-minio
+holesky-test: run-minio ## Runs holesky tests
 	$(HOLESKYTEST) && \
 	make stop-minio
 
 .PHONY: lint
-lint:
+lint: ## Lints the code
 	@if ! test -f  &> /dev/null; \
 	then \
     	echo "golangci-lint command could not be found...."; \
@@ -58,14 +61,14 @@ lint:
 
 	@golangci-lint run
 
-gosec:
+gosec: ## Runs gosec security scanner
 	@echo "Running security scan with gosec..."
 	gosec ./...
 
-submodules:
+submodules: ## Updates git submodules
 	git submodule update --init --recursive
 
-op-devnet-allocs:
+op-devnet-allocs: ## Generates devnet allocations
 	@echo "Generating devnet allocs..."
 	@./scripts/op-devnet-allocs.sh
 
