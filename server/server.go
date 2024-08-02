@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/pprof"
 	"path"
 	"strconv"
 	"time"
@@ -34,7 +35,14 @@ const (
 	CommitmentModeKey = "commitment_mode"
 )
 
+type SvrConfig struct {
+	Host string
+	Port int
+	PPROF bool
+}
+
 type Server struct {
+	pprof 	   bool
 	log        log.Logger
 	endpoint   string
 	router      *store.Router
@@ -44,9 +52,10 @@ type Server struct {
 	listener   net.Listener
 }
 
-func NewServer(host string, port int, router *store.Router, log log.Logger, m metrics.Metricer) *Server {
-	endpoint := net.JoinHostPort(host, strconv.Itoa(port))
+func NewServer(cfg *SvrConfig, router *store.Router, log log.Logger, m metrics.Metricer) *Server {
+	endpoint := net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))
 	return &Server{
+		pprof:   cfg.PPROF,
 		m:        m,
 		log:      log,
 		endpoint: endpoint,
@@ -88,6 +97,16 @@ func (svr *Server) Start() error {
 	mux.HandleFunc(GetRoute, WithLogging(WithMetrics(svr.HandleGet, svr.m), svr.log))
 	mux.HandleFunc(PutRoute, WithLogging(WithMetrics(svr.HandlePut, svr.m), svr.log))
 	mux.HandleFunc("/health", WithLogging(svr.Health, svr.log))
+
+	// pprof routes
+	if svr.pprof {
+		svr.log.Warn("pprof debugging routes are enabled. these should not be enabled in production environments.")
+		mux.HandleFunc("/debug/pprof/", pprof.Index)
+		mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+		mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	}
 
 	svr.httpServer.Handler = mux
 

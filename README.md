@@ -19,6 +19,7 @@ In order to disperse to the EigenDA network in production, or at high throughput
 ## Configuration Options
 | Option | Default Value | Environment Variable | Description |
 |--------|---------------|----------------------|-------------|
+| `--enable-pprof` | `false` | `$EIGENDA_PROXY_ENABLE_PPROF` | Enable pprof profiling for http server. |
 | `--addr` | `"127.0.0.1"` | `$EIGENDA_PROXY_ADDR` | Server listening address |
 | `--eigenda-cache-path` | `"resources/SRSTables/"` | `$EIGENDA_PROXY_TARGET_CACHE_PATH` | Directory path to SRS tables for caching. |
 | `--eigenda-custom-quorum-ids` |  | `$EIGENDA_PROXY_CUSTOM_QUORUM_IDS` | Custom quorum IDs for writing blobs. Should not include default quorums 0 or 1. |

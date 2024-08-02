@@ -34,7 +34,8 @@ func StartProxySvr(cliCtx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create store: %w", err)
 	}
-	server := server.NewServer(cliCtx.String(server.ListenAddrFlagName), cliCtx.Int(server.PortFlagName), daRouter, log, m)
+
+	server := server.NewServer(svrConfig(cliCtx), daRouter, log, m)
 
 	if err := server.Start(); err != nil {
 		return fmt.Errorf("failed to start the DA server")
@@ -68,4 +69,13 @@ func StartProxySvr(cliCtx *cli.Context) error {
 	opio.BlockOnInterrupts()
 
 	return nil
+}
+
+
+func svrConfig(cliCtx *cli.Context) *server.SvrConfig {
+	return &server.SvrConfig{
+		Host: 	cliCtx.String(server.ListenAddrFlagName),
+		Port:   cliCtx.Int(server.PortFlagName),
+		PPROF:  cliCtx.Bool(server.EnablePPROFFlagName),
+	}
 }

@@ -17,10 +17,16 @@ import (
 )
 
 const (
+	// Server flags
+	EnablePPROFFlagName = "enable-pprof"
+
+	// Cert verification <-> soft confirmation flags
 	EigenDADisperserRPCFlagName          = "eigenda-disperser-rpc"
 	EthRPCFlagName                       = "eigenda-eth-rpc"
 	SvcManagerAddrFlagName               = "eigenda-svc-manager-addr"
 	EthConfirmationDepthFlagName         = "eigenda-eth-confirmation-depth"
+
+	// EigenDA client flags
 	StatusQueryRetryIntervalFlagName     = "eigenda-status-query-retry-interval"
 	StatusQueryTimeoutFlagName           = "eigenda-status-query-timeout"
 	DisableTlsFlagName                   = "eigenda-disable-tls"
@@ -53,11 +59,12 @@ var MaxSRSPoints = math.Pow(2, 28)
 var MaxAllowedBlobSize = uint64(MaxSRSPoints * BytesPerSymbol / MaxCodingRatio)
 
 type Config struct {
+	// Server vars
+	EnablePPROF bool
+
+	// Client vars 
 	S3Config store.S3Config
-
 	ClientConfig clients.EigenDAClientConfig
-
-	// The blob encoding version to use when writing blobs from the high level interface.
 	PutBlobEncodingVersion codecs.BlobEncodingVersion
 
 	// ETH vars
@@ -129,6 +136,7 @@ func (c *Config) VerificationCfg() *verify.Config {
 
 }
 
+
 // NewConfig parses the Config from the provided flags or environment variables.
 func ReadConfig(ctx *cli.Context) Config {
 	cfg := Config{
@@ -158,6 +166,7 @@ func ReadConfig(ctx *cli.Context) Config {
 		SvcManagerAddr:         ctx.String(SvcManagerAddrFlagName),
 		EthRPC:                 ctx.String(EthRPCFlagName),
 		EthConfirmationDepth:   ctx.Int64(EthConfirmationDepthFlagName),
+		EnablePPROF: 		    ctx.Bool(EnablePPROFFlagName),
 		MemstoreEnabled:        ctx.Bool(MemstoreFlagName),
 		MemstoreBlobExpiration: ctx.Duration(MemstoreExpirationFlagName),
 	}
@@ -200,8 +209,10 @@ func (cfg *Config) Check() error {
 		return fmt.Errorf("eth confirmation depth is set for certificate verification, but Eth RPC or SvcManagerAddr is not set")
 	}
 
-	if cfg.S3Config.S3CredentialType == store.S3CredentialUnknown {
+	if (cfg.S3Config.S3CredentialType == store.S3CredentialUnknown) {
+		if (cfg.S3Config.Bucket != "" || cfg.S3Config.Path != "" || cfg.S3Config.Endpoint != "" || cfg.S3Config.AccessKeyID != "" || cfg.S3Config.AccessKeySecret != "") {
 		return fmt.Errorf("s3 credential type must be set")
+		}
 	}
 	if cfg.S3Config.S3CredentialType == store.S3CredentialStatic {
 		if cfg.S3Config.Endpoint != "" && (cfg.S3Config.AccessKeyID == "" || cfg.S3Config.AccessKeySecret == "") {
@@ -221,6 +232,11 @@ func CLIFlags(envPrefix string) []cli.Flag {
 		return opservice.PrefixEnvVar(envPrefix, name)
 	}
 	return []cli.Flag{
+		&cli.BoolFlag{
+			Name:    EnablePPROFFlagName,
+			Usage:   "Enable pprof endpoints.",
+			EnvVars: prefixEnvVars("ENABLE_PPROF"),
+		},
 		&cli.StringFlag{
 			Name:    EigenDADisperserRPCFlagName,
 			Usage:   "RPC endpoint of the EigenDA disperser.",

@@ -123,7 +123,13 @@ func CreateTestSuite(t *testing.T, useMemory bool, useS3 bool) (TestSuite, func(
 		log,
 	)
 	require.NoError(t, err)
-	server := server.NewServer(host, 0, store, log, metrics.NoopMetrics)
+
+	svrCfg := &server.SvrConfig{
+		Host: host,
+		Port:       0,
+		PPROF: false,
+	}
+	server := server.NewServer(svrCfg, store, log, metrics.NoopMetrics)
 
 	t.Log("Starting proxy server...")
 	err = server.Start()
