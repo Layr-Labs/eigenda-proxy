@@ -134,8 +134,8 @@ func TestProxyClientWithOversizedBlob(t *testing.T) {
 		URL: ts.Address(),
 	}
 	daClient := client.New(cfg)
-	//  2MB blob
-	testPreimage := []byte(e2e.RandString(200000000))
+	//  5MB blob
+	testPreimage := []byte(e2e.RandString(5_000_0000))
 
 	t.Log("Setting input data on proxy server...")
 	blobInfo, err := daClient.SetData(ts.Ctx, testPreimage)
@@ -147,7 +147,7 @@ func TestProxyClientWithOversizedBlob(t *testing.T) {
 		oversizedError = true
 	}
 
-	if strings.Contains(err.Error(), "blob size cannot exceed 2 MiB") {
+	if strings.Contains(err.Error(), "blob size cannot exceed") {
 		oversizedError = true
 	}
 
