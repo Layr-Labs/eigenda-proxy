@@ -43,6 +43,8 @@ const (
 	S3EndpointFlagName        = "s3.endpoint"
 	S3AccessKeyIDFlagName     = "s3.access-key-id"     // #nosec G101
 	S3AccessKeySecretFlagName = "s3.access-key-secret" // #nosec G101
+	S3BackupFlagName          = "s3.backup"
+	S3TimeoutFlagName         = "s3.timeout"
 )
 
 const BytesPerSymbol = 31
@@ -139,6 +141,8 @@ func ReadConfig(ctx *cli.Context) Config {
 			Endpoint:         ctx.String(S3EndpointFlagName),
 			AccessKeyID:      ctx.String(S3AccessKeyIDFlagName),
 			AccessKeySecret:  ctx.String(S3AccessKeySecretFlagName),
+			Backup:           ctx.Bool(S3BackupFlagName),
+			Timeout:          ctx.Duration(S3TimeoutFlagName),
 		},
 		ClientConfig: clients.EigenDAClientConfig{
 			RPC:                          ctx.String(EigenDADisperserRPCFlagName),
@@ -199,7 +203,7 @@ func (cfg *Config) Check() error {
 	if cfg.EthConfirmationDepth >= 0 && (cfg.SvcManagerAddr == "" || cfg.EthRPC == "") {
 		return fmt.Errorf("eth confirmation depth is set for certificate verification, but Eth RPC or SvcManagerAddr is not set")
 	}
-
+	
 	if cfg.S3Config.S3CredentialType == store.S3CredentialUnknown {
 		return fmt.Errorf("s3 credential type must be set")
 	}
@@ -355,6 +359,18 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			Usage:   "access key secret for S3 storage",
 			Value:   "",
 			EnvVars: prefixEnvVars("S3_ACCESS_KEY_SECRET"),
+		},
+		&cli.BoolFlag{
+			Name:    S3BackupFlagName,
+			Usage:   "Backup to S3 in parallel with Eigenda.",
+			Value:   false,
+			EnvVars: prefixEnvVars("S3_BACKUP"),
+		},
+		&cli.StringFlag{
+			Name:    S3TimeoutFlagName,
+			Usage:   "S3 timeout",
+			Value:   "60s",
+			EnvVars: prefixEnvVars("S3_TIMEOUT"),
 		},
 	}
 }
