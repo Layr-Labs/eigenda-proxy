@@ -10,6 +10,7 @@ import (
 	"net/http/pprof"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
@@ -279,6 +280,10 @@ func ReadCommitmentMode(r *http.Request) (commitments.CommitmentMode, error) {
 	if key == "" { // default
 		commit := path.Base(r.URL.Path)
 		if len(commit) > 0 && commit != "put" { // provided commitment in request params
+			if !strings.HasPrefix(commit, "0x") {
+				commit = "0x" + commit
+			}
+
 			decodedCommit, err := hexutil.Decode(commit)
 			if err != nil {
 				return commitments.SimpleCommitmentMode, err
