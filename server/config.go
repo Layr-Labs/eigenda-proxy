@@ -49,6 +49,8 @@ const (
 	S3EndpointFlagName        = "s3.endpoint"
 	S3AccessKeyIDFlagName     = "s3.access-key-id"     // #nosec G101
 	S3AccessKeySecretFlagName = "s3.access-key-secret" // #nosec G101
+	S3BackupFlagName          = "s3.backup"
+	S3TimeoutFlagName         = "s3.timeout"
 )
 
 const BytesPerSymbol = 31
@@ -147,6 +149,8 @@ func ReadConfig(ctx *cli.Context) Config {
 			Endpoint:         ctx.String(S3EndpointFlagName),
 			AccessKeyID:      ctx.String(S3AccessKeyIDFlagName),
 			AccessKeySecret:  ctx.String(S3AccessKeySecretFlagName),
+			Backup:           ctx.Bool(S3BackupFlagName),
+			Timeout:          ctx.Duration(S3TimeoutFlagName),
 		},
 		ClientConfig: clients.EigenDAClientConfig{
 			RPC:                          ctx.String(EigenDADisperserRPCFlagName),
@@ -211,7 +215,7 @@ func (cfg *Config) Check() error {
 
 	if (cfg.S3Config.S3CredentialType == store.S3CredentialUnknown) {
 		if (cfg.S3Config.Bucket != "" || cfg.S3Config.Path != "" || cfg.S3Config.Endpoint != "" || cfg.S3Config.AccessKeyID != "" || cfg.S3Config.AccessKeySecret != "") {
-		return fmt.Errorf("s3 credential type must be set")
+			return fmt.Errorf("s3 credential type must be set")
 		}
 	}
 	if cfg.S3Config.S3CredentialType == store.S3CredentialStatic {
@@ -343,16 +347,19 @@ func CLIFlags(envPrefix string) []cli.Flag {
 		&cli.StringFlag{
 			Name:    S3CredentialTypeFlagName,
 			Usage:   "The way to authenticate to S3, options are [iam, static]",
+			Value:  "",
 			EnvVars: prefixEnvVars("S3_CREDENTIAL_TYPE"),
 		},
 		&cli.StringFlag{
 			Name:    S3BucketFlagName,
 			Usage:   "bucket name for S3 storage",
+			Value:   "",
 			EnvVars: prefixEnvVars("S3_BUCKET"),
 		},
 		&cli.StringFlag{
 			Name:    S3PathFlagName,
 			Usage:   "path for S3 storage",
+			Value:   "",
 			EnvVars: prefixEnvVars("S3_PATH"),
 		},
 		&cli.StringFlag{
@@ -371,6 +378,18 @@ func CLIFlags(envPrefix string) []cli.Flag {
 			Usage:   "access key secret for S3 storage",
 			Value:   "",
 			EnvVars: prefixEnvVars("S3_ACCESS_KEY_SECRET"),
+		},
+		&cli.BoolFlag{
+			Name:    S3BackupFlagName,
+			Usage:   "Backup to S3 in parallel with Eigenda.",
+			Value:   false,
+			EnvVars: prefixEnvVars("S3_BACKUP"),
+		},
+		&cli.StringFlag{
+			Name:    S3TimeoutFlagName,
+			Usage:   "S3 timeout",
+			Value:   "60s",
+			EnvVars: prefixEnvVars("S3_TIMEOUT"),
 		},
 	}
 }

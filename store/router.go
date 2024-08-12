@@ -54,9 +54,19 @@ func (r *Router) Get(ctx context.Context, key []byte, cm commitments.CommitmentM
 			r.log.Debug("Retrieving data from memstore")
 			return r.mem.Get(ctx, key)
 		}
-
-		r.log.Debug("Retrieving data from eigenda")
-		return r.eigenda.Get(ctx, key)
+		data, err := r.eigenda.Get(ctx, key)
+		if err != nil && r.s3 != nil && r.s3.cfg.Backup {
+			r.log.Warn("Retrieving data from S3 because of EigenDA read failure", "key", crypto.Keccak256(key), "err", err)
+			ctx2, cancel := context.WithTimeout(ctx, r.s3.cfg.Timeout)
+			defer cancel()
+			value, err := r.s3.Get(ctx2, crypto.Keccak256(key))
+			if err != nil {
+				return nil, err
+			}
+			r.log.Info("Got data from S3 now verifying")
+			return r.eigenda.EncodeAndVerify(ctx, key, value)
+		}
+		return data, err
 
 	default:
 		return nil, errors.New("could not determine which storage backend to route to based on unknown commitment mode")
@@ -87,8 +97,23 @@ func (r *Router) PutWithoutKey(ctx context.Context, value []byte) (key []byte, e
 	}
 
 	if r.eigenda != nil {
-		r.log.Debug("Storing data to eigenda backend")
-		return r.eigenda.Put(ctx, value)
+		r.log.Info("Storing data to eigenda backend")
+		//blob's commitment is verified and returned
+		result, err := r.eigenda.Put(ctx, value)
+		if err == nil {
+			if r.s3 != nil && r.s3.cfg.Backup {
+				//we make a keccak of the commitment so that we get 32bytes (valid s3 key)
+				key := crypto.Keccak256(result)
+				r.log.Info("Storing data to S3 backend with key", "key", key)
+				ctx2, cancel := context.WithTimeout(ctx, r.s3.cfg.Timeout)
+				defer cancel()
+				err = r.s3.Put(ctx2, key, value)
+				if err != nil {
+					return nil, err
+				}
+			}
+		}
+		return result, err
 	}
 
 	if r.s3 != nil {
