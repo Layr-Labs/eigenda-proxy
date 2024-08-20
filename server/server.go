@@ -72,9 +72,11 @@ func WithMetrics(handleFn func(http.ResponseWriter, *http.Request) error,
 		// we want to group all requests by commitment header, otherwise the prometheus metric labels will explode
 		commitmentHeader := r.URL.Path[:3]
 		recordDur := m.RecordRPCServerRequest(commitmentHeader)
-		defer recordDur()
 
-		return handleFn(w, r)
+		err := handleFn(w, r)
+		// we assume that every route will set the status header
+		recordDur(w.Header().Get("status"))
+		return err
 	}
 }
 
