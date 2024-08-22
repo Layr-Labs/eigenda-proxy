@@ -150,6 +150,6 @@ func (n *noopMetricer) RecordInfo(_ string) {
 func (n *noopMetricer) RecordUp() {
 }
 
-func (n *noopMetricer) RecordRPCServerRequest(method string) func(status string) {
-	return func(status string) {}
+func (n *noopMetricer) RecordRPCServerRequest(string) func(status string) {
+	return func(string) {}
 }
