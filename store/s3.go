@@ -9,6 +9,7 @@ import (
 	"path"
 	"time"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/minio/minio-go/v7"
 
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -19,6 +20,8 @@ const (
 	S3CredentialIAM     S3CredentialType = "iam"
 	S3CredentialUnknown S3CredentialType = "unknown"
 )
+
+var _ PrecomputedKeyStore = (*S3Store)(nil)
 
 type S3CredentialType string
 type S3Config struct {
@@ -93,8 +96,21 @@ func (s *S3Store) Put(ctx context.Context, key []byte, value []byte) error {
 	return nil
 }
 
+func (s *S3Store) Verify(key []byte, value []byte) error {
+	h := crypto.Keccak256Hash(value)
+	if !bytes.Equal(h[:], key) {
+		return errors.New("key does not match value")
+	}
+
+	return nil
+}
+
 func (s *S3Store) Stats() *Stats {
 	return s.stats
+}
+
+func (s *S3Store) Backend() Backend {
+	return S3
 }
 
 func creds(cfg S3Config) *credentials.Credentials {

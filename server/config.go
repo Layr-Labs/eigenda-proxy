@@ -15,6 +15,7 @@ import (
 )
 
 const (
+	// eigenda client flags
 	EigenDADisperserRPCFlagName          = "eigenda-disperser-rpc"
 	EthRPCFlagName                       = "eigenda-eth-rpc"
 	SvcManagerAddrFlagName               = "eigenda-svc-manager-addr"
@@ -27,17 +28,18 @@ const (
 	SignerPrivateKeyHexFlagName          = "eigenda-signer-private-key-hex"
 	PutBlobEncodingVersionFlagName       = "eigenda-put-blob-encoding-version"
 	DisablePointVerificationModeFlagName = "eigenda-disable-point-verification-mode"
-	// Kzg flags
+
+	// kzg flags
 	G1PathFlagName        = "eigenda-g1-path"
 	G2TauFlagName         = "eigenda-g2-tau-path"
 	CachePathFlagName     = "eigenda-cache-path"
 	MaxBlobLengthFlagName = "eigenda-max-blob-length"
 
-	// Memstore flags
+	// memstore flags
 	MemstoreFlagName           = "memstore.enabled"
 	MemstoreExpirationFlagName = "memstore.expiration"
 
-	// S3 flags
+	// S3 client flags
 	S3CredentialTypeFlagName  = "s3.credential-type" // #nosec G101
 	S3BucketFlagName          = "s3.bucket"          // #nosec G101
 	S3PathFlagName            = "s3.path"
@@ -46,6 +48,10 @@ const (
 	S3AccessKeySecretFlagName = "s3.access-key-secret" // #nosec G101
 	S3BackupFlagName          = "s3.backup"
 	S3TimeoutFlagName         = "s3.timeout"
+
+	// routing flags
+	FallbackTargets = "routing.fallback-targets"
+	CacheTargets    = "routing.cache-targets"
 )
 
 const BytesPerSymbol = 31
@@ -81,6 +87,10 @@ type Config struct {
 	// Memstore
 	MemstoreEnabled        bool
 	MemstoreBlobExpiration time.Duration
+
+	// routing
+	FallbackTargets []string
+	CacheTargets    []string
 }
 
 func (cfg *Config) GetMaxBlobLength() (uint64, error) {
@@ -164,6 +174,8 @@ func ReadConfig(ctx *cli.Context) Config {
 		EthConfirmationDepth:   ctx.Int64(EthConfirmationDepthFlagName),
 		MemstoreEnabled:        ctx.Bool(MemstoreFlagName),
 		MemstoreBlobExpiration: ctx.Duration(MemstoreExpirationFlagName),
+		FallbackTargets:        ctx.StringSlice(FallbackTargets),
+		CacheTargets:           ctx.StringSlice(CacheTargets),
 	}
 	cfg.ClientConfig.WaitForFinalization = (cfg.EthConfirmationDepth < 0)
 
@@ -215,6 +227,22 @@ func (cfg *Config) Check() error {
 
 	if !cfg.MemstoreEnabled && cfg.ClientConfig.RPC == "" {
 		return fmt.Errorf("eigenda disperser rpc url is not set")
+	}
+
+	if len(cfg.FallbackTargets) > 0 {
+		for _, t := range cfg.FallbackTargets {
+			if store.StringToBackend(t) == store.Unknown {
+				return fmt.Errorf("unknown fallback target provided: %s", t)
+			}
+		}
+	}
+
+	if len(cfg.CacheTargets) > 0 {
+		for _, t := range cfg.CacheTargets {
+			if store.StringToBackend(t) == store.Unknown {
+				return fmt.Errorf("unknown cache target provided: %s", t)
+			}
+		}
 	}
 
 	return nil
@@ -376,6 +404,18 @@ func CLIFlags() []cli.Flag {
 			Usage:   "Duration that a mem-store blob/commitment pair are allowed to live.",
 			Value:   25 * time.Minute,
 			EnvVars: []string{"MEMSTORE_EXPIRATION"},
+		},
+		&cli.StringSliceFlag{
+			Name:    FallbackTargets,
+			Usage:   "List of read fallback targets to rollover to if cert can't be read from EigenDA.",
+			Value:   cli.NewStringSlice(),
+			EnvVars: prefixEnvVars("FALLBACK_TARGETS"),
+		},
+		&cli.StringSliceFlag{
+			Name:    CacheTargets,
+			Usage:   "List of caching targets to use fast reads from EigenDA.",
+			Value:   cli.NewStringSlice(),
+			EnvVars: prefixEnvVars("CACHE_TARGETS"),
 		},
 	}
 
