@@ -211,7 +211,7 @@ func TestProxyServerCaching(t *testing.T) {
 
 func TestProxyServerReadFallback(t *testing.T) {
 	// test can't be ran against holesky since read failure case can't be manually triggered
-	if !runIntegrationTests && runTestnetIntegrationTests {
+	if !runIntegrationTests || runTestnetIntegrationTests {
 		t.Skip("Skipping test as INTEGRATION env var not set")
 	}
 
