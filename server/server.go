@@ -213,6 +213,7 @@ func (svr *Server) HandlePut(w http.ResponseWriter, r *http.Request) error {
 
 	commitment, err := svr.router.Put(r.Context(), ct, comm, input)
 	if err != nil {
+		svr.WriteInternalError(w, err)
 		return err
 	}
 

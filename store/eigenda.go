@@ -13,10 +13,12 @@ import (
 )
 
 type EigenDAStoreConfig struct {
-	MaxBlobSizeBytes     uint64
+	MaxBlobSizeBytes uint64
+	// the # of Ethereum blocks to wait after the L1BlockReference # before attempting to verify
+	// & accredit a blob
 	EthConfirmationDepth uint64
 
-	// The total amount of time that the client will spend waiting for EigenDA to confirm a blob
+	// total duration time that client waits for blob to confirm
 	StatusQueryTimeout time.Duration
 }
 
@@ -52,16 +54,6 @@ func (e EigenDAStore) Get(ctx context.Context, key []byte) ([]byte, error) {
 	decodedBlob, err := e.client.GetBlob(ctx, cert.BlobVerificationProof.BatchMetadata.BatchHeaderHash, cert.BlobVerificationProof.BlobIndex)
 	if err != nil {
 		return nil, fmt.Errorf("EigenDA client failed to retrieve decoded blob: %w", err)
-	}
-	// reencode blob for verification
-	encodedBlob, err := e.client.GetCodec().EncodeBlob(decodedBlob)
-	if err != nil {
-		return nil, fmt.Errorf("EigenDA client failed to re-encode blob: %w", err)
-	}
-
-	err = e.verifier.VerifyCommitment(cert.BlobHeader.Commitment, encodedBlob)
-	if err != nil {
-		return nil, err
 	}
 
 	return decodedBlob, nil
@@ -146,11 +138,6 @@ func (e EigenDAStore) Verify(key []byte, value []byte) error {
 	encodedBlob, err := e.client.GetCodec().EncodeBlob(value)
 	if err != nil {
 		return fmt.Errorf("EigenDA client failed to re-encode blob: %w", err)
-	}
-
-	// ensure that generic encoded blob is not larger than the max blob size
-	if uint64(len(encodedBlob)) > e.cfg.MaxBlobSizeBytes {
-		return fmt.Errorf("encoded blob is larger than max blob size: blob length %d, max blob size %d", len(value), e.cfg.MaxBlobSizeBytes)
 	}
 
 	// verify kzg data commitment
