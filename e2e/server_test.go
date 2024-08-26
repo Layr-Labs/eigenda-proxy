@@ -15,7 +15,7 @@ func useMemory() bool {
 	return !runTestnetIntegrationTests
 }
 
-func TestOptimismClientWithS3Backend(t *testing.T) {
+func TestOptimismClientWithKeccak256Commitment(t *testing.T) {
 	if !runIntegrationTests && !runTestnetIntegrationTests {
 		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
 	}
@@ -44,7 +44,7 @@ func TestOptimismClientWithS3Backend(t *testing.T) {
 this test asserts that the data can be posted/read to EigenDA
 with a concurrent S3 backend configured
 */
-func TestOptimismClientWithEigenDABackend(t *testing.T) {
+func TestOptimismClientWithGenericCommitment(t *testing.T) {
 
 	if !runIntegrationTests && !runTestnetIntegrationTests {
 		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
@@ -124,13 +124,13 @@ func TestProxyServerWithLargeBlob(t *testing.T) {
 }
 
 func TestProxyServerWithOversizedBlob(t *testing.T) {
-	// if !runIntegrationTests && !runTestnetIntegrationTests {
-	// 	t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
-	// }
+	if !runIntegrationTests && !runTestnetIntegrationTests {
+		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	}
 
 	t.Parallel()
 
-	ts, kill := e2e.CreateTestSuite(t, e2e.TestConfig(true))
+	ts, kill := e2e.CreateTestSuite(t, e2e.TestConfig(useMemory()))
 	defer kill()
 
 	cfg := &client.Config{
@@ -210,6 +210,7 @@ func TestProxyServerCaching(t *testing.T) {
 */
 
 func TestProxyServerReadFallback(t *testing.T) {
+	// test can't be ran against holesky since read failure case can't be manually triggered
 	if !runIntegrationTests && runTestnetIntegrationTests {
 		t.Skip("Skipping test as INTEGRATION env var not set")
 	}
