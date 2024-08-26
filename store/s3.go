@@ -21,6 +21,17 @@ const (
 	S3CredentialUnknown S3CredentialType = "unknown"
 )
 
+func StringToS3CredentialType(s string) S3CredentialType {
+	switch s {
+	case "static":
+		return S3CredentialStatic
+	case "iam":
+		return S3CredentialIAM
+	default:
+		return S3CredentialUnknown
+	}
+}
+
 var _ PrecomputedKeyStore = (*S3Store)(nil)
 
 type S3CredentialType string

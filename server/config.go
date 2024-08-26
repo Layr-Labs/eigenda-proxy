@@ -54,12 +54,15 @@ const (
 	CacheTargets    = "routing.cache-targets"
 )
 
-const BytesPerSymbol = 31
-const MaxCodingRatio = 8
+const (
+	BytesPerSymbol = 31
+	MaxCodingRatio = 8
+)
 
-var MaxSRSPoints = 1 << 28 // 2^28
-
-var MaxAllowedBlobSize = uint64(MaxSRSPoints * BytesPerSymbol / MaxCodingRatio)
+var (
+	MaxSRSPoints       = 1 << 28 // 2^28
+	MaxAllowedBlobSize = uint64(MaxSRSPoints * BytesPerSymbol / MaxCodingRatio)
+)
 
 type Config struct {
 	S3Config store.S3Config
@@ -93,6 +96,7 @@ type Config struct {
 	CacheTargets    []string
 }
 
+// GetMaxBlobLength ... returns the maximum blob length in bytes
 func (cfg *Config) GetMaxBlobLength() (uint64, error) {
 	if cfg.maxBlobLengthBytes == 0 {
 		numBytes, err := utils.ParseBytesAmount(cfg.MaxBlobLength)
@@ -110,6 +114,7 @@ func (cfg *Config) GetMaxBlobLength() (uint64, error) {
 	return cfg.maxBlobLengthBytes, nil
 }
 
+// VerificationCfg ... returns certificate config used to verify blobs from eigenda
 func (cfg *Config) VerificationCfg() *verify.Config {
 	numBytes, err := cfg.GetMaxBlobLength()
 	if err != nil {
@@ -141,11 +146,11 @@ func (cfg *Config) VerificationCfg() *verify.Config {
 	}
 }
 
-// ReadConfig parses the Config from the provided flags or environment variables.
+// ReadConfig ... parses the Config from the provided flags or environment variables.
 func ReadConfig(ctx *cli.Context) Config {
 	cfg := Config{
 		S3Config: store.S3Config{
-			S3CredentialType: toS3CredentialType(ctx.String(S3CredentialTypeFlagName)),
+			S3CredentialType: store.StringToS3CredentialType(ctx.String(S3CredentialTypeFlagName)),
 			Bucket:           ctx.String(S3BucketFlagName),
 			Path:             ctx.String(S3PathFlagName),
 			Endpoint:         ctx.String(S3EndpointFlagName),
@@ -182,15 +187,23 @@ func ReadConfig(ctx *cli.Context) Config {
 	return cfg
 }
 
-func toS3CredentialType(s string) store.S3CredentialType {
-	switch s {
-	case string(store.S3CredentialStatic):
-		return store.S3CredentialStatic
-	case string(store.S3CredentialIAM):
-		return store.S3CredentialIAM
-	default:
-		return store.S3CredentialUnknown
+// checkTargets ... verifies that a backend target slice is constructed correctly
+func (cfg *Config) checkTargets(targets []string) error {
+	if len(targets) == 0 {
+		return nil
 	}
+
+	if utils.ContainsDuplicates(targets) {
+		return fmt.Errorf("duplicate fallback targets provided")
+	}
+
+	for _, t := range targets {
+		if store.StringToBackend(t) == store.Unknown {
+			return fmt.Errorf("unknown fallback target provided: %s", t)
+		}
+	}
+
+	return nil
 }
 
 // Check ... verifies that configuration values are adequately set
@@ -229,19 +242,20 @@ func (cfg *Config) Check() error {
 		return fmt.Errorf("eigenda disperser rpc url is not set")
 	}
 
-	if len(cfg.FallbackTargets) > 0 {
-		for _, t := range cfg.FallbackTargets {
-			if store.StringToBackend(t) == store.Unknown {
-				return fmt.Errorf("unknown fallback target provided: %s", t)
-			}
-		}
+	err = cfg.checkTargets(cfg.FallbackTargets)
+	if err != nil {
+		return err
 	}
 
-	if len(cfg.CacheTargets) > 0 {
-		for _, t := range cfg.CacheTargets {
-			if store.StringToBackend(t) == store.Unknown {
-				return fmt.Errorf("unknown cache target provided: %s", t)
-			}
+	err = cfg.checkTargets(cfg.CacheTargets)
+	if err != nil {
+		return err
+	}
+
+	// verify that same target is not in both fallback and cache targets
+	for _, t := range cfg.FallbackTargets {
+		if utils.Contains(cfg.CacheTargets, t) {
+			return fmt.Errorf("target %s is in both fallback and cache targets", t)
 		}
 	}
 
