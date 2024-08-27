@@ -9,12 +9,12 @@ import (
 // Helper utility functions //
 
 func ContainsDuplicates[P comparable](s []P) bool {
-	seen := make(map[P]interface{})
+	seen := make(map[P]struct{})
 	for _, v := range s {
 		if _, ok := seen[v]; ok {
 			return true
 		}
-		seen[v] = interface{}(nil)
+		seen[v] = struct{}{}
 	}
 	return false
 }

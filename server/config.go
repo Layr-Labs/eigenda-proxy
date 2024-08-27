@@ -194,11 +194,11 @@ func (cfg *Config) checkTargets(targets []string) error {
 	}
 
 	if utils.ContainsDuplicates(targets) {
-		return fmt.Errorf("duplicate fallback targets provided")
+		return fmt.Errorf("duplicate targets provided: %+v", targets)
 	}
 
 	for _, t := range targets {
-		if store.StringToBackend(t) == store.Unknown {
+		if store.StringToBackendType(t) == store.Unknown {
 			return fmt.Errorf("unknown fallback target provided: %s", t)
 		}
 	}

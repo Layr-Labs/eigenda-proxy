@@ -2,10 +2,10 @@ package store
 
 import "context"
 
-type Backend uint8
+type BackendType uint8
 
 const (
-	EigenDA Backend = iota
+	EigenDA BackendType = iota
 	Memory
 	S3
 	Redis
@@ -13,7 +13,7 @@ const (
 	Unknown
 )
 
-func (b Backend) String() string {
+func (b BackendType) String() string {
 	switch b {
 	case EigenDA:
 		return "EigenDA"
@@ -30,7 +30,7 @@ func (b Backend) String() string {
 	}
 }
 
-func StringToBackend(s string) Backend {
+func StringToBackendType(s string) BackendType {
 	switch s {
 	case "EigenDA":
 		return EigenDA
@@ -57,7 +57,7 @@ type Store interface {
 	// Stats returns the current usage metrics of the key-value data store.
 	Stats() *Stats
 	// Backend returns the backend type provider of the store.
-	Backend() Backend
+	BackendType() BackendType
 	// Verify verifies the given key-value pair.
 	Verify(key []byte, value []byte) error
 }

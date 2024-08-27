@@ -121,7 +121,7 @@ func (e EigenDAStore) Stats() *Stats {
 }
 
 // Backend returns the backend type for EigenDA Store
-func (e EigenDAStore) Backend() Backend {
+func (e EigenDAStore) BackendType() BackendType {
 	return EigenDA
 }
 

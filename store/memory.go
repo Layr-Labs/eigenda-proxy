@@ -222,6 +222,6 @@ func (e *MemStore) Stats() *Stats {
 	}
 }
 
-func (e *MemStore) Backend() Backend {
+func (e *MemStore) BackendType() BackendType {
 	return Memory
 }

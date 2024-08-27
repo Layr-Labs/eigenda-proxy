@@ -76,7 +76,7 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (*store
 	fallbacks := make([]store.PrecomputedKeyStore, len(cfg.EigenDAConfig.FallbackTargets))
 
 	for i, f := range cfg.EigenDAConfig.FallbackTargets {
-		b := store.StringToBackend(f)
+		b := store.StringToBackendType(f)
 
 		switch b {
 		case store.S3:
@@ -92,7 +92,7 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (*store
 			fallthrough
 
 		default:
-			log.Warn("Unknown fallback target", "target", f)
+			panic(fmt.Sprintf("Unknown fallback target: %s", f))
 		}
 	}
 
@@ -100,7 +100,7 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (*store
 	caches := make([]store.PrecomputedKeyStore, len(cfg.EigenDAConfig.CacheTargets))
 
 	for i, f := range cfg.EigenDAConfig.CacheTargets {
-		b := store.StringToBackend(f)
+		b := store.StringToBackendType(f)
 
 		switch b {
 		case store.S3:

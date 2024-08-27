@@ -120,7 +120,7 @@ func (s *S3Store) Stats() *Stats {
 	return s.stats
 }
 
-func (s *S3Store) Backend() Backend {
+func (s *S3Store) BackendType() BackendType {
 	return S3
 }
 

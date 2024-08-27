@@ -153,7 +153,7 @@ func (r *Router) handleRedundantWrites(ctx context.Context, commitment []byte, v
 	for _, src := range sources {
 		err := src.Put(ctx, key, value)
 		if err != nil {
-			r.log.Warn("Failed to write to redundant target", "backend", src.Backend(), "err", err)
+			r.log.Warn("Failed to write to redundant target", "backend", src.BackendType(), "err", err)
 		} else {
 			successes++
 		}
@@ -185,13 +185,13 @@ func (r *Router) multiSourceRead(ctx context.Context, commitment []byte, fallbac
 	for _, src := range sources {
 		data, err := src.Get(ctx, key)
 		if err != nil {
-			r.log.Warn("Failed to read from redundant target", "backend", src.Backend(), "err", err)
+			r.log.Warn("Failed to read from redundant target", "backend", src.BackendType(), "err", err)
 			continue
 		}
 		// verify cert:data using EigenDA verification checks
 		err = r.eigenda.Verify(key, data)
 		if err != nil {
-			log.Warn("Failed to verify blob", "err", err, "backend", src.Backend())
+			log.Warn("Failed to verify blob", "err", err, "backend", src.BackendType())
 			continue
 		}
 
