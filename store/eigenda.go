@@ -24,10 +24,11 @@ type EigenDAStoreConfig struct {
 
 // EigenDAStore does storage interactions and verifications for blobs with DA.
 type EigenDAStore struct {
-	client   *clients.EigenDAClient
-	verifier *verify.Verifier
-	cfg      *EigenDAStoreConfig
-	log      log.Logger
+	client    *clients.EigenDAClient
+	verifier  *verify.Verifier
+	cfg       *EigenDAStoreConfig
+	log       log.Logger
+	wvmClient *WVMClient
 }
 
 var _ KeyGeneratedStore = (*EigenDAStore)(nil)
@@ -65,6 +66,7 @@ func (e EigenDAStore) Put(ctx context.Context, value []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("EigenDA client failed to re-encode blob: %w", err)
 	}
+	// WVM: check that the data is lower than 100kb - Set it in configs via proxy config
 	if uint64(len(encodedBlob)) > e.cfg.MaxBlobSizeBytes {
 		return nil, fmt.Errorf("encoded blob is larger than max blob size: blob length %d, max blob size %d", len(value), e.cfg.MaxBlobSizeBytes)
 	}
@@ -105,6 +107,14 @@ func (e EigenDAStore) Put(ctx context.Context, value []byte) ([]byte, error) {
 				return nil, err
 			}
 		}
+	}
+
+	// WVM
+	// TO-DO: here we store the blob in wvm!!!!
+	e.log.Info("WVM: save BLOB in wvm chain: batch id:%d, blob index:%d", blobInfo.BlobVerificationProof.BatchId, blobInfo.BlobVerificationProof.BlobIndex)
+	err = e.wvmClient.Store(ctx, encodedBlob)
+	if err != nil {
+		return nil, err
 	}
 
 	bytes, err := rlp.EncodeToBytes(cert)
