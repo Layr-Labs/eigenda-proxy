@@ -14,7 +14,7 @@ import (
 
 type EigenDAStoreConfig struct {
 	MaxBlobSizeBytes uint64
-	// the # of Ethereum blocks to wait after the L1BlockReference # before attempting to verify
+	// the # of Ethereum blocks to wait after the EigenDA L1BlockReference # before attempting to verify
 	// & accredit a blob
 	EthConfirmationDepth uint64
 
