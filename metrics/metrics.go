@@ -134,8 +134,8 @@ func (m *Metrics) RecordRPCServerRequest(method string, mode string, ver string)
 
 // RecordBadRequestHeader record an incoming HTTP request that fails the commitment
 // scheme formats with labels type of request method and error type.
-func (m *Metrics) RecordBadRequestHeader(method string, err_type string) {
-	m.HTTPServerBadRequestHeader.WithLabelValues(method, err_type).Inc()
+func (m *Metrics) RecordBadRequestHeader(method string, errorType string) {
+	m.HTTPServerBadRequestHeader.WithLabelValues(method, errorType).Inc()
 }
 
 // StartServer starts the metrics server on the given hostname and port.
