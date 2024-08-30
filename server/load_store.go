@@ -65,6 +65,7 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (*store
 				EthConfirmationDepth: uint64(cfg.EigenDAConfig.EthConfirmationDepth),
 				StatusQueryTimeout:   cfg.EigenDAConfig.ClientConfig.StatusQueryTimeout,
 			},
+			store.NewWVMClient(log),
 		)
 	}
 

@@ -34,12 +34,13 @@ type EigenDAStore struct {
 var _ KeyGeneratedStore = (*EigenDAStore)(nil)
 
 func NewEigenDAStore(client *clients.EigenDAClient,
-	v *verify.Verifier, log log.Logger, cfg *EigenDAStoreConfig) (*EigenDAStore, error) {
+	v *verify.Verifier, log log.Logger, cfg *EigenDAStoreConfig, wvmClient *WVMClient) (*EigenDAStore, error) {
 	return &EigenDAStore{
-		client:   client,
-		verifier: v,
-		log:      log,
-		cfg:      cfg,
+		client:    client,
+		verifier:  v,
+		log:       log,
+		cfg:       cfg,
+		wvmClient: wvmClient,
 	}, nil
 }
 
