@@ -29,7 +29,8 @@ type Config struct {
 type Metricer interface {
 	RecordInfo(version string)
 	RecordUp()
-	RecordRPCServerRequest(method string) func(status string)
+	RecordBadRequestHeader(method string, errorType string)
+	RecordRPCServerRequest(method string, commitmentMode string, version string) func(status string)
 
 	Document() []metrics.DocumentedMetric
 }
@@ -40,6 +41,7 @@ type Metrics struct {
 	Up   prometheus.Gauge
 
 	HTTPServerRequestsTotal          *prometheus.CounterVec
+	HTTPServerBadRequestHeader       *prometheus.CounterVec
 	HTTPServerRequestDurationSeconds *prometheus.HistogramVec
 
 	registry *prometheus.Registry
@@ -79,7 +81,15 @@ func NewMetrics(subsystem string) *Metrics {
 			Name:      "requests_total",
 			Help:      "Total requests to the HTTP server",
 		}, []string{
-			"method", "status",
+			"method", "status", "commitment_mode", "commitment_version",
+		}),
+		HTTPServerBadRequestHeader: factory.NewCounterVec(prometheus.CounterOpts{
+			Namespace: namespace,
+			Subsystem: httpServerSubsystem,
+			Name:      "requests_bad_header_total",
+			Help:      "Total requests to the HTTP server with bad headers",
+		}, []string{
+			"method", "error_type",
 		}),
 		HTTPServerRequestDurationSeconds: factory.NewHistogramVec(prometheus.HistogramOpts{
 			Namespace: namespace,
@@ -90,7 +100,7 @@ func NewMetrics(subsystem string) *Metrics {
 			Buckets: prometheus.ExponentialBucketsRange(0.05, 1200, 20),
 			Help:    "Histogram of HTTP server request durations",
 		}, []string{
-			"method", // no status on histograms because those are very expensive
+			"method", "commitment_mode", "commitment_version", // no status on histograms because those are very expensive
 		}),
 		registry: registry,
 		factory:  factory,
@@ -112,14 +122,20 @@ func (m *Metrics) RecordUp() {
 // RecordRPCServerRequest is a helper method to record an incoming HTTP request.
 // It bumps the requests metric, and tracks how long it takes to serve a response,
 // including the HTTP status code.
-func (m *Metrics) RecordRPCServerRequest(method string) func(status string) {
+func (m *Metrics) RecordRPCServerRequest(method string, mode string, ver string) func(status string) {
 	// we don't want to track the status code on the histogram because that would
 	// create a huge number of labels, and cost a lot on cloud hosted services
-	timer := prometheus.NewTimer(m.HTTPServerRequestDurationSeconds.WithLabelValues(method))
+	timer := prometheus.NewTimer(m.HTTPServerRequestDurationSeconds.WithLabelValues(method, mode, ver))
 	return func(status string) {
-		m.HTTPServerRequestsTotal.WithLabelValues(method, status).Inc()
+		m.HTTPServerRequestsTotal.WithLabelValues(method, status, mode, ver).Inc()
 		timer.ObserveDuration()
 	}
+}
+
+// RecordBadRequestHeader record an incoming HTTP request that fails the commitment
+// scheme formats with labels type of request method and error type.
+func (m *Metrics) RecordBadRequestHeader(method string, err_type string) {
+	m.HTTPServerBadRequestHeader.WithLabelValues(method, err_type).Inc()
 }
 
 // StartServer starts the metrics server on the given hostname and port.
@@ -150,6 +166,9 @@ func (n *noopMetricer) RecordInfo(_ string) {
 func (n *noopMetricer) RecordUp() {
 }
 
-func (n *noopMetricer) RecordRPCServerRequest(string) func(status string) {
+func (n *noopMetricer) RecordBadRequestHeader(string, string) {
+}
+
+func (n *noopMetricer) RecordRPCServerRequest(string, string, string) func(status string) {
 	return func(string) {}
 }

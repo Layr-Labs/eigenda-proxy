@@ -66,16 +66,21 @@ func NewServer(host string, port int, router store.IRouter, log log.Logger,
 func WithMetrics(handleFn func(http.ResponseWriter, *http.Request) error,
 	m metrics.Metricer) func(http.ResponseWriter, *http.Request) error {
 	return func(w http.ResponseWriter, r *http.Request) error {
-		// we use a commitment schema (https://github.com/Layr-Labs/eigenda-proxy?tab=readme-ov-file#commitment-schemas)
-		// where the first 3 bytes of the path are the commitment header
-		// commit type | da layer type | version byte
-		// we want to group all requests by commitment header, otherwise the prometheus metric labels will explode
-		// TODO: commitment header is different for non-op commitments. We will need to change this to accommodate other commitments.
-		//       probably want (commitment mode, cert version) as the labels, since commit-type/da-layer are not relevant anyways.
-		commitmentHeader := r.URL.Path[:3]
-		recordDur := m.RecordRPCServerRequest(commitmentHeader)
+		// label requests with commitment mode and version
+		ct, err := ReadCommitmentMode(r)
+		if err != nil {
+			m.RecordBadRequestHeader(r.Method, "invalid commitment mode")
+			return err
+		}
+		vb, err := ReadCommitmentVersion(r, ct)
+		if err != nil {
+			m.RecordBadRequestHeader(r.Method, "invalid commitment version")
+			return err
+		}
 
-		err := handleFn(w, r)
+		recordDur := m.RecordRPCServerRequest(r.Method, string(ct), strconv.Itoa(int(vb)))
+
+		err = handleFn(w, r)
 		// we assume that every route will set the status header
 		recordDur(w.Header().Get("status"))
 		return err
@@ -292,6 +297,19 @@ func ReadCommitmentMode(r *http.Request) (commitments.CommitmentMode, error) {
 		}
 	}
 	return commitments.OptimismAltDA, nil
+}
+
+func ReadCommitmentVersion(r *http.Request, mode commitments.CommitmentMode) (uint8, error) {
+	commitment := r.URL.Path
+	if len(commitment) < 3 {
+		return 0, fmt.Errorf("commitment is too short")
+	}
+
+	if mode == commitments.OptimismAltDA || mode == commitments.OptimismGeneric {
+		return commitment[2], nil
+	}
+	// the only other mode is simple, which take first byte as version
+	return commitment[0], nil
 }
 
 func (svr *Server) GetEigenDAStats() *store.Stats {
