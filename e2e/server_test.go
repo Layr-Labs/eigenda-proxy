@@ -1,18 +1,23 @@
 package e2e_test
 
 import (
-	"strings"
-	"testing"
-	"time"
-
 	"github.com/Layr-Labs/eigenda-proxy/client"
 	"github.com/Layr-Labs/eigenda-proxy/e2e"
 	op_plasma "github.com/ethereum-optimism/optimism/op-plasma"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"strings"
+	"testing"
+	"time"
 )
 
 func useMemory() bool {
 	return !runTestnetIntegrationTests
+}
+
+func isPanic(err string) bool {
+	return strings.Contains(err, "panic") && strings.Contains(err, "SIGSEGV") &&
+		strings.Contains(err, "nil pointer dereference")
 }
 
 func TestOptimismClientWithKeccak256Commitment(t *testing.T) {
@@ -29,15 +34,44 @@ func TestOptimismClientWithKeccak256Commitment(t *testing.T) {
 	defer kill()
 
 	daClient := op_plasma.NewDAClient(ts.Address(), false, true)
+	daClientPcFalse := op_plasma.NewDAClient(ts.Address(), false, false)
 
-	testPreimage := []byte(e2e.RandString(100))
+	// nil commitment. Should return an error but currently is not
+	t.Run("nil commitment case", func(t *testing.T) {
+		var commit op_plasma.CommitmentData
+		_, err := daClient.GetInput(ts.Ctx, commit)
+		require.Error(t, err)
+		assert.True(t, !isPanic(err.Error()))
+	})
 
-	commit, err := daClient.SetInput(ts.Ctx, testPreimage)
-	require.NoError(t, err)
+	t.Run("input bad data to SetInput & GetInput", func(t *testing.T) {
+		testPreimage := []byte("") // Empty preimage
+		_, err := daClientPcFalse.SetInput(ts.Ctx, testPreimage)
+		require.Error(t, err)
 
-	preimage, err := daClient.GetInput(ts.Ctx, commit)
-	require.NoError(t, err)
-	require.Equal(t, testPreimage, preimage)
+		// should fail with proper error message as is now, and cannot contain panics or nils
+		assert.True(t, strings.Contains(err.Error(), "invalid input") && !isPanic(err.Error()))
+
+		// The below test panics silently.
+		input := op_plasma.NewGenericCommitment([]byte(""))
+		_, err = daClientPcFalse.GetInput(ts.Ctx, input)
+		require.Error(t, err)
+
+		// Should not fail on EOF. Should fail before and return with proper error message
+		assert.False(t, strings.Contains(err.Error(), ": EOF") && !isPanic(err.Error()))
+	})
+
+	// nil commitment. Should return an error but currently not
+	t.Run("normal case", func(t *testing.T) {
+		testPreimage := []byte(e2e.RandString(100))
+
+		commit, err := daClient.SetInput(ts.Ctx, testPreimage)
+		require.NoError(t, err)
+
+		preimage, err := daClient.GetInput(ts.Ctx, commit)
+		require.NoError(t, err)
+		require.Equal(t, testPreimage, preimage)
+	})
 }
 
 /*
@@ -84,16 +118,71 @@ func TestProxyClient(t *testing.T) {
 	}
 	daClient := client.New(cfg)
 
-	testPreimage := []byte(e2e.RandString(100))
+	t.Run("normal case case", func(t *testing.T) {
+		testPreimage := []byte(e2e.RandString(100))
 
-	t.Log("Setting input data on proxy server...")
-	blobInfo, err := daClient.SetData(ts.Ctx, testPreimage)
-	require.NoError(t, err)
+		t.Log("Setting input data on proxy server...")
+		blobInfo, err := daClient.SetData(ts.Ctx, testPreimage)
+		require.NoError(t, err)
 
-	t.Log("Getting input data from proxy server...")
-	preimage, err := daClient.GetData(ts.Ctx, blobInfo)
-	require.NoError(t, err)
-	require.Equal(t, testPreimage, preimage)
+		t.Log("Getting input data from proxy server...")
+		preimage, err := daClient.GetData(ts.Ctx, blobInfo)
+		require.NoError(t, err)
+		require.Equal(t, testPreimage, preimage)
+	})
+
+	t.Run("single byte preimage set data case", func(t *testing.T) {
+		testPreimage := []byte{1} // Empty preimage
+		t.Log("Setting input data on proxy server...")
+		_, err := daClient.SetData(ts.Ctx, testPreimage)
+		require.NoError(t, err)
+		assert.True(t, !isPanic(err.Error()))
+	})
+
+	t.Run("unicode preimage set data case", func(t *testing.T) {
+		testPreimage := []byte("§§©ˆªªˆ˙√ç®∂§∞¶§ƒ¥√¨¥√¨¥ƒƒ©˙˜ø˜˜˜∫˙∫¥∫√†®®√ç¨ˆ¨˙ï") // Empty preimage
+		t.Log("Setting input data on proxy server...")
+		_, err := daClient.SetData(ts.Ctx, testPreimage)
+		require.NoError(t, err)
+		assert.True(t, !isPanic(err.Error()))
+
+		testPreimage = []byte("§") // Empty preimage
+		t.Log("Setting input data on proxy server...")
+		_, err = daClient.SetData(ts.Ctx, testPreimage)
+		require.NoError(t, err)
+		assert.True(t, !isPanic(err.Error()))
+
+	})
+
+	t.Run("empty preimage set data case", func(t *testing.T) {
+		testPreimage := []byte("") // Empty preimage
+		t.Log("Setting input data on proxy server...")
+		_, err := daClient.SetData(ts.Ctx, testPreimage)
+		require.NoError(t, err)
+		assert.True(t, !isPanic(err.Error()))
+	})
+
+	t.Run("get data edge cases", func(t *testing.T) {
+		testCert := []byte("")
+		_, err := daClient.GetData(ts.Ctx, testCert)
+		require.Error(t, err)
+		assert.True(t, strings.Contains(err.Error(),
+			"received error response, code=400, msg = commitment is empty") && !isPanic(err.Error()))
+
+		testCert = []byte{1}
+		_, err = daClient.GetData(ts.Ctx, testCert)
+		require.Error(t, err)
+		assert.True(t, strings.Contains(err.Error(),
+			"received error response, code=500, msg = failed to decode DA cert to RLP format: EOF") &&
+			!isPanic(err.Error()))
+
+		testCert = []byte(e2e.RandString(10000))
+		_, err = daClient.GetData(ts.Ctx, testCert)
+		require.Error(t, err)
+		assert.True(t, strings.Contains(err.Error(),
+			"failed to decode DA cert to RLP format: rlp: expected input list for verify.Certificate") &&
+			!isPanic(err.Error()))
+	})
 }
 
 func TestProxyServerWithLargeBlob(t *testing.T) {
