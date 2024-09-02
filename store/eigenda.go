@@ -112,7 +112,7 @@ func (e EigenDAStore) Put(ctx context.Context, value []byte) ([]byte, error) {
 
 	// WVM
 	// TO-DO: here we store the blob in wvm!!!!
-	e.log.Info("WVM: save BLOB in wvm chain: batch id:%d, blob index:%d", blobInfo.BlobVerificationProof.BatchId, blobInfo.BlobVerificationProof.BlobIndex)
+	e.log.Info("WVM: save BLOB in wvm chain", "batch id", blobInfo.BlobVerificationProof.BatchId, "blob index", blobInfo.BlobVerificationProof.BlobIndex)
 	err = e.wvmClient.Store(ctx, encodedBlob)
 	if err != nil {
 		return nil, err

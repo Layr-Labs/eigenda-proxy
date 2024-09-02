@@ -99,14 +99,15 @@ func (wvm *WVMClient) Store(ctx context.Context, eigenBlobData []byte) error {
 }
 
 func (wvm *WVMClient) wvmEncode(eigenBlob []byte) ([]byte, error) {
+	wvm.log.Info("WVM:eigen blob received", "eigen blob size", len(eigenBlob))
 	// borsch
-
 	borshEncoded, err := borsh.Serialize(eigenBlob)
-	wvm.log.Info("wvm: eigen blob serialized using borsh")
+	wvm.log.Info("WVM:eigen blob serialized using borsh")
 	if err != nil {
 		return nil, err
 	}
 
+	borshEncodedLen := len(borshEncoded)
 	// brotli
 	brotliOut := bytes.Buffer{}
 	writer := brotli.NewWriterOptions(&brotliOut, brotli.WriterOptions{Quality: 6})
@@ -116,11 +117,12 @@ func (wvm *WVMClient) wvmEncode(eigenBlob []byte) ([]byte, error) {
 		panic(err)
 	}
 	if int(n) != len(borshEncoded) {
-		panic("wvm: size mismatch during brotli compression")
+		panic("WVM:size mismatch during brotli compression")
 	}
 	if err := writer.Close(); err != nil {
-		panic(fmt.Errorf("wvm: brotli writer close fail: %w", err))
+		panic(fmt.Errorf("WVM: brotli writer close fail: %w", err))
 	}
+	wvm.log.Info("WVM:compressed by brotli", "borsch encoded blob size before", borshEncodedLen, "borsch encoded and compressed with brotli", brotliOut.Len())
 
 	return brotliOut.Bytes(), nil
 }
@@ -135,7 +137,7 @@ func (wvm *WVMClient) getSuggestedGasPrice(ctx context.Context) error {
 	}
 
 	// Print the suggested gas price to the terminal.
-	wvm.log.Info("WVM suggested Gas Price:", gasPrice.String())
+	wvm.log.Info("WVM suggested Gas Price", "gas", gasPrice.String())
 
 	return nil
 }
@@ -173,7 +175,7 @@ func (wvm *WVMClient) estimateGas(ctx context.Context, from, to string, data []b
 		return 0, err
 	}
 
-	wvm.log.Info("WVM estimated Gas Price:", gas)
+	wvm.log.Info("WVM estimated Gas Price", "price", gas)
 
 	return gas, nil
 }
@@ -336,7 +338,7 @@ func (wvm *WVMClient) sendRawTransaction(ctx context.Context, rawTx string) erro
 		return err
 	}
 
-	wvm.log.Info("WVM:Raw TX Receipt:", string(txJSON))
+	wvm.log.Info("WVM:raw TX Receipt:", "tx receipt", string(txJSON))
 
 	return nil
 }
