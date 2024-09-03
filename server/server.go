@@ -261,7 +261,7 @@ func ReadCommitmentScheme(r *http.Request) (commitments.CommitmentMode, commitme
 	vb, err := ReadCommitmentVersion(r, ct)
 	if err != nil {
 		// default to version 0
-		return ct, commitments.CommitmentVersion(0), err
+		return ct, commitments.CommitmentVersion(fmt.Sprintf("%d", 0)), err
 	}
 	return ct, commitments.CommitmentVersion(vb), nil
 }
