@@ -6,6 +6,7 @@ import (
 )
 
 type CommitmentMode string
+type CommitmentVersion string
 
 const (
 	OptimismGeneric      CommitmentMode = "optimism_keccak256"

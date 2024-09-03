@@ -63,26 +63,14 @@ func NewServer(host string, port int, router store.IRouter, log log.Logger,
 }
 
 // WithMetrics is a middleware that records metrics for the route path.
-func WithMetrics(handleFn func(http.ResponseWriter, *http.Request) error,
+func WithMetrics(handleFn func(http.ResponseWriter, *http.Request) (commitments.CommitmentMode, commitments.CommitmentVersion, error),
 	m metrics.Metricer) func(http.ResponseWriter, *http.Request) error {
 	return func(w http.ResponseWriter, r *http.Request) error {
-		// label requests with commitment mode and version
-		ct, err := ReadCommitmentMode(r)
-		if err != nil {
-			m.RecordBadRequestHeader(r.Method, "invalid commitment mode")
-			return err
-		}
-		vb, err := ReadCommitmentVersion(r, ct)
-		if err != nil {
-			m.RecordBadRequestHeader(r.Method, "invalid commitment version")
-			return err
-		}
+		recordDur := m.RecordRPCServerRequest(r.Method)
 
-		recordDur := m.RecordRPCServerRequest(r.Method, string(ct), strconv.Itoa(int(vb)))
-
-		err = handleFn(w, r)
+		ct, vb, err := handleFn(w, r)
 		// we assume that every route will set the status header
-		recordDur(w.Header().Get("status"))
+		recordDur(w.Header().Get("status"), string(ct), string(vb))
 		return err
 	}
 }
@@ -161,47 +149,47 @@ func (svr *Server) Health(w http.ResponseWriter, _ *http.Request) error {
 	return nil
 }
 
-func (svr *Server) HandleGet(w http.ResponseWriter, r *http.Request) error {
-	ct, err := ReadCommitmentMode(r)
+func (svr *Server) HandleGet(w http.ResponseWriter, r *http.Request) (commitments.CommitmentMode, commitments.CommitmentVersion, error) {
+	ct, vb, err := ReadCommitmentScheme(r)
 	if err != nil {
 		svr.WriteBadRequest(w, invalidCommitmentMode)
-		return err
+		return ct, vb, err
 	}
 	key := path.Base(r.URL.Path)
 	comm, err := commitments.StringToDecodedCommitment(key, ct)
 	if err != nil {
 		svr.log.Info("failed to decode commitment", "err", err, "commitment", comm)
 		w.WriteHeader(http.StatusBadRequest)
-		return err
+		return ct, vb, err
 	}
 
 	input, err := svr.router.Get(r.Context(), comm, ct)
 	if err != nil && errors.Is(err, ErrNotFound) {
 		svr.WriteNotFound(w, err.Error())
-		return err
+		return ct, vb, err
 	}
 
 	if err != nil {
 		svr.WriteInternalError(w, err)
-		return err
+		return ct, vb, err
 	}
 
 	svr.WriteResponse(w, input)
-	return nil
+	return ct, vb, nil
 }
 
-func (svr *Server) HandlePut(w http.ResponseWriter, r *http.Request) error {
-	ct, err := ReadCommitmentMode(r)
+func (svr *Server) HandlePut(w http.ResponseWriter, r *http.Request) (commitments.CommitmentMode, commitments.CommitmentVersion, error) {
+	ct, vb, err := ReadCommitmentScheme(r)
 	if err != nil {
 		svr.WriteBadRequest(w, invalidCommitmentMode)
-		return err
+		return ct, vb, err
 	}
 
 	input, err := io.ReadAll(r.Body)
 	if err != nil {
 		svr.log.Error("Failed to read request body", "err", err)
 		w.WriteHeader(http.StatusBadRequest)
-		return err
+		return ct, vb, err
 	}
 
 	key := path.Base(r.URL.Path)
@@ -212,27 +200,27 @@ func (svr *Server) HandlePut(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			svr.log.Info("failed to decode commitment", "err", err, "key", key)
 			w.WriteHeader(http.StatusBadRequest)
-			return err
+			return ct, vb, err
 		}
 	}
 
 	commitment, err := svr.router.Put(r.Context(), ct, comm, input)
 	if err != nil {
 		svr.WriteInternalError(w, err)
-		return err
+		return ct, vb, err
 	}
 
 	responseCommit, err := commitments.EncodeCommitment(commitment, ct)
 	if err != nil {
 		svr.log.Info("failed to encode commitment", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		return err
+		return ct, vb, err
 	}
 
 	svr.log.Info(fmt.Sprintf("write commitment: %x\n", comm))
 	// write out encoded commitment
 	svr.WriteResponse(w, responseCommit)
-	return nil
+	return ct, vb, nil
 }
 
 func (svr *Server) WriteResponse(w http.ResponseWriter, data []byte) {
@@ -261,6 +249,21 @@ func (svr *Server) Port() int {
 	_, portStr, _ := net.SplitHostPort(svr.listener.Addr().String())
 	port, _ := strconv.Atoi(portStr)
 	return port
+}
+
+// Read both commitment mode and version
+func ReadCommitmentScheme(r *http.Request) (commitments.CommitmentMode, commitments.CommitmentVersion, error) {
+	// label requests with commitment mode and version
+	ct, err := ReadCommitmentMode(r)
+	if err != nil {
+		return "", "", err
+	}
+	vb, err := ReadCommitmentVersion(r, ct)
+	if err != nil {
+		// default to version 0
+		return ct, commitments.CommitmentVersion(0), err
+	}
+	return ct, commitments.CommitmentVersion(vb), nil
 }
 
 func ReadCommitmentMode(r *http.Request) (commitments.CommitmentMode, error) {
