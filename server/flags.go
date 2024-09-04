@@ -55,6 +55,7 @@ func init() {
 var Flags []cli.Flag
 
 type CLIConfig struct {
+	RedisCfg      store.RedisConfig
 	S3Config      store.S3Config
 	EigenDAConfig Config
 	MetricsCfg    opmetrics.CLIConfig
@@ -63,6 +64,7 @@ type CLIConfig struct {
 func ReadCLIConfig(ctx *cli.Context) CLIConfig {
 	config := ReadConfig(ctx)
 	return CLIConfig{
+		RedisCfg:      config.RedisCfg,
 		EigenDAConfig: config,
 		MetricsCfg:    opmetrics.ReadCLIConfig(ctx),
 		S3Config:      config.S3Config,

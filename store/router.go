@@ -70,6 +70,7 @@ func (r *Router) Get(ctx context.Context, key []byte, cm commitments.CommitmentM
 			if err == nil {
 				return data, nil
 			}
+
 			r.log.Warn("Failed to read from cache targets", "err", err)
 		}
 
@@ -188,6 +189,12 @@ func (r *Router) multiSourceRead(ctx context.Context, commitment []byte, fallbac
 			r.log.Warn("Failed to read from redundant target", "backend", src.BackendType(), "err", err)
 			continue
 		}
+
+		if data == nil {
+			r.log.Debug("No data found in redundant target", "backend", src.BackendType())
+			continue
+		}
+
 		// verify cert:data using EigenDA verification checks
 		err = r.eigenda.Verify(commitment, data)
 		if err != nil {
@@ -240,4 +247,14 @@ func (r *Router) GetEigenDAStore() KeyGeneratedStore {
 // GetS3Store ...
 func (r *Router) GetS3Store() PrecomputedKeyStore {
 	return r.s3
+}
+
+// Caches ...
+func (r *Router) Caches() []PrecomputedKeyStore {
+	return r.caches
+}
+
+// Fallbacks ...
+func (r *Router) Fallbacks() []PrecomputedKeyStore {
+	return r.fallbacks
 }
