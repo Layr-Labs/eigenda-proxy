@@ -14,7 +14,7 @@ import (
 // Router ... storage backend routing layer
 type Router struct {
 	log     log.Logger
-	eigenda KeyGeneratedStore
+	eigenda WVMedKeyGeneratedStore
 	s3      PrecomputedKeyStore
 
 	caches    []PrecomputedKeyStore
@@ -24,7 +24,7 @@ type Router struct {
 	fallbackLock sync.RWMutex
 }
 
-func NewRouter(eigenda KeyGeneratedStore, s3 PrecomputedKeyStore, l log.Logger,
+func NewRouter(eigenda WVMedKeyGeneratedStore, s3 PrecomputedKeyStore, l log.Logger,
 	caches []PrecomputedKeyStore, fallbacks []PrecomputedKeyStore) (*Router, error) {
 	return &Router{
 		log:          l,
@@ -99,6 +99,51 @@ func (r *Router) Get(ctx context.Context, key []byte, cm commitments.CommitmentM
 
 	default:
 		return nil, errors.New("could not determine which storage backend to route to based on unknown commitment mode")
+	}
+}
+
+// Get ... fetches a value from a storage backend based on the (commitment mode, type)
+func (r *Router) GetBlobFromWvm(ctx context.Context, key []byte, cm commitments.CommitmentMode) ([]byte, error) {
+	switch cm {
+	case commitments.SimpleCommitmentMode, commitments.OptimismAltDA:
+		if r.eigenda == nil {
+			return nil, errors.New("expected EigenDA backend for DA commitment type, but none configured")
+		}
+
+		data, err := r.eigenda.GetBlobFromWvm(ctx, key)
+		if err == nil {
+			// verify
+			err = r.eigenda.Verify(key, data)
+			if err != nil {
+				return nil, err
+			}
+			return data, nil
+		}
+
+		return data, err
+
+	default:
+		return nil, errors.New("could not determine which storage backend to route to based on unknown commitment mode")
+	}
+}
+
+// GetWvmTxHashByCommitment ... fetches a value from a storage backend based on the (commitment mode, type)
+func (r *Router) GetWvmTxHashByCommitment(ctx context.Context, key []byte, cm commitments.CommitmentMode) (string, error) {
+	switch cm {
+	case commitments.SimpleCommitmentMode, commitments.OptimismAltDA:
+		if r.eigenda == nil {
+			return "", errors.New("expected EigenDA backend for DA commitment type, but none configured")
+		}
+
+		txHash, err := r.eigenda.GetWvmTxHashByCommitment(ctx, key)
+		if err != nil {
+			return "", err
+		}
+
+		return txHash, nil
+
+	default:
+		return "", errors.New("could not determine which storage backend to route to based on unknown commitment mode or UNSUPPORTED")
 	}
 }
 

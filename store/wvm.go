@@ -24,13 +24,11 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/near/borsh-go"
 )
 
 type WVMClient struct {
-	client  *ethclient.Client
-	log     log.Logger
-	privKey string
+	client *ethclient.Client
+	log    log.Logger
 }
 
 const (
@@ -39,22 +37,7 @@ const (
 
 	wvmArchiverAddress    = "0xF8a5a479f04d1565b925A67D088b8fC3f8f0b7eF" // we use it as a "from" address
 	wvmArchivePoolAddress = "0x606dc1BE30A5966FcF3C10D907d1B76A7B1Bbbd9" // we use it as a "to" address
-	data                  = "Hello WVM!"
-
-	gasLimit = uint64(21500) // adjust this if necessary
-	wei      = uint64(0)     // 0 Wei
 )
-
-/*
-	1. client
-	2. wallet
-	3. compressing, brotli, borsch
-	4. put to calldata
-	5. sign tx
-	6. send
-	7. wait for confirmation, get tx id, return in log than return in response
-	8. done
-*/
 
 func NewWVMClient(log log.Logger) *WVMClient {
 	client, err := ethclient.Dial(wvmRpcUrl)
@@ -69,54 +52,48 @@ func NewWVMClient(log log.Logger) *WVMClient {
 	return &WVMClient{client: client, log: log}
 }
 
-func (wvm *WVMClient) Store(ctx context.Context, eigenBlobData []byte) error {
+func (wvm *WVMClient) Store(ctx context.Context, eigenBlobData []byte) (string, error) {
 	wvmData, err := wvm.wvmEncode(eigenBlobData)
 	if err != nil {
-		return fmt.Errorf("failed to store data in wvm: %w", err)
+		return "", fmt.Errorf("failed to store data in wvm: %w", err)
 	}
 
 	err = wvm.getSuggestedGasPrice(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to store data in wvm: %w", err)
+		return "", fmt.Errorf("failed to store data in wvm: %w", err)
 	}
 
 	gas, err := wvm.estimateGas(ctx, wvmArchiverAddress, wvmArchivePoolAddress, wvmData)
 	if err != nil {
-		return fmt.Errorf("failed to store data in wvm: %w", err)
+		return "", fmt.Errorf("failed to store data in wvm: %w", err)
 	}
 
 	wvmRawTx, err := wvm.createRawTransaction(ctx, wvmArchivePoolAddress, string(wvmData), gas)
 	if err != nil {
-		return fmt.Errorf("failed to store data in wvm: %w", err)
+		return "", fmt.Errorf("failed to store data in wvm: %w", err)
 	}
 
-	err = wvm.sendRawTransaction(ctx, wvmRawTx)
+	wvmTxHash, err := wvm.sendRawTransaction(ctx, wvmRawTx)
 	if err != nil {
-		return fmt.Errorf("failed to store data in wvm: %w", err)
+		return "", fmt.Errorf("failed to store data in wvm: %w", err)
 	}
 
-	return nil
+	return wvmTxHash, nil
 }
 
 func (wvm *WVMClient) wvmEncode(eigenBlob []byte) ([]byte, error) {
 	wvm.log.Info("WVM:eigen blob received", "eigen blob size", len(eigenBlob))
-	// borsch
-	borshEncoded, err := borsh.Serialize(eigenBlob)
-	wvm.log.Info("WVM:eigen blob serialized using borsh")
-	if err != nil {
-		return nil, err
-	}
 
-	borshEncodedLen := len(borshEncoded)
+	borshEncodedLen := len(eigenBlob)
 	// brotli
 	brotliOut := bytes.Buffer{}
 	writer := brotli.NewWriterOptions(&brotliOut, brotli.WriterOptions{Quality: 6})
-	in := bytes.NewReader(borshEncoded)
+	in := bytes.NewReader(eigenBlob)
 	n, err := io.Copy(writer, in)
 	if err != nil {
 		panic(err)
 	}
-	if int(n) != len(borshEncoded) {
+	if int(n) != len(eigenBlob) {
 		panic("WVM:size mismatch during brotli compression")
 	}
 	if err := writer.Close(); err != nil {
@@ -125,6 +102,17 @@ func (wvm *WVMClient) wvmEncode(eigenBlob []byte) ([]byte, error) {
 	wvm.log.Info("WVM:compressed by brotli", "borsch encoded blob size before", borshEncodedLen, "borsch encoded and compressed with brotli", brotliOut.Len())
 
 	return brotliOut.Bytes(), nil
+}
+
+func (wvm *WVMClient) WvmDecode(compressedBlob []byte) ([]byte, error) {
+	wvm.log.Info("WVM:compressed blob received for decompression", "compressed blob size", len(compressedBlob))
+	brotliReader := brotli.NewReader(bytes.NewReader(compressedBlob))
+	decompressedEncoded, err := io.ReadAll(brotliReader)
+	if err != nil {
+		return nil, fmt.Errorf("WVM: failed to decompress brotli data: %w", err)
+	}
+
+	return decompressedEncoded, nil
 }
 
 // HELPERS
@@ -218,7 +206,7 @@ func (wvm *WVMClient) createRawTransaction(ctx context.Context, to string, data 
 	publicKey := ecdsaPrivateKey.Public()
 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
 	if !ok {
-		return "", fmt.Errorf("Error casting public key to ECDSA")
+		return "", fmt.Errorf("error casting public key to ECDSA")
 	}
 	// Compute the Ethereum address of the signer from the public key.
 	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
@@ -296,31 +284,31 @@ type Transaction struct {
 	TransactionCost      string   `json:"transactionCost,omitempty"`
 }
 
-func (wvm *WVMClient) sendRawTransaction(ctx context.Context, rawTx string) error {
+func (wvm *WVMClient) sendRawTransaction(ctx context.Context, rawTx string) (string, error) {
 	rawTxBytes, err := hex.DecodeString(rawTx)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	tx := new(types.Transaction)
 
 	err = rlp.DecodeBytes(rawTxBytes, &tx)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	err = wvm.client.SendTransaction(ctx, tx)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	var txDetails Transaction
 	txBytes, err := tx.MarshalJSON()
 	if err != nil {
-		return err
+		return "", err
 	}
 	if err := json.Unmarshal(txBytes, &txDetails); err != nil {
-		return err
+		return "", err
 	}
 
 	txDetails.TransactionTime = tx.Time().Format(time.RFC822)
@@ -329,18 +317,18 @@ func (wvm *WVMClient) sendRawTransaction(ctx context.Context, rawTx string) erro
 	convertFields := []string{"Nonce", "MaxPriorityFeePerGas", "MaxFeePerGas", "Value", "Type", "Gas"}
 	for _, field := range convertFields {
 		if err := convertHexField(&txDetails, field); err != nil {
-			return err
+			return "", err
 		}
 	}
 
 	txJSON, err := json.MarshalIndent(txDetails, "", "\t")
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	wvm.log.Info("WVM:raw TX Receipt:", "tx receipt", string(txJSON))
 
-	return nil
+	return txDetails.Hash, nil
 }
 
 // helper function

@@ -28,8 +28,10 @@ const (
 	invalidDomain         = "invalid domain type"
 	invalidCommitmentMode = "invalid commitment mode"
 
-	GetRoute = "/get/"
-	PutRoute = "/put/"
+	GetRoute            = "/get/"
+	PutRoute            = "/put/"
+	GetWvmTxHashRoute   = "/wvm/get/txhash/"
+	GetBlobFromWvmRoute = "/wvm/get/"
 
 	DomainFilterKey   = "domain"
 	CommitmentModeKey = "commitment_mode"
@@ -100,6 +102,9 @@ func (svr *Server) Start() error {
 
 	mux.HandleFunc(GetRoute, WithLogging(WithMetrics(svr.HandleGet, svr.m), svr.log))
 	mux.HandleFunc(PutRoute, WithLogging(WithMetrics(svr.HandlePut, svr.m), svr.log))
+	mux.HandleFunc(GetWvmTxHashRoute, WithLogging(WithMetrics(svr.HandleGetWvmTxHash, svr.m), svr.log))
+	mux.HandleFunc(GetBlobFromWvmRoute, WithLogging(WithMetrics(svr.HandleGetBlobFromWvm, svr.m), svr.log))
+
 	mux.HandleFunc("/health", WithLogging(svr.Health, svr.log))
 
 	svr.httpServer.Handler = mux
@@ -182,6 +187,65 @@ func (svr *Server) HandleGet(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	svr.WriteResponse(w, input)
+	return nil
+}
+
+func (svr *Server) HandleGetBlobFromWvm(w http.ResponseWriter, r *http.Request) error {
+	ct, err := ReadCommitmentMode(r)
+	if err != nil {
+		svr.WriteBadRequest(w, invalidCommitmentMode)
+		return err
+	}
+	key := path.Base(r.URL.Path)
+	comm, err := commitments.StringToDecodedCommitment(key, ct)
+	if err != nil {
+		svr.log.Info("failed to decode commitment", "err", err, "commitment", comm)
+		w.WriteHeader(http.StatusBadRequest)
+		return err
+	}
+
+	input, err := svr.router.GetBlobFromWvm(r.Context(), comm, ct)
+	if err != nil && errors.Is(err, ErrNotFound) {
+		svr.WriteNotFound(w, err.Error())
+		return err
+	}
+
+	if err != nil {
+		svr.WriteInternalError(w, err)
+		return err
+	}
+
+	svr.WriteResponse(w, input)
+	return nil
+}
+
+func (svr *Server) HandleGetWvmTxHash(w http.ResponseWriter, r *http.Request) error {
+	ct, err := ReadCommitmentMode(r)
+	if err != nil {
+		svr.WriteBadRequest(w, invalidCommitmentMode)
+		return err
+	}
+	key := path.Base(r.URL.Path)
+	comm, err := commitments.StringToDecodedCommitment(key, ct)
+	if err != nil {
+		svr.log.Info("failed to decode commitment", "err", err, "commitment", comm)
+		w.WriteHeader(http.StatusBadRequest)
+		return err
+	}
+
+	txHash, err := svr.router.GetWvmTxHashByCommitment(r.Context(), comm, ct)
+	if err != nil && errors.Is(err, ErrNotFound) {
+		svr.WriteNotFound(w, err.Error())
+		return err
+	}
+
+	if err != nil {
+		svr.WriteInternalError(w, err)
+		return err
+	}
+	svr.log.Info("wvm tx hash found", "wvm tx hash", txHash)
+
+	svr.WriteResponse(w, []byte(txHash))
 	return nil
 }
 
