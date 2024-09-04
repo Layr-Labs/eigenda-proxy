@@ -53,9 +53,10 @@ e2e-test: stop-minio stop-redis run-minio run-redis
 	make stop-minio && \
 	make stop-redis
 
-holesky-test: run-minio
+holesky-test: stop-minio stop-redis run-minio run-redis
 	$(HOLESKYTEST) && \
-	make stop-minio
+	make stop-minio && \
+	make stop-redis
 
 .PHONY: lint
 lint:
