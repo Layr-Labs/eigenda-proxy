@@ -116,7 +116,7 @@ func TestGetHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mockBehavior()
 
-			req := httptest.NewRequest("GET", tt.url, nil)
+			req := httptest.NewRequest(http.MethodGet, tt.url, nil)
 			rec := httptest.NewRecorder()
 
 			err := server.HandleGet(rec, req)
@@ -230,7 +230,7 @@ func TestPutHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mockBehavior()
 
-			req := httptest.NewRequest("PUT", tt.url, bytes.NewReader(tt.body))
+			req := httptest.NewRequest(http.MethodPut, tt.url, bytes.NewReader(tt.body))
 			rec := httptest.NewRecorder()
 
 			err := server.HandlePut(rec, req)
