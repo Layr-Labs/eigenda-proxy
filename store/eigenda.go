@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -134,7 +135,12 @@ func (e EigenDAStore) GetBlobFromWvm(ctx context.Context, key []byte) ([]byte, e
 
 	e.log.Info("Received data from WVM", "arweave_block_hash", wvmData.ArweaveBlockHash, "wvm_block_hash", wvmData.WvmBlockHash)
 
-	wvmDecodedBlob, err := e.wvmClient.WvmDecode([]byte(wvmData.Calldata))
+	b, err := hex.DecodeString(wvmData.Calldata[2:])
+	if err != nil {
+		return nil, err
+	}
+
+	wvmDecodedBlob, err := e.wvmClient.WvmDecode(b)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode calldata to eigen decoded blob: %w", err)
 	}
