@@ -24,21 +24,23 @@ type EigenDAStoreConfig struct {
 
 // EigenDAStore does storage interactions and verifications for blobs with DA.
 type EigenDAStore struct {
-	client   *clients.EigenDAClient
-	verifier *verify.Verifier
-	cfg      *EigenDAStoreConfig
-	log      log.Logger
+	client    *clients.EigenDAClient
+	verifier  *verify.Verifier
+	cfg       *EigenDAStoreConfig
+	log       log.Logger
+	wvmClient *WVMClient
 }
 
 var _ KeyGeneratedStore = (*EigenDAStore)(nil)
 
 func NewEigenDAStore(client *clients.EigenDAClient,
-	v *verify.Verifier, log log.Logger, cfg *EigenDAStoreConfig) (*EigenDAStore, error) {
+	v *verify.Verifier, log log.Logger, cfg *EigenDAStoreConfig, wvmClient *WVMClient) (*EigenDAStore, error) {
 	return &EigenDAStore{
-		client:   client,
-		verifier: v,
-		log:      log,
-		cfg:      cfg,
+		client:    client,
+		verifier:  v,
+		log:       log,
+		cfg:       cfg,
+		wvmClient: wvmClient,
 	}, nil
 }
 
@@ -65,8 +67,9 @@ func (e EigenDAStore) Put(ctx context.Context, value []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("EigenDA client failed to re-encode blob: %w", err)
 	}
+	// WVM: check that the data is lower than 100kb - Set it in configs via proxy config
 	if uint64(len(encodedBlob)) > e.cfg.MaxBlobSizeBytes {
-		return nil, fmt.Errorf("encoded blob is larger than max blob size: blob length %d, max blob size %d", len(value), e.cfg.MaxBlobSizeBytes)
+		return nil, fmt.Errorf("encoded blob is larger than max blob size: blob length %d, encoded blob length: %d, max blob size %d", len(value), len(encodedBlob), e.cfg.MaxBlobSizeBytes)
 	}
 
 	dispersalStart := time.Now()
@@ -105,6 +108,12 @@ func (e EigenDAStore) Put(ctx context.Context, value []byte) ([]byte, error) {
 				return nil, err
 			}
 		}
+	}
+
+	// WVM: we store the encoded blob in wvm
+	err = e.wvmClient.Store(ctx, cert, encodedBlob)
+	if err != nil {
+		return nil, err
 	}
 
 	bytes, err := rlp.EncodeToBytes(cert)
@@ -148,4 +157,49 @@ func (e EigenDAStore) Verify(key []byte, value []byte) error {
 
 	// verify DA certificate against on-chain
 	return e.verifier.VerifyCert(&cert)
+}
+
+// GetWvmTxHashByCommitment uses commitment to get wvm tx hash from the internal map(temprorary hack)
+// and returns it to the caller
+func (e EigenDAStore) GetWvmTxHashByCommitment(ctx context.Context, key []byte) (string, error) {
+	e.log.Info("try get wvm tx hash using provided commitment")
+	var cert verify.Certificate
+	err := rlp.DecodeBytes(key, &cert)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode DA cert to RLP format: %w", err)
+	}
+
+	wvmTxHash, err := e.wvmClient.GetWvmTxHashByCommitment(ctx, &cert)
+	if err != nil {
+		return "", err
+	}
+
+	return wvmTxHash, nil
+}
+
+func (e EigenDAStore) GetBlobFromWvm(ctx context.Context, key []byte) ([]byte, error) {
+	var cert verify.Certificate
+	err := rlp.DecodeBytes(key, &cert)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode DA cert to RLP format: %w", err)
+	}
+
+	wvmTxHash, err := e.wvmClient.GetWvmTxHashByCommitment(ctx, &cert)
+	if err != nil {
+		return nil, err
+	}
+
+	e.log.Info("found wvm tx hash using provided commitment", "provided key", commitmentKey(cert.BlobVerificationProof.BatchId, cert.BlobVerificationProof.BlobIndex))
+
+	wvmDecodedBlob, err := e.wvmClient.GetBlobFromWvm(ctx, wvmTxHash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get eigenda blob from wvm: %w", err)
+	}
+
+	decodedData, err := e.client.Codec.DecodeBlob(wvmDecodedBlob)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding eigen blob: %w", err)
+	}
+
+	return decodedData, nil
 }

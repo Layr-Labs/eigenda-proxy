@@ -70,6 +70,12 @@ type KeyGeneratedStore interface {
 	Put(ctx context.Context, value []byte) (key []byte, err error)
 }
 
+type WVMedKeyGeneratedStore interface {
+	KeyGeneratedStore
+	GetWvmTxHashByCommitment(ctx context.Context, key []byte) (string, error)
+	GetBlobFromWvm(ctx context.Context, key []byte) ([]byte, error)
+}
+
 type PrecomputedKeyStore interface {
 	Store
 	// Get retrieves the given key if it's present in the key-value data store.
