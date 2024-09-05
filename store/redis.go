@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -17,7 +18,7 @@ type RedisConfig struct {
 	Profile  bool
 }
 
-// RedStore ... Redis storage backend implementation
+// RedStore ... Redis storage backend implementation (This not safe for concurrent usage)
 type RedStore struct {
 	eviction time.Duration
 
@@ -39,9 +40,12 @@ func NewRedisStore(cfg *RedisConfig) (*RedStore, error) {
 	})
 
 	// ensure server can be pinged using potential client connection
-	cmd := client.Ping(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	cmd := client.Ping(ctx)
 	if cmd.Err() != nil {
-		return nil, cmd.Err()
+		return nil, fmt.Errorf("failed to ping redis server: %w", cmd.Err())
 	}
 
 	return &RedStore{

@@ -221,8 +221,8 @@ func TestProxyServerCachingWithRedis(t *testing.T) {
 		URL: ts.Address(),
 	}
 	daClient := client.New(cfg)
-	//  1mb blob
-	testPreimage := []byte(e2e.RandString(1_0000))
+	//  10 kb blob
+	testPreimage := []byte(e2e.RandString(10_000))
 
 	t.Log("Setting input data on proxy server...")
 	blobInfo, err := daClient.SetData(ts.Ctx, testPreimage)
@@ -235,7 +235,7 @@ func TestProxyServerCachingWithRedis(t *testing.T) {
 	require.Equal(t, testPreimage, preimage)
 
 	// ensure that read was from cache
-	redStats, err := ts.Server.MaybeGetStore(store.Redis)
+	redStats, err := ts.Server.GetStoreStats(store.Redis)
 	require.NoError(t, err)
 
 	require.Equal(t, 1, redStats.Reads)

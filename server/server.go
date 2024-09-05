@@ -298,7 +298,7 @@ func (svr *Server) GetS3Stats() *store.Stats {
 	return svr.router.GetS3Store().Stats()
 }
 
-func (svr *Server) MaybeGetStore(bt store.BackendType) (*store.Stats, error) {
+func (svr *Server) GetStoreStats(bt store.BackendType) (*store.Stats, error) {
 	// first check if the store is a cache
 	for _, cache := range svr.router.Caches() {
 		if cache.BackendType() == bt {
