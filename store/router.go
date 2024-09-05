@@ -19,6 +19,8 @@ type IRouter interface {
 
 	GetEigenDAStore() KeyGeneratedStore
 	GetS3Store() PrecomputedKeyStore
+	Caches() []PrecomputedKeyStore
+	Fallbacks() []PrecomputedKeyStore
 }
 
 // Router ... storage backend routing layer
