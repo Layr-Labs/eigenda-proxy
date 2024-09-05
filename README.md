@@ -47,7 +47,10 @@ curl -X GET "https://eigenda-proxy-1047776281941.us-central1.run.app/wvm/get/0x$
 ![](./media/get-workflow.png)
 
 ## Full test workflow example
-
+- `wvm-eigenda-proxy` WeaveVM archiver address: [0xF8a5a479f04d1565b925A67D088b8fC3f8f0b7eF](https://explorer.wvm.dev/address/0xF8a5a479f04d1565b925A67D088b8fC3f8f0b7eF)
+- Archive pool address: [0x606dc1BE30A5966FcF3C10D907d1B76A7B1Bbbd9](https://explorer.wvm.dev/address/0x606dc1BE30A5966FcF3C10D907d1B76A7B1Bbbd9)
+- EigenDA network: Holesky
+- WeaveVM network: Alphanet
 - WeaveVM Alphanet block explorer: https://explorer.wvm.dev
 - WeaveVM-EigenDA sidecar server proxy endpoint: https://eigenda-proxy-1047776281941.us-central1.run.app
 
