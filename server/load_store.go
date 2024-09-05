@@ -39,7 +39,7 @@ func populateTargets(targets []string, s3 *store.S3Store, redis *store.RedStore)
 }
 
 // LoadStoreRouter ... creates storage backend clients and instruments them into a storage routing abstraction
-func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (*store.Router, error) {
+func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (store.IRouter, error) {
 	// create S3 backend store (if enabled)
 	var err error
 	var s3 *store.S3Store
