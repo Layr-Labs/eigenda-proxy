@@ -38,12 +38,18 @@ curl -X GET "https://eigenda-proxy-1047776281941.us-central1.run.app/wvm/get/0x$
  -H "Content-Type: application/octet-stream"
 ```
 
+## Data pipelines
+
+### PUT blob workflow
+![](./media/put-workflow.png)
+
+### GET blob workflow
+![](./media/get-workflow.png)
+
 ## Full test workflow example
 
 - WeaveVM Alphanet block explorer: https://explorer.wvm.dev
 - WeaveVM-EigenDA sidecar server proxy endpoint: https://eigenda-proxy-1047776281941.us-central1.run.app
-
-![](./media/put-workflow.png)
 
 ### 1) Post data 
 
