@@ -69,7 +69,7 @@ func (e EigenDAStore) Put(ctx context.Context, value []byte) ([]byte, error) {
 	}
 	// WVM: check that the data is lower than 100kb - Set it in configs via proxy config
 	if uint64(len(encodedBlob)) > e.cfg.MaxBlobSizeBytes {
-		return nil, fmt.Errorf("encoded blob is larger than max blob size: blob length %d, max blob size %d", len(value), e.cfg.MaxBlobSizeBytes)
+		return nil, fmt.Errorf("encoded blob is larger than max blob size: blob length %d, encoded blob length: %d, max blob size %d", len(value), len(encodedBlob), e.cfg.MaxBlobSizeBytes)
 	}
 
 	dispersalStart := time.Now()
