@@ -2,19 +2,14 @@ package store
 
 import (
 	"context"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/patrickmn/go-cache"
 )
 
 type EigenDAStoreConfig struct {
@@ -34,7 +29,6 @@ type EigenDAStore struct {
 	cfg       *EigenDAStoreConfig
 	log       log.Logger
 	wvmClient *WVMClient
-	wvmCache  *cache.Cache
 }
 
 var _ KeyGeneratedStore = (*EigenDAStore)(nil)
@@ -47,7 +41,6 @@ func NewEigenDAStore(client *clients.EigenDAClient,
 		log:       log,
 		cfg:       cfg,
 		wvmClient: wvmClient,
-		wvmCache:  cache.New(24*15*time.Hour, 24*time.Hour),
 	}, nil
 }
 
@@ -66,95 +59,6 @@ func (e EigenDAStore) Get(ctx context.Context, key []byte) ([]byte, error) {
 	}
 
 	return decodedBlob, nil
-}
-
-// GetWvmTxHashByCommitment uses commitment to get wvm tx hash from the internal map(temprorary hack)
-// and returns it to the caller
-func (e EigenDAStore) GetWvmTxHashByCommitment(ctx context.Context, key []byte) (string, error) {
-	e.log.Info("trying to get wvm tx hash using provided commitment")
-	var cert verify.Certificate
-	err := rlp.DecodeBytes(key, &cert)
-	if err != nil {
-		return "", fmt.Errorf("failed to decode DA cert to RLP format: %w", err)
-	}
-
-	wvmTxHash, found := e.wvmCache.Get(commitmentKey(cert.BlobVerificationProof.BatchId, cert.BlobVerificationProof.BlobIndex))
-	if !found {
-		e.log.Info("wvm tx hash using provided commitment NOT FOUND", "provided key", commitmentKey(cert.BlobVerificationProof.BatchId, cert.BlobVerificationProof.BlobIndex))
-		return "", fmt.Errorf("wvm tx hash for provided commitment not found")
-	}
-
-	e.log.Info("wvm tx hash using provided commitment FOUND", "provided key", commitmentKey(cert.BlobVerificationProof.BatchId, cert.BlobVerificationProof.BlobIndex))
-
-	return wvmTxHash.(string), nil
-}
-
-func commitmentKey(batchID, blobIndex uint32) string {
-	return fmt.Sprintf("%d:%d", batchID, blobIndex)
-}
-
-func (e EigenDAStore) GetBlobFromWvm(ctx context.Context, key []byte) ([]byte, error) {
-	var cert verify.Certificate
-	err := rlp.DecodeBytes(key, &cert)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode DA cert to RLP format: %w", err)
-	}
-
-	wvmTxHash, found := e.wvmCache.Get(commitmentKey(cert.BlobVerificationProof.BatchId, cert.BlobVerificationProof.BlobIndex))
-	if !found {
-		e.log.Info("wvm tx hash using provided commitment NOT FOUND", "provided key", commitmentKey(cert.BlobVerificationProof.BatchId, cert.BlobVerificationProof.BlobIndex))
-		return nil, fmt.Errorf("wvm tx hash for provided commitment not found")
-	}
-
-	e.log.Info("wvm tx hash using provided commitment FOUND", "provided key", commitmentKey(cert.BlobVerificationProof.BatchId, cert.BlobVerificationProof.BlobIndex))
-
-	r, err := http.Get(fmt.Sprintf("https://wvm-data-retriever.shuttleapp.rs/calldata/%s", wvmTxHash))
-	if err != nil {
-		return nil, fmt.Errorf("failed to call wvm-data-retriever")
-	}
-
-	type WvmResponse struct {
-		ArweaveBlockHash   string `json:"arweave_block_hash"`
-		Calldata           string `json:"calldata"`
-		WarDecodedCalldata string `json:"war_decoded_calldata"`
-		WvmBlockHash       string `json:"wvm_block_hash"`
-	}
-
-	defer r.Body.Close()
-
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	var wvmData WvmResponse
-	err = json.Unmarshal(body, &wvmData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
-	}
-
-	e.log.Info("Received data from WVM", "arweave_block_hash", wvmData.ArweaveBlockHash, "wvm_block_hash", wvmData.WvmBlockHash)
-
-	b, err := hex.DecodeString(wvmData.Calldata[2:])
-	if err != nil {
-		return nil, err
-	}
-
-	wvmDecodedBlob, err := e.wvmClient.WvmDecode(b)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode calldata to eigen decoded blob: %w", err)
-	}
-
-	if len(wvmDecodedBlob) == 0 {
-		return nil, fmt.Errorf("blob has length zero")
-	}
-
-	decodedData, err := e.client.Codec.DecodeBlob(wvmDecodedBlob)
-	if err != nil {
-		return nil, fmt.Errorf("error decoding eigen blob: %w", err)
-	}
-
-	return decodedData, nil
 }
 
 // Put disperses a blob for some pre-image and returns the associated RLP encoded certificate commit.
@@ -206,22 +110,11 @@ func (e EigenDAStore) Put(ctx context.Context, value []byte) ([]byte, error) {
 		}
 	}
 
-	// WVM
-	// TO-DO: here we store the blob in wvm!!!!
-	e.log.Info("WVM: save BLOB in wvm chain", "batch id", blobInfo.BlobVerificationProof.BatchId, "blob index", blobInfo.BlobVerificationProof.BlobIndex)
-	wvmTxHash, err := e.wvmClient.Store(ctx, encodedBlob)
+	// WVM: we store the encoded blob in wvm
+	err = e.wvmClient.Store(ctx, cert, encodedBlob)
 	if err != nil {
 		return nil, err
 	}
-
-	e.log.Info("WVM:TX Hash:", "tx hash", wvmTxHash)
-
-	// store wvm txid and blob ??header?? to the key-value storage
-	e.wvmCache.Set(commitmentKey(cert.BlobVerificationProof.BatchId, cert.BlobVerificationProof.BlobIndex), wvmTxHash, cache.DefaultExpiration)
-	//
-	e.log.Info("WVM:saved wvm Tx Hash by batch_id:blob_index",
-		"tx hash", wvmTxHash,
-		"key", commitmentKey(cert.BlobVerificationProof.BatchId, cert.BlobVerificationProof.BlobIndex))
 
 	bytes, err := rlp.EncodeToBytes(cert)
 	if err != nil {
@@ -264,4 +157,49 @@ func (e EigenDAStore) Verify(key []byte, value []byte) error {
 
 	// verify DA certificate against on-chain
 	return e.verifier.VerifyCert(&cert)
+}
+
+// GetWvmTxHashByCommitment uses commitment to get wvm tx hash from the internal map(temprorary hack)
+// and returns it to the caller
+func (e EigenDAStore) GetWvmTxHashByCommitment(ctx context.Context, key []byte) (string, error) {
+	e.log.Info("try get wvm tx hash using provided commitment")
+	var cert verify.Certificate
+	err := rlp.DecodeBytes(key, &cert)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode DA cert to RLP format: %w", err)
+	}
+
+	wvmTxHash, err := e.wvmClient.GetWvmTxHashByCommitment(ctx, &cert)
+	if err != nil {
+		return "", err
+	}
+
+	return wvmTxHash, nil
+}
+
+func (e EigenDAStore) GetBlobFromWvm(ctx context.Context, key []byte) ([]byte, error) {
+	var cert verify.Certificate
+	err := rlp.DecodeBytes(key, &cert)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode DA cert to RLP format: %w", err)
+	}
+
+	wvmTxHash, err := e.wvmClient.GetWvmTxHashByCommitment(ctx, &cert)
+	if err != nil {
+		return nil, err
+	}
+
+	e.log.Info("found wvm tx hash using provided commitment", "provided key", commitmentKey(cert.BlobVerificationProof.BatchId, cert.BlobVerificationProof.BlobIndex))
+
+	wvmDecodedBlob, err := e.wvmClient.GetBlobFromWvm(ctx, wvmTxHash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get eigenda blob from wvm: %w", err)
+	}
+
+	decodedData, err := e.client.Codec.DecodeBlob(wvmDecodedBlob)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding eigen blob: %w", err)
+	}
+
+	return decodedData, nil
 }

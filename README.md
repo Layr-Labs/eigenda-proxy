@@ -1,3 +1,60 @@
+# EigenDA Sidecar Proxy with WVM archive features
+
+EigenDA Sidecar Proxy was forked and modified to use WVM as an archive layer for blobs.
+On each Put request it compresses the encoded eigenDA blob using brotli compression and stores the compressed blob in wvm.
+
+There are endpoints to get txhash for provided eigen commitment and to get encoded blob directly from WVM.
+It is PoC and an experimental feature and in this first v0 iteration the proxy internally stores mapping of eigenda blob batch_id:blob_index -> wvm tx hash
+
+To get wvm tx hash of dispersed blob use
+```
+curl -X GET "https://eigenda-proxy-1047776281941.us-central1.run.app/get/0x$COMMITMENT?commitment_mode=simple" \
+ -H "Content-Type: application/octet-stream"
+```
+
+To get dispersed blob from wvm use
+```
+curl -X GET "https://eigenda-proxy-1047776281941.us-central1.run.app/wvm/get/0x$COMMITMENT?commitment_mode=simple" \
+ -H "Content-Type: application/octet-stream"
+```
+
+You will find examples below.
+
+To see the status of wvm tx use: https://explorer.wvm.dev
+test proxy url is https://eigenda-proxy-1047776281941.us-central1.run.app
+
+To test the flow you may go through next steps:
+
+1) Post data 
+
+```
+ curl -X POST "https://eigenda-proxy-1047776281941.us-central1.run.app/put/?commitment_mode=simple" \
+>      --data-binary "eigen hello wvm" \
+>      -H "Content-Type: application/octet-stream" \
+>      --output response.bin
+```
+2) trim commitment
+```
+COMMITMENT=$(xxd -p response.bin | tr -d '\n' | tr -d ' ')
+```
+3) Get data from the proxy
+```
+curl -X GET "https://eigenda-proxy-1047776281941.us-central1.run.app/get/0x$COMMITMENT?commitment_mode=simple" \
+ -H "Content-Type: application/octet-stream"
+```
+4) get wvm tx for this commitment
+```
+curl -X GET "https://eigenda-proxy-1047776281941.us-central1.run.app/wvm/get/txhash/0x$COMMITMENT?commitment_mode=simple" \
+ -H "Content-Type: application/octet-stream"
+```
+5) get eigen blob from wvm
+
+```
+curl -X GET "https://eigenda-proxy-1047776281941.us-central1.run.app/wvm/get/0x$COMMITMENT?commitment_mode=simple" \
+ -H "Content-Type: application/octet-stream"
+```
+
+
 ![Compiles](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/build.yml/badge.svg)
 ![Unit Tests](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/unit-tests.yml/badge.svg)
 ![Linter](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/lint.yml/badge.svg)
@@ -213,3 +270,5 @@ An E2E test exists which spins up a local OP sequencer instance using the [op-e2
 * [op-stack](https://github.com/ethereum-optimism/optimism)
 * [Alt-DA spec](https://specs.optimism.io/experimental/alt-da.html)
 * [eigen da](https://github.com/Layr-Labs/eigenda)
+
+

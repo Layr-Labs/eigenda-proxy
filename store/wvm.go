@@ -9,12 +9,14 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"net/http"
 	"os"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/andybalholm/brotli"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
@@ -24,16 +26,18 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/patrickmn/go-cache"
 )
 
 type WVMClient struct {
-	client *ethclient.Client
-	log    log.Logger
+	client   *ethclient.Client
+	log      log.Logger
+	wvmCache *cache.Cache
 }
 
 const (
-	wvmRpcUrl  = "https://testnet-rpc.wvm.dev" // wvm rpc url
-	wvmChainId = 9496                          // wvm chain id
+	wvmRpcUrl  = "https://testnet-rpc.wvm.dev" // wvm alphanet rpc url
+	wvmChainId = 9496                          // wvm alphanet chain id
 
 	wvmArchiverAddress    = "0xF8a5a479f04d1565b925A67D088b8fC3f8f0b7eF" // we use it as a "from" address
 	wvmArchivePoolAddress = "0x606dc1BE30A5966FcF3C10D907d1B76A7B1Bbbd9" // we use it as a "to" address
@@ -49,70 +53,147 @@ func NewWVMClient(log log.Logger) *WVMClient {
 		panic("wvm archiver signer key is empty")
 	}
 
-	return &WVMClient{client: client, log: log}
+	return &WVMClient{client: client, log: log, wvmCache: cache.New(24*15*time.Hour, 24*time.Hour)}
 }
 
-func (wvm *WVMClient) Store(ctx context.Context, eigenBlobData []byte) (string, error) {
-	wvmData, err := wvm.wvmEncode(eigenBlobData)
+func (wvm *WVMClient) Store(ctx context.Context, cert *verify.Certificate, eigenBlobData []byte) error {
+	wvm.log.Info("WVM: save BLOB in wvm chain", "batch id", cert.BlobVerificationProof.BatchId, "blob index", cert.BlobVerificationProof.BlobIndex)
+
+	wvmData, err := wvm.WvmEncode(eigenBlobData)
 	if err != nil {
-		return "", fmt.Errorf("failed to store data in wvm: %w", err)
+		return fmt.Errorf("failed to store data in wvm: %w", err)
 	}
 
 	err = wvm.getSuggestedGasPrice(ctx)
 	if err != nil {
-		return "", fmt.Errorf("failed to store data in wvm: %w", err)
+		return fmt.Errorf("failed to store data in wvm: %w", err)
 	}
 
 	gas, err := wvm.estimateGas(ctx, wvmArchiverAddress, wvmArchivePoolAddress, wvmData)
 	if err != nil {
-		return "", fmt.Errorf("failed to store data in wvm: %w", err)
+		return fmt.Errorf("failed to store data in wvm: %w", err)
 	}
 
 	wvmRawTx, err := wvm.createRawTransaction(ctx, wvmArchivePoolAddress, string(wvmData), gas)
 	if err != nil {
-		return "", fmt.Errorf("failed to store data in wvm: %w", err)
+		return fmt.Errorf("failed to store data in wvm: %w", err)
 	}
 
 	wvmTxHash, err := wvm.sendRawTransaction(ctx, wvmRawTx)
 	if err != nil {
-		return "", fmt.Errorf("failed to store data in wvm: %w", err)
+		return fmt.Errorf("failed to store data in wvm: %w", err)
 	}
 
-	return wvmTxHash, nil
+	wvm.log.Info("WVM:TX Hash:", "tx hash", wvmTxHash)
+
+	wvm.wvmCache.Set(commitmentKey(cert.BlobVerificationProof.BatchId, cert.BlobVerificationProof.BlobIndex), wvmTxHash, cache.DefaultExpiration)
+	wvm.log.Info("WVM:saved wvm Tx Hash by batch_id:blob_index",
+		"tx hash", wvmTxHash,
+		"key", commitmentKey(cert.BlobVerificationProof.BatchId, cert.BlobVerificationProof.BlobIndex))
+
+	return nil
 }
 
-func (wvm *WVMClient) wvmEncode(eigenBlob []byte) ([]byte, error) {
-	wvm.log.Info("WVM:eigen blob received", "eigen blob size", len(eigenBlob))
+func (wvm *WVMClient) WvmEncode(eigenBlob []byte) ([]byte, error) {
+	eigenBlobLen := len(eigenBlob)
 
-	borshEncodedLen := len(eigenBlob)
-	// brotli
+	wvm.log.Info("WVM:eigen blob received", "eigen blob size", eigenBlobLen)
+
 	brotliOut := bytes.Buffer{}
 	writer := brotli.NewWriterOptions(&brotliOut, brotli.WriterOptions{Quality: 6})
+
 	in := bytes.NewReader(eigenBlob)
 	n, err := io.Copy(writer, in)
 	if err != nil {
 		panic(err)
 	}
+
 	if int(n) != len(eigenBlob) {
 		panic("WVM:size mismatch during brotli compression")
 	}
+
 	if err := writer.Close(); err != nil {
 		panic(fmt.Errorf("WVM: brotli writer close fail: %w", err))
 	}
-	wvm.log.Info("WVM:compressed by brotli", "borsch encoded blob size before", borshEncodedLen, "borsch encoded and compressed with brotli", brotliOut.Len())
+
+	wvm.log.Info("WVM:compressed by brotli", "eigen blob size", eigenBlobLen, "eigen blob size compressed with brotli", brotliOut.Len())
 
 	return brotliOut.Bytes(), nil
 }
 
-func (wvm *WVMClient) WvmDecode(compressedBlob []byte) ([]byte, error) {
-	wvm.log.Info("WVM:compressed blob received for decompression", "compressed blob size", len(compressedBlob))
+func (wvm *WVMClient) WvmDecode(calldataBlob string) ([]byte, error) {
+	// trim calldata
+	compressedBlob, err := hex.DecodeString(calldataBlob[2:])
+	if err != nil {
+		return nil, err
+	}
+
+	wvm.log.Info("WVM:compressed eigen blob received for decompression", "compressed blob size", len(compressedBlob))
+
 	brotliReader := brotli.NewReader(bytes.NewReader(compressedBlob))
+
 	decompressedEncoded, err := io.ReadAll(brotliReader)
 	if err != nil {
 		return nil, fmt.Errorf("WVM: failed to decompress brotli data: %w", err)
 	}
 
+	wvm.log.Info("WVM:blob successfully decompressed", "decompressed blob size", len(compressedBlob))
+
 	return decompressedEncoded, nil
+}
+
+// GetWvmTxHashByCommitment uses commitment to get wvm tx hash from the internal map(temprorary hack)
+// and returns it to the caller
+func (wvm *WVMClient) GetWvmTxHashByCommitment(ctx context.Context, cert *verify.Certificate) (string, error) {
+	wvmTxHash, found := wvm.wvmCache.Get(commitmentKey(cert.BlobVerificationProof.BatchId, cert.BlobVerificationProof.BlobIndex))
+	if !found {
+		wvm.log.Info("wvm tx hash using provided commitment NOT FOUND", "provided key", commitmentKey(cert.BlobVerificationProof.BatchId, cert.BlobVerificationProof.BlobIndex))
+		return "", fmt.Errorf("wvm tx hash for provided commitment not found")
+	}
+
+	wvm.log.Info("wvm tx hash using provided commitment FOUND", "provided key", commitmentKey(cert.BlobVerificationProof.BatchId, cert.BlobVerificationProof.BlobIndex))
+
+	return wvmTxHash.(string), nil
+}
+
+func (wvm *WVMClient) GetBlobFromWvm(ctx context.Context, wvmTxHash string) ([]byte, error) {
+	r, err := http.Get(fmt.Sprintf("https://wvm-data-retriever.shuttleapp.rs/calldata/%s", wvmTxHash))
+	if err != nil {
+		return nil, fmt.Errorf("failed to call wvm-data-retriever")
+	}
+
+	type WvmResponse struct {
+		ArweaveBlockHash   string `json:"arweave_block_hash"`
+		Calldata           string `json:"calldata"`
+		WarDecodedCalldata string `json:"war_decoded_calldata"`
+		WvmBlockHash       string `json:"wvm_block_hash"`
+	}
+
+	defer r.Body.Close()
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var wvmData WvmResponse
+	err = json.Unmarshal(body, &wvmData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
+	}
+
+	wvm.log.Info("Received data from WVM", "arweave_block_hash", wvmData.ArweaveBlockHash, "wvm_block_hash", wvmData.WvmBlockHash)
+
+	wvmDecodedBlob, err := wvm.WvmDecode(wvmData.Calldata)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode calldata to eigen decoded blob: %w", err)
+	}
+
+	if len(wvmDecodedBlob) == 0 {
+		return nil, fmt.Errorf("blob has length zero")
+	}
+
+	return wvmDecodedBlob, nil
 }
 
 // HELPERS
@@ -124,7 +205,6 @@ func (wvm *WVMClient) getSuggestedGasPrice(ctx context.Context) error {
 		return fmt.Errorf("failed to suggest gas price: %w", err)
 	}
 
-	// Print the suggested gas price to the terminal.
 	wvm.log.Info("WVM suggested Gas Price", "gas", gasPrice.String())
 
 	return nil
@@ -170,15 +250,10 @@ func (wvm *WVMClient) estimateGas(ctx context.Context, from, to string, data []b
 
 // createRawTransaction creates a raw EIP-1559 transaction and returns it as a hex string.
 func (wvm *WVMClient) createRawTransaction(ctx context.Context, to string, data string, gasLimit uint64) (string, error) {
-	// Suggest the base fee for inclusion in a block.
 	baseFee, err := wvm.client.SuggestGasPrice(ctx)
 	if err != nil {
 		return "", err
 	}
-	// priorityFee, err := wvm.client.SuggestGasTipCap(context.Background())
-	// if err != nil {
-	// 	return "", err
-	// }
 
 	// WVM: maybe we don't need this, but e.g.
 	// increment := new(big.Int).Mul(big.NewInt(2), big.NewInt(params.GWei))
@@ -228,9 +303,7 @@ func (wvm *WVMClient) createRawTransaction(ctx context.Context, to string, data 
 		return "", err
 	}
 
-	// Set up the transaction fields, including the recipient address, value, and gas parameters.
 	toAddr := common.HexToAddress(to)
-
 	txData := types.DynamicFeeTx{
 		ChainID:   big.NewInt(wvmChainId),
 		Nonce:     nonce,
@@ -359,4 +432,8 @@ func convertHexField(tx *Transaction, field string) error {
 	txValue.FieldByName(field).SetString(decimalStr)
 
 	return nil
+}
+
+func commitmentKey(batchID, blobIndex uint32) string {
+	return fmt.Sprintf("%d:%d", batchID, blobIndex)
 }

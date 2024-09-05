@@ -102,7 +102,7 @@ func (r *Router) Get(ctx context.Context, key []byte, cm commitments.CommitmentM
 	}
 }
 
-// Get ... fetches a value from a storage backend based on the (commitment mode, type)
+// GetBlobFromWvm ... maps commitment to the WVM txhash and retrieves blob from the archived data
 func (r *Router) GetBlobFromWvm(ctx context.Context, key []byte, cm commitments.CommitmentMode) ([]byte, error) {
 	switch cm {
 	case commitments.SimpleCommitmentMode, commitments.OptimismAltDA:
@@ -112,7 +112,6 @@ func (r *Router) GetBlobFromWvm(ctx context.Context, key []byte, cm commitments.
 
 		data, err := r.eigenda.GetBlobFromWvm(ctx, key)
 		if err == nil {
-			// verify
 			err = r.eigenda.Verify(key, data)
 			if err != nil {
 				return nil, err
@@ -123,11 +122,11 @@ func (r *Router) GetBlobFromWvm(ctx context.Context, key []byte, cm commitments.
 		return data, err
 
 	default:
-		return nil, errors.New("could not determine which storage backend to route to based on unknown commitment mode")
+		return nil, fmt.Errorf("could not determine which storage backend to route to based on unknown commitment mode or this mode is not supported: %s", cm)
 	}
 }
 
-// GetWvmTxHashByCommitment ... fetches a value from a storage backend based on the (commitment mode, type)
+// GetWvmTxHashByCommitment ... fetches a wvm txhash for provided commitment
 func (r *Router) GetWvmTxHashByCommitment(ctx context.Context, key []byte, cm commitments.CommitmentMode) (string, error) {
 	switch cm {
 	case commitments.SimpleCommitmentMode, commitments.OptimismAltDA:
@@ -143,7 +142,7 @@ func (r *Router) GetWvmTxHashByCommitment(ctx context.Context, key []byte, cm co
 		return txHash, nil
 
 	default:
-		return "", errors.New("could not determine which storage backend to route to based on unknown commitment mode or UNSUPPORTED")
+		return "", fmt.Errorf("could not determine which storage backend to route to based on unknown commitment mode or this mode is not supported: %s", cm)
 	}
 }
 
