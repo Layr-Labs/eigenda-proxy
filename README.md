@@ -43,9 +43,9 @@ curl -X GET "https://eigenda-proxy-1047776281941.us-central1.run.app/wvm/get/0x$
 - WeaveVM Alphanet block explorer: https://explorer.wvm.dev
 - WeaveVM-EigenDA sidecar server proxy endpoint: https://eigenda-proxy-1047776281941.us-central1.run.app
 
-### testing workflow
+![](./media/workflow.png)
 
-#### 1) Post data 
+### 1) Post data 
 
 ```bash
  curl -X POST "https://eigenda-proxy-1047776281941.us-central1.run.app/put/?commitment_mode=simple" \
@@ -53,26 +53,26 @@ curl -X GET "https://eigenda-proxy-1047776281941.us-central1.run.app/wvm/get/0x$
       -H "Content-Type: application/octet-stream" \
       --output response.bin
 ```
-#### 2) Trim the blob commitment
+### 2) Trim the blob commitment
 
 ```bash
 COMMITMENT=$(xxd -p response.bin | tr -d '\n' | tr -d ' ')
 ```
 
-#### 3) Get data from the proxy
+### 3) Get data from the proxy
 
 ```bash
 curl -X GET "https://eigenda-proxy-1047776281941.us-central1.run.app/get/0x$COMMITMENT?commitment_mode=simple" \
  -H "Content-Type: application/octet-stream"
 ```
-#### 4) Get the WeaveVM data TXID for a commitment
+### 4) Get the WeaveVM data TXID for a commitment
 
 ```bash
 curl -X GET "https://eigenda-proxy-1047776281941.us-central1.run.app/wvm/get/txhash/0x$COMMITMENT?commitment_mode=simple" \
  -H "Content-Type: application/octet-stream"
 ```
 
-#### 5) Get the EigenDA archived blob's decoded data from WeaveVM
+### 5) Get the EigenDA archived blob's decoded data from WeaveVM
 
 This method use WeaveVM's `wvm://` data retrieval gateway to retrieve the data associated with a WeaveVM transaction (calldata) natively from WeaveVM's self-DA layer and Arweave's permanent WeaveVM-ExEx data protocol. [Check out the `wvm-data-retriever` codebase here](https://github.com/weavevM/wvm-data-retriever)
 
