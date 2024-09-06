@@ -16,7 +16,7 @@ const (
 	testPreimage = "Four score and seven years ago"
 )
 
-func getDefaultTestConfig() MemStoreConfig {
+func getDefaultMemStoreTestConfig() MemStoreConfig {
 	return MemStoreConfig{
 		MaxBlobSizeBytes: 1024 * 1024,
 		BlobExpiration:   0,
@@ -25,32 +25,32 @@ func getDefaultTestConfig() MemStoreConfig {
 	}
 }
 
+func getDefaultVerifierTestConfig() *verify.Config {
+	return &verify.Config{
+		Verify: false,
+		KzgConfig: &kzg.KzgConfig{
+			G1Path:          "../resources/g1.point",
+			G2PowerOf2Path:  "../resources/g2.point.powerOf2",
+			CacheDir:        "../resources/SRSTables",
+			SRSOrder:        3000,
+			SRSNumberToLoad: 3000,
+			NumWorker:       uint64(runtime.GOMAXPROCS(0)),
+		},
+	}
+}
+
 func TestGetSet(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	kzgConfig := &kzg.KzgConfig{
-		G1Path:          "../resources/g1.point",
-		G2PowerOf2Path:  "../resources/g2.point.powerOf2",
-		CacheDir:        "../resources/SRSTables",
-		SRSOrder:        3000,
-		SRSNumberToLoad: 3000,
-		NumWorker:       uint64(runtime.GOMAXPROCS(0)),
-	}
-
-	cfg := &verify.Config{
-		Verify:    false,
-		KzgConfig: kzgConfig,
-	}
-
-	verifier, err := verify.NewVerifier(cfg, nil)
+	verifier, err := verify.NewVerifier(getDefaultVerifierTestConfig(), nil)
 	require.NoError(t, err)
 
 	ms, err := NewMemStore(
 		ctx,
 		verifier,
 		log.New(),
-		getDefaultTestConfig(),
+		getDefaultMemStoreTestConfig(),
 	)
 
 	require.NoError(t, err)
@@ -70,24 +70,10 @@ func TestExpiration(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	kzgConfig := &kzg.KzgConfig{
-		G1Path:          "../resources/g1.point",
-		G2PowerOf2Path:  "../resources/g2.point.powerOf2",
-		CacheDir:        "../resources/SRSTables",
-		SRSOrder:        3000,
-		SRSNumberToLoad: 3000,
-		NumWorker:       uint64(runtime.GOMAXPROCS(0)),
-	}
-
-	cfg := &verify.Config{
-		Verify:    false,
-		KzgConfig: kzgConfig,
-	}
-
-	verifier, err := verify.NewVerifier(cfg, nil)
+	verifier, err := verify.NewVerifier(getDefaultVerifierTestConfig(), nil)
 	require.NoError(t, err)
 
-	memstoreConfig := getDefaultTestConfig()
+	memstoreConfig := getDefaultMemStoreTestConfig()
 	memstoreConfig.BlobExpiration = 10 * time.Millisecond
 	ms, err := NewMemStore(
 		ctx,
@@ -119,24 +105,10 @@ func TestLatency(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	kzgConfig := &kzg.KzgConfig{
-		G1Path:          "../resources/g1.point",
-		G2PowerOf2Path:  "../resources/g2.point.powerOf2",
-		CacheDir:        "../resources/SRSTables",
-		SRSOrder:        3000,
-		SRSNumberToLoad: 3000,
-		NumWorker:       uint64(runtime.GOMAXPROCS(0)),
-	}
-
-	cfg := &verify.Config{
-		Verify:    false,
-		KzgConfig: kzgConfig,
-	}
-
-	verifier, err := verify.NewVerifier(cfg, nil)
+	verifier, err := verify.NewVerifier(getDefaultVerifierTestConfig(), nil)
 	require.NoError(t, err)
 
-	config := getDefaultTestConfig()
+	config := getDefaultMemStoreTestConfig()
 	config.PutLatency = putLatency
 	config.GetLatency = getLatency
 	ms, err := NewMemStore(ctx, verifier, log.New(), config)
