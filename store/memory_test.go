@@ -19,7 +19,7 @@ const (
 func getDefaultTestConfig() MemStoreConfig {
 	return MemStoreConfig{
 		MaxBlobSizeBytes: 1024 * 1024,
-		BlobExpiration:   time.Hour * 1000,
+		BlobExpiration:   0,
 		PutLatency:       0,
 		GetLatency:       0,
 	}
@@ -87,11 +87,13 @@ func TestExpiration(t *testing.T) {
 	verifier, err := verify.NewVerifier(cfg, nil)
 	require.NoError(t, err)
 
+	memstoreConfig := getDefaultTestConfig()
+	memstoreConfig.BlobExpiration = 10 * time.Millisecond
 	ms, err := NewMemStore(
 		ctx,
 		verifier,
 		log.New(),
-		getDefaultTestConfig(),
+		memstoreConfig,
 	)
 
 	require.NoError(t, err)
@@ -134,12 +136,10 @@ func TestLatency(t *testing.T) {
 	verifier, err := verify.NewVerifier(cfg, nil)
 	require.NoError(t, err)
 
-	ms, err := NewMemStore(
-		ctx,
-		verifier,
-		log.New(),
-		getDefaultTestConfig(),
-	)
+	config := getDefaultTestConfig()
+	config.PutLatency = putLatency
+	config.GetLatency = getLatency
+	ms, err := NewMemStore(ctx, verifier, log.New(), config)
 
 	require.NoError(t, err)
 
@@ -149,12 +149,9 @@ func TestLatency(t *testing.T) {
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, time.Since(timeBeforePut), putLatency)
 
-	// sleep 1 second and verify that older blob entries are removed
-	time.Sleep(time.Second * 1)
-
 	timeBeforeGet := time.Now()
 	_, err = ms.Get(ctx, key)
-	require.Error(t, err)
+	require.NoError(t, err)
 	require.GreaterOrEqual(t, time.Since(timeBeforeGet), getLatency)
 
 }
