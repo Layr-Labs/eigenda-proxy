@@ -30,6 +30,7 @@ type Metricer interface {
 	RecordInfo(version string)
 	RecordUp()
 	RecordRPCServerRequest(method string) func(status string, commitmentMode string, version string)
+	RecordBlobSize(method string, mode string, ver string, size int)
 
 	Document() []metrics.DocumentedMetric
 }
@@ -42,6 +43,7 @@ type Metrics struct {
 	HTTPServerRequestsTotal          *prometheus.CounterVec
 	HTTPServerBadRequestHeader       *prometheus.CounterVec
 	HTTPServerRequestDurationSeconds *prometheus.HistogramVec
+	BlobSizeBytes                    *prometheus.HistogramVec
 
 	registry *prometheus.Registry
 	factory  metrics.Factory
@@ -101,6 +103,16 @@ func NewMetrics(subsystem string) *Metrics {
 		}, []string{
 			"method", "commitment_mode", "commitment_version", // no status on histograms because those are very expensive
 		}),
+		BlobSizeBytes: factory.NewHistogramVec(prometheus.HistogramOpts{
+			Namespace: namespace,
+			Subsystem: subsystem,
+			Name:      "blob_size_bytes",
+			Help:      "Histogram of blob size in bytes",
+			Buckets:   prometheus.ExponentialBucketsRange(1, 1000000000, 20),
+		}, []string{
+			//Todo: add store as a label
+			"method", "commitment_mode", "certificate_version",
+		}),
 		registry: registry,
 		factory:  factory,
 	}
@@ -129,6 +141,11 @@ func (m *Metrics) RecordRPCServerRequest(method string) func(status string, mode
 		m.HTTPServerRequestsTotal.WithLabelValues(method, status, mode, ver).Inc()
 		timer.ObserveDuration()
 	}
+}
+
+// RecordBlobSize records the size of a blob in bytes
+func (m *Metrics) RecordBlobSize(method string, mode string, ver string, size int) {
+	m.BlobSizeBytes.WithLabelValues(method, mode, ver).Observe(float64(size))
 }
 
 // StartServer starts the metrics server on the given hostname and port.
@@ -161,4 +178,7 @@ func (n *noopMetricer) RecordUp() {
 
 func (n *noopMetricer) RecordRPCServerRequest(string) func(status, mode, ver string) {
 	return func(string, string, string) {}
+}
+
+func (n *noopMetricer) RecordBlobSize(string, string, string, int) {
 }

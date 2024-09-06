@@ -45,6 +45,11 @@ type Server struct {
 	listener   net.Listener
 }
 
+type ServiceResult struct {
+	meta       commitments.CommitmentMeta
+	bodyLength uint
+}
+
 func NewServer(host string, port int, router store.IRouter, log log.Logger,
 	m metrics.Metricer) *Server {
 	endpoint := net.JoinHostPort(host, strconv.Itoa(port))
@@ -63,14 +68,16 @@ func NewServer(host string, port int, router store.IRouter, log log.Logger,
 }
 
 // WithMetrics is a middleware that records metrics for the route path.
-func WithMetrics(handleFn func(http.ResponseWriter, *http.Request) (commitments.CommitmentMeta, error),
+func WithMetrics(handleFn func(http.ResponseWriter, *http.Request) (ServiceResult, error),
 	m metrics.Metricer) func(http.ResponseWriter, *http.Request) error {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		recordDur := m.RecordRPCServerRequest(r.Method)
 
-		meta, err := handleFn(w, r)
+		res, err := handleFn(w, r)
+
 		// we assume that every route will set the status header
-		recordDur(w.Header().Get("status"), string(meta.Mode), meta.CertVersion)
+		recordDur(w.Header().Get("status"), string(res.meta.Mode), res.meta.CertVersion)
+		m.RecordBlobSize(r.Method, string(res.meta.Mode), res.meta.CertVersion, int(res.bodyLength))
 		return err
 	}
 }
@@ -149,47 +156,47 @@ func (svr *Server) Health(w http.ResponseWriter, _ *http.Request) error {
 	return nil
 }
 
-func (svr *Server) HandleGet(w http.ResponseWriter, r *http.Request) (commitments.CommitmentMeta, error) {
+func (svr *Server) HandleGet(w http.ResponseWriter, r *http.Request) (ServiceResult, error) {
 	meta, err := ReadCommitmentMeta(r)
 	if err != nil {
 		svr.WriteBadRequest(w, invalidCommitmentMode)
-		return meta, err
+		return ServiceResult{meta: meta}, err
 	}
 	key := path.Base(r.URL.Path)
 	comm, err := commitments.StringToDecodedCommitment(key, meta.Mode)
 	if err != nil {
 		svr.log.Info("failed to decode commitment", "err", err, "commitment", comm)
 		w.WriteHeader(http.StatusBadRequest)
-		return meta, err
+		return ServiceResult{meta: meta}, err
 	}
 
 	input, err := svr.router.Get(r.Context(), comm, meta.Mode)
 	if err != nil && errors.Is(err, ErrNotFound) {
 		svr.WriteNotFound(w, err.Error())
-		return meta, err
+		return ServiceResult{meta: meta}, err
 	}
 
 	if err != nil {
 		svr.WriteInternalError(w, err)
-		return meta, err
+		return ServiceResult{meta: meta}, err
 	}
 
 	svr.WriteResponse(w, input)
-	return meta, nil
+	return ServiceResult{meta: meta, bodyLength: uint(len(input))}, nil
 }
 
-func (svr *Server) HandlePut(w http.ResponseWriter, r *http.Request) (commitments.CommitmentMeta, error) {
+func (svr *Server) HandlePut(w http.ResponseWriter, r *http.Request) (ServiceResult, error) {
 	meta, err := ReadCommitmentMeta(r)
 	if err != nil {
 		svr.WriteBadRequest(w, invalidCommitmentMode)
-		return meta, err
+		return ServiceResult{meta: meta}, err
 	}
 
 	input, err := io.ReadAll(r.Body)
 	if err != nil {
 		svr.log.Error("Failed to read request body", "err", err)
 		w.WriteHeader(http.StatusBadRequest)
-		return meta, err
+		return ServiceResult{meta: meta}, err
 	}
 
 	key := path.Base(r.URL.Path)
@@ -200,27 +207,27 @@ func (svr *Server) HandlePut(w http.ResponseWriter, r *http.Request) (commitment
 		if err != nil {
 			svr.log.Info("failed to decode commitment", "err", err, "key", key)
 			w.WriteHeader(http.StatusBadRequest)
-			return meta, err
+			return ServiceResult{meta: meta}, err
 		}
 	}
 
 	commitment, err := svr.router.Put(r.Context(), meta.Mode, comm, input)
 	if err != nil {
 		svr.WriteInternalError(w, err)
-		return meta, err
+		return ServiceResult{meta: meta}, err
 	}
 
 	responseCommit, err := commitments.EncodeCommitment(commitment, meta.Mode)
 	if err != nil {
 		svr.log.Info("failed to encode commitment", "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		return meta, err
+		return ServiceResult{meta: meta}, err
 	}
 
 	svr.log.Info(fmt.Sprintf("write commitment: %x\n", comm))
 	// write out encoded commitment
 	svr.WriteResponse(w, responseCommit)
-	return meta, nil
+	return ServiceResult{meta: meta, bodyLength: uint(len(input))}, nil
 }
 
 func (svr *Server) WriteResponse(w http.ResponseWriter, data []byte) {
