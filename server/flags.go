@@ -1,8 +1,6 @@
 package server
 
 import (
-	"fmt"
-
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/urfave/cli/v2"
 
@@ -26,7 +24,7 @@ var (
 	ListenAddrFlag = &cli.StringFlag{
 		Name:    ListenAddrFlagName,
 		Usage:   "server listening address",
-		Value:   "127.0.0.1",
+		Value:   "0.0.0.0",
 		EnvVars: prefixEnvVars("ADDR"),
 	}
 	PortFlag = &cli.IntFlag{
@@ -37,12 +35,12 @@ var (
 	}
 )
 
-var requiredFlags = []cli.Flag{
+var requiredFlags = []cli.Flag{}
+
+var optionalFlags = []cli.Flag{
 	ListenAddrFlag,
 	PortFlag,
 }
-
-var optionalFlags = []cli.Flag{}
 
 func init() {
 	optionalFlags = append(optionalFlags, oplog.CLIFlags(EnvVarPrefix)...)
@@ -73,15 +71,6 @@ func (c CLIConfig) Check() error {
 	err := c.EigenDAConfig.Check()
 	if err != nil {
 		return err
-	}
-	return nil
-}
-
-func CheckRequired(ctx *cli.Context) error {
-	for _, f := range requiredFlags {
-		if !ctx.IsSet(f.Names()[0]) {
-			return fmt.Errorf("flag %s is required", f.Names()[0])
-		}
 	}
 	return nil
 }
