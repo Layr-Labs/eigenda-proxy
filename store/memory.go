@@ -30,10 +30,6 @@ type MemStoreConfig struct {
 	GetLatency time.Duration
 }
 
-var memStoreConfigDefaults = MemStoreConfig{
-	MaxBlobSizeBytes: 1024 * 1024,
-}
-
 /*
 MemStore is a simple in-memory store for blobs which uses an expiration
 time to evict blobs to best emulate the ephemeral nature of blobs dispersed to
