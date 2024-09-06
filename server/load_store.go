@@ -47,7 +47,7 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (store.
 	var eigenda store.KeyGeneratedStore
 	if cfg.EigenDAConfig.MemstoreEnabled {
 		log.Info("Using mem-store backend for EigenDA")
-		eigenda, err = store.NewMemStore(ctx, verifier, log, maxBlobLength, cfg.EigenDAConfig.MemstoreBlobExpiration)
+		eigenda, err = store.NewMemStore(ctx, verifier, log, maxBlobLength, cfg.EigenDAConfig.MemstoreBlobExpiration, cfg.EigenDAConfig.MemstorePutLatency, cfg.EigenDAConfig.MemstoreGetLatency)
 	} else {
 		var client *clients.EigenDAClient
 		log.Info("Using EigenDA backend")

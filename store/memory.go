@@ -30,11 +30,13 @@ EigenDA operators.
 type MemStore struct {
 	sync.RWMutex
 
-	l         log.Logger
-	keyStarts map[string]time.Time
-	store     map[string][]byte
-	verifier  *verify.Verifier
-	codec     codecs.BlobCodec
+	l          log.Logger
+	keyStarts  map[string]time.Time
+	store      map[string][]byte
+	verifier   *verify.Verifier
+	codec      codecs.BlobCodec
+	putLatency time.Duration
+	getLatency time.Duration
 
 	maxBlobSizeBytes uint64
 	blobExpiration   time.Duration
@@ -45,7 +47,8 @@ var _ KeyGeneratedStore = (*MemStore)(nil)
 
 // NewMemStore ... constructor
 func NewMemStore(ctx context.Context, verifier *verify.Verifier, l log.Logger,
-	maxBlobSizeBytes uint64, blobExpiration time.Duration) (*MemStore, error) {
+	maxBlobSizeBytes uint64, blobExpiration time.Duration,
+	putLatency, getLatency time.Duration) (*MemStore, error) {
 	store := &MemStore{
 		l:                l,
 		keyStarts:        make(map[string]time.Time),
@@ -54,6 +57,9 @@ func NewMemStore(ctx context.Context, verifier *verify.Verifier, l log.Logger,
 		codec:            codecs.NewIFFTCodec(codecs.NewDefaultBlobCodec()),
 		maxBlobSizeBytes: maxBlobSizeBytes,
 		blobExpiration:   blobExpiration,
+		// artificial latency added for memstore backend to mimic eigenda's latency
+		putLatency:       putLatency,
+		getLatency:       getLatency,
 	}
 
 	if store.blobExpiration != 0 {
@@ -97,6 +103,7 @@ func (e *MemStore) pruneExpired() {
 
 // Get fetches a value from the store.
 func (e *MemStore) Get(_ context.Context, commit []byte) ([]byte, error) {
+	time.Sleep(e.getLatency)
 	e.reads++
 	e.RLock()
 	defer e.RUnlock()
@@ -124,6 +131,7 @@ func (e *MemStore) Get(_ context.Context, commit []byte) ([]byte, error) {
 
 // Put inserts a value into the store.
 func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
+	time.Sleep(e.putLatency)
 	if uint64(len(value)) > e.maxBlobSizeBytes {
 		return nil, fmt.Errorf("blob is larger than max blob size: blob length %d, max blob size %d", len(value), e.maxBlobSizeBytes)
 	}

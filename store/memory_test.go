@@ -43,6 +43,7 @@ func TestGetSet(t *testing.T) {
 		log.New(),
 		1024*1024*2,
 		time.Hour*1000,
+		0, 0,
 	)
 
 	require.NoError(t, err)
@@ -85,6 +86,7 @@ func TestExpiration(t *testing.T) {
 		log.New(),
 		1024*1024*2,
 		time.Millisecond*10,
+		0, 0,
 	)
 
 	require.NoError(t, err)
@@ -98,5 +100,58 @@ func TestExpiration(t *testing.T) {
 
 	_, err = ms.Get(ctx, key)
 	require.Error(t, err)
+
+}
+
+func TestLatency(t *testing.T) {
+	t.Parallel()
+
+	putLatency := 1 * time.Second
+	getLatency := 1 * time.Second
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	kzgConfig := &kzg.KzgConfig{
+		G1Path:          "../resources/g1.point",
+		G2PowerOf2Path:  "../resources/g2.point.powerOf2",
+		CacheDir:        "../resources/SRSTables",
+		SRSOrder:        3000,
+		SRSNumberToLoad: 3000,
+		NumWorker:       uint64(runtime.GOMAXPROCS(0)),
+	}
+
+	cfg := &verify.Config{
+		Verify:    false,
+		KzgConfig: kzgConfig,
+	}
+
+	verifier, err := verify.NewVerifier(cfg, nil)
+	require.NoError(t, err)
+
+	ms, err := NewMemStore(
+		ctx,
+		verifier,
+		log.New(),
+		1024*1024*2,
+		time.Millisecond*10,
+		putLatency, getLatency,
+	)
+
+	require.NoError(t, err)
+
+	preimage := []byte(testPreimage)
+	timeBeforePut := time.Now()
+	key, err := ms.Put(ctx, preimage)
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, time.Since(timeBeforePut), putLatency)
+
+	// sleep 1 second and verify that older blob entries are removed
+	time.Sleep(time.Second * 1)
+
+	timeBeforeGet := time.Now()
+	_, err = ms.Get(ctx, key)
+	require.Error(t, err)
+	require.GreaterOrEqual(t, time.Since(timeBeforeGet), getLatency)
 
 }
