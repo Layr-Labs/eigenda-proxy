@@ -39,8 +39,8 @@ stop-redis:
 		docker stop redis && docker rm redis; \
 	fi
 
-run-server:
-	./bin/eigenda-proxy
+run-memstore-server:
+	./bin/eigenda-proxy --memstore.enabled
 
 clean:
 	rm bin/eigenda-proxy
