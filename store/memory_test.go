@@ -16,6 +16,15 @@ const (
 	testPreimage = "Four score and seven years ago"
 )
 
+func getDefaultTestConfig() MemStoreConfig {
+	return MemStoreConfig{
+		MaxBlobSizeBytes: 1024 * 1024,
+		BlobExpiration:   time.Hour * 1000,
+		PutLatency:       0,
+		GetLatency:       0,
+	}
+}
+
 func TestGetSet(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -41,9 +50,7 @@ func TestGetSet(t *testing.T) {
 		ctx,
 		verifier,
 		log.New(),
-		1024*1024*2,
-		time.Hour*1000,
-		0, 0,
+		getDefaultTestConfig(),
 	)
 
 	require.NoError(t, err)
@@ -84,9 +91,7 @@ func TestExpiration(t *testing.T) {
 		ctx,
 		verifier,
 		log.New(),
-		1024*1024*2,
-		time.Millisecond*10,
-		0, 0,
+		getDefaultTestConfig(),
 	)
 
 	require.NoError(t, err)
@@ -133,9 +138,7 @@ func TestLatency(t *testing.T) {
 		ctx,
 		verifier,
 		log.New(),
-		1024*1024*2,
-		time.Millisecond*10,
-		putLatency, getLatency,
+		getDefaultTestConfig(),
 	)
 
 	require.NoError(t, err)

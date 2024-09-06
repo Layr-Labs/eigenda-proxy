@@ -22,6 +22,18 @@ const (
 	DefaultPruneInterval = 500 * time.Millisecond
 )
 
+type MemStoreConfig struct {
+	MaxBlobSizeBytes uint64
+	BlobExpiration   time.Duration
+	// artificial latency added for memstore backend to mimic eigenda's latency
+	PutLatency time.Duration
+	GetLatency time.Duration
+}
+
+var memStoreConfigDefaults = MemStoreConfig{
+	MaxBlobSizeBytes: 1024 * 1024,
+}
+
 /*
 MemStore is a simple in-memory store for blobs which uses an expiration
 time to evict blobs to best emulate the ephemeral nature of blobs dispersed to
@@ -30,40 +42,33 @@ EigenDA operators.
 type MemStore struct {
 	sync.RWMutex
 
-	l          log.Logger
-	keyStarts  map[string]time.Time
-	store      map[string][]byte
-	verifier   *verify.Verifier
-	codec      codecs.BlobCodec
-	putLatency time.Duration
-	getLatency time.Duration
+	config    MemStoreConfig
+	l         log.Logger
+	keyStarts map[string]time.Time
+	store     map[string][]byte
+	verifier  *verify.Verifier
+	codec     codecs.BlobCodec
 
-	maxBlobSizeBytes uint64
-	blobExpiration   time.Duration
-	reads            int
+	reads int
 }
 
 var _ KeyGeneratedStore = (*MemStore)(nil)
 
 // NewMemStore ... constructor
-func NewMemStore(ctx context.Context, verifier *verify.Verifier, l log.Logger,
-	maxBlobSizeBytes uint64, blobExpiration time.Duration,
-	putLatency, getLatency time.Duration) (*MemStore, error) {
+func NewMemStore(
+	ctx context.Context, verifier *verify.Verifier, l log.Logger, config MemStoreConfig,
+) (*MemStore, error) {
 	store := &MemStore{
-		l:                l,
-		keyStarts:        make(map[string]time.Time),
-		store:            make(map[string][]byte),
-		verifier:         verifier,
-		codec:            codecs.NewIFFTCodec(codecs.NewDefaultBlobCodec()),
-		maxBlobSizeBytes: maxBlobSizeBytes,
-		blobExpiration:   blobExpiration,
-		// artificial latency added for memstore backend to mimic eigenda's latency
-		putLatency:       putLatency,
-		getLatency:       getLatency,
+		l:         l,
+		config:    config,
+		keyStarts: make(map[string]time.Time),
+		store:     make(map[string][]byte),
+		verifier:  verifier,
+		codec:     codecs.NewIFFTCodec(codecs.NewDefaultBlobCodec()),
 	}
 
-	if store.blobExpiration != 0 {
-		l.Info("memstore expiration enabled", "time", store.blobExpiration)
+	if store.config.BlobExpiration != 0 {
+		l.Info("memstore expiration enabled", "time", store.config.BlobExpiration)
 		go store.EventLoop(ctx)
 	}
 
@@ -92,7 +97,7 @@ func (e *MemStore) pruneExpired() {
 	defer e.Unlock()
 
 	for commit, dur := range e.keyStarts {
-		if time.Since(dur) >= e.blobExpiration {
+		if time.Since(dur) >= e.config.BlobExpiration {
 			delete(e.keyStarts, commit)
 			delete(e.store, commit)
 
@@ -103,7 +108,7 @@ func (e *MemStore) pruneExpired() {
 
 // Get fetches a value from the store.
 func (e *MemStore) Get(_ context.Context, commit []byte) ([]byte, error) {
-	time.Sleep(e.getLatency)
+	time.Sleep(e.config.GetLatency)
 	e.reads++
 	e.RLock()
 	defer e.RUnlock()
@@ -131,9 +136,9 @@ func (e *MemStore) Get(_ context.Context, commit []byte) ([]byte, error) {
 
 // Put inserts a value into the store.
 func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
-	time.Sleep(e.putLatency)
-	if uint64(len(value)) > e.maxBlobSizeBytes {
-		return nil, fmt.Errorf("blob is larger than max blob size: blob length %d, max blob size %d", len(value), e.maxBlobSizeBytes)
+	time.Sleep(e.config.PutLatency)
+	if uint64(len(value)) > e.config.MaxBlobSizeBytes {
+		return nil, fmt.Errorf("blob is larger than max blob size: blob length %d, max blob size %d", len(value), e.config.MaxBlobSizeBytes)
 	}
 
 	e.Lock()
