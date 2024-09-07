@@ -30,6 +30,7 @@ const (
 
 	GetRoute = "/get/"
 	PutRoute = "/put/"
+	Put      = "put"
 
 	DomainFilterKey   = "domain"
 	CommitmentModeKey = "commitment_mode"
@@ -70,7 +71,7 @@ func WithMetrics(handleFn func(http.ResponseWriter, *http.Request) (commitments.
 
 		meta, err := handleFn(w, r)
 		// we assume that every route will set the status header
-		recordDur(w.Header().Get("status"), string(meta.Mode), meta.CertVersion)
+		recordDur(w.Header().Get("status"), string(meta.Mode), string(meta.CertVersion))
 		return err
 	}
 }
@@ -195,7 +196,7 @@ func (svr *Server) HandlePut(w http.ResponseWriter, r *http.Request) (commitment
 	key := path.Base(r.URL.Path)
 	var comm []byte
 
-	if len(key) > 0 && key != "put" { // commitment key already provided (keccak256)
+	if len(key) > 0 && key != Put { // commitment key already provided (keccak256)
 		comm, err = commitments.StringToDecodedCommitment(key, meta.Mode)
 		if err != nil {
 			svr.log.Info("failed to decode commitment", "err", err, "key", key)
@@ -258,12 +259,15 @@ func ReadCommitmentMeta(r *http.Request) (commitments.CommitmentMeta, error) {
 	if err != nil {
 		return commitments.CommitmentMeta{}, err
 	}
-	vb, err := ReadCommitmentVersion(r, ct)
+	if ct == "" {
+		return commitments.CommitmentMeta{}, fmt.Errorf("commitment mode is empty")
+	}
+	cv, err := ReadCommitmentVersion(r, ct)
 	if err != nil {
 		// default to version 0
-		return commitments.CommitmentMeta{Mode: ct, CertVersion: fmt.Sprintf("%d", 0)}, err
+		return commitments.CommitmentMeta{Mode: ct, CertVersion: cv}, err
 	}
-	return commitments.CommitmentMeta{Mode: ct, CertVersion: fmt.Sprintf("%d", vb)}, nil
+	return commitments.CommitmentMeta{Mode: ct, CertVersion: cv}, nil
 }
 
 func ReadCommitmentMode(r *http.Request) (commitments.CommitmentMode, error) {
@@ -274,18 +278,18 @@ func ReadCommitmentMode(r *http.Request) (commitments.CommitmentMode, error) {
 	}
 
 	commit := path.Base(r.URL.Path)
-	if len(commit) > 0 && commit != "put" { // provided commitment in request params (op keccak256)
+	if len(commit) > 0 && commit != Put { // provided commitment in request params (op keccak256)
 		if !strings.HasPrefix(commit, "0x") {
 			commit = "0x" + commit
 		}
 
 		decodedCommit, err := hexutil.Decode(commit)
 		if err != nil {
-			return commitments.SimpleCommitmentMode, err
+			return "", err
 		}
 
 		if len(decodedCommit) < 3 {
-			return commitments.SimpleCommitmentMode, fmt.Errorf("commitment is too short")
+			return "", fmt.Errorf("commitment is too short")
 		}
 
 		switch decodedCommit[0] {
@@ -302,17 +306,29 @@ func ReadCommitmentMode(r *http.Request) (commitments.CommitmentMode, error) {
 	return commitments.OptimismAltDA, nil
 }
 
-func ReadCommitmentVersion(r *http.Request, mode commitments.CommitmentMode) (uint8, error) {
-	commitment := r.URL.Path
-	if len(commitment) < 3 {
-		return 0, fmt.Errorf("commitment is too short")
-	}
+func ReadCommitmentVersion(r *http.Request, mode commitments.CommitmentMode) (byte, error) {
+	commit := path.Base(r.URL.Path)
+	if len(commit) > 0 && commit != Put { // provided commitment in request params (op keccak256)
+		if !strings.HasPrefix(commit, "0x") {
+			commit = "0x" + commit
+		}
 
-	if mode == commitments.OptimismAltDA || mode == commitments.OptimismGeneric {
-		return commitment[2], nil
+		decodedCommit, err := hexutil.Decode(commit)
+		if err != nil {
+			return 0, err
+		}
+
+		if len(decodedCommit) < 3 {
+			return 0, fmt.Errorf("commitment is too short")
+		}
+
+		if mode == commitments.OptimismAltDA || mode == commitments.SimpleCommitmentMode {
+			return decodedCommit[2], nil
+		}
+
+		return decodedCommit[0], nil
 	}
-	// the only other mode is simple, which take first byte as version
-	return commitment[0], nil
+	return 0, nil
 }
 
 func (svr *Server) GetEigenDAStats() *store.Stats {
