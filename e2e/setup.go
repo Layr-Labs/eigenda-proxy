@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"testing"
@@ -93,10 +94,15 @@ type TestSuite struct {
 func CreateTestSuite(t *testing.T, testCfg *Cfg) (TestSuite, func()) {
 	ctx := context.Background()
 
-	// load signer key from environment
+	// load signer key from environment or generate a random one
 	pk := os.Getenv(privateKey)
 	if pk == "" && !testCfg.UseMemory {
-		t.Fatal("SIGNER_PRIVATE_KEY environment variable not set")
+		t.Logf("SIGNER_PRIVATE_KEY environment variable not set. Generated random private key")
+		randomBytes := make([]byte, 32)
+		if _, err := rand.Read(randomBytes); err != nil {
+			t.Fatalf("Failed to generate random private key: %v", err)
+		}
+		pk = hex.EncodeToString(randomBytes)
 	}
 
 	// load node url from environment

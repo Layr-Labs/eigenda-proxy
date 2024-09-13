@@ -1,6 +1,8 @@
 package server
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"runtime"
 	"time"
@@ -179,13 +181,22 @@ func ReadConfig(ctx *cli.Context) Config {
 			Timeout:          ctx.Duration(S3TimeoutFlagName),
 		},
 		ClientConfig: clients.EigenDAClientConfig{
-			RPC:                          ctx.String(EigenDADisperserRPCFlagName),
-			StatusQueryRetryInterval:     ctx.Duration(StatusQueryRetryIntervalFlagName),
-			StatusQueryTimeout:           ctx.Duration(StatusQueryTimeoutFlagName),
-			DisableTLS:                   ctx.Bool(DisableTLSFlagName),
-			ResponseTimeout:              ctx.Duration(ResponseTimeoutFlagName),
-			CustomQuorumIDs:              ctx.UintSlice(CustomQuorumIDsFlagName),
-			SignerPrivateKeyHex:          ctx.String(SignerPrivateKeyHexFlagName),
+			RPC:                      ctx.String(EigenDADisperserRPCFlagName),
+			StatusQueryRetryInterval: ctx.Duration(StatusQueryRetryIntervalFlagName),
+			StatusQueryTimeout:       ctx.Duration(StatusQueryTimeoutFlagName),
+			DisableTLS:               ctx.Bool(DisableTLSFlagName),
+			ResponseTimeout:          ctx.Duration(ResponseTimeoutFlagName),
+			CustomQuorumIDs:          ctx.UintSlice(CustomQuorumIDsFlagName),
+			SignerPrivateKeyHex: func() string {
+				if key := ctx.String(SignerPrivateKeyHexFlagName); key != "" {
+					return key
+				}
+				randomBytes := make([]byte, 32)
+				if _, err := rand.Read(randomBytes); err != nil {
+					panic(fmt.Errorf("failed to generate random private key: %w", err))
+				}
+				return hex.EncodeToString(randomBytes)
+			}(),
 			PutBlobEncodingVersion:       codecs.BlobEncodingVersion(ctx.Uint(PutBlobEncodingVersionFlagName)),
 			DisablePointVerificationMode: ctx.Bool(DisablePointVerificationModeFlagName),
 		},
