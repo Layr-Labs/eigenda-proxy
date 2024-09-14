@@ -30,6 +30,7 @@ const (
 	SignerPrivateKeyHexFlagName          = "eigenda-signer-private-key-hex"
 	PutBlobEncodingVersionFlagName       = "eigenda-put-blob-encoding-version"
 	DisablePointVerificationModeFlagName = "eigenda-disable-point-verification-mode"
+	ReadOnlyFlagName                     = "read-only"
 
 	// kzg flags
 	G1PathFlagName        = "eigenda-g1-path"
@@ -77,6 +78,7 @@ var (
 type Config struct {
 	// eigenda
 	ClientConfig clients.EigenDAClientConfig
+	ReadOnly     bool
 
 	// the blob encoding version to use when writing blobs from the high level interface.
 	PutBlobEncodingVersion codecs.BlobEncodingVersion
@@ -213,6 +215,7 @@ func ReadConfig(ctx *cli.Context) Config {
 		MemstorePutLatency:     ctx.Duration(MemstorePutLatencyFlagName),
 		FallbackTargets:        ctx.StringSlice(FallbackTargets),
 		CacheTargets:           ctx.StringSlice(CacheTargets),
+		ReadOnly:               ctx.Bool(ReadOnlyFlagName),
 	}
 	cfg.ClientConfig.WaitForFinalization = (cfg.EthConfirmationDepth < 0)
 
@@ -506,6 +509,12 @@ func CLIFlags() []cli.Flag {
 			Usage:   "List of caching targets to use fast reads from EigenDA.",
 			Value:   cli.NewStringSlice(),
 			EnvVars: prefixEnvVars("CACHE_TARGETS"),
+		},
+		&cli.BoolFlag{
+			Name:    ReadOnlyFlagName,
+			Usage:   "Whether the proxy should operate in read-only mode.",
+			Value:   false,
+			EnvVars: prefixEnvVars("READ_ONLY"),
 		},
 	}
 

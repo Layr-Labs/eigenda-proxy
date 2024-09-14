@@ -121,5 +121,5 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (store.
 	caches := populateTargets(cfg.EigenDAConfig.CacheTargets, s3, redis)
 
 	log.Info("Creating storage router", "eigenda backend type", eigenda != nil, "s3 backend type", s3 != nil)
-	return store.NewRouter(eigenda, s3, log, caches, fallbacks)
+	return store.NewRouter(eigenda, s3, log, caches, fallbacks, cfg.EigenDAConfig.ReadOnly)
 }

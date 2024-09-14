@@ -25,9 +25,10 @@ type IRouter interface {
 
 // Router ... storage backend routing layer
 type Router struct {
-	log     log.Logger
-	eigenda KeyGeneratedStore
-	s3      PrecomputedKeyStore
+	log      log.Logger
+	eigenda  KeyGeneratedStore
+	s3       PrecomputedKeyStore
+	readonly bool
 
 	caches    []PrecomputedKeyStore
 	cacheLock sync.RWMutex
@@ -37,11 +38,12 @@ type Router struct {
 }
 
 func NewRouter(eigenda KeyGeneratedStore, s3 PrecomputedKeyStore, l log.Logger,
-	caches []PrecomputedKeyStore, fallbacks []PrecomputedKeyStore) (IRouter, error) {
+	caches []PrecomputedKeyStore, fallbacks []PrecomputedKeyStore, readonly bool) (IRouter, error) {
 	return &Router{
 		log:          l,
 		eigenda:      eigenda,
 		s3:           s3,
+		readonly:     readonly,
 		caches:       caches,
 		cacheLock:    sync.RWMutex{},
 		fallbacks:    fallbacks,
@@ -117,6 +119,10 @@ func (r *Router) Get(ctx context.Context, key []byte, cm commitments.CommitmentM
 
 // Put ... inserts a value into a storage backend based on the commitment mode
 func (r *Router) Put(ctx context.Context, cm commitments.CommitmentMode, key, value []byte) ([]byte, error) {
+	if r.readonly {
+		return nil, errors.New("read-only router does not support Put")
+	}
+
 	var commit []byte
 	var err error
 
