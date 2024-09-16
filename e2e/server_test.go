@@ -1,10 +1,11 @@
 package e2e_test
 
 import (
-	"github.com/Layr-Labs/eigenda-proxy/client"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Layr-Labs/eigenda-proxy/client"
 
 	"github.com/Layr-Labs/eigenda-proxy/e2e"
 	"github.com/Layr-Labs/eigenda-proxy/store"
