@@ -38,14 +38,14 @@ const (
 type Server struct {
 	log        log.Logger
 	endpoint   string
-	router     *store.Router
+	router     store.IRouter
 	m          metrics.Metricer
 	tls        *rpc.ServerTLSConfig
 	httpServer *http.Server
 	listener   net.Listener
 }
 
-func NewServer(host string, port int, router *store.Router, log log.Logger,
+func NewServer(host string, port int, router store.IRouter, log log.Logger,
 	m metrics.Metricer) *Server {
 	endpoint := net.JoinHostPort(host, strconv.Itoa(port))
 	return &Server{
@@ -266,7 +266,7 @@ func ReadCommitmentMode(r *http.Request) (commitments.CommitmentMode, error) {
 	}
 
 	commit := path.Base(r.URL.Path)
-	if len(commit) > 0 && commit != "put" { // provided commitment in request params
+	if len(commit) > 0 && commit != "put" { // provided commitment in request params (op keccak256)
 		if !strings.HasPrefix(commit, "0x") {
 			commit = "0x" + commit
 		}
@@ -274,6 +274,10 @@ func ReadCommitmentMode(r *http.Request) (commitments.CommitmentMode, error) {
 		decodedCommit, err := hexutil.Decode(commit)
 		if err != nil {
 			return commitments.SimpleCommitmentMode, err
+		}
+
+		if len(decodedCommit) < 3 {
+			return commitments.SimpleCommitmentMode, fmt.Errorf("commitment is too short")
 		}
 
 		switch decodedCommit[0] {
@@ -296,4 +300,22 @@ func (svr *Server) GetEigenDAStats() *store.Stats {
 
 func (svr *Server) GetS3Stats() *store.Stats {
 	return svr.router.GetS3Store().Stats()
+}
+
+func (svr *Server) GetStoreStats(bt store.BackendType) (*store.Stats, error) {
+	// first check if the store is a cache
+	for _, cache := range svr.router.Caches() {
+		if cache.BackendType() == bt {
+			return cache.Stats(), nil
+		}
+	}
+
+	// then check if the store is a fallback
+	for _, fallback := range svr.router.Fallbacks() {
+		if fallback.BackendType() == bt {
+			return fallback.Stats(), nil
+		}
+	}
+
+	return nil, fmt.Errorf("store not found")
 }

@@ -46,8 +46,10 @@ In order to disperse to the EigenDA network in production, or at high throughput
 | `--log.format` | `text` | `$EIGENDA_PROXY_LOG_FORMAT` | Format the log output. Supported formats: 'text', 'terminal', 'logfmt', 'json', 'json-pretty'. |
 | `--log.level` | `INFO` | `$EIGENDA_PROXY_LOG_LEVEL` | The lowest log level that will be output. |
 | `--log.pid` | `false` | `$EIGENDA_PROXY_LOG_PID` | Show pid in the log. |
-| `--memstore.enabled` | `false` | `$MEMSTORE_ENABLED` | Whether to use mem-store for DA logic. |
-| `--memstore.expiration` | `25m0s` | `$MEMSTORE_EXPIRATION` | Duration that a mem-store blob/commitment pair are allowed to live. |
+| `--memstore.enabled` | `false` | `$EIGENDA_PROXY_MEMSTORE_ENABLED` | Whether to use mem-store for DA logic. |
+| `--memstore.expiration` | `25m0s` | `$EIGENDA_PROXY_MEMSTORE_EXPIRATION` | Duration that a mem-store blob/commitment pair are allowed to live. |
+| `--memstore.put-latency` | `0` | `$EIGENDA_PROXY_MEMSTORE_PUT_LATENCY` | Artificial latency added for memstore backend to mimic EigenDA's dispersal latency. |
+| `--memstore.get-latency` | `0` | `$EIGENDA_PROXY_MEMSTORE_GET_LATENCY` | Artificial latency added for memstore backend to mimic EigenDA's retrieval latency. |
 | `--metrics.addr` | `"0.0.0.0"` | `$EIGENDA_PROXY_METRICS_ADDR` | Metrics listening address. |
 | `--metrics.enabled` | `false` | `$EIGENDA_PROXY_METRICS_ENABLED` | Enable the metrics server. |
 | `--metrics.port` | `7300` | `$EIGENDA_PROXY_METRICS_PORT` | Metrics listening port. |
@@ -62,6 +64,10 @@ In order to disperse to the EigenDA network in production, or at high throughput
 | `--routing.fallback-targets` | `[]` | `$EIGENDA_PROXY_FALLBACK_TARGETS` | Fall back backend targets. Supports S3. | Backup storage locations to read from in the event of eigenda retrieval failure. |
 | `--routing.cache-targets` | `[]` | `$EIGENDA_PROXY_CACHE_TARGETS` | Caching targets. Supports S3. | Caches data to backend targets after dispersing to DA, retrieved from before trying read from EigenDA. |
 | `--s3.timeout` | `5s` | `$EIGENDA_PROXY_S3_TIMEOUT` | timeout for S3 storage operations (e.g. get, put) |
+| `--redis.db` | `0` |  `$EIGENDA_PROXY_REDIS_DB` | redis database to use after connecting to server |
+| `--redis.endpoint` | `""` | `$EIGENDA_PROXY_REDIS_ENDPOINT` | redis endpoint url |
+| `--redis.password` | `""` | `$EIGENDA_PROXY_REDIS_PASSWORD` | redis password |
+| `--redis.eviction` | `24h0m0s`  | `$EIGENDA_PROXY_REDIS_EVICTION` | entry eviction/expiration time |
 | `--help, -h` | `false` |  | Show help. |
 | `--version, -v` | `false` |  | Print the version. |
 

@@ -1,4 +1,4 @@
-APP_NAME = eigenda-proxy
+IMAGE_NAME = ghcr.io/layr-labs/eigenda-proxy
 LINTER_VERSION = v1.52.1
 LINTER_URL = https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh
 GET_LINT_CMD = "curl -sSfL $(LINTER_URL) | sh -s -- -b $(go env GOPATH)/bin $(LINTER_VERSION)"
@@ -21,18 +21,29 @@ eigenda-proxy:
 
 .PHONY: docker-build
 docker-build:
-	@docker build -t $(APP_NAME) .
+	@docker build -t $(IMAGE_NAME) .
 
 run-minio:
 	docker run -p 4566:9000 -d -e "MINIO_ROOT_USER=minioadmin" -e "MINIO_ROOT_PASSWORD=minioadmin" --name minio minio/minio server /data
+
+run-redis:
+	docker run -p 9001:6379 -d --name redis redis
 
 stop-minio:
 	@if [ -n "$$(docker ps -q -f name=minio)" ]; then \
 		docker stop minio && docker rm minio; \
 	fi
 
-run-server:
-	./bin/eigenda-proxy
+stop-redis:
+	@if [ -n "$$(docker ps -q -f name=redis)" ]; then \
+		docker stop redis && docker rm redis; \
+	fi
+
+run-memstore-server:
+	./bin/eigenda-proxy --memstore.enabled
+
+disperse-test-blob:
+	curl -X POST -d my-blob-content http://127.0.0.1:3100/put/
 
 clean:
 	rm bin/eigenda-proxy
@@ -40,13 +51,15 @@ clean:
 test:
 	go test -v ./... -parallel 4 
 
-e2e-test: stop-minio run-minio
+e2e-test: stop-minio stop-redis run-minio run-redis
 	$(E2ETEST) && \
-	make stop-minio
+	make stop-minio && \
+	make stop-redis
 
-holesky-test: run-minio
+holesky-test: stop-minio stop-redis run-minio run-redis
 	$(HOLESKYTEST) && \
-	make stop-minio
+	make stop-minio && \
+	make stop-redis
 
 .PHONY: lint
 lint:
@@ -59,6 +72,10 @@ lint:
 	fi
 
 	@golangci-lint run
+
+go-gen-mocks:
+	@echo "generating go mocks..."
+	@GO111MODULE=on go generate --run "mockgen*" ./...
 
 install-lint:
 	@echo "Installing golangci-lint..."
