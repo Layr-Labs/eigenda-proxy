@@ -39,12 +39,12 @@ func TestOptimismClientWithKeccak256Commitment(t *testing.T) {
 	daClientPcFalse := op_plasma.NewDAClient(ts.Address(), false, false)
 
 	// nil commitment. Should return an error but currently is not. This needs to be fixed by OP
-	//t.Run("nil commitment case", func(t *testing.T) {
+	// t.Run("nil commitment case", func(t *testing.T) {
 	//	var commit op_plasma.CommitmentData
 	//	_, err := daClient.GetInput(ts.Ctx, commit)
 	//	require.Error(t, err)
 	//	assert.True(t, !isPanic(err.Error()))
-	//})
+	// })
 
 	t.Run("input bad data to SetInput & GetInput", func(t *testing.T) {
 		testPreimage := []byte("") // Empty preimage
@@ -60,7 +60,7 @@ func TestOptimismClientWithKeccak256Commitment(t *testing.T) {
 		require.Error(t, err)
 
 		// Should not fail on slice bounds out of range. This needs to be fixed by OP.
-		//assert.False(t, strings.Contains(err.Error(), ": EOF") && !isPanic(err.Error()))
+		// assert.False(t, strings.Contains(err.Error(), ": EOF") && !isPanic(err.Error()))
 	})
 
 	// nil commitment. Should return an error but currently not
