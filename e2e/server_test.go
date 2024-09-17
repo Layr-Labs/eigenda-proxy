@@ -23,10 +23,18 @@ func isPanic(err string) bool {
 		strings.Contains(err, "nil pointer dereference")
 }
 
-func TestOptimismClientWithKeccak256Commitment(t *testing.T) {
-	if !runIntegrationTests && !runTestnetIntegrationTests {
-		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+func TestOptimismClientWithKeccak256CommitmentIntegration(t *testing.T) {
+	if !runIntegrationTests || runTestnetIntegrationTests {
+		t.Skip("Skipping test as TESTNET env set or INTEGRATION var not set")
 	}
+
+	// nil commitment. Should return an error but currently is not. This needs to be fixed by OP
+	// t.Run("nil commitment case", func(t *testing.T) {
+	//	var commit op_plasma.CommitmentData
+	//	_, err := daClient.GetInput(ts.Ctx, commit)
+	//	require.Error(t, err)
+	//	assert.True(t, !isPanic(err.Error()))
+	// })
 
 	t.Parallel()
 
@@ -36,16 +44,7 @@ func TestOptimismClientWithKeccak256Commitment(t *testing.T) {
 	ts, kill := e2e.CreateTestSuite(t, testCfg)
 	defer kill()
 
-	daClient := op_plasma.NewDAClient(ts.Address(), false, true)
 	daClientPcFalse := op_plasma.NewDAClient(ts.Address(), false, false)
-
-	// nil commitment. Should return an error but currently is not. This needs to be fixed by OP
-	// t.Run("nil commitment case", func(t *testing.T) {
-	//	var commit op_plasma.CommitmentData
-	//	_, err := daClient.GetInput(ts.Ctx, commit)
-	//	require.Error(t, err)
-	//	assert.True(t, !isPanic(err.Error()))
-	// })
 
 	t.Run("input bad data to SetInput & GetInput", func(t *testing.T) {
 		testPreimage := []byte("") // Empty preimage
@@ -64,7 +63,23 @@ func TestOptimismClientWithKeccak256Commitment(t *testing.T) {
 		// assert.False(t, strings.Contains(err.Error(), ": EOF") && !isPanic(err.Error()))
 	})
 
-	// nil commitment. Should return an error but currently not
+}
+
+func TestOptimismClientWithKeccak256Commitment(t *testing.T) {
+	if !runIntegrationTests && !runTestnetIntegrationTests {
+		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	}
+
+	t.Parallel()
+
+	testCfg := e2e.TestConfig(useMemory())
+	testCfg.UseKeccak256ModeS3 = true
+
+	ts, kill := e2e.CreateTestSuite(t, testCfg)
+	defer kill()
+
+	daClient := op_plasma.NewDAClient(ts.Address(), false, true)
+
 	t.Run("normal case", func(t *testing.T) {
 		testPreimage := []byte(e2e.RandString(100))
 
@@ -106,7 +121,7 @@ func TestOptimismClientWithGenericCommitment(t *testing.T) {
 	require.Equal(t, testPreimage, preimage)
 }
 
-func TestProxyClient(t *testing.T) {
+func TestProxyClientIntegrationOnly(t *testing.T) {
 	if !runIntegrationTests && !runTestnetIntegrationTests {
 		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
 	}
@@ -120,19 +135,6 @@ func TestProxyClient(t *testing.T) {
 		URL: ts.Address(),
 	}
 	daClient := client.New(cfg)
-
-	t.Run("normal case case", func(t *testing.T) {
-		testPreimage := []byte(e2e.RandString(100))
-
-		t.Log("Setting input data on proxy server...")
-		blobInfo, err := daClient.SetData(ts.Ctx, testPreimage)
-		require.NoError(t, err)
-
-		t.Log("Getting input data from proxy server...")
-		preimage, err := daClient.GetData(ts.Ctx, blobInfo)
-		require.NoError(t, err)
-		require.Equal(t, testPreimage, preimage)
-	})
 
 	t.Run("single byte preimage set data case", func(t *testing.T) {
 		testPreimage := []byte{1} // Empty preimage
@@ -181,6 +183,34 @@ func TestProxyClient(t *testing.T) {
 			"failed to decode DA cert to RLP format: rlp: expected input list for verify.Certificate") &&
 			!isPanic(err.Error()))
 	})
+
+}
+
+func TestProxyClient(t *testing.T) {
+	if !runIntegrationTests && !runTestnetIntegrationTests {
+		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	}
+
+	t.Parallel()
+
+	ts, kill := e2e.CreateTestSuite(t, e2e.TestConfig(useMemory()))
+	defer kill()
+
+	cfg := &client.Config{
+		URL: ts.Address(),
+	}
+	daClient := client.New(cfg)
+
+	testPreimage := []byte(e2e.RandString(100))
+
+	t.Log("Setting input data on proxy server...")
+	blobInfo, err := daClient.SetData(ts.Ctx, testPreimage)
+	require.NoError(t, err)
+
+	t.Log("Getting input data from proxy server...")
+	preimage, err := daClient.GetData(ts.Ctx, blobInfo)
+	require.NoError(t, err)
+	require.Equal(t, testPreimage, preimage)
 }
 
 func TestProxyServerWithLargeBlob(t *testing.T) {
