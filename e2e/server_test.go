@@ -107,9 +107,9 @@ func TestOptimismClientWithGenericCommitment(t *testing.T) {
 }
 
 func TestProxyClient(t *testing.T) {
-	if !runIntegrationTests && !runTestnetIntegrationTests {
-		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
-	}
+	//if !runIntegrationTests && !runTestnetIntegrationTests {
+	//	t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	//}
 
 	t.Parallel()
 
@@ -146,13 +146,11 @@ func TestProxyClient(t *testing.T) {
 		t.Log("Setting input data on proxy server...")
 		_, err := daClient.SetData(ts.Ctx, testPreimage)
 		require.NoError(t, err)
-		assert.True(t, !isPanic(err.Error()))
 
 		testPreimage = []byte("§") // Empty preimage
 		t.Log("Setting input data on proxy server...")
 		_, err = daClient.SetData(ts.Ctx, testPreimage)
 		require.NoError(t, err)
-		assert.True(t, !isPanic(err.Error()))
 
 	})
 
@@ -161,7 +159,6 @@ func TestProxyClient(t *testing.T) {
 		t.Log("Setting input data on proxy server...")
 		_, err := daClient.SetData(ts.Ctx, testPreimage)
 		require.NoError(t, err)
-		assert.True(t, !isPanic(err.Error()))
 	})
 
 	t.Run("get data edge cases", func(t *testing.T) {
@@ -169,14 +166,13 @@ func TestProxyClient(t *testing.T) {
 		_, err := daClient.GetData(ts.Ctx, testCert)
 		require.Error(t, err)
 		assert.True(t, strings.Contains(err.Error(),
-			"received error response, code=400, msg = commitment is empty") && !isPanic(err.Error()))
+			"commitment is too short") && !isPanic(err.Error()))
 
 		testCert = []byte{1}
 		_, err = daClient.GetData(ts.Ctx, testCert)
 		require.Error(t, err)
 		assert.True(t, strings.Contains(err.Error(),
-			"received error response, code=500, msg = failed to decode DA cert to RLP format: EOF") &&
-			!isPanic(err.Error()))
+			"commitment is too short") && !isPanic(err.Error()))
 
 		testCert = []byte(e2e.RandString(10000))
 		_, err = daClient.GetData(ts.Ctx, testCert)
