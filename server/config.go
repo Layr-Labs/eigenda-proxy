@@ -126,7 +126,7 @@ func (cfg *Config) VerificationCfg() *verify.Config {
 		G2PowerOf2Path:  cfg.G2PowerOfTauPath,
 		CacheDir:        cfg.CacheDir,
 		SRSOrder:        268435456,                     // 2 ^ 32
-		SRSNumberToLoad: numBytes / 32,                 // # of fp.Elements
+		SRSNumberToLoad: numBytes / 32,                 // # of fr.Elements
 		NumWorker:       uint64(runtime.GOMAXPROCS(0)), // #nosec G115
 	}
 
