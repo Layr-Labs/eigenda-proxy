@@ -80,7 +80,7 @@ func NewMetrics(subsystem string) *Metrics {
 			Name:      "requests_total",
 			Help:      "Total requests to the HTTP server",
 		}, []string{
-			"method", "status", "commitment_mode", "commitment_version",
+			"method", "status", "commitment_mode", "DA_cert_version",
 		}),
 		HTTPServerBadRequestHeader: factory.NewCounterVec(prometheus.CounterOpts{
 			Namespace: namespace,
@@ -99,7 +99,7 @@ func NewMetrics(subsystem string) *Metrics {
 			Buckets: prometheus.ExponentialBucketsRange(0.05, 1200, 20),
 			Help:    "Histogram of HTTP server request durations",
 		}, []string{
-			"method", "commitment_mode", "commitment_version", // no status on histograms because those are very expensive
+			"method", "commitment_mode", "DA_cert_version", // no status on histograms because those are very expensive
 		}),
 		registry: registry,
 		factory:  factory,
