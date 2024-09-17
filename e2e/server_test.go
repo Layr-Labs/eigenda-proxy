@@ -107,9 +107,9 @@ func TestOptimismClientWithGenericCommitment(t *testing.T) {
 }
 
 func TestProxyClient(t *testing.T) {
-	//if !runIntegrationTests && !runTestnetIntegrationTests {
-	//	t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
-	//}
+	if !runIntegrationTests && !runTestnetIntegrationTests {
+		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	}
 
 	t.Parallel()
 
