@@ -13,6 +13,7 @@ import (
 )
 
 func StartProxySvr(cliCtx *cli.Context) error {
+	fmt.Printf("Starting EigenDA Proxy Server - Version %v - Date %v - Commit %v\n", Version, Date, Commit)
 	cfg := server.ReadCLIConfig(cliCtx)
 	if err := cfg.Check(); err != nil {
 		return err
