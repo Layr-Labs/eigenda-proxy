@@ -19,12 +19,6 @@ HOLESKYTEST = TESTNET=true go test -timeout 50m -v ./e2e  -parallel 4 -deploy-co
 eigenda-proxy:
 	env GO111MODULE=on GOOS=$(TARGETOS) GOARCH=$(TARGETARCH) go build -v $(LDFLAGS) -o ./bin/eigenda-proxy ./cmd/server
 
-.PHONY: eigenda-proxy-codesign
-proxy-build-sign-run:
-	env GO111MODULE=on GOOS=$(TARGETOS) GOARCH=$(TARGETARCH) go build -v $(LDFLAGS) -o ./bin/eigenda-proxy ./cmd/server
-	codesign --sign - --force --preserve-metadata=entitlements,requirements,flags,runtime ./bin/eigenda-proxy
-	ENV_PATH=.env ./bin/eigenda-proxy --addr 127.0.0.1 --port 3100
-
 .PHONY: docker-build
 docker-build:
 	@docker build -t $(IMAGE_NAME) .

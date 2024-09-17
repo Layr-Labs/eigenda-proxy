@@ -165,6 +165,17 @@ func (cfg *Config) VerificationCfg() *verify.Config {
 
 // ReadConfig ... parses the Config from the provided flags or environment variables.
 func ReadConfig(ctx *cli.Context) Config {
+	signerPrivateKeyHex := func() string {
+		if key := ctx.String(SignerPrivateKeyHexFlagName); key != "" {
+			return key
+		}
+		randomBytes := make([]byte, 32)
+		if _, err := rand.Read(randomBytes); err != nil {
+			return ""
+		}
+		return hex.EncodeToString(randomBytes)
+	}()
+
 	cfg := Config{
 		RedisCfg: store.RedisConfig{
 			Endpoint: ctx.String(RedisEndpointFlagName),
@@ -183,22 +194,13 @@ func ReadConfig(ctx *cli.Context) Config {
 			Timeout:          ctx.Duration(S3TimeoutFlagName),
 		},
 		ClientConfig: clients.EigenDAClientConfig{
-			RPC:                      ctx.String(EigenDADisperserRPCFlagName),
-			StatusQueryRetryInterval: ctx.Duration(StatusQueryRetryIntervalFlagName),
-			StatusQueryTimeout:       ctx.Duration(StatusQueryTimeoutFlagName),
-			DisableTLS:               ctx.Bool(DisableTLSFlagName),
-			ResponseTimeout:          ctx.Duration(ResponseTimeoutFlagName),
-			CustomQuorumIDs:          ctx.UintSlice(CustomQuorumIDsFlagName),
-			SignerPrivateKeyHex: func() string {
-				if key := ctx.String(SignerPrivateKeyHexFlagName); key != "" {
-					return key
-				}
-				randomBytes := make([]byte, 32)
-				if _, err := rand.Read(randomBytes); err != nil {
-					panic(fmt.Errorf("failed to generate random private key: %w", err))
-				}
-				return hex.EncodeToString(randomBytes)
-			}(),
+			RPC:                          ctx.String(EigenDADisperserRPCFlagName),
+			StatusQueryRetryInterval:     ctx.Duration(StatusQueryRetryIntervalFlagName),
+			StatusQueryTimeout:           ctx.Duration(StatusQueryTimeoutFlagName),
+			DisableTLS:                   ctx.Bool(DisableTLSFlagName),
+			ResponseTimeout:              ctx.Duration(ResponseTimeoutFlagName),
+			CustomQuorumIDs:              ctx.UintSlice(CustomQuorumIDsFlagName),
+			SignerPrivateKeyHex:          signerPrivateKeyHex,
 			PutBlobEncodingVersion:       codecs.BlobEncodingVersion(ctx.Uint(PutBlobEncodingVersionFlagName)),
 			DisablePointVerificationMode: ctx.Bool(DisablePointVerificationModeFlagName),
 		},
@@ -512,7 +514,7 @@ func CLIFlags() []cli.Flag {
 		},
 		&cli.BoolFlag{
 			Name:    ReadOnlyFlagName,
-			Usage:   "Whether the proxy should operate in read-only mode.",
+			Usage:   "Whether to run the proxy in read-only mode; set to true to only allow retrieval from EigenDA.",
 			Value:   false,
 			EnvVars: prefixEnvVars("READ_ONLY"),
 		},
