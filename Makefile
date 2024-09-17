@@ -1,4 +1,3 @@
-IMAGE_NAME = ghcr.io/layr-labs/eigenda-proxy
 LINTER_VERSION = v1.52.1
 LINTER_URL = https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh
 GET_LINT_CMD = "curl -sSfL $(LINTER_URL) | sh -s -- -b $(go env GOPATH)/bin $(LINTER_VERSION)"
@@ -21,7 +20,8 @@ eigenda-proxy:
 
 .PHONY: docker-build
 docker-build:
-	@docker build -t $(IMAGE_NAME) .
+	# we only use this to build the docker image locally, so we give it the dev tag as a reminder
+	@docker build -t ghcr.io/layr-labs/eigenda-proxy:dev .
 
 run-minio:
 	docker run -p 4566:9000 -d -e "MINIO_ROOT_USER=minioadmin" -e "MINIO_ROOT_PASSWORD=minioadmin" --name minio minio/minio server /data
