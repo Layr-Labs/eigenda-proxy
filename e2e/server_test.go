@@ -26,7 +26,8 @@ func TestOptimismClientWithKeccak256Commitment(t *testing.T) {
 	testCfg := e2e.TestConfig(useMemory())
 	testCfg.UseKeccak256ModeS3 = true
 
-	ts, kill := e2e.CreateTestSuite(t, testCfg)
+	tsConfig := e2e.TestSuiteConfig(t, testCfg)
+	ts, kill := e2e.CreateTestSuite(t, tsConfig)
 	defer kill()
 
 	daClient := op_plasma.NewDAClient(ts.Address(), false, true)
@@ -53,7 +54,8 @@ func TestOptimismClientWithGenericCommitment(t *testing.T) {
 
 	t.Parallel()
 
-	ts, kill := e2e.CreateTestSuite(t, e2e.TestConfig(useMemory()))
+	tsConfig := e2e.TestSuiteConfig(t, e2e.TestConfig(useMemory()))
+	ts, kill := e2e.CreateTestSuite(t, tsConfig)
 	defer kill()
 
 	daClient := op_plasma.NewDAClient(ts.Address(), false, false)
@@ -77,7 +79,8 @@ func TestProxyClient(t *testing.T) {
 
 	t.Parallel()
 
-	ts, kill := e2e.CreateTestSuite(t, e2e.TestConfig(useMemory()))
+	tsConfig := e2e.TestSuiteConfig(t, e2e.TestConfig(useMemory()))
+	ts, kill := e2e.CreateTestSuite(t, tsConfig)
 	defer kill()
 
 	cfg := &client.Config{
@@ -99,12 +102,13 @@ func TestProxyClient(t *testing.T) {
 
 func TestProxyServerWithLargeBlob(t *testing.T) {
 	if !runIntegrationTests && !runTestnetIntegrationTests {
-		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+		// t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
 	}
 
 	t.Parallel()
 
-	ts, kill := e2e.CreateTestSuite(t, e2e.TestConfig(useMemory()))
+	tsConfig := e2e.TestSuiteConfig(t, e2e.TestConfig(useMemory()))
+	ts, kill := e2e.CreateTestSuite(t, tsConfig)
 	defer kill()
 
 	cfg := &client.Config{
@@ -131,7 +135,8 @@ func TestProxyServerWithOversizedBlob(t *testing.T) {
 
 	t.Parallel()
 
-	ts, kill := e2e.CreateTestSuite(t, e2e.TestConfig(useMemory()))
+	tsConfig := e2e.TestSuiteConfig(t, e2e.TestConfig(useMemory()))
+	ts, kill := e2e.CreateTestSuite(t, tsConfig)
 	defer kill()
 
 	cfg := &client.Config{
@@ -172,7 +177,8 @@ func TestProxyServerCaching(t *testing.T) {
 	testCfg := e2e.TestConfig(useMemory())
 	testCfg.UseS3Caching = true
 
-	ts, kill := e2e.CreateTestSuite(t, testCfg)
+	tsConfig := e2e.TestSuiteConfig(t, e2e.TestConfig(useMemory()))
+	ts, kill := e2e.CreateTestSuite(t, tsConfig)
 	defer kill()
 
 	cfg := &client.Config{
@@ -214,7 +220,8 @@ func TestProxyServerCachingWithRedis(t *testing.T) {
 	testCfg := e2e.TestConfig(useMemory())
 	testCfg.UseRedisCaching = true
 
-	ts, kill := e2e.CreateTestSuite(t, testCfg)
+	tsConfig := e2e.TestSuiteConfig(t, e2e.TestConfig(useMemory()))
+	ts, kill := e2e.CreateTestSuite(t, tsConfig)
 	defer kill()
 
 	cfg := &client.Config{
@@ -266,7 +273,8 @@ func TestProxyServerReadFallback(t *testing.T) {
 	testCfg.UseS3Fallback = true
 	testCfg.Expiration = time.Millisecond * 1
 
-	ts, kill := e2e.CreateTestSuite(t, testCfg)
+	tsConfig := e2e.TestSuiteConfig(t, e2e.TestConfig(useMemory()))
+	ts, kill := e2e.CreateTestSuite(t, tsConfig)
 	defer kill()
 
 	cfg := &client.Config{
