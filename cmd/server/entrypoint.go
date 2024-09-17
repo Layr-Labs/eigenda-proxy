@@ -13,7 +13,10 @@ import (
 )
 
 func StartProxySvr(cliCtx *cli.Context) error {
-	fmt.Printf("Starting EigenDA Proxy Server - Version %v - Date %v - Commit %v\n", Version, Date, Commit)
+	log := oplog.NewLogger(oplog.AppOut(cliCtx), oplog.ReadCLIConfig(cliCtx)).New("role", "eigenda_proxy")
+	oplog.SetGlobalLogHandler(log.Handler())
+	log.Info("Starting EigenDA Proxy Server", "version", Version, "date", Date, "commit", Commit)
+
 	cfg := server.ReadCLIConfig(cliCtx)
 	if err := cfg.Check(); err != nil {
 		return err
@@ -22,9 +25,6 @@ func StartProxySvr(cliCtx *cli.Context) error {
 	defer ctxCancel()
 
 	m := metrics.NewMetrics("default")
-
-	log := oplog.NewLogger(oplog.AppOut(cliCtx), oplog.ReadCLIConfig(cliCtx)).New("role", "eigenda_proxy")
-	oplog.SetGlobalLogHandler(log.Handler())
 
 	log.Info("Initializing EigenDA proxy server...")
 
