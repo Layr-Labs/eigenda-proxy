@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"sync"
 
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
@@ -38,15 +39,20 @@ type Router struct {
 
 func NewRouter(eigenda KeyGeneratedStore, s3 PrecomputedKeyStore, l log.Logger,
 	caches []PrecomputedKeyStore, fallbacks []PrecomputedKeyStore) (IRouter, error) {
-	return &Router{
+	r := &Router{
 		log:          l,
-		eigenda:      eigenda,
-		s3:           s3,
 		caches:       caches,
 		cacheLock:    sync.RWMutex{},
 		fallbacks:    fallbacks,
 		fallbackLock: sync.RWMutex{},
-	}, nil
+	}
+	if !reflect.ValueOf(s3).IsNil() {
+		r.s3 = s3
+	}
+	if !reflect.ValueOf(eigenda).IsNil() {
+		r.eigenda = eigenda
+	}
+	return r, nil
 }
 
 // Get ... fetches a value from a storage backend based on the (commitment mode, type)
