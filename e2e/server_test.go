@@ -42,6 +42,30 @@ func TestOptimismClientWithKeccak256Commitment(t *testing.T) {
 	require.Equal(t, testPreimage, preimage)
 }
 
+func TestKeccak256CommitmentRequestErrorsWhenS3NotSet(t *testing.T) {
+	if !runIntegrationTests && !runTestnetIntegrationTests {
+		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	}
+
+	t.Parallel()
+
+	testCfg := e2e.TestConfig(useMemory())
+	testCfg.UseKeccak256ModeS3 = true
+
+	tsConfig := e2e.TestSuiteConfig(t, testCfg)
+	tsConfig.S3Config.Endpoint = ""
+	ts, kill := e2e.CreateTestSuite(t, tsConfig)
+	defer kill()
+
+	daClient := op_plasma.NewDAClient(ts.Address(), false, true)
+
+	testPreimage := []byte(e2e.RandString(100))
+
+	_, err := daClient.SetInput(ts.Ctx, testPreimage)
+	// TODO: the server currently returns an internal server error. Should it return a 400 instead?
+	require.Error(t, err)
+}
+
 /*
 this test asserts that the data can be posted/read to EigenDA
 with a concurrent S3 backend configured
