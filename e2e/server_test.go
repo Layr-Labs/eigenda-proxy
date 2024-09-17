@@ -139,7 +139,6 @@ func TestProxyClient(t *testing.T) {
 		t.Log("Setting input data on proxy server...")
 		_, err := daClient.SetData(ts.Ctx, testPreimage)
 		require.NoError(t, err)
-		assert.True(t, !isPanic(err.Error()))
 	})
 
 	t.Run("unicode preimage set data case", func(t *testing.T) {
