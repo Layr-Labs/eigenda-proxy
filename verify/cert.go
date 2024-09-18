@@ -109,5 +109,5 @@ func (cv *CertVerifier) getConfDeepBlockNumber() (*big.Int, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get latest block number: %w", err)
 	}
-	return big.NewInt(int64(max(uint64(blockNumber-cv.ethConfirmationDepth), 0))), nil
+	return new(big.Int).SetUint64(max(blockNumber-cv.ethConfirmationDepth, 0)), nil
 }
