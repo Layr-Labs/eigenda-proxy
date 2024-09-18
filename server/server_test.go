@@ -31,7 +31,8 @@ func TestGetHandler(t *testing.T) {
 
 	mockRouter := mocks.NewMockIRouter(ctrl)
 
-	server := NewServer("localhost", 8080, mockRouter, log.New(), metrics.NoopMetrics)
+	m := metrics.NewMetrics("default")
+	server := NewServer("localhost", 8080, mockRouter, log.New(), m)
 
 	tests := []struct {
 		name                   string
@@ -128,6 +129,13 @@ func TestGetHandler(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.url, nil)
 			rec := httptest.NewRecorder()
 
+			t.Run("CheckMiddlewaresNoPanic", func(_ *testing.T) {
+				// we also run the request through the middlewares, to make sure no panic occurs
+				// could happen if there's a problem with the metrics. For eg, in the past we saw
+				// panic: inconsistent label cardinality: expected 3 label values but got 1 in []string{"GET"}
+				handler := WithLogging(WithMetrics(server.HandleGet, server.m), server.log)
+				handler(rec, req)
+			})
 			meta, err := server.HandleGet(rec, req)
 			if tt.expectError {
 				require.Error(t, err)
@@ -252,6 +260,14 @@ func TestPutHandler(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodPut, tt.url, bytes.NewReader(tt.body))
 			rec := httptest.NewRecorder()
+
+			t.Run("CheckMiddlewaresNoPanic", func(_ *testing.T) {
+				// we also run the request through the middlewares, to make sure no panic occurs
+				// could happen if there's a problem with the metrics. For eg, in the past we saw
+				// panic: inconsistent label cardinality: expected 3 label values but got 1 in []string{"GET"}
+				handler := WithLogging(WithMetrics(server.HandleGet, server.m), server.log)
+				handler(rec, req)
+			})
 
 			meta, err := server.HandlePut(rec, req)
 			if tt.expectError {
