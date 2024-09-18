@@ -201,7 +201,7 @@ func TestProxyServerCaching(t *testing.T) {
 	testCfg := e2e.TestConfig(useMemory())
 	testCfg.UseS3Caching = true
 
-	tsConfig := e2e.TestSuiteConfig(t, e2e.TestConfig(useMemory()))
+	tsConfig := e2e.TestSuiteConfig(t, testCfg)
 	ts, kill := e2e.CreateTestSuite(t, tsConfig)
 	defer kill()
 
@@ -244,7 +244,7 @@ func TestProxyServerCachingWithRedis(t *testing.T) {
 	testCfg := e2e.TestConfig(useMemory())
 	testCfg.UseRedisCaching = true
 
-	tsConfig := e2e.TestSuiteConfig(t, e2e.TestConfig(useMemory()))
+	tsConfig := e2e.TestSuiteConfig(t, testCfg)
 	ts, kill := e2e.CreateTestSuite(t, tsConfig)
 	defer kill()
 
@@ -297,7 +297,7 @@ func TestProxyServerReadFallback(t *testing.T) {
 	testCfg.UseS3Fallback = true
 	testCfg.Expiration = time.Millisecond * 1
 
-	tsConfig := e2e.TestSuiteConfig(t, e2e.TestConfig(useMemory()))
+	tsConfig := e2e.TestSuiteConfig(t, testCfg)
 	ts, kill := e2e.CreateTestSuite(t, tsConfig)
 	defer kill()
 
