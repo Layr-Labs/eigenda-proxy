@@ -126,7 +126,7 @@ func TestProxyClient(t *testing.T) {
 
 func TestProxyServerWithLargeBlob(t *testing.T) {
 	if !runIntegrationTests && !runTestnetIntegrationTests {
-		// t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
 	}
 
 	t.Parallel()
