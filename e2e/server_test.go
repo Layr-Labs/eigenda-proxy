@@ -23,26 +23,26 @@ func isPanic(err string) bool {
 		strings.Contains(err, "nil pointer dereference")
 }
 
-func TestOptimismClientWithKeccak256CommitmentIntegration(t *testing.T) {
+func TestOpClientKeccak256MalformedInputs(t *testing.T) {
 	if !runIntegrationTests || runTestnetIntegrationTests {
 		t.Skip("Skipping test as TESTNET env set or INTEGRATION var not set")
 	}
 
+	t.Parallel()
+	testCfg := e2e.TestConfig(useMemory())
+	testCfg.UseKeccak256ModeS3 = true
+	ts, kill := e2e.CreateTestSuite(t, testCfg)
+	defer kill()
+
 	// nil commitment. Should return an error but currently is not. This needs to be fixed by OP
-	// t.Run("nil commitment case", func(t *testing.T) {
+	// Ref: https://github.com/ethereum-optimism/optimism/issues/11987
+	//daClient := op_plasma.NewDAClient(ts.Address(), false, true)
+	//t.Run("nil commitment case", func(t *testing.T) {
 	//	var commit op_plasma.CommitmentData
 	//	_, err := daClient.GetInput(ts.Ctx, commit)
 	//	require.Error(t, err)
 	//	assert.True(t, !isPanic(err.Error()))
-	// })
-
-	t.Parallel()
-
-	testCfg := e2e.TestConfig(useMemory())
-	testCfg.UseKeccak256ModeS3 = true
-
-	ts, kill := e2e.CreateTestSuite(t, testCfg)
-	defer kill()
+	//})
 
 	daClientPcFalse := op_plasma.NewDAClient(ts.Address(), false, false)
 
