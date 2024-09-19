@@ -131,9 +131,9 @@ func TestGetHandler(t *testing.T) {
 
 			meta, err := server.HandleGet(rec, req)
 			if tt.expectError {
-				require.Error(t, err.Err)
+				require.Error(t, err)
 			} else {
-				require.NoError(t, err.Err)
+				require.NoError(t, err)
 			}
 
 			require.Equal(t, tt.expectedCode, rec.Code)
@@ -269,9 +269,9 @@ func TestPutHandler(t *testing.T) {
 
 			meta, err := server.HandlePut(rec, req)
 			if tt.expectError {
-				require.Error(t, err.Err)
+				require.Error(t, err)
 			} else {
-				require.NoError(t, err.Err)
+				require.NoError(t, err)
 			}
 			require.Equal(t, tt.expectedCode, rec.Code)
 			if !tt.expectError {
