@@ -85,7 +85,7 @@ func TestGetHandler(t *testing.T) {
 			expectedCode:           http.StatusInternalServerError,
 			expectedBody:           "",
 			expectError:            true,
-			expectedCommitmentMeta: commitments.CommitmentMeta{},
+			expectedCommitmentMeta: commitments.CommitmentMeta{Mode: commitments.OptimismGeneric, CertVersion: 0},
 		},
 		{
 			name: "Success - OP Keccak256",
@@ -107,7 +107,7 @@ func TestGetHandler(t *testing.T) {
 			expectedCode:           http.StatusInternalServerError,
 			expectedBody:           "",
 			expectError:            true,
-			expectedCommitmentMeta: commitments.CommitmentMeta{},
+			expectedCommitmentMeta: commitments.CommitmentMeta{Mode: commitments.OptimismAltDA, CertVersion: 0},
 		},
 		{
 			name: "Success - OP Alt-DA",
@@ -129,13 +129,6 @@ func TestGetHandler(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, tt.url, nil)
 			rec := httptest.NewRecorder()
 
-			t.Run("CheckMiddlewaresNoPanic", func(_ *testing.T) {
-				// we also run the request through the middlewares, to make sure no panic occurs
-				// could happen if there's a problem with the metrics. For eg, in the past we saw
-				// panic: inconsistent label cardinality: expected 3 label values but got 1 in []string{"GET"}
-				handler := WithLogging(WithMetrics(server.HandleGet, server.m), server.log)
-				handler(rec, req)
-			})
 			meta, err := server.HandleGet(rec, req)
 			if tt.expectError {
 				require.Error(t, err)
@@ -146,6 +139,20 @@ func TestGetHandler(t *testing.T) {
 			require.Equal(t, tt.expectedCode, rec.Code)
 			require.Equal(t, tt.expectedCommitmentMeta, meta)
 			require.Equal(t, tt.expectedBody, rec.Body.String())
+
+		})
+	}
+	for _, tt := range tests {
+		t.Run(tt.name+"/CheckMiddlewaresNoPanic", func(_ *testing.T) {
+			tt.mockBehavior()
+
+			req := httptest.NewRequest(http.MethodGet, tt.url, nil)
+			rec := httptest.NewRecorder()
+			// we also run the request through the middlewares, to make sure no panic occurs
+			// could happen if there's a problem with the metrics. For eg, in the past we saw
+			// panic: inconsistent label cardinality: expected 3 label values but got 1 in []string{"GET"}
+			handler := WithLogging(WithMetrics(server.HandleGet, server.m), server.log)
+			handler(rec, req)
 		})
 	}
 }
@@ -261,14 +268,6 @@ func TestPutHandler(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPut, tt.url, bytes.NewReader(tt.body))
 			rec := httptest.NewRecorder()
 
-			t.Run("CheckMiddlewaresNoPanic", func(_ *testing.T) {
-				// we also run the request through the middlewares, to make sure no panic occurs
-				// could happen if there's a problem with the metrics. For eg, in the past we saw
-				// panic: inconsistent label cardinality: expected 3 label values but got 1 in []string{"GET"}
-				handler := WithLogging(WithMetrics(server.HandleGet, server.m), server.log)
-				handler(rec, req)
-			})
-
 			meta, err := server.HandlePut(rec, req)
 			if tt.expectError {
 				require.Error(t, err)
@@ -280,6 +279,20 @@ func TestPutHandler(t *testing.T) {
 				require.Equal(t, []byte(tt.expectedBody), rec.Body.Bytes())
 			}
 			require.Equal(t, tt.expectedCommitmentMeta, meta)
+		})
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name+"/CheckMiddlewaresNoPanic", func(_ *testing.T) {
+			tt.mockBehavior()
+
+			req := httptest.NewRequest(http.MethodGet, tt.url, nil)
+			rec := httptest.NewRecorder()
+			// we also run the request through the middlewares, to make sure no panic occurs
+			// could happen if there's a problem with the metrics. For eg, in the past we saw
+			// panic: inconsistent label cardinality: expected 3 label values but got 1 in []string{"GET"}
+			handler := WithLogging(WithMetrics(server.HandlePut, server.m), server.log)
+			handler(rec, req)
 		})
 	}
 }
