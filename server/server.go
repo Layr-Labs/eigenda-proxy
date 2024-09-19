@@ -181,7 +181,7 @@ func (svr *Server) HandleGet(w http.ResponseWriter, r *http.Request) (commitment
 }
 
 // HandlePut handles the PUT request for commitments.
-// Note: even when an error is returned, the commitment meta is still returned, 
+// Note: even when an error is returned, the commitment meta is still returned,
 // because it is needed for metrics (see the WithMetrics middleware).
 // TODO: we should change this behavior and instead use a custom error that contains the commitment meta.
 func (svr *Server) HandlePut(w http.ResponseWriter, r *http.Request) (commitments.CommitmentMeta, error) {
