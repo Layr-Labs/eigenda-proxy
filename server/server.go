@@ -60,15 +60,23 @@ func NewServer(host string, port int, router store.IRouter, log log.Logger,
 }
 
 // WithMetrics is a middleware that records metrics for the route path.
-func WithMetrics(handleFn func(http.ResponseWriter, *http.Request) (commitments.CommitmentMeta, error),
+func WithMetrics(handleFn func(http.ResponseWriter, *http.Request) (commitments.CommitmentMeta, HandlerError),
 	m metrics.Metricer) func(http.ResponseWriter, *http.Request) error {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		recordDur := m.RecordRPCServerRequest(r.Method)
 
 		meta, err := handleFn(w, r)
+		if err.Err != nil {
+			if err.Meta != nil {
+				recordDur(w.Header().Get("status"), string(err.Meta.Mode), string(err.Meta.CertVersion))
+			} else {
+				recordDur(w.Header().Get("status"), string("NoCommitmentModeSet"), string("NoCertVersionSet"))
+			}
+			return err.Err
+		}
 		// we assume that every route will set the status header
 		recordDur(w.Header().Get("status"), string(meta.Mode), string(meta.CertVersion))
-		return err
+		return nil
 	}
 }
 
@@ -150,19 +158,19 @@ func (svr *Server) Health(w http.ResponseWriter, _ *http.Request) error {
 // Note: even when an error is returned, the commitment meta is still returned,
 // because it is needed for metrics (see the WithMetrics middleware).
 // TODO: we should change this behavior and instead use a custom error that contains the commitment meta.
-func (svr *Server) HandleGet(w http.ResponseWriter, r *http.Request) (commitments.CommitmentMeta, error) {
+func (svr *Server) HandleGet(w http.ResponseWriter, r *http.Request) (commitments.CommitmentMeta, HandlerError) {
 	meta, err := ReadCommitmentMeta(r)
 	if err != nil {
 		err = fmt.Errorf("invalid commitment mode: %w", err)
 		svr.WriteBadRequest(w, err)
-		return meta, err
+		return commitments.CommitmentMeta{}, NewHandlerError(err, &meta)
 	}
 	key := path.Base(r.URL.Path)
 	comm, err := commitments.StringToDecodedCommitment(key, meta.Mode)
 	if err != nil {
 		err = fmt.Errorf("failed to decode commitment from key %v (commitment mode %v): %w", key, meta.Mode, err)
 		svr.WriteBadRequest(w, err)
-		return meta, err
+		return commitments.CommitmentMeta{}, NewHandlerError(err, &meta)
 	}
 
 	input, err := svr.router.Get(r.Context(), comm, meta.Mode)
@@ -173,30 +181,30 @@ func (svr *Server) HandleGet(w http.ResponseWriter, r *http.Request) (commitment
 		} else {
 			svr.WriteInternalError(w, err)
 		}
-		return meta, err
+		return commitments.CommitmentMeta{}, NewHandlerError(err, &meta)
 	}
 
 	svr.WriteResponse(w, input)
-	return meta, nil
+	return meta, HandlerError{}
 }
 
 // HandlePut handles the PUT request for commitments.
 // Note: even when an error is returned, the commitment meta is still returned,
 // because it is needed for metrics (see the WithMetrics middleware).
 // TODO: we should change this behavior and instead use a custom error that contains the commitment meta.
-func (svr *Server) HandlePut(w http.ResponseWriter, r *http.Request) (commitments.CommitmentMeta, error) {
+func (svr *Server) HandlePut(w http.ResponseWriter, r *http.Request) (commitments.CommitmentMeta, HandlerError) {
 	meta, err := ReadCommitmentMeta(r)
 	if err != nil {
 		err = fmt.Errorf("invalid commitment mode: %w", err)
 		svr.WriteBadRequest(w, err)
-		return meta, err
+		return commitments.CommitmentMeta{}, NewHandlerError(err, &meta)
 	}
 
 	input, err := io.ReadAll(r.Body)
 	if err != nil {
 		err = fmt.Errorf("failed to read request body: %w", err)
 		svr.WriteBadRequest(w, err)
-		return meta, err
+		return commitments.CommitmentMeta{}, NewHandlerError(err, &meta)
 	}
 
 	key := path.Base(r.URL.Path)
@@ -207,7 +215,7 @@ func (svr *Server) HandlePut(w http.ResponseWriter, r *http.Request) (commitment
 		if err != nil {
 			err = fmt.Errorf("failed to decode commitment from key %v (commitment mode %v): %w", key, meta.Mode, err)
 			svr.WriteBadRequest(w, err)
-			return meta, err
+			return commitments.CommitmentMeta{}, NewHandlerError(err, &meta)
 		}
 	}
 
@@ -215,20 +223,20 @@ func (svr *Server) HandlePut(w http.ResponseWriter, r *http.Request) (commitment
 	if err != nil {
 		err = fmt.Errorf("put request failed with commitment %v (commitment mode %v): %w", comm, meta.Mode, err)
 		svr.WriteInternalError(w, err)
-		return meta, err
+		return commitments.CommitmentMeta{}, NewHandlerError(err, &meta)
 	}
 
 	responseCommit, err := commitments.EncodeCommitment(commitment, meta.Mode)
 	if err != nil {
 		err = fmt.Errorf("failed to encode commitment %v (commitment mode %v): %w", commitment, meta.Mode, err)
 		svr.WriteInternalError(w, err)
-		return meta, err
+		return commitments.CommitmentMeta{}, NewHandlerError(err, &meta)
 	}
 
 	svr.log.Info(fmt.Sprintf("write commitment: %x\n", comm))
 	// write out encoded commitment
 	svr.WriteResponse(w, responseCommit)
-	return meta, nil
+	return meta, HandlerError{}
 }
 
 func (svr *Server) WriteResponse(w http.ResponseWriter, data []byte) {
@@ -362,4 +370,21 @@ func (svr *Server) GetStoreStats(bt store.BackendType) (*store.Stats, error) {
 	}
 
 	return nil, fmt.Errorf("store not found")
+}
+
+type HandlerError struct {
+	Err  error
+	Meta *commitments.CommitmentMeta
+}
+
+func (e *HandlerError) Error() string {
+	return fmt.Sprintf("HandlerError: %s", e.Err.Error())
+}
+
+// Helper function to create a new HandlerError
+func NewHandlerError(err error, meta *commitments.CommitmentMeta) HandlerError {
+	return HandlerError{
+		Err:  err,
+		Meta: meta,
+	}
 }
