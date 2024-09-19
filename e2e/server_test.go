@@ -37,13 +37,13 @@ func TestOpClientKeccak256MalformedInputs(t *testing.T) {
 
 	// nil commitment. Should return an error but currently is not. This needs to be fixed by OP
 	// Ref: https://github.com/ethereum-optimism/optimism/issues/11987
-	//daClient := op_plasma.NewDAClient(ts.Address(), false, true)
-	//t.Run("nil commitment case", func(t *testing.T) {
+	// daClient := op_plasma.NewDAClient(ts.Address(), false, true)
+	// t.Run("nil commitment case", func(t *testing.T) {
 	//	var commit op_plasma.CommitmentData
 	//	_, err := daClient.GetInput(ts.Ctx, commit)
 	//	require.Error(t, err)
 	//	assert.True(t, !isPanic(err.Error()))
-	//})
+	// })
 
 	daClientPcFalse := op_plasma.NewDAClient(ts.Address(), false, false)
 
