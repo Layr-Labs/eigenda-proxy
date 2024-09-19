@@ -31,7 +31,8 @@ func TestOpClientKeccak256MalformedInputs(t *testing.T) {
 	t.Parallel()
 	testCfg := e2e.TestConfig(useMemory())
 	testCfg.UseKeccak256ModeS3 = true
-	ts, kill := e2e.CreateTestSuite(t, testCfg)
+	tsConfig := e2e.TestSuiteConfig(t, testCfg)
+	ts, kill := e2e.CreateTestSuite(t, tsConfig)
 	defer kill()
 
 	// nil commitment. Should return an error but currently is not. This needs to be fixed by OP
@@ -154,7 +155,8 @@ func TestProxyClientServerIntegration(t *testing.T) {
 
 	t.Parallel()
 
-	ts, kill := e2e.CreateTestSuite(t, e2e.TestConfig(useMemory()))
+	tsConfig := e2e.TestSuiteConfig(t, e2e.TestConfig(useMemory()))
+	ts, kill := e2e.CreateTestSuite(t, tsConfig)
 	defer kill()
 
 	cfg := &client.Config{
