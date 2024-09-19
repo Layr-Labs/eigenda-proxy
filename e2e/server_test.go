@@ -52,7 +52,7 @@ func TestOpClientKeccak256MalformedInputs(t *testing.T) {
 		require.Error(t, err)
 
 		// should fail with proper error message as is now, and cannot contain panics or nils
-		assert.True(t, strings.Contains(err.Error(), "invalid input") && !isPanic(err.Error()))
+		assert.True(t, strings.Contains(err.Error(), "invalid input") && !isNilPtrDerefPanic(err.Error()))
 
 		// The below test panics silently.
 		input := op_plasma.NewGenericCommitment([]byte(""))
@@ -121,7 +121,7 @@ func TestOptimismClientWithGenericCommitment(t *testing.T) {
 	require.Equal(t, testPreimage, preimage)
 }
 
-func TestProxyClientIntegrationOnly(t *testing.T) {
+func TestProxyClientServerIntegration(t *testing.T) {
 	if !runIntegrationTests && !runTestnetIntegrationTests {
 		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
 	}
@@ -168,20 +168,20 @@ func TestProxyClientIntegrationOnly(t *testing.T) {
 		_, err := daClient.GetData(ts.Ctx, testCert)
 		require.Error(t, err)
 		assert.True(t, strings.Contains(err.Error(),
-			"commitment is too short") && !isPanic(err.Error()))
+			"commitment is too short") && !isNilPtrDerefPanic(err.Error()))
 
 		testCert = []byte{1}
 		_, err = daClient.GetData(ts.Ctx, testCert)
 		require.Error(t, err)
 		assert.True(t, strings.Contains(err.Error(),
-			"commitment is too short") && !isPanic(err.Error()))
+			"commitment is too short") && !isNilPtrDerefPanic(err.Error()))
 
 		testCert = []byte(e2e.RandString(10000))
 		_, err = daClient.GetData(ts.Ctx, testCert)
 		require.Error(t, err)
 		assert.True(t, strings.Contains(err.Error(),
 			"failed to decode DA cert to RLP format: rlp: expected input list for verify.Certificate") &&
-			!isPanic(err.Error()))
+			!isNilPtrDerefPanic(err.Error()))
 	})
 
 }
