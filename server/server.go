@@ -67,9 +67,9 @@ func WithMetrics(handleFn func(http.ResponseWriter, *http.Request) (commitments.
 
 		meta, err := handleFn(w, r)
 		if err != nil {
-			// check if the error is a measured error
-			if meta, ok := err.(MetaError); ok {
-				recordDur(w.Header().Get("status"), string(meta.Meta.Mode), string(meta.Meta.CertVersion))
+			var metaErr MetaError
+			if errors.As(err, &metaErr) {
+				recordDur(w.Header().Get("status"), string(metaErr.Meta.Mode), string(metaErr.Meta.CertVersion))
 			} else {
 				recordDur(w.Header().Get("status"), string("NoCommitmentMode"), string("NoCertVersion"))
 			}
