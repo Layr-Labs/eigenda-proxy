@@ -12,7 +12,7 @@ import (
 
 	"github.com/Layr-Labs/eigenda/api/grpc/common"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
-	"github.com/Layr-Labs/eigenda/encoding/kzg/verifier"
+	kzgverifier "github.com/Layr-Labs/eigenda/encoding/kzg/verifier"
 	"github.com/Layr-Labs/eigenda/encoding/rs"
 )
 
@@ -26,7 +26,7 @@ type Config struct {
 
 type Verifier struct {
 	verifyCert  bool
-	kzgVerifier *verifier.Verifier
+	kzgVerifier *kzgverifier.Verifier
 	cv          *CertVerifier
 }
 
@@ -41,7 +41,7 @@ func NewVerifier(cfg *Config, l log.Logger) (*Verifier, error) {
 		}
 	}
 
-	kzgVerifier, err := verifier.NewVerifier(cfg.KzgConfig, false)
+	kzgVerifier, err := kzgverifier.NewVerifier(cfg.KzgConfig, false)
 	if err != nil {
 		return nil, err
 	}
@@ -69,19 +69,19 @@ func (v *Verifier) VerifyCert(cert *Certificate) error {
 
 	err := v.cv.VerifyBatch(&header, cert.Proof().GetBatchId(), [32]byte(cert.Proof().BatchMetadata.GetSignatoryRecordHash()), cert.Proof().BatchMetadata.GetConfirmationBlockNumber())
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to verify batch: %w", err)
 	}
 
 	// 2 - verify merkle inclusion proof
 	err = v.cv.VerifyMerkleProof(cert.Proof().GetInclusionProof(), cert.BatchHeaderRoot(), cert.Proof().GetBlobIndex(), cert.ReadBlobHeader())
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to verify merkle proof: %w", err)
 	}
 
 	// 3 - verify security parameters
 	err = v.VerifySecurityParams(cert.ReadBlobHeader(), header)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to verify security parameters: %w", err)
 	}
 
 	return nil

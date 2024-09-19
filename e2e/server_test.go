@@ -75,7 +75,8 @@ func TestOptimismClientWithKeccak256Commitment(t *testing.T) {
 	testCfg := e2e.TestConfig(useMemory())
 	testCfg.UseKeccak256ModeS3 = true
 
-	ts, kill := e2e.CreateTestSuite(t, testCfg)
+	tsConfig := e2e.TestSuiteConfig(t, testCfg)
+	ts, kill := e2e.CreateTestSuite(t, tsConfig)
 	defer kill()
 
 	daClient := op_plasma.NewDAClient(ts.Address(), false, true)
@@ -92,6 +93,30 @@ func TestOptimismClientWithKeccak256Commitment(t *testing.T) {
 	})
 }
 
+func TestKeccak256CommitmentRequestErrorsWhenS3NotSet(t *testing.T) {
+	if !runIntegrationTests && !runTestnetIntegrationTests {
+		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	}
+
+	t.Parallel()
+
+	testCfg := e2e.TestConfig(useMemory())
+	testCfg.UseKeccak256ModeS3 = true
+
+	tsConfig := e2e.TestSuiteConfig(t, testCfg)
+	tsConfig.S3Config.Endpoint = ""
+	ts, kill := e2e.CreateTestSuite(t, tsConfig)
+	defer kill()
+
+	daClient := op_plasma.NewDAClient(ts.Address(), false, true)
+
+	testPreimage := []byte(e2e.RandString(100))
+
+	_, err := daClient.SetInput(ts.Ctx, testPreimage)
+	// TODO: the server currently returns an internal server error. Should it return a 400 instead?
+	require.Error(t, err)
+}
+
 /*
 this test asserts that the data can be posted/read to EigenDA
 with a concurrent S3 backend configured
@@ -104,7 +129,8 @@ func TestOptimismClientWithGenericCommitment(t *testing.T) {
 
 	t.Parallel()
 
-	ts, kill := e2e.CreateTestSuite(t, e2e.TestConfig(useMemory()))
+	tsConfig := e2e.TestSuiteConfig(t, e2e.TestConfig(useMemory()))
+	ts, kill := e2e.CreateTestSuite(t, tsConfig)
 	defer kill()
 
 	daClient := op_plasma.NewDAClient(ts.Address(), false, false)
@@ -193,7 +219,8 @@ func TestProxyClient(t *testing.T) {
 
 	t.Parallel()
 
-	ts, kill := e2e.CreateTestSuite(t, e2e.TestConfig(useMemory()))
+	tsConfig := e2e.TestSuiteConfig(t, e2e.TestConfig(useMemory()))
+	ts, kill := e2e.CreateTestSuite(t, tsConfig)
 	defer kill()
 
 	cfg := &client.Config{
@@ -220,7 +247,8 @@ func TestProxyServerWithLargeBlob(t *testing.T) {
 
 	t.Parallel()
 
-	ts, kill := e2e.CreateTestSuite(t, e2e.TestConfig(useMemory()))
+	tsConfig := e2e.TestSuiteConfig(t, e2e.TestConfig(useMemory()))
+	ts, kill := e2e.CreateTestSuite(t, tsConfig)
 	defer kill()
 
 	cfg := &client.Config{
@@ -247,7 +275,8 @@ func TestProxyServerWithOversizedBlob(t *testing.T) {
 
 	t.Parallel()
 
-	ts, kill := e2e.CreateTestSuite(t, e2e.TestConfig(useMemory()))
+	tsConfig := e2e.TestSuiteConfig(t, e2e.TestConfig(useMemory()))
+	ts, kill := e2e.CreateTestSuite(t, tsConfig)
 	defer kill()
 
 	cfg := &client.Config{
@@ -288,7 +317,8 @@ func TestProxyServerCaching(t *testing.T) {
 	testCfg := e2e.TestConfig(useMemory())
 	testCfg.UseS3Caching = true
 
-	ts, kill := e2e.CreateTestSuite(t, testCfg)
+	tsConfig := e2e.TestSuiteConfig(t, testCfg)
+	ts, kill := e2e.CreateTestSuite(t, tsConfig)
 	defer kill()
 
 	cfg := &client.Config{
@@ -330,7 +360,8 @@ func TestProxyServerCachingWithRedis(t *testing.T) {
 	testCfg := e2e.TestConfig(useMemory())
 	testCfg.UseRedisCaching = true
 
-	ts, kill := e2e.CreateTestSuite(t, testCfg)
+	tsConfig := e2e.TestSuiteConfig(t, testCfg)
+	ts, kill := e2e.CreateTestSuite(t, tsConfig)
 	defer kill()
 
 	cfg := &client.Config{
@@ -382,7 +413,8 @@ func TestProxyServerReadFallback(t *testing.T) {
 	testCfg.UseS3Fallback = true
 	testCfg.Expiration = time.Millisecond * 1
 
-	ts, kill := e2e.CreateTestSuite(t, testCfg)
+	tsConfig := e2e.TestSuiteConfig(t, testCfg)
+	ts, kill := e2e.CreateTestSuite(t, tsConfig)
 	defer kill()
 
 	cfg := &client.Config{

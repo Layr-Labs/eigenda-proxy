@@ -13,6 +13,10 @@ import (
 )
 
 func StartProxySvr(cliCtx *cli.Context) error {
+	log := oplog.NewLogger(oplog.AppOut(cliCtx), oplog.ReadCLIConfig(cliCtx)).New("role", "eigenda_proxy")
+	oplog.SetGlobalLogHandler(log.Handler())
+	log.Info("Starting EigenDA Proxy Server", "version", Version, "date", Date, "commit", Commit)
+
 	cfg := server.ReadCLIConfig(cliCtx)
 	if err := cfg.Check(); err != nil {
 		return err
@@ -21,9 +25,6 @@ func StartProxySvr(cliCtx *cli.Context) error {
 	defer ctxCancel()
 
 	m := metrics.NewMetrics("default")
-
-	log := oplog.NewLogger(oplog.AppOut(cliCtx), oplog.ReadCLIConfig(cliCtx)).New("role", "eigenda_proxy")
-	oplog.SetGlobalLogHandler(log.Handler())
 
 	log.Info("Initializing EigenDA proxy server...")
 
@@ -34,7 +35,7 @@ func StartProxySvr(cliCtx *cli.Context) error {
 	server := server.NewServer(cliCtx.String(server.ListenAddrFlagName), cliCtx.Int(server.PortFlagName), daRouter, log, m)
 
 	if err := server.Start(); err != nil {
-		return fmt.Errorf("failed to start the DA server")
+		return fmt.Errorf("failed to start the DA server: %w", err)
 	}
 
 	log.Info("Started EigenDA proxy server")
