@@ -18,7 +18,7 @@ func useMemory() bool {
 	return !runTestnetIntegrationTests
 }
 
-func isPanic(err string) bool {
+func isNilPtrDerefPanic(err string) bool {
 	return strings.Contains(err, "panic") && strings.Contains(err, "SIGSEGV") &&
 		strings.Contains(err, "nil pointer dereference")
 }
