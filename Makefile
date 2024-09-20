@@ -58,7 +58,7 @@ e2e-test: stop-minio stop-redis run-minio run-redis
 	make stop-redis
 
 e2e-fuzz-test: stop-minio stop-redis run-minio run-redis
-	$(E2ETEST) && \
+	$(E2EFUZZTEST) && \
 	make stop-minio && \
 	make stop-redis
 
