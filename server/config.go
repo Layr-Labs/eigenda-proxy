@@ -246,16 +246,20 @@ func (cfg *Config) Check() error {
 		return fmt.Errorf("max blob length is 0")
 	}
 
-	if cfg.SvcManagerAddr != "" && cfg.EthRPC == "" {
-		return fmt.Errorf("svc manager address is set, but Eth RPC is not set")
-	}
+	// memstore not enabled means we use eigenda as a backend, which requires these fields to be set
+	if !cfg.MemstoreEnabled {
+		if cfg.ClientConfig.RPC == "" {
+			return fmt.Errorf("eigenda disperser rpc url is not set")
+		}
 
-	if cfg.EthRPC != "" && cfg.SvcManagerAddr == "" {
-		return fmt.Errorf("eth rpc is set, but svc manager address is not set")
-	}
+		if cfg.EthRPC == "" {
+			return fmt.Errorf("eth rpc is not set")
+		}
 
-	if cfg.EthConfirmationDepth >= 0 && (cfg.SvcManagerAddr == "" || cfg.EthRPC == "") {
-		return fmt.Errorf("eth confirmation depth is set for certificate verification, but Eth RPC or SvcManagerAddr is not set")
+		if cfg.SvcManagerAddr == "" {
+			return fmt.Errorf("svc manager address is not set")
+		}
+
 	}
 
 	if cfg.S3Config.S3CredentialType == store.S3CredentialUnknown && cfg.S3Config.Endpoint != "" {
@@ -269,10 +273,6 @@ func (cfg *Config) Check() error {
 
 	if cfg.RedisCfg.Endpoint == "" && cfg.RedisCfg.Password != "" {
 		return fmt.Errorf("redis password is set, but endpoint is not")
-	}
-
-	if !cfg.MemstoreEnabled && cfg.ClientConfig.RPC == "" {
-		return fmt.Errorf("eigenda disperser rpc url is not set")
 	}
 
 	err = cfg.checkTargets(cfg.FallbackTargets)
