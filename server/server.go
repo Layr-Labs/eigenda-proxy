@@ -12,6 +12,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/labstack/echo-contrib/echoprometheus"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/store"
@@ -24,9 +28,7 @@ var (
 )
 
 const (
-	GetRoute = "/get/"
-	PutRoute = "/put/"
-	Put      = "put"
+	Put = "put"
 
 	CommitmentModeKey = "commitment_mode"
 )
@@ -70,42 +72,37 @@ func WithMetrics(handleFn func(http.ResponseWriter, *http.Request) (commitments.
 	}
 }
 
-// WithLogging is a middleware that logs the request method and URL.
-func WithLogging(handleFn func(http.ResponseWriter, *http.Request) error,
-	log log.Logger) func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		log.Info("request", "method", r.Method, "url", r.URL)
-		err := handleFn(w, r)
-		if err != nil { // #nosec G104
-			w.Write([]byte(err.Error())) //nolint:errcheck // ignore error
-			log.Error(err.Error())
-		}
-	}
-}
-
 func (svr *Server) Start() error {
-	mux := http.NewServeMux()
 
-	mux.HandleFunc(GetRoute, WithLogging(WithMetrics(svr.HandleGet, svr.m), svr.log))
-	mux.HandleFunc(PutRoute, WithLogging(WithMetrics(svr.HandlePut, svr.m), svr.log))
-	mux.HandleFunc("/health", WithLogging(svr.Health, svr.log))
+	e := echo.New()
 
-	svr.httpServer.Handler = mux
+	// Middleware
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
+	e.Use(echoprometheus.NewMiddleware("myapp"))
+	// TODO: probably want to server this on a different echo server so that it uses the metrics port instead of server port
+	e.GET("/metrics", echoprometheus.NewHandler())
+
+	// Routes: see https://specs.optimism.io/experimental/alt-da.html#da-server
+	e.GET("/get/", svr.HandleGet)
+	// TODO: prob want different handlers for these
+	// one difference in the spec for eg which we aren't accounting for currently is that /put should not return a commitment
+	e.POST("/put/:hex_encoded_commitment", svr.HandlePut)
+	e.POST("/put", svr.HandlePut)
+	e.GET("/health", svr.Health)
 
 	listener, err := net.Listen("tcp", svr.endpoint)
 	if err != nil {
 		return fmt.Errorf("failed to listen: %w", err)
 	}
-	svr.listener = listener
-
 	svr.endpoint = listener.Addr().String()
+	e.Listener = listener
 
 	svr.log.Info("Starting DA server", "endpoint", svr.endpoint)
+
 	errCh := make(chan error, 1)
 	go func() {
-		if err := svr.httpServer.Serve(svr.listener); err != nil {
-			errCh <- err
-		}
+		errCh <- e.Start("")
 	}()
 
 	// verify that the server comes up
@@ -133,98 +130,78 @@ func (svr *Server) Stop() error {
 	}
 	return nil
 }
-func (svr *Server) Health(w http.ResponseWriter, _ *http.Request) error {
-	w.WriteHeader(http.StatusOK)
-	return nil
+func (svr *Server) Health(c echo.Context) error {
+	return c.NoContent(http.StatusOK)
 }
 
 // HandleGet handles the GET request for commitments.
-// Note: even when an error is returned, the commitment meta is still returned,
-// because it is needed for metrics (see the WithMetrics middleware).
-// TODO: we should change this behavior and instead use a custom error that contains the commitment meta.
-func (svr *Server) HandleGet(w http.ResponseWriter, r *http.Request) (commitments.CommitmentMeta, error) {
-	meta, err := ReadCommitmentMeta(r)
+func (svr *Server) HandleGet(c echo.Context) error {
+	meta, err := ReadCommitmentMeta(c.Request())
 	if err != nil {
 		err = fmt.Errorf("invalid commitment mode: %w", err)
-		svr.WriteBadRequest(w, err)
-		return meta, err
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
-	key := path.Base(r.URL.Path)
+	key := path.Base(c.Path())
 	comm, err := commitments.StringToDecodedCommitment(key, meta.Mode)
 	if err != nil {
 		err = fmt.Errorf("failed to decode commitment from key %v (commitment mode %v): %w", key, meta.Mode, err)
-		svr.WriteBadRequest(w, err)
-		return meta, err
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	input, err := svr.router.Get(r.Context(), comm, meta.Mode)
+	input, err := svr.router.Get(c.Request().Context(), comm, meta.Mode)
 	if err != nil {
 		err = fmt.Errorf("get request failed with commitment %v (commitment mode %v): %w", comm, meta.Mode, err)
 		if errors.Is(err, ErrNotFound) {
-			svr.WriteNotFound(w, err)
-		} else {
-			svr.WriteInternalError(w, err)
+			return echo.NewHTTPError(http.StatusNotFound, err)
 		}
-		return meta, err
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
-	svr.WriteResponse(w, input)
-	return meta, nil
+	return c.Blob(http.StatusOK, "application/octet-stream", input)
 }
 
 // HandlePut handles the PUT request for commitments.
-// Note: even when an error is returned, the commitment meta is still returned,
-// because it is needed for metrics (see the WithMetrics middleware).
-// TODO: we should change this behavior and instead use a custom error that contains the commitment meta.
-func (svr *Server) HandlePut(w http.ResponseWriter, r *http.Request) (commitments.CommitmentMeta, error) {
-	meta, err := ReadCommitmentMeta(r)
+func (svr *Server) HandlePut(c echo.Context) error {
+	meta, err := ReadCommitmentMeta(c.Request())
 	if err != nil {
 		err = fmt.Errorf("invalid commitment mode: %w", err)
-		svr.WriteBadRequest(w, err)
-		return meta, err
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 	// ReadCommitmentMeta function invoked inside HandlePut will not return a valid certVersion
 	// Current simple fix is using the hardcoded default value of 0 (also the only supported value)
 	//TODO: smarter decode needed when there's more than one version
 	meta.CertVersion = byte(commitments.CertV0)
 
-	input, err := io.ReadAll(r.Body)
+	input, err := io.ReadAll(c.Request().Body)
 	if err != nil {
 		err = fmt.Errorf("failed to read request body: %w", err)
-		svr.WriteBadRequest(w, err)
-		return meta, err
+		return echo.NewHTTPError(http.StatusBadRequest, err)
 	}
 
-	key := path.Base(r.URL.Path)
+	key := path.Base(c.Path())
 	var comm []byte
 
 	if len(key) > 0 && key != Put { // commitment key already provided (keccak256)
 		comm, err = commitments.StringToDecodedCommitment(key, meta.Mode)
 		if err != nil {
 			err = fmt.Errorf("failed to decode commitment from key %v (commitment mode %v): %w", key, meta.Mode, err)
-			svr.WriteBadRequest(w, err)
-			return meta, err
+			return echo.NewHTTPError(http.StatusBadRequest, err)
 		}
 	}
 
-	commitment, err := svr.router.Put(r.Context(), meta.Mode, comm, input)
+	commitment, err := svr.router.Put(c.Request().Context(), meta.Mode, comm, input)
 	if err != nil {
 		err = fmt.Errorf("put request failed with commitment %v (commitment mode %v): %w", comm, meta.Mode, err)
-		svr.WriteInternalError(w, err)
-		return meta, err
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
 	responseCommit, err := commitments.EncodeCommitment(commitment, meta.Mode)
 	if err != nil {
 		err = fmt.Errorf("failed to encode commitment %v (commitment mode %v): %w", commitment, meta.Mode, err)
-		svr.WriteInternalError(w, err)
-		return meta, err
+		return echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
 
-	svr.log.Info(fmt.Sprintf("write commitment: %x\n", comm))
-	// write out encoded commitment
-	svr.WriteResponse(w, responseCommit)
-	return meta, nil
+	return c.Blob(http.StatusOK, "application/octet-stream", responseCommit)
 }
 
 func (svr *Server) WriteResponse(w http.ResponseWriter, data []byte) {
