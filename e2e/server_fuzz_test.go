@@ -10,9 +10,9 @@ import (
 )
 
 func FuzzProxyClientServerIntegration(f *testing.F) {
-	//if !runIntegrationTests && !runTestnetIntegrationTests {
-	//	f.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
-	//}
+	if !runFuzzTests {
+		f.Skip("Skipping test as FUZZ env var not set")
+	}
 
 	testCfg := e2e.TestConfig(useMemory())
 	testCfg.UseKeccak256ModeS3 = true
@@ -39,8 +39,8 @@ func FuzzProxyClientServerIntegration(f *testing.F) {
 }
 
 func FuzzOpClientKeccak256MalformedInputs(f *testing.F) {
-	if !runIntegrationTests || runTestnetIntegrationTests {
-		f.Skip("Skipping test as INTEGRATION var not set")
+	if !runFuzzTests {
+		f.Skip("Skipping test as FUZZ env var not set")
 	}
 
 	testCfg := e2e.TestConfig(useMemory())
