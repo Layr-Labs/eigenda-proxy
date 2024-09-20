@@ -20,7 +20,9 @@ func addUnicodeTestCases(f *testing.F) {
 	}
 }
 
-func FuzzProxyClientServerIntegration(f *testing.F) {
+// FuzzProxyClientServerIntegrationAndOpClientKeccak256MalformedInputs will fuzz the proxy client server integration
+// and op client keccak256 with malformed inputs
+func FuzzProxyClientServerIntegrationAndOpClientKeccak256MalformedInputs(f *testing.F) {
 	if !runFuzzTests {
 		f.Skip("Skipping test as FUZZ env var not set")
 	}
@@ -31,37 +33,21 @@ func FuzzProxyClientServerIntegration(f *testing.F) {
 	ts, kill := e2e.CreateTestSuite(f, tsConfig)
 	defer kill()
 
+	// Add each printable Unicode character as a seed
 	addUnicodeTestCases(f)
 
 	cfg := &client.Config{
 		URL: ts.Address(),
 	}
 	daClient := client.New(cfg)
+	daClientPcFalse := op_plasma.NewDAClient(ts.Address(), false, false)
 
-	// Add each printable Unicode character as a seed including ascii
 	f.Fuzz(func(t *testing.T, _ string, data []byte) {
 		_, err := daClient.SetData(ts.Ctx, data)
 		require.NoError(t, err)
 	})
-}
 
-func FuzzOpClientKeccak256MalformedInputs(f *testing.F) {
-
-	if !runFuzzTests {
-		f.Skip("Skipping test as FUZZ env var not set")
-	}
-
-	testCfg := e2e.TestConfig(useMemory())
-	testCfg.UseKeccak256ModeS3 = true
-	tsConfig := e2e.TestSuiteConfig(f, testCfg)
-	ts, kill := e2e.CreateTestSuite(f, tsConfig)
-	defer kill()
-	addUnicodeTestCases(f)
-
-	daClientPcFalse := op_plasma.NewDAClient(ts.Address(), false, false)
-
-	// Fuzz the SetInput function with random data
-	// seed and data are expected. `seed` value is seed: {i} and data is the one with the random string
+	// seed and data are expected. `seed` value is seed: {rune} and data is the one with the random byte/s
 	f.Fuzz(func(t *testing.T, _ string, data []byte) {
 
 		_, err := daClientPcFalse.SetInput(ts.Ctx, data)
@@ -71,5 +57,4 @@ func FuzzOpClientKeccak256MalformedInputs(f *testing.F) {
 		}
 
 	})
-
 }
