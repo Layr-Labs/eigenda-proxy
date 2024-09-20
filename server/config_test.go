@@ -35,15 +35,16 @@ func validCfg() *Config {
 			PutBlobEncodingVersion:       0,
 			DisablePointVerificationMode: false,
 		},
-		G1Path:                 "path/to/g1",
-		G2PowerOfTauPath:       "path/to/g2",
-		CacheDir:               "path/to/cache",
-		MaxBlobLength:          "2MiB",
-		SvcManagerAddr:         "0x1234567890abcdef",
-		EthRPC:                 "http://localhost:8545",
-		EthConfirmationDepth:   12,
-		MemstoreEnabled:        true,
-		MemstoreBlobExpiration: 25 * time.Minute,
+		G1Path:                  "path/to/g1",
+		G2PowerOfTauPath:        "path/to/g2",
+		CacheDir:                "path/to/cache",
+		MaxBlobLength:           "2MiB",
+		CertVerificationEnabled: false,
+		SvcManagerAddr:          "0x1234567890abcdef",
+		EthRPC:                  "http://localhost:8545",
+		EthConfirmationDepth:    12,
+		MemstoreEnabled:         true,
+		MemstoreBlobExpiration:  25 * time.Minute,
 	}
 }
 
@@ -71,12 +72,14 @@ func TestConfigVerification(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	t.Run("EigenDABackend", func(t *testing.T) {
+	t.Run("CertVerificationEnabled", func(t *testing.T) {
 		// when eigenDABackend is enabled (memstore.enabled = false),
 		// some extra fields are required.
 		t.Run("MissingSvcManagerAddr", func(t *testing.T) {
 			cfg := validCfg()
+			// cert verification only makes sense when memstore is disabled (we use eigenda as backend)
 			cfg.MemstoreEnabled = false
+			cfg.CertVerificationEnabled = true
 			cfg.SvcManagerAddr = ""
 
 			err := cfg.Check()
@@ -85,8 +88,19 @@ func TestConfigVerification(t *testing.T) {
 
 		t.Run("MissingEthRPC", func(t *testing.T) {
 			cfg := validCfg()
+			// cert verification only makes sense when memstore is disabled (we use eigenda as backend)
 			cfg.MemstoreEnabled = false
+			cfg.CertVerificationEnabled = true
 			cfg.EthRPC = ""
+
+			err := cfg.Check()
+			require.Error(t, err)
+		})
+
+		t.Run("CantDoCertVerificationWhenMemstoreEnabled", func(t *testing.T) {
+			cfg := validCfg()
+			cfg.MemstoreEnabled = true
+			cfg.CertVerificationEnabled = true
 
 			err := cfg.Check()
 			require.Error(t, err)
