@@ -15,7 +15,6 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/store"
-	"github.com/Layr-Labs/eigenda-proxy/utils"
 	"github.com/ethereum-optimism/optimism/op-service/rpc"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/log"
@@ -220,7 +219,9 @@ func (svr *Server) HandlePut(w http.ResponseWriter, r *http.Request) (commitment
 	if err != nil {
 		err = fmt.Errorf("put request failed with commitment %v (commitment mode %v): %w", comm, meta.Mode, err)
 
-		if utils.ErrorMessageContainsAny(err, store.OversizedEigenDAError, store.OversizedProxyError) {
+		if errors.Is(err, store.ErrEigenDAOversizedBlob) || errors.Is(err, store.ErrProxyOversizedBlob) {
+			// we add here any error that should be returned as a 400 instead of a 500.
+			// currently only includes oversized blob requests
 			svr.WriteBadRequest(w, err)
 			return meta, err
 		}

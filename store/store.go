@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"fmt"
 	"strings"
 )
 
@@ -16,9 +17,9 @@ const (
 	Unknown
 )
 
-const (
-	OversizedProxyError   = "encoded blob is larger than max blob size"
-	OversizedEigenDAError = "blob size cannot exceed"
+var (
+	ErrProxyOversizedBlob   = fmt.Errorf("encoded blob is larger than max blob size")
+	ErrEigenDAOversizedBlob = fmt.Errorf("blob size cannot exceed")
 )
 
 func (b BackendType) String() string {

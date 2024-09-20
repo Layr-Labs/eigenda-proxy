@@ -66,7 +66,7 @@ func (e EigenDAStore) Put(ctx context.Context, value []byte) ([]byte, error) {
 		return nil, fmt.Errorf("EigenDA client failed to re-encode blob: %w", err)
 	}
 	if uint64(len(encodedBlob)) > e.cfg.MaxBlobSizeBytes {
-		return nil, fmt.Errorf("%s: blob length %d, max blob size %d", OversizedProxyError, len(value), e.cfg.MaxBlobSizeBytes)
+		return nil, fmt.Errorf("%w: blob length %d, max blob size %d", ErrProxyOversizedBlob, len(value), e.cfg.MaxBlobSizeBytes)
 	}
 
 	dispersalStart := time.Now()
