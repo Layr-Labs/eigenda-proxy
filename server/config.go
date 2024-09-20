@@ -259,7 +259,6 @@ func (cfg *Config) Check() error {
 		if cfg.SvcManagerAddr == "" {
 			return fmt.Errorf("svc manager address is not set")
 		}
-
 	}
 
 	if cfg.S3Config.S3CredentialType == store.S3CredentialUnknown && cfg.S3Config.Endpoint != "" {
