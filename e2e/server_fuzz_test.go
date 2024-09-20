@@ -1,13 +1,23 @@
 package e2e_test
 
 import (
+	"fmt"
 	"github.com/Layr-Labs/eigenda-proxy/client"
 	"github.com/Layr-Labs/eigenda-proxy/e2e"
 	op_plasma "github.com/ethereum-optimism/optimism/op-plasma"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
+	"unicode"
 )
+
+func addUnicodeTestCases(f *testing.F) {
+	for r := rune(0); r <= unicode.MaxRune; r++ {
+		if unicode.IsPrint(r) {
+			f.Add(fmt.Sprintf("seed: %s", string(r)), []byte(string(r))) // Add each printable Unicode character as a seed
+		}
+	}
+}
 
 func FuzzProxyClientServerIntegration(f *testing.F) {
 	if !runFuzzTests {
@@ -16,9 +26,11 @@ func FuzzProxyClientServerIntegration(f *testing.F) {
 
 	testCfg := e2e.TestConfig(useMemory())
 	testCfg.UseKeccak256ModeS3 = true
-	tsConfig := e2e.TestSuiteConfigF(f, testCfg)
-	ts, kill := e2e.CreateTestSuiteF(f, tsConfig)
+	tsConfig := e2e.TestSuiteConfig(f, testCfg)
+	ts, kill := e2e.CreateTestSuite(f, tsConfig)
 	defer kill()
+
+	addUnicodeTestCases(f)
 
 	cfg := &client.Config{
 		URL: ts.Address(),
@@ -26,12 +38,6 @@ func FuzzProxyClientServerIntegration(f *testing.F) {
 	daClient := client.New(cfg)
 
 	// Add each printable Unicode character as a seed including ascii
-	//for r := rune(0); r <= unicode.MaxRune; r++ {
-	//	if unicode.IsPrint(r) {
-	//		f.Add(fmt.Sprintf("seed: %s", string(r)), []byte(string(r))) // Add each printable Unicode character as a seed
-	//	}
-	//}
-
 	f.Fuzz(func(t *testing.T, seed string, data []byte) {
 		_, err := daClient.SetData(ts.Ctx, data)
 		require.NoError(t, err)
@@ -39,15 +45,17 @@ func FuzzProxyClientServerIntegration(f *testing.F) {
 }
 
 func FuzzOpClientKeccak256MalformedInputs(f *testing.F) {
+
 	if !runFuzzTests {
 		f.Skip("Skipping test as FUZZ env var not set")
 	}
 
 	testCfg := e2e.TestConfig(useMemory())
 	testCfg.UseKeccak256ModeS3 = true
-	tsConfig := e2e.TestSuiteConfigF(f, testCfg)
-	ts, kill := e2e.CreateTestSuiteF(f, tsConfig)
+	tsConfig := e2e.TestSuiteConfig(f, testCfg)
+	ts, kill := e2e.CreateTestSuite(f, tsConfig)
 	defer kill()
+	addUnicodeTestCases(f)
 
 	daClientPcFalse := op_plasma.NewDAClient(ts.Address(), false, false)
 

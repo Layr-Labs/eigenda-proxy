@@ -3,22 +3,18 @@ package e2e
 import (
 	"context"
 	"fmt"
-	"os"
-	"testing"
-	"time"
-	"unicode"
-
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/server"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda/api/clients"
+	oplog "github.com/ethereum-optimism/optimism/op-service/log"
+	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"golang.org/x/exp/rand"
-
-	oplog "github.com/ethereum-optimism/optimism/op-service/log"
-	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
+	"os"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -86,78 +82,16 @@ func createS3Config(eigendaCfg server.Config) server.CLIConfig {
 	}
 }
 
-func TestSuiteConfig(t *testing.T, testCfg *Cfg) server.CLIConfig {
-	// load signer key from environment
-	pk := os.Getenv(privateKey)
-	if pk == "" && !testCfg.UseMemory {
-		t.Fatal("SIGNER_PRIVATE_KEY environment variable not set")
-	}
-
-	// load node url from environment
-	ethRPC := os.Getenv(ethRPC)
-	if ethRPC == "" && !testCfg.UseMemory {
-		t.Fatal("ETHEREUM_RPC environment variable is not set")
-	}
-
-	var pollInterval time.Duration
-	if testCfg.UseMemory {
-		pollInterval = time.Second * 1
-	} else {
-		pollInterval = time.Minute * 1
-	}
-
-	eigendaCfg := server.Config{
-		ClientConfig: clients.EigenDAClientConfig{
-			RPC:                      holeskyDA,
-			StatusQueryTimeout:       time.Minute * 45,
-			StatusQueryRetryInterval: pollInterval,
-			DisableTLS:               false,
-			SignerPrivateKeyHex:      pk,
-		},
-		EthRPC:                 ethRPC,
-		SvcManagerAddr:         "0xD4A7E1Bd8015057293f0D0A557088c286942e84b", // incompatible with non holeskly networks
-		CacheDir:               "../resources/SRSTables",
-		G1Path:                 "../resources/g1.point",
-		MaxBlobLength:          "16mib",
-		G2PowerOfTauPath:       "../resources/g2.point.powerOf2",
-		PutBlobEncodingVersion: 0x00,
-		MemstoreEnabled:        testCfg.UseMemory,
-		MemstoreBlobExpiration: testCfg.Expiration,
-		EthConfirmationDepth:   0,
-	}
-
-	if testCfg.UseMemory {
-		eigendaCfg.ClientConfig.SignerPrivateKeyHex = "0000000000000000000100000000000000000000000000000000000000000000"
-	}
-
-	var cfg server.CLIConfig
-	switch {
-	case testCfg.UseKeccak256ModeS3:
-		cfg = createS3Config(eigendaCfg)
-
-	case testCfg.UseS3Caching:
-		eigendaCfg.CacheTargets = []string{"S3"}
-		cfg = createS3Config(eigendaCfg)
-
-	case testCfg.UseS3Fallback:
-		eigendaCfg.FallbackTargets = []string{"S3"}
-		cfg = createS3Config(eigendaCfg)
-
-	case testCfg.UseRedisCaching:
-		eigendaCfg.CacheTargets = []string{"redis"}
-		cfg = createRedisConfig(eigendaCfg)
-
-	default:
-		cfg = server.CLIConfig{
-			EigenDAConfig: eigendaCfg,
-			MetricsCfg:    opmetrics.CLIConfig{},
-		}
-	}
-
-	return cfg
+type TB interface {
+	Helper()
+	Log(args ...interface{})
+	Error(args ...interface{})
+	Fatal(args ...interface{})
+	Errorf(format string, args ...interface{})
+	FailNow()
 }
 
-func TestSuiteConfigF(t *testing.F, testCfg *Cfg) server.CLIConfig {
+func TestSuiteConfig(t TB, testCfg *Cfg) server.CLIConfig {
 	// load signer key from environment
 	pk := os.Getenv(privateKey)
 	if pk == "" && !testCfg.UseMemory {
@@ -234,47 +168,7 @@ type TestSuite struct {
 	Server *server.Server
 }
 
-func CreateTestSuite(t *testing.T, testSuiteCfg server.CLIConfig) (TestSuite, func()) {
-	log := oplog.NewLogger(os.Stdout, oplog.CLIConfig{
-		Level:  log.LevelDebug,
-		Format: oplog.FormatLogFmt,
-		Color:  true,
-	}).New("role", svcName)
-
-	ctx := context.Background()
-	store, err := server.LoadStoreRouter(
-		ctx,
-		testSuiteCfg,
-		log,
-	)
-	require.NoError(t, err)
-	server := server.NewServer(host, 0, store, log, metrics.NoopMetrics)
-
-	t.Log("Starting proxy server...")
-	err = server.Start()
-	require.NoError(t, err)
-
-	kill := func() {
-		if err := server.Stop(); err != nil {
-			panic(err)
-		}
-	}
-
-	return TestSuite{
-		Ctx:    ctx,
-		Log:    log,
-		Server: server,
-	}, kill
-}
-
-func CreateTestSuiteF(t *testing.F, testSuiteCfg server.CLIConfig) (TestSuite, func()) {
-
-	for r := rune(0); r <= unicode.MaxRune; r++ {
-		if unicode.IsPrint(r) {
-			t.Add(fmt.Sprintf("seed: %s", string(r)), []byte(string(r))) // Add each printable Unicode character as a seed
-		}
-	}
-
+func CreateTestSuite(t TB, testSuiteCfg server.CLIConfig) (TestSuite, func()) {
 	log := oplog.NewLogger(os.Stdout, oplog.CLIConfig{
 		Level:  log.LevelDebug,
 		Format: oplog.FormatLogFmt,
