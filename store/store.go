@@ -16,6 +16,11 @@ const (
 	Unknown
 )
 
+const (
+	OversizedProxyError   = "encoded blob is larger than max blob size"
+	OversizedEigenDAError = "blob size cannot exceed"
+)
+
 func (b BackendType) String() string {
 	switch b {
 	case EigenDA:

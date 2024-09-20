@@ -8,6 +8,21 @@ import (
 
 // Helper utility functions //
 
+func ErrorMessageContainsAny(err error, msgs ...string) bool {
+	if err == nil {
+		return false
+	}
+
+	errMsg := err.Error()
+	for _, str := range msgs {
+		if strings.Contains(errMsg, str) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func ContainsDuplicates[P comparable](s []P) bool {
 	seen := make(map[P]struct{})
 	for _, v := range s {

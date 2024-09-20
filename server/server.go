@@ -15,6 +15,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/store"
+	"github.com/Layr-Labs/eigenda-proxy/utils"
 	"github.com/ethereum-optimism/optimism/op-service/rpc"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/log"
@@ -218,6 +219,12 @@ func (svr *Server) HandlePut(w http.ResponseWriter, r *http.Request) (commitment
 	commitment, err := svr.router.Put(r.Context(), meta.Mode, comm, input)
 	if err != nil {
 		err = fmt.Errorf("put request failed with commitment %v (commitment mode %v): %w", comm, meta.Mode, err)
+
+		if utils.ErrorMessageContainsAny(err, store.OversizedEigenDAError, store.OversizedProxyError) {
+			svr.WriteBadRequest(w, err)
+			return meta, err
+		}
+
 		svr.WriteInternalError(w, err)
 		return meta, err
 	}
