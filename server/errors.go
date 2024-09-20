@@ -6,12 +6,6 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
 )
 
-// HandlerError is an interface that can be either a simple error or a MetaError
-type HandlerError interface {
-	error
-	isHandlerError() // marker method
-}
-
 // MetaError includes both an error and commitment metadata
 type MetaError struct {
 	Err  error
@@ -25,9 +19,7 @@ func (me MetaError) Error() string {
 		me.Meta.CertVersion)
 }
 
-func (MetaError) isHandlerError() {}
-
 // NewMetaError creates a new MetaError
-func NewMetaError(err error, meta commitments.CommitmentMeta) HandlerError {
+func NewMetaError(err error, meta commitments.CommitmentMeta) MetaError {
 	return MetaError{Err: err, Meta: meta}
 }
