@@ -71,37 +71,26 @@ func TestConfigVerification(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	t.Run("MissingSvcManagerAddr", func(t *testing.T) {
-		cfg := validCfg()
+	t.Run("EigenDABackend", func(t *testing.T) {
+		// when eigenDABackend is enabled (memstore.enabled = false),
+		// some extra fields are required.
+		t.Run("MissingSvcManagerAddr", func(t *testing.T) {
+			cfg := validCfg()
+			cfg.MemstoreEnabled = false
+			cfg.SvcManagerAddr = ""
 
-		cfg.EthRPC = "http://localhost:6969"
-		cfg.EthConfirmationDepth = 12
-		cfg.SvcManagerAddr = ""
+			err := cfg.Check()
+			require.Error(t, err)
+		})
 
-		err := cfg.Check()
-		require.Error(t, err)
-	})
+		t.Run("MissingEthRPC", func(t *testing.T) {
+			cfg := validCfg()
+			cfg.MemstoreEnabled = false
+			cfg.EthRPC = ""
 
-	t.Run("MissingCertVerificationParams", func(t *testing.T) {
-		cfg := validCfg()
-
-		cfg.EthConfirmationDepth = 12
-		cfg.SvcManagerAddr = ""
-		cfg.EthRPC = "http://localhost:6969"
-
-		err := cfg.Check()
-		require.Error(t, err)
-	})
-
-	t.Run("MissingEthRPC", func(t *testing.T) {
-		cfg := validCfg()
-
-		cfg.EthConfirmationDepth = 12
-		cfg.SvcManagerAddr = "0x00000000123"
-		cfg.EthRPC = ""
-
-		err := cfg.Check()
-		require.Error(t, err)
+			err := cfg.Check()
+			require.Error(t, err)
+		})
 	})
 
 	t.Run("MissingS3AccessKeys", func(t *testing.T) {
