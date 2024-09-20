@@ -12,7 +12,7 @@ LDFLAGSSTRING +=-X main.Version=$(GIT_TAG)
 LDFLAGS := -ldflags "$(LDFLAGSSTRING)"
 
 E2ETEST = INTEGRATION=true go test -timeout 1m -v ./e2e -parallel 4 -deploy-config ../.devnet/devnetL1.json
-E2EFUZZTEST = INTEGRATION=true go test -fuzz ./e2e -deploy-config ../.devnet/devnetL1.json -v -fuzztime=30m
+E2EFUZZTEST = INTEGRATION=true go test ./e2e -fuzz -deploy-config ../.devnet/devnetL1.json -v -fuzztime=30m
 HOLESKYTEST = TESTNET=true go test -timeout 50m -v ./e2e  -parallel 4 -deploy-config ../.devnet/devnetL1.json
 
 .PHONY: eigenda-proxy
