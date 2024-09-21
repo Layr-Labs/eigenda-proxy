@@ -26,6 +26,7 @@ const (
 	PutBlobEncodingVersionFlagName       = "eigenda-put-blob-encoding-version"
 	DisablePointVerificationModeFlagName = "eigenda-disable-point-verification-mode"
 
+	// cert verification flags
 	CertVerificationEnabledFlagName = "eigenda-cert-verification-enabled"
 	EthRPCFlagName                  = "eigenda-eth-rpc"
 	SvcManagerAddrFlagName          = "eigenda-svc-manager-addr"
@@ -456,7 +457,7 @@ func CLIFlags() []cli.Flag {
 		},
 		&cli.BoolFlag{
 			Name:    CertVerificationEnabledFlagName,
-			Usage:   "Whether to verify certificates from EigenDA. If false, the DA-proxy will not verify certificates and will not require an Ethereum RPC endpoint.",
+			Usage:   "Whether to verify certificates received from EigenDA disperser.",
 			EnvVars: prefixEnvVars("CERT_VERIFICATION_ENABLED"),
 			// TODO: ideally we'd want this to be turned on by default when eigenda backend is used (memstore.enabled=false)
 			Value: false,
