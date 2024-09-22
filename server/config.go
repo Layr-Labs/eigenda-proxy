@@ -117,16 +117,7 @@ func (cfg *Config) VerificationCfg() *verify.Config {
 func ReadConfig(ctx *cli.Context) Config {
 	cfg := Config{
 		RedisConfig: redis.ReadConfig(ctx),
-		S3Config: s3.Config{
-			S3CredentialType: s3.StringToCredentialType(ctx.String(flags.S3CredentialTypeFlagName)),
-			Bucket:           ctx.String(flags.S3BucketFlagName),
-			Path:             ctx.String(flags.S3PathFlagName),
-			Endpoint:         ctx.String(flags.S3EndpointFlagName),
-			AccessKeyID:      ctx.String(flags.S3AccessKeyIDFlagName),
-			AccessKeySecret:  ctx.String(flags.S3AccessKeySecretFlagName),
-			Backup:           ctx.Bool(flags.S3BackupFlagName),
-			Timeout:          ctx.Duration(flags.S3TimeoutFlagName),
-		},
+		S3Config:    s3.ReadConfig(ctx),
 		ClientConfig: clients.EigenDAClientConfig{
 			RPC:                          ctx.String(flags.EigenDADisperserRPCFlagName),
 			StatusQueryRetryInterval:     ctx.Duration(flags.StatusQueryRetryIntervalFlagName),
@@ -214,10 +205,10 @@ func (cfg *Config) Check() error {
 		}
 	}
 
-	if cfg.S3Config.S3CredentialType == s3.CredentialTypeUnknown && cfg.S3Config.Endpoint != "" {
+	if cfg.S3Config.CredentialType == s3.CredentialTypeUnknown && cfg.S3Config.Endpoint != "" {
 		return fmt.Errorf("s3 credential type must be set")
 	}
-	if cfg.S3Config.S3CredentialType == s3.CredentialTypeStatic {
+	if cfg.S3Config.CredentialType == s3.CredentialTypeStatic {
 		if cfg.S3Config.Endpoint != "" && (cfg.S3Config.AccessKeyID == "" || cfg.S3Config.AccessKeySecret == "") {
 			return fmt.Errorf("s3 endpoint is set, but access key id or access key secret is not set")
 		}

@@ -37,15 +37,15 @@ var _ store.PrecomputedKeyStore = (*Store)(nil)
 
 type CredentialType string
 type Config struct {
-	S3CredentialType CredentialType
-	Bucket           string
-	Path             string
-	Endpoint         string
-	AccessKeyID      string
-	AccessKeySecret  string
-	Profiling        bool
-	Backup           bool
-	Timeout          time.Duration
+	CredentialType  CredentialType
+	Endpoint        string
+	AccessKeyID     string
+	AccessKeySecret string
+	Bucket          string
+	Path            string
+	Backup          bool
+	Timeout         time.Duration
+	Profiling       bool
 }
 
 type Store struct {
@@ -126,7 +126,7 @@ func (s *Store) BackendType() store.BackendType {
 }
 
 func creds(cfg Config) *credentials.Credentials {
-	if cfg.S3CredentialType == CredentialTypeIAM {
+	if cfg.CredentialType == CredentialTypeIAM {
 		return credentials.NewIAM("")
 	}
 	return credentials.NewStaticV4(cfg.AccessKeyID, cfg.AccessKeySecret, "")

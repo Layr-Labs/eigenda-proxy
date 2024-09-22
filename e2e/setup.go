@@ -72,14 +72,14 @@ func createS3Config(eigendaCfg server.Config) server.CLIConfig {
 	createS3Bucket(bucketName)
 
 	eigendaCfg.S3Config = s3.Config{
-		Profiling:        true,
-		Bucket:           bucketName,
-		Path:             "",
-		Endpoint:         "localhost:4566",
-		AccessKeySecret:  "minioadmin",
-		AccessKeyID:      "minioadmin",
-		S3CredentialType: s3.CredentialTypeStatic,
-		Backup:           false,
+		Profiling:       true,
+		Bucket:          bucketName,
+		Path:            "",
+		Endpoint:        "localhost:4566",
+		AccessKeySecret: "minioadmin",
+		AccessKeyID:     "minioadmin",
+		CredentialType:  s3.CredentialTypeStatic,
+		Backup:          false,
 	}
 	return server.CLIConfig{
 		EigenDAConfig: eigendaCfg,

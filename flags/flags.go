@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
+	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/urfave/cli/v2"
 
 	opservice "github.com/ethereum-optimism/optimism/op-service"
@@ -14,6 +15,7 @@ import (
 const (
 	MemstoreFlagsCategory = "Memstore"
 	RedisCategory         = "Redis"
+	S3Category            = "S3"
 )
 
 const (
@@ -50,16 +52,6 @@ const (
 	MemstorePutLatencyFlagName = "memstore.put-latency"
 	MemstoreGetLatencyFlagName = "memstore.get-latency"
 
-	// S3 client flags
-	S3CredentialTypeFlagName  = "s3.credential-type" // #nosec G101
-	S3BucketFlagName          = "s3.bucket"          // #nosec G101
-	S3PathFlagName            = "s3.path"
-	S3EndpointFlagName        = "s3.endpoint"
-	S3AccessKeyIDFlagName     = "s3.access-key-id"     // #nosec G101
-	S3AccessKeySecretFlagName = "s3.access-key-secret" // #nosec G101
-	S3BackupFlagName          = "s3.backup"
-	S3TimeoutFlagName         = "s3.timeout"
-
 	// routing flags
 	FallbackTargetsFlagName = "routing.fallback-targets"
 	CacheTargetsFlagName    = "routing.cache-targets"
@@ -71,76 +63,21 @@ func prefixEnvVars(name string) []string {
 	return opservice.PrefixEnvVar(EnvVarPrefix, name)
 }
 
-// Flags contains the list of configuration options available to the binary.
-var Flags = []cli.Flag{
-	&cli.StringFlag{
-		Name:    ListenAddrFlagName,
-		Usage:   "server listening address",
-		Value:   "0.0.0.0",
-		EnvVars: prefixEnvVars("ADDR"),
-	},
-	&cli.IntFlag{
-		Name:    PortFlagName,
-		Usage:   "server listening port",
-		Value:   3100,
-		EnvVars: prefixEnvVars("PORT"),
-	},
-}
-
-// s3Flags ... used for S3 backend configuration
-func s3Flags() []cli.Flag {
-	return []cli.Flag{
-		&cli.StringFlag{
-			Name:    S3CredentialTypeFlagName,
-			Usage:   "The way to authenticate to S3, options are [iam, static]",
-			EnvVars: prefixEnvVars("S3_CREDENTIAL_TYPE"),
-		},
-		&cli.StringFlag{
-			Name:    S3BucketFlagName,
-			Usage:   "bucket name for S3 storage",
-			EnvVars: prefixEnvVars("S3_BUCKET"),
-		},
-		&cli.StringFlag{
-			Name:    S3PathFlagName,
-			Usage:   "path for S3 storage",
-			EnvVars: prefixEnvVars("S3_PATH"),
-		},
-		&cli.StringFlag{
-			Name:    S3EndpointFlagName,
-			Usage:   "endpoint for S3 storage",
-			Value:   "",
-			EnvVars: prefixEnvVars("S3_ENDPOINT"),
-		},
-		&cli.StringFlag{
-			Name:    S3AccessKeyIDFlagName,
-			Usage:   "access key id for S3 storage",
-			Value:   "",
-			EnvVars: prefixEnvVars("S3_ACCESS_KEY_ID"),
-		},
-		&cli.StringFlag{
-			Name:    S3AccessKeySecretFlagName,
-			Usage:   "access key secret for S3 storage",
-			Value:   "",
-			EnvVars: prefixEnvVars("S3_ACCESS_KEY_SECRET"),
-		},
-		&cli.BoolFlag{
-			Name:    S3BackupFlagName,
-			Usage:   "whether to use S3 as a backup store to ensure resiliency in case of EigenDA read failure",
-			Value:   false,
-			EnvVars: prefixEnvVars("S3_BACKUP"),
-		},
-		&cli.DurationFlag{
-			Name:    S3TimeoutFlagName,
-			Usage:   "timeout for S3 storage operations (e.g. get, put)",
-			Value:   5 * time.Second,
-			EnvVars: prefixEnvVars("S3_TIMEOUT"),
-		},
-	}
-}
-
 func CLIFlags() []cli.Flag {
 	// TODO: Decompose all flags into constituent parts based on their respective category / usage
 	flags := []cli.Flag{
+		&cli.StringFlag{
+			Name:    ListenAddrFlagName,
+			Usage:   "server listening address",
+			Value:   "0.0.0.0",
+			EnvVars: prefixEnvVars("ADDR"),
+		},
+		&cli.IntFlag{
+			Name:    PortFlagName,
+			Usage:   "server listening port",
+			Value:   3100,
+			EnvVars: prefixEnvVars("PORT"),
+		},
 		&cli.StringFlag{
 			Name:    EigenDADisperserRPCFlagName,
 			Usage:   "RPC endpoint of the EigenDA disperser.",
@@ -281,13 +218,16 @@ func CLIFlags() []cli.Flag {
 		},
 	}
 
-	flags = append(flags, s3Flags()...)
 	return flags
 }
+
+// Flags contains the list of configuration options available to the binary.
+var Flags = []cli.Flag{}
 
 func init() {
 	Flags = CLIFlags()
 	Flags = append(Flags, oplog.CLIFlags(EnvVarPrefix)...)
 	Flags = append(Flags, opmetrics.CLIFlags(EnvVarPrefix)...)
 	Flags = append(Flags, redis.CLIFlags(EnvVarPrefix, RedisCategory)...)
+	Flags = append(Flags, s3.CLIFlags(EnvVarPrefix, S3Category)...)
 }
