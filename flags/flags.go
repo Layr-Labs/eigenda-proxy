@@ -1,4 +1,4 @@
-package cli
+package flags
 
 import (
 	"time"
@@ -322,25 +322,4 @@ func init() {
 	Flags = CLIFlags()
 	Flags = append(Flags, oplog.CLIFlags(EnvVarPrefix)...)
 	Flags = append(Flags, opmetrics.CLIFlags(EnvVarPrefix)...)
-}
-
-type CLIConfig struct {
-	EigenDAConfig Config
-	MetricsCfg    opmetrics.CLIConfig
-}
-
-func ReadCLIConfig(ctx *cli.Context) CLIConfig {
-	config := ReadConfig(ctx)
-	return CLIConfig{
-		EigenDAConfig: config,
-		MetricsCfg:    opmetrics.ReadCLIConfig(ctx),
-	}
-}
-
-func (c CLIConfig) Check() error {
-	err := c.EigenDAConfig.Check()
-	if err != nil {
-		return err
-	}
-	return nil
 }

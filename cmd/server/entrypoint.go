@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	proxycli "github.com/Layr-Labs/eigenda-proxy/cli"
+	"github.com/Layr-Labs/eigenda-proxy/flags"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/server"
 	"github.com/urfave/cli/v2"
@@ -18,7 +18,7 @@ func StartProxySvr(cliCtx *cli.Context) error {
 	oplog.SetGlobalLogHandler(log.Handler())
 	log.Info("Starting EigenDA Proxy Server", "version", Version, "date", Date, "commit", Commit)
 
-	cfg := proxycli.ReadCLIConfig(cliCtx)
+	cfg := server.ReadCLIConfig(cliCtx)
 	if err := cfg.Check(); err != nil {
 		return err
 	}
@@ -32,7 +32,7 @@ func StartProxySvr(cliCtx *cli.Context) error {
 		return fmt.Errorf("failed to create store: %w", err)
 	}
 	m := metrics.NewMetrics("default")
-	server := server.NewServer(cliCtx.String(proxycli.ListenAddrFlagName), cliCtx.Int(proxycli.PortFlagName), daRouter, log, m)
+	server := server.NewServer(cliCtx.String(flags.ListenAddrFlagName), cliCtx.Int(flags.PortFlagName), daRouter, log, m)
 
 	if err := server.Start(); err != nil {
 		return fmt.Errorf("failed to start the DA server: %w", err)

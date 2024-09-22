@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Layr-Labs/eigenda-proxy/cli"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/eigenda"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
@@ -44,7 +43,7 @@ func populateTargets(targets []string, s3 store.PrecomputedKeyStore, redis *redi
 }
 
 // LoadStoreRouter ... creates storage backend clients and instruments them into a storage routing abstraction
-func LoadStoreRouter(ctx context.Context, cfg cli.CLIConfig, log log.Logger) (store.IRouter, error) {
+func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (store.IRouter, error) {
 	// create S3 backend store (if enabled)
 	var err error
 	var s3Store store.PrecomputedKeyStore

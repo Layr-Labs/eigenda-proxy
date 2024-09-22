@@ -1,4 +1,4 @@
-package cli
+package server
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/Layr-Labs/eigenda-proxy/flags"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
@@ -15,6 +16,8 @@ import (
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/Layr-Labs/eigenda/api/clients/codecs"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
+
+	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 )
 
 const (
@@ -114,46 +117,46 @@ func (cfg *Config) VerificationCfg() *verify.Config {
 func ReadConfig(ctx *cli.Context) Config {
 	cfg := Config{
 		RedisConfig: redis.Config{
-			Endpoint: ctx.String(RedisEndpointFlagName),
-			Password: ctx.String(RedisPasswordFlagName),
-			DB:       ctx.Int(RedisDBFlagName),
-			Eviction: ctx.Duration(RedisEvictionFlagName),
+			Endpoint: ctx.String(flags.RedisEndpointFlagName),
+			Password: ctx.String(flags.RedisPasswordFlagName),
+			DB:       ctx.Int(flags.RedisDBFlagName),
+			Eviction: ctx.Duration(flags.RedisEvictionFlagName),
 		},
 		S3Config: s3.Config{
-			S3CredentialType: s3.StringToCredentialType(ctx.String(S3CredentialTypeFlagName)),
-			Bucket:           ctx.String(S3BucketFlagName),
-			Path:             ctx.String(S3PathFlagName),
-			Endpoint:         ctx.String(S3EndpointFlagName),
-			AccessKeyID:      ctx.String(S3AccessKeyIDFlagName),
-			AccessKeySecret:  ctx.String(S3AccessKeySecretFlagName),
-			Backup:           ctx.Bool(S3BackupFlagName),
-			Timeout:          ctx.Duration(S3TimeoutFlagName),
+			S3CredentialType: s3.StringToCredentialType(ctx.String(flags.S3CredentialTypeFlagName)),
+			Bucket:           ctx.String(flags.S3BucketFlagName),
+			Path:             ctx.String(flags.S3PathFlagName),
+			Endpoint:         ctx.String(flags.S3EndpointFlagName),
+			AccessKeyID:      ctx.String(flags.S3AccessKeyIDFlagName),
+			AccessKeySecret:  ctx.String(flags.S3AccessKeySecretFlagName),
+			Backup:           ctx.Bool(flags.S3BackupFlagName),
+			Timeout:          ctx.Duration(flags.S3TimeoutFlagName),
 		},
 		ClientConfig: clients.EigenDAClientConfig{
-			RPC:                          ctx.String(EigenDADisperserRPCFlagName),
-			StatusQueryRetryInterval:     ctx.Duration(StatusQueryRetryIntervalFlagName),
-			StatusQueryTimeout:           ctx.Duration(StatusQueryTimeoutFlagName),
-			DisableTLS:                   ctx.Bool(DisableTLSFlagName),
-			ResponseTimeout:              ctx.Duration(ResponseTimeoutFlagName),
-			CustomQuorumIDs:              ctx.UintSlice(CustomQuorumIDsFlagName),
-			SignerPrivateKeyHex:          ctx.String(SignerPrivateKeyHexFlagName),
-			PutBlobEncodingVersion:       codecs.BlobEncodingVersion(ctx.Uint(PutBlobEncodingVersionFlagName)),
-			DisablePointVerificationMode: ctx.Bool(DisablePointVerificationModeFlagName),
+			RPC:                          ctx.String(flags.EigenDADisperserRPCFlagName),
+			StatusQueryRetryInterval:     ctx.Duration(flags.StatusQueryRetryIntervalFlagName),
+			StatusQueryTimeout:           ctx.Duration(flags.StatusQueryTimeoutFlagName),
+			DisableTLS:                   ctx.Bool(flags.DisableTLSFlagName),
+			ResponseTimeout:              ctx.Duration(flags.ResponseTimeoutFlagName),
+			CustomQuorumIDs:              ctx.UintSlice(flags.CustomQuorumIDsFlagName),
+			SignerPrivateKeyHex:          ctx.String(flags.SignerPrivateKeyHexFlagName),
+			PutBlobEncodingVersion:       codecs.BlobEncodingVersion(ctx.Uint(flags.PutBlobEncodingVersionFlagName)),
+			DisablePointVerificationMode: ctx.Bool(flags.DisablePointVerificationModeFlagName),
 		},
-		G1Path:                  ctx.String(G1PathFlagName),
-		G2PowerOfTauPath:        ctx.String(G2TauFlagName),
-		CacheDir:                ctx.String(CachePathFlagName),
-		MaxBlobLength:           ctx.String(MaxBlobLengthFlagName),
-		CertVerificationEnabled: ctx.Bool(CertVerificationEnabledFlagName),
-		SvcManagerAddr:          ctx.String(SvcManagerAddrFlagName),
-		EthRPC:                  ctx.String(EthRPCFlagName),
-		EthConfirmationDepth:    ctx.Int64(EthConfirmationDepthFlagName),
-		MemstoreEnabled:         ctx.Bool(MemstoreFlagName),
-		MemstoreBlobExpiration:  ctx.Duration(MemstoreExpirationFlagName),
-		MemstoreGetLatency:      ctx.Duration(MemstoreGetLatencyFlagName),
-		MemstorePutLatency:      ctx.Duration(MemstorePutLatencyFlagName),
-		FallbackTargets:         ctx.StringSlice(FallbackTargetsFlagName),
-		CacheTargets:            ctx.StringSlice(CacheTargetsFlagName),
+		G1Path:                  ctx.String(flags.G1PathFlagName),
+		G2PowerOfTauPath:        ctx.String(flags.G2TauFlagName),
+		CacheDir:                ctx.String(flags.CachePathFlagName),
+		MaxBlobLength:           ctx.String(flags.MaxBlobLengthFlagName),
+		CertVerificationEnabled: ctx.Bool(flags.CertVerificationEnabledFlagName),
+		SvcManagerAddr:          ctx.String(flags.SvcManagerAddrFlagName),
+		EthRPC:                  ctx.String(flags.EthRPCFlagName),
+		EthConfirmationDepth:    ctx.Int64(flags.EthConfirmationDepthFlagName),
+		MemstoreEnabled:         ctx.Bool(flags.MemstoreFlagName),
+		MemstoreBlobExpiration:  ctx.Duration(flags.MemstoreExpirationFlagName),
+		MemstoreGetLatency:      ctx.Duration(flags.MemstoreGetLatencyFlagName),
+		MemstorePutLatency:      ctx.Duration(flags.MemstorePutLatencyFlagName),
+		FallbackTargets:         ctx.StringSlice(flags.FallbackTargetsFlagName),
+		CacheTargets:            ctx.StringSlice(flags.CacheTargetsFlagName),
 	}
 	// the eigenda client can only wait for 0 confirmations or finality
 	// the da-proxy has a more fine-grained notion of confirmation depth
@@ -246,5 +249,26 @@ func (cfg *Config) Check() error {
 		}
 	}
 
+	return nil
+}
+
+type CLIConfig struct {
+	EigenDAConfig Config
+	MetricsCfg    opmetrics.CLIConfig
+}
+
+func ReadCLIConfig(ctx *cli.Context) CLIConfig {
+	config := ReadConfig(ctx)
+	return CLIConfig{
+		EigenDAConfig: config,
+		MetricsCfg:    opmetrics.ReadCLIConfig(ctx),
+	}
+}
+
+func (c CLIConfig) Check() error {
+	err := c.EigenDAConfig.Check()
+	if err != nil {
+		return err
+	}
 	return nil
 }
