@@ -77,6 +77,8 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (store.
 		log.Warn("Verification disabled")
 	}
 
+	// TODO: change this logic... we shouldn't need to calculate this here.
+	// It should already be part of the config
 	maxBlobLength, err := daCfg.GetMaxBlobLength()
 	if err != nil {
 		return nil, err

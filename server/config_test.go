@@ -11,7 +11,7 @@ import (
 
 func validCfg() *Config {
 	return &Config{
-		RedisCfg: store.RedisConfig{
+		RedisConfig: store.RedisConfig{
 			Endpoint: "localhost:6379",
 			Password: "password",
 			DB:       0,
@@ -186,7 +186,7 @@ func TestConfigVerification(t *testing.T) {
 
 	t.Run("BadRedisConfiguration", func(t *testing.T) {
 		cfg := validCfg()
-		cfg.RedisCfg.Endpoint = ""
+		cfg.RedisConfig.Endpoint = ""
 
 		err := cfg.Check()
 		require.Error(t, err)
