@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Layr-Labs/eigenda-proxy/cli"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/api/clients"
@@ -39,24 +40,24 @@ func populateTargets(targets []string, s3 store.PrecomputedKeyStore, redis *stor
 }
 
 // LoadStoreRouter ... creates storage backend clients and instruments them into a storage routing abstraction
-func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (store.IRouter, error) {
+func LoadStoreRouter(ctx context.Context, cfg cli.CLIConfig, log log.Logger) (store.IRouter, error) {
 	// create S3 backend store (if enabled)
 	var err error
 	var s3 store.PrecomputedKeyStore
 	var redis *store.RedStore
 
-	if cfg.S3Config.Bucket != "" && cfg.S3Config.Endpoint != "" {
+	if cfg.EigenDAConfig.S3Config.Bucket != "" && cfg.EigenDAConfig.S3Config.Endpoint != "" {
 		log.Info("Using S3 backend")
-		s3, err = store.NewS3(cfg.S3Config)
+		s3, err = store.NewS3(cfg.EigenDAConfig.S3Config)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create S3 store: %w", err)
 		}
 	}
 
-	if cfg.RedisCfg.Endpoint != "" {
+	if cfg.EigenDAConfig.RedisConfig.Endpoint != "" {
 		log.Info("Using Redis backend")
 		// create Redis backend store
-		redis, err = store.NewRedisStore(&cfg.RedisCfg)
+		redis, err = store.NewRedisStore(&cfg.EigenDAConfig.RedisConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create Redis store: %w", err)
 		}

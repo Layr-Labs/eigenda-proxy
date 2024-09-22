@@ -1,4 +1,4 @@
-package server
+package cli
 
 import (
 	"testing"

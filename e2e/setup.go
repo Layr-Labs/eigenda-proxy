@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Layr-Labs/eigenda-proxy/cli"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/server"
 	"github.com/Layr-Labs/eigenda-proxy/store"
@@ -52,40 +53,40 @@ func TestConfig(useMemory bool) *Cfg {
 	}
 }
 
-func createRedisConfig(eigendaCfg server.Config) server.CLIConfig {
-	return server.CLIConfig{
+func createRedisConfig(eigendaCfg cli.Config) cli.CLIConfig {
+	eigendaCfg.RedisConfig = store.RedisConfig{
+		Endpoint: "127.0.0.1:9001",
+		Password: "",
+		DB:       0,
+		Eviction: 10 * time.Minute,
+		Profile:  true,
+	}
+	return cli.CLIConfig{
 		EigenDAConfig: eigendaCfg,
-		RedisCfg: store.RedisConfig{
-			Endpoint: "127.0.0.1:9001",
-			Password: "",
-			DB:       0,
-			Eviction: 10 * time.Minute,
-			Profile:  true,
-		},
 	}
 }
 
-func createS3Config(eigendaCfg server.Config) server.CLIConfig {
+func createS3Config(eigendaCfg cli.Config) cli.CLIConfig {
 	// generate random string
 	bucketName := "eigenda-proxy-test-" + RandString(10)
 	createS3Bucket(bucketName)
 
-	return server.CLIConfig{
+	eigendaCfg.S3Config = store.S3Config{
+		Profiling:        true,
+		Bucket:           bucketName,
+		Path:             "",
+		Endpoint:         "localhost:4566",
+		AccessKeySecret:  "minioadmin",
+		AccessKeyID:      "minioadmin",
+		S3CredentialType: store.S3CredentialStatic,
+		Backup:           false,
+	}
+	return cli.CLIConfig{
 		EigenDAConfig: eigendaCfg,
-		S3Config: store.S3Config{
-			Profiling:        true,
-			Bucket:           bucketName,
-			Path:             "",
-			Endpoint:         "localhost:4566",
-			AccessKeySecret:  "minioadmin",
-			AccessKeyID:      "minioadmin",
-			S3CredentialType: store.S3CredentialStatic,
-			Backup:           false,
-		},
 	}
 }
 
-func TestSuiteConfig(t *testing.T, testCfg *Cfg) server.CLIConfig {
+func TestSuiteConfig(t *testing.T, testCfg *Cfg) cli.CLIConfig {
 	// load signer key from environment
 	pk := os.Getenv(privateKey)
 	if pk == "" && !testCfg.UseMemory {
@@ -105,7 +106,7 @@ func TestSuiteConfig(t *testing.T, testCfg *Cfg) server.CLIConfig {
 		pollInterval = time.Minute * 1
 	}
 
-	eigendaCfg := server.Config{
+	eigendaCfg := cli.Config{
 		ClientConfig: clients.EigenDAClientConfig{
 			RPC:                      holeskyDA,
 			StatusQueryTimeout:       time.Minute * 45,
@@ -129,7 +130,7 @@ func TestSuiteConfig(t *testing.T, testCfg *Cfg) server.CLIConfig {
 		eigendaCfg.ClientConfig.SignerPrivateKeyHex = "0000000000000000000100000000000000000000000000000000000000000000"
 	}
 
-	var cfg server.CLIConfig
+	var cfg cli.CLIConfig
 	switch {
 	case testCfg.UseKeccak256ModeS3:
 		cfg = createS3Config(eigendaCfg)
@@ -147,7 +148,7 @@ func TestSuiteConfig(t *testing.T, testCfg *Cfg) server.CLIConfig {
 		cfg = createRedisConfig(eigendaCfg)
 
 	default:
-		cfg = server.CLIConfig{
+		cfg = cli.CLIConfig{
 			EigenDAConfig: eigendaCfg,
 			MetricsCfg:    opmetrics.CLIConfig{},
 		}
@@ -162,7 +163,7 @@ type TestSuite struct {
 	Server *server.Server
 }
 
-func CreateTestSuite(t *testing.T, testSuiteCfg server.CLIConfig) (TestSuite, func()) {
+func CreateTestSuite(t *testing.T, testSuiteCfg cli.CLIConfig) (TestSuite, func()) {
 	log := oplog.NewLogger(os.Stdout, oplog.CLIConfig{
 		Level:  log.LevelDebug,
 		Format: oplog.FormatLogFmt,

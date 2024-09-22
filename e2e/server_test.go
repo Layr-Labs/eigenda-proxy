@@ -110,7 +110,7 @@ func TestKeccak256CommitmentRequestErrorsWhenS3NotSet(t *testing.T) {
 	testCfg.UseKeccak256ModeS3 = true
 
 	tsConfig := e2e.TestSuiteConfig(t, testCfg)
-	tsConfig.S3Config.Endpoint = ""
+	tsConfig.EigenDAConfig.S3Config.Endpoint = ""
 	ts, kill := e2e.CreateTestSuite(t, tsConfig)
 	defer kill()
 
