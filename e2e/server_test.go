@@ -393,7 +393,7 @@ func TestProxyServerCachingWithRedis(t *testing.T) {
 	require.Equal(t, testPreimage, preimage)
 
 	// ensure that read was from cache
-	redStats, err := ts.Server.GetStoreStats(store.Redis)
+	redStats, err := ts.Server.GetStoreStats(store.RedisBackendType)
 	require.NoError(t, err)
 
 	require.Equal(t, 1, redStats.Reads)

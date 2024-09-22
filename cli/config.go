@@ -8,6 +8,8 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/Layr-Labs/eigenda-proxy/store"
+	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
+	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/Layr-Labs/eigenda-proxy/utils"
 	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/api/clients"
@@ -61,8 +63,8 @@ type Config struct {
 	CacheTargets    []string
 
 	// secondary storage
-	RedisConfig store.RedisConfig
-	S3Config    store.S3Config
+	RedisConfig redis.Config
+	S3Config    s3.Config
 }
 
 // GetMaxBlobLength ... returns the maximum blob length in bytes
@@ -111,14 +113,14 @@ func (cfg *Config) VerificationCfg() *verify.Config {
 // ReadConfig ... parses the Config from the provided flags or environment variables.
 func ReadConfig(ctx *cli.Context) Config {
 	cfg := Config{
-		RedisConfig: store.RedisConfig{
+		RedisConfig: redis.Config{
 			Endpoint: ctx.String(RedisEndpointFlagName),
 			Password: ctx.String(RedisPasswordFlagName),
 			DB:       ctx.Int(RedisDBFlagName),
 			Eviction: ctx.Duration(RedisEvictionFlagName),
 		},
-		S3Config: store.S3Config{
-			S3CredentialType: store.StringToS3CredentialType(ctx.String(S3CredentialTypeFlagName)),
+		S3Config: s3.Config{
+			S3CredentialType: s3.StringToCredentialType(ctx.String(S3CredentialTypeFlagName)),
 			Bucket:           ctx.String(S3BucketFlagName),
 			Path:             ctx.String(S3PathFlagName),
 			Endpoint:         ctx.String(S3EndpointFlagName),
@@ -214,10 +216,10 @@ func (cfg *Config) Check() error {
 		}
 	}
 
-	if cfg.S3Config.S3CredentialType == store.S3CredentialUnknown && cfg.S3Config.Endpoint != "" {
+	if cfg.S3Config.S3CredentialType == s3.CredentialTypeUnknown && cfg.S3Config.Endpoint != "" {
 		return fmt.Errorf("s3 credential type must be set")
 	}
-	if cfg.S3Config.S3CredentialType == store.S3CredentialStatic {
+	if cfg.S3Config.S3CredentialType == s3.CredentialTypeStatic {
 		if cfg.S3Config.Endpoint != "" && (cfg.S3Config.AccessKeyID == "" || cfg.S3Config.AccessKeySecret == "") {
 			return fmt.Errorf("s3 endpoint is set, but access key id or access key secret is not set")
 		}

@@ -10,7 +10,8 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/cli"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/server"
-	"github.com/Layr-Labs/eigenda-proxy/store"
+	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
+	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/minio/minio-go/v7"
@@ -54,7 +55,7 @@ func TestConfig(useMemory bool) *Cfg {
 }
 
 func createRedisConfig(eigendaCfg cli.Config) cli.CLIConfig {
-	eigendaCfg.RedisConfig = store.RedisConfig{
+	eigendaCfg.RedisConfig = redis.Config{
 		Endpoint: "127.0.0.1:9001",
 		Password: "",
 		DB:       0,
@@ -71,14 +72,14 @@ func createS3Config(eigendaCfg cli.Config) cli.CLIConfig {
 	bucketName := "eigenda-proxy-test-" + RandString(10)
 	createS3Bucket(bucketName)
 
-	eigendaCfg.S3Config = store.S3Config{
+	eigendaCfg.S3Config = s3.Config{
 		Profiling:        true,
 		Bucket:           bucketName,
 		Path:             "",
 		Endpoint:         "localhost:4566",
 		AccessKeySecret:  "minioadmin",
 		AccessKeyID:      "minioadmin",
-		S3CredentialType: store.S3CredentialStatic,
+		S3CredentialType: s3.CredentialTypeStatic,
 		Backup:           false,
 	}
 	return cli.CLIConfig{

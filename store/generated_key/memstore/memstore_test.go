@@ -1,4 +1,4 @@
-package store
+package memstore
 
 import (
 	"context"
@@ -16,8 +16,8 @@ const (
 	testPreimage = "Four score and seven years ago"
 )
 
-func getDefaultMemStoreTestConfig() MemStoreConfig {
-	return MemStoreConfig{
+func getDefaultMemStoreTestConfig() Config {
+	return Config{
 		MaxBlobSizeBytes: 1024 * 1024,
 		BlobExpiration:   0,
 		PutLatency:       0,
@@ -46,7 +46,7 @@ func TestGetSet(t *testing.T) {
 	verifier, err := verify.NewVerifier(getDefaultVerifierTestConfig(), nil)
 	require.NoError(t, err)
 
-	ms, err := NewMemStore(
+	ms, err := New(
 		ctx,
 		verifier,
 		log.New(),
@@ -75,7 +75,7 @@ func TestExpiration(t *testing.T) {
 
 	memstoreConfig := getDefaultMemStoreTestConfig()
 	memstoreConfig.BlobExpiration = 10 * time.Millisecond
-	ms, err := NewMemStore(
+	ms, err := New(
 		ctx,
 		verifier,
 		log.New(),
@@ -111,7 +111,7 @@ func TestLatency(t *testing.T) {
 	config := getDefaultMemStoreTestConfig()
 	config.PutLatency = putLatency
 	config.GetLatency = getLatency
-	ms, err := NewMemStore(ctx, verifier, log.New(), config)
+	ms, err := New(ctx, verifier, log.New(), config)
 
 	require.NoError(t, err)
 

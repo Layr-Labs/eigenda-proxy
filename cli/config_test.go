@@ -4,20 +4,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Layr-Labs/eigenda-proxy/store"
+	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
+	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/stretchr/testify/require"
 )
 
 func validCfg() *Config {
 	return &Config{
-		RedisConfig: store.RedisConfig{
+		RedisConfig: redis.Config{
 			Endpoint: "localhost:6379",
 			Password: "password",
 			DB:       0,
 			Eviction: 10 * time.Minute,
 		},
-		S3Config: store.S3Config{
+		S3Config: s3.Config{
 			Bucket:          "test-bucket",
 			Path:            "",
 			Endpoint:        "http://localhost:9000",
@@ -110,7 +111,7 @@ func TestConfigVerification(t *testing.T) {
 	t.Run("MissingS3AccessKeys", func(t *testing.T) {
 		cfg := validCfg()
 
-		cfg.S3Config.S3CredentialType = store.S3CredentialStatic
+		cfg.S3Config.S3CredentialType = s3.CredentialTypeStatic
 		cfg.S3Config.Endpoint = "http://localhost:9000"
 		cfg.S3Config.AccessKeyID = ""
 
@@ -121,7 +122,7 @@ func TestConfigVerification(t *testing.T) {
 	t.Run("MissingS3Credential", func(t *testing.T) {
 		cfg := validCfg()
 
-		cfg.S3Config.S3CredentialType = store.S3CredentialUnknown
+		cfg.S3Config.S3CredentialType = s3.CredentialTypeUnknown
 
 		err := cfg.Check()
 		require.Error(t, err)
