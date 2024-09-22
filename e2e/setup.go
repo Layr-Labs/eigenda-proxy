@@ -11,7 +11,10 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/server"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
+	"github.com/Layr-Labs/eigenda-proxy/utils"
+	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/api/clients"
+	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -106,6 +109,8 @@ func TestSuiteConfig(t *testing.T, testCfg *Cfg) server.CLIConfig {
 		pollInterval = time.Minute * 1
 	}
 
+	maxBlobLengthBytes, err := utils.ParseBytesAmount("16mib")
+	require.NoError(t, err)
 	eigendaCfg := server.Config{
 		EdaClientConfig: clients.EigenDAClientConfig{
 			RPC:                      holeskyDA,
@@ -114,16 +119,20 @@ func TestSuiteConfig(t *testing.T, testCfg *Cfg) server.CLIConfig {
 			DisableTLS:               false,
 			SignerPrivateKeyHex:      pk,
 		},
-		EthRPC:                 ethRPC,
-		SvcManagerAddr:         "0xD4A7E1Bd8015057293f0D0A557088c286942e84b", // incompatible with non holeskly networks
-		CacheDir:               "../resources/SRSTables",
-		G1Path:                 "../resources/g1.point",
-		MaxBlobLength:          "16mib",
-		G2PowerOfTauPath:       "../resources/g2.point.powerOf2",
-		PutBlobEncodingVersion: 0x00,
+		VerifierConfig: verify.Config{
+			VerifyCerts:          true,
+			RPCURL:               ethRPC,
+			SvcManagerAddr:       "0xD4A7E1Bd8015057293f0D0A557088c286942e84b", // incompatible with non holeskly networks
+			EthConfirmationDepth: 0,
+			KzgConfig: &kzg.KzgConfig{
+				G1Path:         "../resources/g1.point",
+				G2PowerOf2Path: "../resources/g2.point.powerOf2",
+				CacheDir:       "../resources/SRSTables",
+				SRSOrder:       maxBlobLengthBytes / 32,
+			},
+		},
 		MemstoreEnabled:        testCfg.UseMemory,
 		MemstoreBlobExpiration: testCfg.Expiration,
-		EthConfirmationDepth:   0,
 	}
 
 	if testCfg.UseMemory {

@@ -68,9 +68,9 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (store.
 
 	// create cert/data verification type
 	daCfg := cfg.EigenDAConfig
-	vCfg := daCfg.VerificationCfg()
+	vCfg := daCfg.VerifierConfig
 
-	verifier, err := verify.NewVerifier(vCfg, log)
+	verifier, err := verify.NewVerifier(&vCfg, log)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create verifier: %w", err)
 	}
@@ -81,19 +81,16 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (store.
 		log.Warn("Verification disabled")
 	}
 
-	// TODO: change this logic... we shouldn't need to calculate this here.
-	// It should already be part of the config
-	maxBlobLength, err := daCfg.GetMaxBlobLength()
-	if err != nil {
-		return nil, err
-	}
-
 	// create EigenDA backend store
 	var eigenDA store.KeyGeneratedStore
 	if cfg.EigenDAConfig.MemstoreEnabled {
 		log.Info("Using mem-store backend for EigenDA")
 		eigenDA, err = memstore.New(ctx, verifier, log, memstore.Config{
-			MaxBlobSizeBytes: maxBlobLength,
+			// TODO: there has to be a better way to get MaxBlobLengthBytes
+			// right now we get it from the verifier cli, but there's probably a way to share flags more nicely?
+			// maybe use a duplicate but hidden flag in memstore category, and set it using the action by reading
+			// from the other flag?
+			MaxBlobSizeBytes: verify.MaxBlobLengthBytes,
 			BlobExpiration:   cfg.EigenDAConfig.MemstoreBlobExpiration,
 			PutLatency:       cfg.EigenDAConfig.MemstorePutLatency,
 			GetLatency:       cfg.EigenDAConfig.MemstoreGetLatency,
@@ -111,8 +108,8 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (store.
 			verifier,
 			log,
 			&eigenda.StoreConfig{
-				MaxBlobSizeBytes:     maxBlobLength,
-				EthConfirmationDepth: uint64(cfg.EigenDAConfig.EthConfirmationDepth), // #nosec G115
+				MaxBlobSizeBytes:     verify.MaxBlobLengthBytes,
+				EthConfirmationDepth: uint64(cfg.EigenDAConfig.VerifierConfig.EthConfirmationDepth), // #nosec G115
 				StatusQueryTimeout:   cfg.EigenDAConfig.EdaClientConfig.StatusQueryTimeout,
 			},
 		)
