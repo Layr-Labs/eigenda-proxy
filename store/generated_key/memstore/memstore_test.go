@@ -29,9 +29,9 @@ func getDefaultVerifierTestConfig() *verify.Config {
 	return &verify.Config{
 		VerifyCerts: false,
 		KzgConfig: &kzg.KzgConfig{
-			G1Path:          "../resources/g1.point",
-			G2PowerOf2Path:  "../resources/g2.point.powerOf2",
-			CacheDir:        "../resources/SRSTables",
+			G1Path:          "../../../resources/g1.point",
+			G2PowerOf2Path:  "../../../resources/g2.point.powerOf2",
+			CacheDir:        "../../..resources/SRSTables",
 			SRSOrder:        3000,
 			SRSNumberToLoad: 3000,
 			NumWorker:       uint64(runtime.GOMAXPROCS(0)),
