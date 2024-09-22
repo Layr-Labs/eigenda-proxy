@@ -25,7 +25,7 @@ func validCfg() *Config {
 			AccessKeyID:     "access-key-id",
 			AccessKeySecret: "access-key-secret",
 		},
-		ClientConfig: clients.EigenDAClientConfig{
+		EdaClientConfig: clients.EigenDAClientConfig{
 			RPC:                          "http://localhost:8545",
 			StatusQueryRetryInterval:     5 * time.Second,
 			StatusQueryTimeout:           30 * time.Minute,
@@ -130,7 +130,7 @@ func TestConfigVerification(t *testing.T) {
 
 	t.Run("MissingEigenDADisperserRPC", func(t *testing.T) {
 		cfg := validCfg()
-		cfg.ClientConfig.RPC = ""
+		cfg.EdaClientConfig.RPC = ""
 		cfg.MemstoreEnabled = false
 
 		err := cfg.Check()

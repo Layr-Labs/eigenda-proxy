@@ -107,7 +107,7 @@ func TestSuiteConfig(t *testing.T, testCfg *Cfg) server.CLIConfig {
 	}
 
 	eigendaCfg := server.Config{
-		ClientConfig: clients.EigenDAClientConfig{
+		EdaClientConfig: clients.EigenDAClientConfig{
 			RPC:                      holeskyDA,
 			StatusQueryTimeout:       time.Minute * 45,
 			StatusQueryRetryInterval: pollInterval,
@@ -127,7 +127,7 @@ func TestSuiteConfig(t *testing.T, testCfg *Cfg) server.CLIConfig {
 	}
 
 	if testCfg.UseMemory {
-		eigendaCfg.ClientConfig.SignerPrivateKeyHex = "0000000000000000000100000000000000000000000000000000000000000000"
+		eigendaCfg.EdaClientConfig.SignerPrivateKeyHex = "0000000000000000000100000000000000000000000000000000000000000000"
 	}
 
 	var cfg server.CLIConfig

@@ -3,6 +3,7 @@ package flags
 import (
 	"time"
 
+	"github.com/Layr-Labs/eigenda-proxy/flags/eigenda_flags"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/urfave/cli/v2"
@@ -13,25 +14,15 @@ import (
 )
 
 const (
-	MemstoreFlagsCategory = "Memstore"
-	RedisCategory         = "Redis"
-	S3Category            = "S3"
+	EigenDAClientCategory = "EigenDA Client"
+	MemstoreFlagsCategory = "Memstore (replaces EigenDA when enabled)"
+	RedisCategory         = "Redis Cache/Fallback"
+	S3Category            = "S3 Cache/Fallback"
 )
 
 const (
 	ListenAddrFlagName = "addr"
 	PortFlagName       = "port"
-
-	// eigenda client flags
-	EigenDADisperserRPCFlagName          = "eigenda-disperser-rpc"
-	StatusQueryRetryIntervalFlagName     = "eigenda-status-query-retry-interval"
-	StatusQueryTimeoutFlagName           = "eigenda-status-query-timeout"
-	DisableTLSFlagName                   = "eigenda-disable-tls"
-	ResponseTimeoutFlagName              = "eigenda-response-timeout"
-	CustomQuorumIDsFlagName              = "eigenda-custom-quorum-ids"
-	SignerPrivateKeyHexFlagName          = "eigenda-signer-private-key-hex"
-	PutBlobEncodingVersionFlagName       = "eigenda-put-blob-encoding-version"
-	DisablePointVerificationModeFlagName = "eigenda-disable-point-verification-mode"
 
 	// cert verification flags
 	// TODO: should we remove the eigenda prefix since these are not eigenda-client flags?
@@ -77,58 +68,6 @@ func CLIFlags() []cli.Flag {
 			Usage:   "server listening port",
 			Value:   3100,
 			EnvVars: prefixEnvVars("PORT"),
-		},
-		&cli.StringFlag{
-			Name:    EigenDADisperserRPCFlagName,
-			Usage:   "RPC endpoint of the EigenDA disperser.",
-			EnvVars: prefixEnvVars("EIGENDA_DISPERSER_RPC"),
-		},
-		&cli.DurationFlag{
-			Name:    StatusQueryTimeoutFlagName,
-			Usage:   "Duration to wait for a blob to finalize after being sent for dispersal. Default is 30 minutes.",
-			Value:   30 * time.Minute,
-			EnvVars: prefixEnvVars("STATUS_QUERY_TIMEOUT"),
-		},
-		&cli.DurationFlag{
-			Name:    StatusQueryRetryIntervalFlagName,
-			Usage:   "Interval between retries when awaiting network blob finalization. Default is 5 seconds.",
-			Value:   5 * time.Second,
-			EnvVars: prefixEnvVars("STATUS_QUERY_INTERVAL"),
-		},
-		&cli.BoolFlag{
-			Name:    DisableTLSFlagName,
-			Usage:   "Disable TLS for gRPC communication with the EigenDA disperser. Default is false.",
-			Value:   false,
-			EnvVars: prefixEnvVars("GRPC_DISABLE_TLS"),
-		},
-		&cli.DurationFlag{
-			Name:    ResponseTimeoutFlagName,
-			Usage:   "Total time to wait for a response from the EigenDA disperser. Default is 60 seconds.",
-			Value:   60 * time.Second,
-			EnvVars: prefixEnvVars("RESPONSE_TIMEOUT"),
-		},
-		&cli.UintSliceFlag{
-			Name:    CustomQuorumIDsFlagName,
-			Usage:   "Custom quorum IDs for writing blobs. Should not include default quorums 0 or 1.",
-			Value:   cli.NewUintSlice(),
-			EnvVars: prefixEnvVars("CUSTOM_QUORUM_IDS"),
-		},
-		&cli.StringFlag{
-			Name:    SignerPrivateKeyHexFlagName,
-			Usage:   "Hex-encoded signer private key. This key should not be associated with an Ethereum address holding any funds.",
-			EnvVars: prefixEnvVars("SIGNER_PRIVATE_KEY_HEX"),
-		},
-		&cli.UintFlag{
-			Name:    PutBlobEncodingVersionFlagName,
-			Usage:   "Blob encoding version to use when writing blobs from the high-level interface.",
-			EnvVars: prefixEnvVars("PUT_BLOB_ENCODING_VERSION"),
-			Value:   0,
-		},
-		&cli.BoolFlag{
-			Name:    DisablePointVerificationModeFlagName,
-			Usage:   "Disable point verification mode. This mode performs IFFT on data before writing and FFT on data after reading. Disabling requires supplying the entire blob for verification against the KZG commitment.",
-			EnvVars: prefixEnvVars("DISABLE_POINT_VERIFICATION_MODE"),
-			Value:   false,
 		},
 		&cli.StringFlag{
 			Name:    MaxBlobLengthFlagName,
@@ -228,6 +167,7 @@ func init() {
 	Flags = CLIFlags()
 	Flags = append(Flags, oplog.CLIFlags(EnvVarPrefix)...)
 	Flags = append(Flags, opmetrics.CLIFlags(EnvVarPrefix)...)
+	Flags = append(Flags, eigenda_flags.CLIFlags(EnvVarPrefix, EigenDAClientCategory)...)
 	Flags = append(Flags, redis.CLIFlags(EnvVarPrefix, RedisCategory)...)
 	Flags = append(Flags, s3.CLIFlags(EnvVarPrefix, S3Category)...)
 }

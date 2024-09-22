@@ -101,7 +101,7 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (store.
 	} else {
 		var client *clients.EigenDAClient
 		log.Info("Using EigenDA backend")
-		client, err = clients.NewEigenDAClient(log.With("subsystem", "eigenda-client"), daCfg.ClientConfig)
+		client, err = clients.NewEigenDAClient(log.With("subsystem", "eigenda-client"), daCfg.EdaClientConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -113,7 +113,7 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (store.
 			&eigenda.StoreConfig{
 				MaxBlobSizeBytes:     maxBlobLength,
 				EthConfirmationDepth: uint64(cfg.EigenDAConfig.EthConfirmationDepth), // #nosec G115
-				StatusQueryTimeout:   cfg.EigenDAConfig.ClientConfig.StatusQueryTimeout,
+				StatusQueryTimeout:   cfg.EigenDAConfig.EdaClientConfig.StatusQueryTimeout,
 			},
 		)
 	}

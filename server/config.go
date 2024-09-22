@@ -8,6 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/Layr-Labs/eigenda-proxy/flags"
+	"github.com/Layr-Labs/eigenda-proxy/flags/eigenda_flags"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
@@ -32,7 +33,7 @@ var (
 
 type Config struct {
 	// eigenda
-	ClientConfig clients.EigenDAClientConfig
+	EdaClientConfig clients.EigenDAClientConfig
 
 	// the blob encoding version to use when writing blobs from the high level interface.
 	PutBlobEncodingVersion codecs.BlobEncodingVersion
@@ -116,19 +117,9 @@ func (cfg *Config) VerificationCfg() *verify.Config {
 // ReadConfig ... parses the Config from the provided flags or environment variables.
 func ReadConfig(ctx *cli.Context) Config {
 	cfg := Config{
-		RedisConfig: redis.ReadConfig(ctx),
-		S3Config:    s3.ReadConfig(ctx),
-		ClientConfig: clients.EigenDAClientConfig{
-			RPC:                          ctx.String(flags.EigenDADisperserRPCFlagName),
-			StatusQueryRetryInterval:     ctx.Duration(flags.StatusQueryRetryIntervalFlagName),
-			StatusQueryTimeout:           ctx.Duration(flags.StatusQueryTimeoutFlagName),
-			DisableTLS:                   ctx.Bool(flags.DisableTLSFlagName),
-			ResponseTimeout:              ctx.Duration(flags.ResponseTimeoutFlagName),
-			CustomQuorumIDs:              ctx.UintSlice(flags.CustomQuorumIDsFlagName),
-			SignerPrivateKeyHex:          ctx.String(flags.SignerPrivateKeyHexFlagName),
-			PutBlobEncodingVersion:       codecs.BlobEncodingVersion(ctx.Uint(flags.PutBlobEncodingVersionFlagName)),
-			DisablePointVerificationMode: ctx.Bool(flags.DisablePointVerificationModeFlagName),
-		},
+		RedisConfig:             redis.ReadConfig(ctx),
+		S3Config:                s3.ReadConfig(ctx),
+		EdaClientConfig:         eigenda_flags.ReadConfig(ctx),
 		G1Path:                  ctx.String(flags.G1PathFlagName),
 		G2PowerOfTauPath:        ctx.String(flags.G2TauFlagName),
 		CacheDir:                ctx.String(flags.CachePathFlagName),
@@ -150,7 +141,7 @@ func ReadConfig(ctx *cli.Context) Config {
 	// for the da-proxy to 0 (because negative confirmation depth doesn't mean anything and leads to errors)
 	// TODO: should the eigenda-client implement this feature for us instead?
 	if cfg.EthConfirmationDepth < 0 {
-		cfg.ClientConfig.WaitForFinalization = true
+		cfg.EdaClientConfig.WaitForFinalization = true
 		cfg.EthConfirmationDepth = 0
 	}
 
@@ -188,7 +179,7 @@ func (cfg *Config) Check() error {
 	}
 
 	if !cfg.MemstoreEnabled {
-		if cfg.ClientConfig.RPC == "" {
+		if cfg.EdaClientConfig.RPC == "" {
 			return fmt.Errorf("using eigenda backend (memstore.enabled=false) but eigenda disperser rpc url is not set")
 		}
 	}
