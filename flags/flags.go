@@ -3,6 +3,7 @@ package flags
 import (
 	"time"
 
+	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/urfave/cli/v2"
 
 	opservice "github.com/ethereum-optimism/optimism/op-service"
@@ -12,6 +13,7 @@ import (
 
 const (
 	MemstoreFlagsCategory = "Memstore"
+	RedisCategory         = "Redis"
 )
 
 const (
@@ -47,12 +49,6 @@ const (
 	MemstoreExpirationFlagName = "memstore.expiration"
 	MemstorePutLatencyFlagName = "memstore.put-latency"
 	MemstoreGetLatencyFlagName = "memstore.get-latency"
-
-	// redis client flags
-	RedisEndpointFlagName = "redis.endpoint"
-	RedisPasswordFlagName = "redis.password"
-	RedisDBFlagName       = "redis.db"
-	RedisEvictionFlagName = "redis.eviction"
 
 	// S3 client flags
 	S3CredentialTypeFlagName  = "s3.credential-type" // #nosec G101
@@ -138,34 +134,6 @@ func s3Flags() []cli.Flag {
 			Usage:   "timeout for S3 storage operations (e.g. get, put)",
 			Value:   5 * time.Second,
 			EnvVars: prefixEnvVars("S3_TIMEOUT"),
-		},
-	}
-}
-
-// redisFlags ... used for Redis backend configuration
-func redisFlags() []cli.Flag {
-	return []cli.Flag{
-		&cli.StringFlag{
-			Name:    RedisEndpointFlagName,
-			Usage:   "Redis endpoint",
-			EnvVars: prefixEnvVars("REDIS_ENDPOINT"),
-		},
-		&cli.StringFlag{
-			Name:    RedisPasswordFlagName,
-			Usage:   "Redis password",
-			EnvVars: prefixEnvVars("REDIS_PASSWORD"),
-		},
-		&cli.IntFlag{
-			Name:    RedisDBFlagName,
-			Usage:   "Redis database",
-			Value:   0,
-			EnvVars: prefixEnvVars("REDIS_DB"),
-		},
-		&cli.DurationFlag{
-			Name:    RedisEvictionFlagName,
-			Usage:   "Redis eviction time",
-			Value:   24 * time.Hour,
-			EnvVars: prefixEnvVars("REDIS_EVICTION"),
 		},
 	}
 }
@@ -314,7 +282,6 @@ func CLIFlags() []cli.Flag {
 	}
 
 	flags = append(flags, s3Flags()...)
-	flags = append(flags, redisFlags()...)
 	return flags
 }
 
@@ -322,4 +289,5 @@ func init() {
 	Flags = CLIFlags()
 	Flags = append(Flags, oplog.CLIFlags(EnvVarPrefix)...)
 	Flags = append(Flags, opmetrics.CLIFlags(EnvVarPrefix)...)
+	Flags = append(Flags, redis.CLIFlags(EnvVarPrefix, RedisCategory)...)
 }

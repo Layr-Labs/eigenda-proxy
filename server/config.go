@@ -116,12 +116,7 @@ func (cfg *Config) VerificationCfg() *verify.Config {
 // ReadConfig ... parses the Config from the provided flags or environment variables.
 func ReadConfig(ctx *cli.Context) Config {
 	cfg := Config{
-		RedisConfig: redis.Config{
-			Endpoint: ctx.String(flags.RedisEndpointFlagName),
-			Password: ctx.String(flags.RedisPasswordFlagName),
-			DB:       ctx.Int(flags.RedisDBFlagName),
-			Eviction: ctx.Duration(flags.RedisEvictionFlagName),
-		},
+		RedisConfig: redis.ReadConfig(ctx),
 		S3Config: s3.Config{
 			S3CredentialType: s3.StringToCredentialType(ctx.String(flags.S3CredentialTypeFlagName)),
 			Bucket:           ctx.String(flags.S3BucketFlagName),
