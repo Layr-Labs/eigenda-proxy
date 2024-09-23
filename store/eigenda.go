@@ -44,7 +44,7 @@ func NewEigenDAStore(client *clients.EigenDAClient,
 
 // Get fetches a blob from DA using certificate fields.
 // VO cert: (BatchHeaderHash, BlobIndex)
-// (TODO) V1 cert 
+// (TODO) V1 cert
 func (e EigenDAStore) Get(ctx context.Context, key []byte) ([]byte, error) {
 	var cert verify.Certificate
 	err := rlp.DecodeBytes(key, &cert)
