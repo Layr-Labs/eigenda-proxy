@@ -3,7 +3,7 @@ package flags
 import (
 	"time"
 
-	"github.com/Layr-Labs/eigenda-proxy/flags/eigenda_flags"
+	"github.com/Layr-Labs/eigenda-proxy/flags/eigendaflags"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/urfave/cli/v2"
@@ -107,7 +107,7 @@ func init() {
 	Flags = CLIFlags()
 	Flags = append(Flags, oplog.CLIFlags(EnvVarPrefix)...)
 	Flags = append(Flags, opmetrics.CLIFlags(EnvVarPrefix)...)
-	Flags = append(Flags, eigenda_flags.CLIFlags(EnvVarPrefix, EigenDAClientCategory)...)
+	Flags = append(Flags, eigendaflags.CLIFlags(EnvVarPrefix, EigenDAClientCategory)...)
 	Flags = append(Flags, redis.CLIFlags(EnvVarPrefix, RedisCategory)...)
 	Flags = append(Flags, s3.CLIFlags(EnvVarPrefix, S3Category)...)
 }

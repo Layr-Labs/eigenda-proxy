@@ -68,11 +68,11 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			EnvVars:  withEnvPrefix(envPrefix, "SERVICE_MANAGER_ADDR"),
 			Category: category,
 		},
-		&cli.Int64Flag{
+		&cli.Uint64Flag{
 			Name:     EthConfirmationDepthFlagName,
-			Usage:    "The number of Ethereum blocks to wait before considering a submitted blob's DA batch submission confirmed. `0` means wait for inclusion only. `-1` means wait for finality.",
+			Usage:    "The number of Ethereum blocks to wait before considering a submitted blob's DA batch submission confirmed. `0` means wait for inclusion only.",
 			EnvVars:  withEnvPrefix(envPrefix, "ETH_CONFIRMATION_DEPTH"),
-			Value:    -1,
+			Value:    0,
 			Category: category,
 		},
 		// kzg flags
@@ -105,7 +105,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Usage:   "Maximum blob length to be written or read from EigenDA. Determines the number of SRS points loaded into memory for KZG commitments. Example units: '30MiB', '4Kb', '30MB'. Maximum size slightly exceeds 1GB.",
 			EnvVars: withEnvPrefix(envPrefix, "MAX_BLOB_LENGTH"),
 			Value:   "16MiB",
-			Action: func(c *cli.Context, maxBlobLengthStr string) error {
+			Action: func(_ *cli.Context, maxBlobLengthStr string) error {
 				// parse the string to a uint64 and set the maxBlobLengthBytes var to be used by ReadConfig()
 				numBytes, err := utils.ParseBytesAmount(maxBlobLengthStr)
 				if err != nil {

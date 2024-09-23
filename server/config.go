@@ -7,7 +7,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/Layr-Labs/eigenda-proxy/flags"
-	"github.com/Layr-Labs/eigenda-proxy/flags/eigenda_flags"
+	"github.com/Layr-Labs/eigenda-proxy/flags/eigendaflags"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
@@ -19,13 +19,8 @@ import (
 )
 
 type Config struct {
-	// eigenda
 	EdaClientConfig clients.EigenDAClientConfig
-
-	VerifierConfig verify.Config
-	// eth verification vars
-	// TODO: right now verification and confirmation depth are tightly coupled
-	//       we should decouple them
+	VerifierConfig  verify.Config
 
 	// memstore
 	MemstoreEnabled        bool
@@ -44,10 +39,10 @@ type Config struct {
 
 // ReadConfig ... parses the Config from the provided flags or environment variables.
 func ReadConfig(ctx *cli.Context) Config {
-	cfg := Config{
+	return Config{
 		RedisConfig:            redis.ReadConfig(ctx),
 		S3Config:               s3.ReadConfig(ctx),
-		EdaClientConfig:        eigenda_flags.ReadConfig(ctx),
+		EdaClientConfig:        eigendaflags.ReadConfig(ctx),
 		VerifierConfig:         verify.ReadConfig(ctx),
 		MemstoreEnabled:        ctx.Bool(flags.MemstoreFlagName),
 		MemstoreBlobExpiration: ctx.Duration(flags.MemstoreExpirationFlagName),
@@ -56,17 +51,6 @@ func ReadConfig(ctx *cli.Context) Config {
 		FallbackTargets:        ctx.StringSlice(flags.FallbackTargetsFlagName),
 		CacheTargets:           ctx.StringSlice(flags.CacheTargetsFlagName),
 	}
-	// the eigenda client can only wait for 0 confirmations or finality
-	// the da-proxy has a more fine-grained notion of confirmation depth
-	// we use -1 to let the da client wait for finality, and then need to set the confirmation depth
-	// for the da-proxy to 0 (because negative confirmation depth doesn't mean anything and leads to errors)
-	// TODO: should the eigenda-client implement this feature for us instead?
-	if cfg.VerifierConfig.EthConfirmationDepth < 0 {
-		cfg.EdaClientConfig.WaitForFinalization = true
-		cfg.VerifierConfig.EthConfirmationDepth = 0
-	}
-
-	return cfg
 }
 
 // checkTargets ... verifies that a backend target slice is constructed correctly
@@ -90,7 +74,6 @@ func (cfg *Config) checkTargets(targets []string) error {
 
 // Check ... verifies that configuration values are adequately set
 func (cfg *Config) Check() error {
-
 	if !cfg.MemstoreEnabled {
 		if cfg.EdaClientConfig.RPC == "" {
 			return fmt.Errorf("using eigenda backend (memstore.enabled=false) but eigenda disperser rpc url is not set")

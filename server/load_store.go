@@ -109,7 +109,7 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (store.
 			log,
 			&eigenda.StoreConfig{
 				MaxBlobSizeBytes:     verify.MaxBlobLengthBytes,
-				EthConfirmationDepth: uint64(cfg.EigenDAConfig.VerifierConfig.EthConfirmationDepth), // #nosec G115
+				EthConfirmationDepth: cfg.EigenDAConfig.VerifierConfig.EthConfirmationDepth,
 				StatusQueryTimeout:   cfg.EigenDAConfig.EdaClientConfig.StatusQueryTimeout,
 			},
 		)

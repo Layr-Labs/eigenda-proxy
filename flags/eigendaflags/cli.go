@@ -1,4 +1,4 @@
-package eigenda_flags
+package eigendaflags
 
 import (
 	"time"
@@ -20,6 +20,7 @@ var (
 	SignerPrivateKeyHexFlagName          = withFlagPrefix("signer-private-key-hex")
 	PutBlobEncodingVersionFlagName       = withFlagPrefix("put-blob-encoding-version")
 	DisablePointVerificationModeFlagName = withFlagPrefix("disable-point-verification-mode")
+	WaitForFinalizationFlagName          = withFlagPrefix("wait-for-finalization")
 )
 
 func withFlagPrefix(s string) string {
@@ -94,6 +95,13 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Value:    false,
 			Category: category,
 		},
+		&cli.BoolFlag{
+			Name:     WaitForFinalizationFlagName,
+			Usage:    "Wait for blob finalization before returning from PutBlob.",
+			EnvVars:  withEnvPrefix(envPrefix, "WAIT_FOR_FINALIZATION"),
+			Value:    false,
+			Category: category,
+		},
 	}
 }
 
@@ -108,5 +116,6 @@ func ReadConfig(ctx *cli.Context) clients.EigenDAClientConfig {
 		SignerPrivateKeyHex:          ctx.String(SignerPrivateKeyHexFlagName),
 		PutBlobEncodingVersion:       codecs.BlobEncodingVersion(ctx.Uint(PutBlobEncodingVersionFlagName)),
 		DisablePointVerificationMode: ctx.Bool(DisablePointVerificationModeFlagName),
+		WaitForFinalization:          ctx.Bool(WaitForFinalizationFlagName),
 	}
 }
