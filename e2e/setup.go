@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime"
 	"testing"
 	"time"
 
@@ -126,10 +127,12 @@ func TestSuiteConfig(t *testing.T, testCfg *Cfg) server.CLIConfig {
 			SvcManagerAddr:       "0xD4A7E1Bd8015057293f0D0A557088c286942e84b", // incompatible with non holeskly networks
 			EthConfirmationDepth: 0,
 			KzgConfig: &kzg.KzgConfig{
-				G1Path:         "../resources/g1.point",
-				G2PowerOf2Path: "../resources/g2.point.powerOf2",
-				CacheDir:       "../resources/SRSTables",
-				SRSOrder:       maxBlobLengthBytes / 32,
+				G1Path:          "../resources/g1.point",
+				G2PowerOf2Path:  "../resources/g2.point.powerOf2",
+				CacheDir:        "../resources/SRSTables",
+				SRSOrder:        268435456,
+				SRSNumberToLoad: maxBlobLengthBytes / 32,
+				NumWorker:       uint64(runtime.GOMAXPROCS(0)),
 			},
 		},
 		MemstoreEnabled: testCfg.UseMemory,
