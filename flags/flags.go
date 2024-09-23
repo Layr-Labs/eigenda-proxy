@@ -1,9 +1,8 @@
 package flags
 
 import (
-	"time"
-
 	"github.com/Layr-Labs/eigenda-proxy/flags/eigendaflags"
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/urfave/cli/v2"
@@ -23,12 +22,6 @@ const (
 const (
 	ListenAddrFlagName = "addr"
 	PortFlagName       = "port"
-
-	// memstore flags
-	MemstoreFlagName           = "memstore.enabled"
-	MemstoreExpirationFlagName = "memstore.expiration"
-	MemstorePutLatencyFlagName = "memstore.put-latency"
-	MemstoreGetLatencyFlagName = "memstore.get-latency"
 
 	// routing flags
 	FallbackTargetsFlagName = "routing.fallback-targets"
@@ -55,33 +48,6 @@ func CLIFlags() []cli.Flag {
 			Usage:   "server listening port",
 			Value:   3100,
 			EnvVars: prefixEnvVars("PORT"),
-		},
-		&cli.BoolFlag{
-			Name:     MemstoreFlagName,
-			Usage:    "Whether to use mem-store for DA logic.",
-			EnvVars:  prefixEnvVars("MEMSTORE_ENABLED"),
-			Category: MemstoreFlagsCategory,
-		},
-		&cli.DurationFlag{
-			Name:     MemstoreExpirationFlagName,
-			Usage:    "Duration that a mem-store blob/commitment pair are allowed to live.",
-			Value:    25 * time.Minute,
-			EnvVars:  prefixEnvVars("MEMSTORE_EXPIRATION"),
-			Category: MemstoreFlagsCategory,
-		},
-		&cli.DurationFlag{
-			Name:     MemstorePutLatencyFlagName,
-			Usage:    "Artificial latency added for memstore backend to mimic EigenDA's dispersal latency.",
-			Value:    0,
-			EnvVars:  prefixEnvVars("MEMSTORE_PUT_LATENCY"),
-			Category: MemstoreFlagsCategory,
-		},
-		&cli.DurationFlag{
-			Name:     MemstoreGetLatencyFlagName,
-			Usage:    "Artificial latency added for memstore backend to mimic EigenDA's retrieval latency.",
-			Value:    0,
-			EnvVars:  prefixEnvVars("MEMSTORE_GET_LATENCY"),
-			Category: MemstoreFlagsCategory,
 		},
 		&cli.StringSliceFlag{
 			Name:    FallbackTargetsFlagName,
@@ -110,4 +76,5 @@ func init() {
 	Flags = append(Flags, eigendaflags.CLIFlags(EnvVarPrefix, EigenDAClientCategory)...)
 	Flags = append(Flags, redis.CLIFlags(EnvVarPrefix, RedisCategory)...)
 	Flags = append(Flags, s3.CLIFlags(EnvVarPrefix, S3Category)...)
+	Flags = append(Flags, memstore.CLIFlags(EnvVarPrefix, MemstoreFlagsCategory)...)
 }

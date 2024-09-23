@@ -2,13 +2,13 @@ package server
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/urfave/cli/v2"
 
 	"github.com/Layr-Labs/eigenda-proxy/flags"
 	"github.com/Layr-Labs/eigenda-proxy/flags/eigendaflags"
 	"github.com/Layr-Labs/eigenda-proxy/store"
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/Layr-Labs/eigenda-proxy/utils"
@@ -22,11 +22,8 @@ type Config struct {
 	EdaClientConfig clients.EigenDAClientConfig
 	VerifierConfig  verify.Config
 
-	// memstore
-	MemstoreEnabled        bool
-	MemstoreBlobExpiration time.Duration
-	MemstoreGetLatency     time.Duration
-	MemstorePutLatency     time.Duration
+	MemstoreEnabled bool
+	MemstoreConfig  memstore.Config
 
 	// routing
 	FallbackTargets []string
@@ -40,16 +37,14 @@ type Config struct {
 // ReadConfig ... parses the Config from the provided flags or environment variables.
 func ReadConfig(ctx *cli.Context) Config {
 	return Config{
-		RedisConfig:            redis.ReadConfig(ctx),
-		S3Config:               s3.ReadConfig(ctx),
-		EdaClientConfig:        eigendaflags.ReadConfig(ctx),
-		VerifierConfig:         verify.ReadConfig(ctx),
-		MemstoreEnabled:        ctx.Bool(flags.MemstoreFlagName),
-		MemstoreBlobExpiration: ctx.Duration(flags.MemstoreExpirationFlagName),
-		MemstoreGetLatency:     ctx.Duration(flags.MemstoreGetLatencyFlagName),
-		MemstorePutLatency:     ctx.Duration(flags.MemstorePutLatencyFlagName),
-		FallbackTargets:        ctx.StringSlice(flags.FallbackTargetsFlagName),
-		CacheTargets:           ctx.StringSlice(flags.CacheTargetsFlagName),
+		RedisConfig:     redis.ReadConfig(ctx),
+		S3Config:        s3.ReadConfig(ctx),
+		EdaClientConfig: eigendaflags.ReadConfig(ctx),
+		VerifierConfig:  verify.ReadConfig(ctx),
+		MemstoreEnabled: ctx.Bool(memstore.EnabledFlagName),
+		MemstoreConfig:  memstore.ReadConfig(ctx),
+		FallbackTargets: ctx.StringSlice(flags.FallbackTargetsFlagName),
+		CacheTargets:    ctx.StringSlice(flags.CacheTargetsFlagName),
 	}
 }
 

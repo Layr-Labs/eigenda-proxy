@@ -9,6 +9,7 @@ import (
 
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/server"
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/Layr-Labs/eigenda-proxy/utils"
@@ -131,8 +132,10 @@ func TestSuiteConfig(t *testing.T, testCfg *Cfg) server.CLIConfig {
 				SRSOrder:       maxBlobLengthBytes / 32,
 			},
 		},
-		MemstoreEnabled:        testCfg.UseMemory,
-		MemstoreBlobExpiration: testCfg.Expiration,
+		MemstoreEnabled: testCfg.UseMemory,
+		MemstoreConfig: memstore.Config{
+			BlobExpiration: testCfg.Expiration,
+		},
 	}
 
 	if testCfg.UseMemory {

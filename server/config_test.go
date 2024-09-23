@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/Layr-Labs/eigenda-proxy/utils"
@@ -55,8 +56,10 @@ func validCfg() *Config {
 			RPCURL:               "http://localhost:8545",
 			EthConfirmationDepth: 12,
 		},
-		MemstoreEnabled:        true,
-		MemstoreBlobExpiration: 25 * time.Minute,
+		MemstoreEnabled: true,
+		MemstoreConfig: memstore.Config{
+			BlobExpiration: 25 * time.Minute,
+		},
 	}
 }
 

@@ -85,16 +85,7 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (store.
 	var eigenDA store.KeyGeneratedStore
 	if cfg.EigenDAConfig.MemstoreEnabled {
 		log.Info("Using mem-store backend for EigenDA")
-		eigenDA, err = memstore.New(ctx, verifier, log, memstore.Config{
-			// TODO: there has to be a better way to get MaxBlobLengthBytes
-			// right now we get it from the verifier cli, but there's probably a way to share flags more nicely?
-			// maybe use a duplicate but hidden flag in memstore category, and set it using the action by reading
-			// from the other flag?
-			MaxBlobSizeBytes: verify.MaxBlobLengthBytes,
-			BlobExpiration:   cfg.EigenDAConfig.MemstoreBlobExpiration,
-			PutLatency:       cfg.EigenDAConfig.MemstorePutLatency,
-			GetLatency:       cfg.EigenDAConfig.MemstoreGetLatency,
-		})
+		eigenDA, err = memstore.New(ctx, verifier, log, cfg.EigenDAConfig.MemstoreConfig)
 	} else {
 		var client *clients.EigenDAClient
 		log.Info("Using EigenDA backend")
