@@ -42,8 +42,9 @@ func NewEigenDAStore(client *clients.EigenDAClient,
 	}, nil
 }
 
-// Get fetches a blob from DA using certificate fields and verifies blob
-// against commitment to ensure data is valid and non-tampered.
+// Get fetches a blob from DA using certificate fields.
+// VO cert: (BatchHeaderHash, BlobIndex)
+// (TODO) V1 cert 
 func (e EigenDAStore) Get(ctx context.Context, key []byte) ([]byte, error) {
 	var cert verify.Certificate
 	err := rlp.DecodeBytes(key, &cert)
@@ -146,6 +147,6 @@ func (e EigenDAStore) Verify(key []byte, value []byte) error {
 		return fmt.Errorf("failed to verify commitment: %w", err)
 	}
 
-	// verify DA certificate against on-chain
+	// verify DA certificate against EigenDA's batch metadata that's bridged to Ethereum
 	return e.verifier.VerifyCert(&cert)
 }

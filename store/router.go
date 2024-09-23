@@ -26,9 +26,13 @@ type IRouter interface {
 // Router ... storage backend routing layer
 type Router struct {
 	log     log.Logger
+
+
 	eigenda KeyGeneratedStore
 	s3      PrecomputedKeyStore
 
+	// In the future it may make sense to build higher order types
+	// for these secondary storage backend slices
 	caches    []PrecomputedKeyStore
 	cacheLock sync.RWMutex
 
@@ -89,13 +93,22 @@ func (r *Router) Get(ctx context.Context, key []byte, cm commitments.CommitmentM
 		// 2 - read blob from EigenDA
 		data, err := r.eigenda.Get(ctx, key)
 		if err == nil {
-			// verify
+			// 2.a - verify data 
 			err = r.eigenda.Verify(key, data)
 			if err != nil {
 				return nil, err
 			}
+
+			// 2.b - write fetched blob to secondary backends for lower latency reads
+			if r.cacheEnabled() || r.fallbackEnabled() {
+				err = r.handleRedundantWrites(ctx, key, data)
+				if err != nil {
+					log.Error("Failed to write to redundant backends", "err", err)
+				}
+
 			return data, nil
 		}
+	}
 
 		// 3 - read blob from fallbacks if enabled and data is non-retrievable from EigenDA
 		if r.fallbackEnabled() {
@@ -182,6 +195,7 @@ func (r *Router) handleRedundantWrites(ctx context.Context, commitment []byte, v
 // multiSourceRead ... reads from a set of backends and returns the first successfully read blob
 func (r *Router) multiSourceRead(ctx context.Context, commitment []byte, fallback bool) ([]byte, error) {
 	var sources []PrecomputedKeyStore
+
 	if fallback {
 		r.fallbackLock.RLock()
 		defer r.fallbackLock.RUnlock()
