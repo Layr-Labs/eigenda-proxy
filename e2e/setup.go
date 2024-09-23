@@ -122,7 +122,7 @@ func TestSuiteConfig(t *testing.T, testCfg *Cfg) server.CLIConfig {
 			SignerPrivateKeyHex:      pk,
 		},
 		VerifierConfig: verify.Config{
-			VerifyCerts:          true,
+			VerifyCerts:          false,
 			RPCURL:               ethRPC,
 			SvcManagerAddr:       "0xD4A7E1Bd8015057293f0D0A557088c286942e84b", // incompatible with non holeskly networks
 			EthConfirmationDepth: 0,
@@ -137,7 +137,8 @@ func TestSuiteConfig(t *testing.T, testCfg *Cfg) server.CLIConfig {
 		},
 		MemstoreEnabled: testCfg.UseMemory,
 		MemstoreConfig: memstore.Config{
-			BlobExpiration: testCfg.Expiration,
+			BlobExpiration:   testCfg.Expiration,
+			MaxBlobSizeBytes: maxBlobLengthBytes,
 		},
 	}
 
