@@ -73,7 +73,7 @@ type Store interface {
 	Verify(key []byte, value []byte) error
 }
 
-type KeyGeneratedStore interface {
+type GeneratedKeyStore interface {
 	Store
 	// Get retrieves the given key if it's present in the key-value data store.
 	Get(ctx context.Context, key []byte) ([]byte, error)

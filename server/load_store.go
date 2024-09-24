@@ -82,7 +82,7 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (store.
 	}
 
 	// create EigenDA backend store
-	var eigenDA store.KeyGeneratedStore
+	var eigenDA store.GeneratedKeyStore
 	if cfg.EigenDAConfig.MemstoreEnabled {
 		log.Info("Using mem-store backend for EigenDA")
 		eigenDA, err = memstore.New(ctx, verifier, log, cfg.EigenDAConfig.MemstoreConfig)

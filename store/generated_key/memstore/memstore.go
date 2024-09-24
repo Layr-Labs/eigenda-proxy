@@ -49,7 +49,7 @@ type MemStore struct {
 	reads int
 }
 
-var _ store.KeyGeneratedStore = (*MemStore)(nil)
+var _ store.GeneratedKeyStore = (*MemStore)(nil)
 
 // New ... constructor
 func New(

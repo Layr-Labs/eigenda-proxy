@@ -31,7 +31,7 @@ type Store struct {
 	log      log.Logger
 }
 
-var _ store.KeyGeneratedStore = (*Store)(nil)
+var _ store.GeneratedKeyStore = (*Store)(nil)
 
 func NewStore(client *clients.EigenDAClient,
 	v *verify.Verifier, log log.Logger, cfg *StoreConfig) (*Store, error) {
