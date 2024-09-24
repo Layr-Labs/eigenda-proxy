@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func addUnicodeTestCases(f *testing.F) {
+func addAllUnicodeTestCases(f *testing.F) {
 	for r := rune(0); r <= unicode.MaxRune; r++ {
 		if unicode.IsPrint(r) {
 			f.Add(fmt.Sprintf("seed: %s", string(r)), []byte(string(r))) // Add each printable Unicode character as a seed
@@ -34,7 +34,7 @@ func FuzzProxyClientServerIntegrationAndOpClientKeccak256MalformedInputs(f *test
 	defer kill()
 
 	// Add each printable Unicode character as a seed
-	addUnicodeTestCases(f)
+	addAllUnicodeTestCases(f)
 
 	cfg := &client.Config{
 		URL: ts.Address(),
@@ -42,19 +42,16 @@ func FuzzProxyClientServerIntegrationAndOpClientKeccak256MalformedInputs(f *test
 	daClient := client.New(cfg)
 	daClientPcFalse := op_plasma.NewDAClient(ts.Address(), false, false)
 
+	// seed and data are expected. `seed` value is seed: {rune} and data is the one with the random byte(s)
 	f.Fuzz(func(t *testing.T, _ string, data []byte) {
+
 		_, err := daClient.SetData(ts.Ctx, data)
 		require.NoError(t, err)
-	})
 
-	// seed and data are expected. `seed` value is seed: {rune} and data is the one with the random byte/s
-	f.Fuzz(func(t *testing.T, _ string, data []byte) {
-
-		_, err := daClientPcFalse.SetInput(ts.Ctx, data)
+		_, err = daClientPcFalse.SetInput(ts.Ctx, data)
 		// should fail with proper error message as is now, and cannot contain panics or nils
 		if err != nil {
 			assert.True(t, !isNilPtrDerefPanic(err.Error()))
 		}
-
 	})
 }
