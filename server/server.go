@@ -15,6 +15,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/store"
+	"github.com/Layr-Labs/eigenda-proxy/utils"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/log"
 )
@@ -87,6 +88,9 @@ func WithLogging(
 	log log.Logger,
 ) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := utils.ContextWithNewRequestID(r.Context())
+		r = r.WithContext(ctx)
+		log = utils.RequestLogger(ctx, log)
 		log.Info("request", "method", r.Method, "url", r.URL)
 		err := handleFn(w, r)
 		if err != nil { // #nosec G104
@@ -273,17 +277,14 @@ func (svr *Server) WriteResponse(w http.ResponseWriter, data []byte) {
 }
 
 func (svr *Server) WriteInternalError(w http.ResponseWriter, err error) {
-	svr.log.Error("internal server error", "err", err)
 	w.WriteHeader(http.StatusInternalServerError)
 }
 
 func (svr *Server) WriteNotFound(w http.ResponseWriter, err error) {
-	svr.log.Info("not found", "err", err)
 	w.WriteHeader(http.StatusNotFound)
 }
 
 func (svr *Server) WriteBadRequest(w http.ResponseWriter, err error) {
-	svr.log.Info("bad request", "err", err)
 	w.WriteHeader(http.StatusBadRequest)
 }
 
