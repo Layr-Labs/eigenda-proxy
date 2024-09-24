@@ -33,6 +33,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Name:    EndpointFlagName,
 			Usage:   "endpoint for S3 storage",
 			EnvVars: withEnvPrefix(envPrefix, "S3_ENDPOINT"),
+			Category: category,
 		},
 		&cli.StringFlag{
 			Name:     CredentialTypeFlagName,
@@ -44,33 +45,39 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Name:    AccessKeyIDFlagName,
 			Usage:   "access key id for S3 storage",
 			EnvVars: withEnvPrefix(envPrefix, "ACCESS_KEY_ID"),
+			Category: category,
 		},
 		&cli.StringFlag{
 			Name:    AccessKeySecretFlagName,
 			Usage:   "access key secret for S3 storage",
 			EnvVars: withEnvPrefix(envPrefix, "ACCESS_KEY_SECRET"),
+			Category: category,
 		},
 		&cli.StringFlag{
 			Name:    BucketFlagName,
 			Usage:   "bucket name for S3 storage",
 			EnvVars: withEnvPrefix(envPrefix, "BUCKET"),
+			Category: category,
 		},
 		&cli.StringFlag{
 			Name:    PathFlagName,
 			Usage:   "path for S3 storage",
 			EnvVars: withEnvPrefix(envPrefix, "PATH"),
+			Category: category,
 		},
 		&cli.BoolFlag{
 			Name:    BackupFlagName,
 			Usage:   "whether to use S3 as a backup store to ensure resiliency in case of EigenDA read failure",
 			Value:   false,
 			EnvVars: withEnvPrefix(envPrefix, "BACKUP"),
+			Category: category,
 		},
 		&cli.DurationFlag{
 			Name:    TimeoutFlagName,
 			Usage:   "timeout for S3 storage operations (e.g. get, put)",
 			Value:   5 * time.Second,
 			EnvVars: withEnvPrefix(envPrefix, "TIMEOUT"),
+			Category: category,
 		},
 	}
 }
