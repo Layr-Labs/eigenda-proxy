@@ -32,7 +32,6 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.StringFlag{
 			Name:    EndpointFlagName,
 			Usage:   "endpoint for S3 storage",
-			Value:   "",
 			EnvVars: withEnvPrefix(envPrefix, "S3_ENDPOINT"),
 		},
 		&cli.StringFlag{
@@ -44,13 +43,11 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.StringFlag{
 			Name:    AccessKeyIDFlagName,
 			Usage:   "access key id for S3 storage",
-			Value:   "",
 			EnvVars: withEnvPrefix(envPrefix, "ACCESS_KEY_ID"),
 		},
 		&cli.StringFlag{
 			Name:    AccessKeySecretFlagName,
 			Usage:   "access key secret for S3 storage",
-			Value:   "",
 			EnvVars: withEnvPrefix(envPrefix, "ACCESS_KEY_SECRET"),
 		},
 		&cli.StringFlag{
