@@ -4,20 +4,18 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"testing"
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/server"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda/api/clients"
+	oplog "github.com/ethereum-optimism/optimism/op-service/log"
+	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"golang.org/x/exp/rand"
-
-	oplog "github.com/ethereum-optimism/optimism/op-service/log"
-	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 
 	"github.com/stretchr/testify/require"
 )
@@ -85,7 +83,16 @@ func createS3Config(eigendaCfg server.Config) server.CLIConfig {
 	}
 }
 
-func TestSuiteConfig(t *testing.T, testCfg *Cfg) server.CLIConfig {
+type TB interface {
+	Helper()
+	Log(args ...interface{})
+	Error(args ...interface{})
+	Fatal(args ...interface{})
+	Errorf(format string, args ...interface{})
+	FailNow()
+}
+
+func TestSuiteConfig(t TB, testCfg *Cfg) server.CLIConfig {
 	// load signer key from environment
 	pk := os.Getenv(privateKey)
 	if pk == "" && !testCfg.UseMemory {
@@ -162,7 +169,7 @@ type TestSuite struct {
 	Server *server.Server
 }
 
-func CreateTestSuite(t *testing.T, testSuiteCfg server.CLIConfig) (TestSuite, func()) {
+func CreateTestSuite(t TB, testSuiteCfg server.CLIConfig) (TestSuite, func()) {
 	log := oplog.NewLogger(os.Stdout, oplog.CLIConfig{
 		Level:  log.LevelDebug,
 		Format: oplog.FormatLogFmt,
