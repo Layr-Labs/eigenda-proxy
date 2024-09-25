@@ -3,7 +3,7 @@ module github.com/Layr-Labs/eigenda-proxy
 go 1.21
 
 require (
-	github.com/Layr-Labs/eigenda v0.8.3
+	github.com/Layr-Labs/eigenda v0.8.4-0.20240918205210-351526af1e80
 	github.com/consensys/gnark-crypto v0.12.1
 	github.com/ethereum-optimism/optimism v1.9.0
 	github.com/ethereum/go-ethereum v1.14.0
@@ -260,5 +260,3 @@ replace github.com/ethereum/go-ethereum => github.com/ethereum-optimism/op-geth 
 replace github.com/cockroachdb/pebble => github.com/cockroachdb/pebble v0.0.0-20230928194634-aa077af62593
 
 replace github.com/crate-crypto/go-kzg-4844 => github.com/crate-crypto/go-kzg-4844 v0.7.0
-
-replace github.com/Layr-Labs/eigenda => ../myEigenda
