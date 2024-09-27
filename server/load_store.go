@@ -19,9 +19,15 @@ func populateTargets(targets []string, s3 store.PrecomputedKeyStore, redis *stor
 
 		switch b {
 		case store.Redis:
+			if redis == nil {
+				panic(fmt.Sprintf("Redis backend is not configured but specified in targets: %s", f))
+			}
 			stores[i] = redis
 
 		case store.S3:
+			if s3 == nil {
+				panic(fmt.Sprintf("S3 backend is not configured but specified in targets: %s", f))
+			}
 			stores[i] = s3
 
 		case store.EigenDA, store.Memory:
