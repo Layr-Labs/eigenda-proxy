@@ -157,8 +157,7 @@ func (r *Router) handleRedundantWrites(ctx context.Context, commitment []byte, v
 		r.fallbackLock.RUnlock()
 	}()
 
-	sources := r.caches
-	sources = append(sources, r.fallbacks...)
+	sources := r.uniqueSources()
 
 	key := crypto.Keccak256(commitment)
 	successes := 0
@@ -177,6 +176,23 @@ func (r *Router) handleRedundantWrites(ctx context.Context, commitment []byte, v
 	}
 
 	return nil
+}
+
+// uniqueSources ... returns a list of unique storage backends
+func (r *Router) uniqueSources() []PrecomputedKeyStore {
+	sourceMap := make(map[PrecomputedKeyStore]struct{})
+	for _, cache := range r.caches {
+		sourceMap[cache] = struct{}{}
+	}
+	for _, fallback := range r.fallbacks {
+		sourceMap[fallback] = struct{}{}
+	}
+
+	var sources []PrecomputedKeyStore
+	for src := range sourceMap {
+		sources = append(sources, src)
+	}
+	return sources
 }
 
 // multiSourceRead ... reads from a set of backends and returns the first successfully read blob
