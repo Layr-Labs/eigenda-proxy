@@ -86,18 +86,18 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Category: category,
 		},
 		&cli.StringFlag{
-			Name:     G2TauFlagName,
-			Usage:    "Directory path to g2.point.powerOf2 file.",
-			EnvVars:  withEnvPrefix(envPrefix, "TARGET_G2_TAU_PATH"),
+			Name:    G2TauFlagName,
+			Usage:   "Directory path to g2.point.powerOf2 file.",
+			EnvVars: withEnvPrefix(envPrefix, "TARGET_G2_TAU_PATH"),
 			// we use a relative path so that the path works for both the binary and the docker container
 			// aka we assume the binary is run from root dir, and that the resources/ dir is copied into the working dir of the container
 			Value:    "resources/g2.point.powerOf2",
 			Category: category,
 		},
 		&cli.StringFlag{
-			Name:     CachePathFlagName,
-			Usage:    "Directory path to SRS tables for caching.",
-			EnvVars:  withEnvPrefix(envPrefix, "TARGET_CACHE_PATH"),
+			Name:    CachePathFlagName,
+			Usage:   "Directory path to SRS tables for caching.",
+			EnvVars: withEnvPrefix(envPrefix, "TARGET_CACHE_PATH"),
 			// we use a relative path so that the path works for both the binary and the docker container
 			// aka we assume the binary is run from root dir, and that the resources/ dir is copied into the working dir of the container
 			Value:    "resources/SRSTables/",
