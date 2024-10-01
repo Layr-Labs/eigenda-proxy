@@ -8,6 +8,7 @@ import (
 
 var (
 	EndpointFlagName        = withFlagPrefix("endpoint")
+	EnableTLSFlagName       = withFlagPrefix("enable-tls")
 	CredentialTypeFlagName  = withFlagPrefix("credential-type")
 	AccessKeyIDFlagName     = withFlagPrefix("access-key-id")     // #nosec G101
 	AccessKeySecretFlagName = withFlagPrefix("access-key-secret") // #nosec G101
@@ -35,9 +36,16 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			EnvVars:  withEnvPrefix(envPrefix, "S3_ENDPOINT"),
 			Category: category,
 		},
+		&cli.BoolFlag{
+			Name:     EnableTLSFlagName,
+			Usage:    "enable TLS connection to S3 endpoint",
+			Value:    false,
+			EnvVars:  withEnvPrefix(envPrefix, "S3_ENABLE_TLS"),
+			Category: category,
+		},
 		&cli.StringFlag{
 			Name:     CredentialTypeFlagName,
-			Usage:    "The way to authenticate to S3, options are [iam, static]",
+			Usage:    "the way to authenticate to S3, options are [iam, static]",
 			EnvVars:  withEnvPrefix(envPrefix, "CREDENTIAL_TYPE"),
 			Category: category,
 		},
@@ -86,6 +94,7 @@ func ReadConfig(ctx *cli.Context) Config {
 	return Config{
 		CredentialType:  StringToCredentialType(ctx.String(CredentialTypeFlagName)),
 		Endpoint:        ctx.String(EndpointFlagName),
+		EnableTLS:       ctx.Bool(EnableTLSFlagName),
 		AccessKeyID:     ctx.String(AccessKeyIDFlagName),
 		AccessKeySecret: ctx.String(AccessKeySecretFlagName),
 		Bucket:          ctx.String(BucketFlagName),
