@@ -11,8 +11,8 @@ LDFLAGSSTRING +=-X main.Date=$(BUILD_TIME)
 LDFLAGSSTRING +=-X main.Version=$(GIT_TAG)
 LDFLAGS := -ldflags "$(LDFLAGSSTRING)"
 
-E2ETEST = INTEGRATION=true go test -timeout 1m -v ./e2e -parallel 4 -deploy-config ../.devnet/devnetL1.json
-HOLESKYTEST = TESTNET=true go test -timeout 50m -v ./e2e  -parallel 4 -deploy-config ../.devnet/devnetL1.json
+E2ETEST = INTEGRATION=true go test -timeout 1m ./e2e -parallel 4 -deploy-config ../.devnet/devnetL1.json
+HOLESKYTEST = TESTNET=true go test -timeout 50m ./e2e  -parallel 4 -deploy-config ../.devnet/devnetL1.json
 
 .PHONY: eigenda-proxy
 eigenda-proxy:
@@ -72,6 +72,10 @@ lint:
 	fi
 
 	@golangci-lint run
+
+.PHONY: format
+format:
+	@go fmt ./...
 
 go-gen-mocks:
 	@echo "generating go mocks..."
