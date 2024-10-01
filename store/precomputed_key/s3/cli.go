@@ -32,7 +32,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.StringFlag{
 			Name:     EndpointFlagName,
 			Usage:    "endpoint for S3 storage",
-			EnvVars:  withEnvPrefix(envPrefix, "S3_ENDPOINT"),
+			EnvVars:  withEnvPrefix(envPrefix, "ENDPOINT"),
 			Category: category,
 		},
 		&cli.StringFlag{

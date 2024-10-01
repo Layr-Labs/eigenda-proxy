@@ -41,7 +41,7 @@ func withFlagPrefix(s string) string {
 }
 
 func withEnvPrefix(envPrefix, s string) []string {
-	return []string{envPrefix + "_EIGENDA_" + s}
+	return []string{envPrefix + "_EIGENDA_CLIENT_" + s, envPrefix + "_" + s}
 }
 
 // CLIFlags ... used for Verifier configuration
