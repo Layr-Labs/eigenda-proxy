@@ -29,8 +29,6 @@ type Router struct {
 	eigenda GeneratedKeyStore
 	s3      PrecomputedKeyStore
 
-	// In the future it may make sense to build higher order types
-	// for these secondary storage backend slices
 	caches    []PrecomputedKeyStore
 	cacheLock sync.RWMutex
 
@@ -91,21 +89,12 @@ func (r *Router) Get(ctx context.Context, key []byte, cm commitments.CommitmentM
 		// 2 - read blob from EigenDA
 		data, err := r.eigenda.Get(ctx, key)
 		if err == nil {
-			// 2.a - verify data
+			// verify
 			err = r.eigenda.Verify(key, data)
 			if err != nil {
 				return nil, err
 			}
-
-			// 2.b - write fetched blob to caches for lower latency reads
-			if r.cacheEnabled() {
-				err = r.writeToCaches(ctx, key, data)
-				if err != nil {
-					log.Error("Failed to write to redundant backends", "err", err)
-				}
-
-				return data, nil
-			}
+			return data, nil
 		}
 
 		// 3 - read blob from fallbacks if enabled and data is non-retrievable from EigenDA
@@ -154,35 +143,12 @@ func (r *Router) Put(ctx context.Context, cm commitments.CommitmentMode, key, va
 	return commit, nil
 }
 
-func (r *Router) writeToCaches(ctx context.Context, commitment, value []byte) error {
-	r.cacheLock.RLock()
-	defer r.cacheLock.RUnlock()
-
-	key := crypto.Keccak256(commitment)
-	successes := 0
-
-	for _, cache := range r.caches {
-		err := cache.Put(ctx, key, value)
-		if err != nil {
-			r.log.Warn("Failed to write to cache", "backend", cache.BackendType(), "err", err)
-		} else {
-			successes++
-		}
-	}
-
-	if successes == 0 {
-		return errors.New("failed to write blob to any redundant targets")
-	}
-
-	return nil
-}
-
 // handleRedundantWrites ... writes to both sets of backends (i.e, fallback, cache)
 // and returns an error if NONE of them succeed
 // NOTE: multi-target set writes are done at once to avoid re-invocation of the same write function at the same
 // caller step for different target sets vs. reading which is done conditionally to segment between a cached read type
 // vs a fallback read type
-func (r *Router) handleRedundantWrites(ctx context.Context, commitment, value []byte) error {
+func (r *Router) handleRedundantWrites(ctx context.Context, commitment []byte, value []byte) error {
 	r.cacheLock.RLock()
 	r.fallbackLock.RLock()
 
@@ -216,7 +182,6 @@ func (r *Router) handleRedundantWrites(ctx context.Context, commitment, value []
 // multiSourceRead ... reads from a set of backends and returns the first successfully read blob
 func (r *Router) multiSourceRead(ctx context.Context, commitment []byte, fallback bool) ([]byte, error) {
 	var sources []PrecomputedKeyStore
-
 	if fallback {
 		r.fallbackLock.RLock()
 		defer r.fallbackLock.RUnlock()
