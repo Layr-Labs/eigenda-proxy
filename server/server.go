@@ -261,8 +261,8 @@ func (svr *Server) HandlePut(w http.ResponseWriter, r *http.Request) (commitment
 	}
 
 	svr.log.Info(fmt.Sprintf("response commitment: %x\n", responseCommit))
-	// write commitment to resp body if not in OptimismGeneric mode
-	if meta.Mode != commitments.OptimismGeneric {
+	// write commitment to resp body if not in OptimismKeccak mode
+	if meta.Mode != commitments.OptimismKeccak {
 		svr.WriteResponse(w, responseCommit)
 	}
 	return meta, nil
@@ -338,16 +338,16 @@ func ReadCommitmentMode(r *http.Request) (commitments.CommitmentMode, error) {
 
 		switch decodedCommit[0] {
 		case byte(commitments.GenericCommitmentType):
-			return commitments.OptimismAltDA, nil
+			return commitments.OptimismGeneric, nil
 
 		case byte(commitments.Keccak256CommitmentType):
-			return commitments.OptimismGeneric, nil
+			return commitments.OptimismKeccak, nil
 
 		default:
 			return commitments.SimpleCommitmentMode, fmt.Errorf("unknown commit byte prefix")
 		}
 	}
-	return commitments.OptimismAltDA, nil
+	return commitments.OptimismGeneric, nil
 }
 
 func ReadCommitmentVersion(r *http.Request, mode commitments.CommitmentMode) (byte, error) {
@@ -366,7 +366,7 @@ func ReadCommitmentVersion(r *http.Request, mode commitments.CommitmentMode) (by
 			return 0, fmt.Errorf("commitment is too short")
 		}
 
-		if mode == commitments.OptimismAltDA || mode == commitments.SimpleCommitmentMode {
+		if mode == commitments.OptimismGeneric || mode == commitments.SimpleCommitmentMode {
 			return decodedCommit[2], nil
 		}
 
