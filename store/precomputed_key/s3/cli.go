@@ -33,14 +33,14 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.StringFlag{
 			Name:     EndpointFlagName,
 			Usage:    "endpoint for S3 storage",
-			EnvVars:  withEnvPrefix(envPrefix, "S3_ENDPOINT"),
+			EnvVars:  withEnvPrefix(envPrefix, "ENDPOINT"),
 			Category: category,
 		},
 		&cli.BoolFlag{
 			Name:     EnableTLSFlagName,
 			Usage:    "enable TLS connection to S3 endpoint",
 			Value:    false,
-			EnvVars:  withEnvPrefix(envPrefix, "S3_ENABLE_TLS"),
+			EnvVars:  withEnvPrefix(envPrefix, "ENABLE_TLS"),
 			Category: category,
 		},
 		&cli.StringFlag{
