@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"io"
+	"net/url"
 	"path"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/minio/minio-go/v7"
 
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"github.com/minio/minio-go/v7/pkg/s3utils"
 )
 
 const (
@@ -97,7 +99,16 @@ func (s *Store) Get(ctx context.Context, key []byte) ([]byte, error) {
 }
 
 func (s *Store) Put(ctx context.Context, key []byte, value []byte) error {
-	_, err := s.client.PutObject(ctx, s.cfg.Bucket, path.Join(s.cfg.Path, hex.EncodeToString(key)), bytes.NewReader(value), int64(len(value)), minio.PutObjectOptions{})
+	endpointURL, err := url.Parse(s.cfg.Endpoint)
+	if err != nil {
+		return err
+	}
+
+	putObjectOptions := minio.PutObjectOptions{}
+	if s3utils.IsGoogleEndpoint(*endpointURL) {
+		putObjectOptions.DisableContentSha256 = true // Avoid chunk signatures on GCS: https://github.com/minio/minio-go/issues/1922
+	}
+	_, err = s.client.PutObject(ctx, s.cfg.Bucket, path.Join(s.cfg.Path, hex.EncodeToString(key)), bytes.NewReader(value), int64(len(value)), putObjectOptions)
 	if err != nil {
 		return err
 	}
