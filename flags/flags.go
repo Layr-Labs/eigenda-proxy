@@ -16,7 +16,7 @@ import (
 const (
 	EigenDAClientCategory     = "EigenDA Client"
 	EigenDADeprecatedCategory = "DEPRECATED EIGENDA CLIENT FLAGS -- THESE WILL BE REMOVED IN V2.0.0"
-	MemstoreFlagsCategory     = "Memstore (replaces EigenDA when enabled)"
+	MemstoreFlagsCategory     = "Memstore (for testing purposes - replaces EigenDA backend)"
 	RedisCategory             = "Redis Cache/Fallback"
 	S3Category                = "S3 Cache/Fallback"
 	VerifierCategory          = "KZG and Cert Verifier"
