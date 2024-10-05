@@ -28,7 +28,7 @@ func withEnvPrefix(envPrefix, s string) []string {
 
 // if these deprecated env vars are used, we force the user to update their config
 // in the flags' actions
-func withDeprecatedEnvPrefix(envPrefix, s string) string {
+func withDeprecatedEnvPrefix(_, s string) string {
 	return "MEMSTORE_" + s
 }
 
