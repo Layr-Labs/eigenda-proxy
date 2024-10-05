@@ -22,20 +22,20 @@ const srsOrder = 268435456 // 2 ^ 32
 
 var (
 	// cert verification flags
-	// TODO: we keep the eigenda prefix like eigenda client flags, because we
-	// plan to upstream this verification logic into the eigenda client
-	CertVerificationEnabledFlagName = withFlagPrefix("cert-verification-enabled")
-	EthRPCFlagName                  = withFlagPrefix("eth-rpc")
-	SvcManagerAddrFlagName          = withFlagPrefix("svc-manager-addr")
-	EthConfirmationDepthFlagName    = withFlagPrefix("eth-confirmation-depth")
+	CertVerificationDisabledFlagName = withFlagPrefix("cert-verification-disabled")
+	EthRPCFlagName                   = withFlagPrefix("eth-rpc")
+	SvcManagerAddrFlagName           = withFlagPrefix("svc-manager-addr")
+	EthConfirmationDepthFlagName     = withFlagPrefix("eth-confirmation-depth")
 
 	// kzg flags
-	G1PathFlagName        = withFlagPrefix("g1-path")
-	G2TauFlagName         = withFlagPrefix("g2-tau-path")
-	CachePathFlagName     = withFlagPrefix("cache-path")
-	MaxBlobLengthFlagName = withFlagPrefix("max-blob-length")
+	G1PathFlagName         = withFlagPrefix("g1-path")
+	G2PowerOf2PathFlagName = withFlagPrefix("g2-power-of-2-path")
+	CachePathFlagName      = withFlagPrefix("cache-path")
+	MaxBlobLengthFlagName  = withFlagPrefix("max-blob-length")
 )
 
+// we keep the eigenda prefix like eigenda client flags, because we
+// plan to upstream this verification logic into the eigenda client
 func withFlagPrefix(s string) string {
 	return "eigenda." + s
 }
@@ -49,10 +49,9 @@ func withEnvPrefix(envPrefix, s string) []string {
 func CLIFlags(envPrefix, category string) []cli.Flag {
 	return []cli.Flag{
 		&cli.BoolFlag{
-			Name:    CertVerificationEnabledFlagName,
-			Usage:   "Whether to verify certificates received from EigenDA disperser.",
-			EnvVars: withEnvPrefix(envPrefix, "CERT_VERIFICATION_ENABLED"),
-			// TODO: ideally we'd want this to be turned on by default when eigenda backend is used (memstore.enabled=false)
+			Name:     CertVerificationDisabledFlagName,
+			Usage:    "Whether to verify certificates received from EigenDA disperser.",
+			EnvVars:  withEnvPrefix(envPrefix, "CERT_VERIFICATION_DISABLED"),
 			Value:    false,
 			Category: category,
 		},
@@ -86,9 +85,9 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Category: category,
 		},
 		&cli.StringFlag{
-			Name:    G2TauFlagName,
-			Usage:   "Directory path to g2.point.powerOf2 file.",
-			EnvVars: withEnvPrefix(envPrefix, "TARGET_G2_TAU_PATH"),
+			Name:    G2PowerOf2PathFlagName,
+			Usage:   "Directory path to g2.point.powerOf2 file. This resource is not currently used, but needed because of the shared eigenda KZG library that we use. We will eventually fix this.",
+			EnvVars: withEnvPrefix(envPrefix, "TARGET_KZG_G2_POWER_OF_2_PATH"),
 			// we use a relative path so that the path works for both the binary and the docker container
 			// aka we assume the binary is run from root dir, and that the resources/ dir is copied into the working dir of the container
 			Value:    "resources/g2.point.powerOf2",
@@ -96,7 +95,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		},
 		&cli.StringFlag{
 			Name:    CachePathFlagName,
-			Usage:   "Directory path to SRS tables for caching.",
+			Usage:   "Directory path to SRS tables for caching. This resource is not currently used, but needed because of the shared eigenda KZG library that we use. We will eventually fix this.",
 			EnvVars: withEnvPrefix(envPrefix, "TARGET_CACHE_PATH"),
 			// we use a relative path so that the path works for both the binary and the docker container
 			// aka we assume the binary is run from root dir, and that the resources/ dir is copied into the working dir of the container
@@ -141,7 +140,7 @@ var MaxBlobLengthBytes uint64
 func ReadConfig(ctx *cli.Context) Config {
 	kzgCfg := &kzg.KzgConfig{
 		G1Path:          ctx.String(G1PathFlagName),
-		G2PowerOf2Path:  ctx.String(G2TauFlagName),
+		G2PowerOf2Path:  ctx.String(G2PowerOf2PathFlagName),
 		CacheDir:        ctx.String(CachePathFlagName),
 		SRSOrder:        srsOrder,
 		SRSNumberToLoad: MaxBlobLengthBytes / 32,       // # of fr.Elements
@@ -150,7 +149,7 @@ func ReadConfig(ctx *cli.Context) Config {
 
 	return Config{
 		KzgConfig:            kzgCfg,
-		VerifyCerts:          ctx.Bool(CertVerificationEnabledFlagName),
+		VerifyCerts:          !ctx.Bool(CertVerificationDisabledFlagName),
 		RPCURL:               ctx.String(EthRPCFlagName),
 		SvcManagerAddr:       ctx.String(SvcManagerAddrFlagName),
 		EthConfirmationDepth: uint64(ctx.Int64(EthConfirmationDepthFlagName)), // #nosec G115

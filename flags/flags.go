@@ -14,12 +14,13 @@ import (
 )
 
 const (
-	EigenDAClientCategory     = "EigenDA Client"
-	EigenDADeprecatedCategory = "DEPRECATED EIGENDA CLIENT FLAGS -- THESE WILL BE REMOVED IN V2.0.0"
-	MemstoreFlagsCategory     = "Memstore (for testing purposes - replaces EigenDA backend)"
-	RedisCategory             = "Redis Cache/Fallback"
-	S3Category                = "S3 Cache/Fallback"
-	VerifierCategory          = "KZG and Cert Verifier"
+	EigenDAClientCategory      = "EigenDA Client"
+	EigenDADeprecatedCategory  = "DEPRECATED EIGENDA CLIENT FLAGS -- THESE WILL BE REMOVED IN V2.0.0"
+	MemstoreFlagsCategory      = "Memstore (for testing purposes - replaces EigenDA backend)"
+	RedisCategory              = "Redis Cache/Fallback"
+	S3Category                 = "S3 Cache/Fallback"
+	VerifierCategory           = "KZG and Cert Verifier"
+	VerifierDeprecatedCategory = "DEPRECATED VERIFIER FLAGS -- THESE WILL BE REMOVED IN V2.0.0"
 )
 
 const (
@@ -82,4 +83,5 @@ func init() {
 	Flags = append(Flags, s3.CLIFlags(EnvVarPrefix, S3Category)...)
 	Flags = append(Flags, memstore.CLIFlags(EnvVarPrefix, MemstoreFlagsCategory)...)
 	Flags = append(Flags, verify.CLIFlags(EnvVarPrefix, VerifierCategory)...)
+	Flags = append(Flags, verify.DeprecatedCLIFlags(EnvVarPrefix, VerifierDeprecatedCategory)...)
 }
