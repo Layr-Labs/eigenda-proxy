@@ -141,17 +141,5 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 					DisablePointVerificationModeFlagName, withEnvPrefix(envPrefix, "DISABLE_POINT_VERIFICATION_MODE"))
 			},
 		},
-		&cli.BoolFlag{
-			Name:     DeprecatedWaitForFinalizationFlagName,
-			Usage:    "Wait for blob finalization before returning from PutBlob.",
-			EnvVars:  withDeprecatedEnvPrefix(envPrefix, "WAIT_FOR_FINALIZATION"),
-			Value:    false,
-			Category: category,
-			Action: func(*cli.Context, bool) error {
-				return fmt.Errorf("flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
-					DeprecatedWaitForFinalizationFlagName, withDeprecatedEnvPrefix(envPrefix, "WAIT_FOR_FINALIZATION"),
-					WaitForFinalizationFlagName, withEnvPrefix(envPrefix, "WAIT_FOR_FINALIZATION"))
-			},
-		},
 	}
 }
