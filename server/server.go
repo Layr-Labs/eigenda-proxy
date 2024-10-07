@@ -25,7 +25,7 @@ var (
 
 const (
 	GetRoute = "/get/"
-       PutRoute = "/put"
+	PutRoute = "/put"
 	Put      = "put"
 
 	CommitmentModeKey = "commitment_mode"
