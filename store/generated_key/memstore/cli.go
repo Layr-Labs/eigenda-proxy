@@ -44,7 +44,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 					return fmt.Errorf("env var %s is deprecated for flag %s, use %s instead",
 						withDeprecatedEnvPrefix(envPrefix, "ENABLED"),
 						EnabledFlagName,
-						withEnvPrefix(envPrefix, "ENABLED")[0])
+						withEnvPrefix(envPrefix, "ENABLED"))
 				}
 				return nil
 			},
@@ -60,7 +60,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 					return fmt.Errorf("env var %s is deprecated for flag %s, use %s instead",
 						withDeprecatedEnvPrefix(envPrefix, "EXPIRATION"),
 						ExpirationFlagName,
-						withEnvPrefix(envPrefix, "EXPIRATION")[0])
+						withEnvPrefix(envPrefix, "EXPIRATION"))
 				}
 				return nil
 			},
