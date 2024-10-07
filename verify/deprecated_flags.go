@@ -26,8 +26,8 @@ func withDeprecatedFlagPrefix(s string) string {
 	return "eigenda-" + s
 }
 
-func withDeprecatedEnvPrefix(envPrefix, s string) []string {
-	return []string{envPrefix + "_" + s}
+func withDeprecatedEnvPrefix(envPrefix, s string) string {
+	return envPrefix + "_" + s
 }
 
 // CLIFlags ... used for Verifier configuration
@@ -37,7 +37,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.StringFlag{
 			Name:    DeprecatedEthRPCFlagName,
 			Usage:   "JSON RPC node endpoint for the Ethereum network used for finalizing DA blobs. See available list here: https://docs.eigenlayer.xyz/eigenda/networks/",
-			EnvVars: withDeprecatedEnvPrefix(envPrefix, "ETH_RPC"),
+			EnvVars: []string{withDeprecatedEnvPrefix(envPrefix, "ETH_RPC")},
 			Action: func(_ *cli.Context, _ string) error {
 				return fmt.Errorf("flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
 					DeprecatedEthRPCFlagName, withDeprecatedEnvPrefix(envPrefix, "ETH_RPC"),
@@ -48,7 +48,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.StringFlag{
 			Name:    DeprecatedSvcManagerAddrFlagName,
 			Usage:   "The deployed EigenDA service manager address. The list can be found here: https://github.com/Layr-Labs/eigenlayer-middleware/?tab=readme-ov-file#current-mainnet-deployment",
-			EnvVars: withDeprecatedEnvPrefix(envPrefix, "SERVICE_MANAGER_ADDR"),
+			EnvVars: []string{withDeprecatedEnvPrefix(envPrefix, "SERVICE_MANAGER_ADDR")},
 			Action: func(_ *cli.Context, _ string) error {
 				return fmt.Errorf("flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
 					DeprecatedSvcManagerAddrFlagName, withDeprecatedEnvPrefix(envPrefix, "SERVICE_MANAGER_ADDR"),
@@ -59,7 +59,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.Uint64Flag{
 			Name:    DeprecatedEthConfirmationDepthFlagName,
 			Usage:   "The number of Ethereum blocks to wait before considering a submitted blob's DA batch submission confirmed. `0` means wait for inclusion only.",
-			EnvVars: withDeprecatedEnvPrefix(envPrefix, "ETH_CONFIRMATION_DEPTH"),
+			EnvVars: []string{withDeprecatedEnvPrefix(envPrefix, "ETH_CONFIRMATION_DEPTH")},
 			Value:   0,
 			Action: func(_ *cli.Context, _ uint64) error {
 				return fmt.Errorf("flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
@@ -72,7 +72,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.StringFlag{
 			Name:    DeprecatedG1PathFlagName,
 			Usage:   "Directory path to g1.point file.",
-			EnvVars: withDeprecatedEnvPrefix(envPrefix, "TARGET_KZG_G1_PATH"),
+			EnvVars: []string{withDeprecatedEnvPrefix(envPrefix, "TARGET_KZG_G1_PATH")},
 			// we use a relative path so that the path works for both the binary and the docker container
 			// aka we assume the binary is run from root dir, and that the resources/ dir is copied into the working dir of the container
 			Value: "resources/g1.point",
@@ -86,7 +86,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.StringFlag{
 			Name:    DeprecatedG2TauFlagName,
 			Usage:   "Directory path to g2.point.powerOf2 file.",
-			EnvVars: withDeprecatedEnvPrefix(envPrefix, "TARGET_G2_TAU_PATH"),
+			EnvVars: []string{withDeprecatedEnvPrefix(envPrefix, "TARGET_G2_TAU_PATH")},
 			// we use a relative path so that the path works for both the binary and the docker container
 			// aka we assume the binary is run from root dir, and that the resources/ dir is copied into the working dir of the container
 			Value: "resources/g2.point.powerOf2",
@@ -100,7 +100,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.StringFlag{
 			Name:    DeprecatedCachePathFlagName,
 			Usage:   "Directory path to SRS tables for caching.",
-			EnvVars: withDeprecatedEnvPrefix(envPrefix, "TARGET_CACHE_PATH"),
+			EnvVars: []string{withDeprecatedEnvPrefix(envPrefix, "TARGET_CACHE_PATH")},
 			// we use a relative path so that the path works for both the binary and the docker container
 			// aka we assume the binary is run from root dir, and that the resources/ dir is copied into the working dir of the container
 			Value: "resources/SRSTables/",
@@ -115,7 +115,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.StringFlag{
 			Name:    DeprecatedMaxBlobLengthFlagName,
 			Usage:   "Maximum blob length to be written or read from EigenDA. Determines the number of SRS points loaded into memory for KZG commitments. Example units: '30MiB', '4Kb', '30MB'. Maximum size slightly exceeds 1GB.",
-			EnvVars: withDeprecatedEnvPrefix(envPrefix, "MAX_BLOB_LENGTH"),
+			EnvVars: []string{withDeprecatedEnvPrefix(envPrefix, "MAX_BLOB_LENGTH")},
 			Value:   "16MiB",
 			Action: func(_ *cli.Context, _ string) error {
 				return fmt.Errorf("flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
