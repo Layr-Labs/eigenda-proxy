@@ -20,10 +20,8 @@ func withFlagPrefix(s string) string {
 	return "memstore." + s
 }
 
-func withEnvPrefix(envPrefix, s string) []string {
-	return []string{
-		envPrefix + "_MEMSTORE_" + s,
-	}
+func withEnvPrefix(envPrefix, s string) string {
+	return envPrefix + "_MEMSTORE_" + s
 }
 
 // if these deprecated env vars are used, we force the user to update their config
@@ -39,7 +37,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.BoolFlag{
 			Name:     EnabledFlagName,
 			Usage:    "Whether to use memstore for DA logic.",
-			EnvVars:  append(withEnvPrefix(envPrefix, "ENABLED"), withDeprecatedEnvPrefix(envPrefix, "ENABLED")),
+			EnvVars:  []string{withEnvPrefix(envPrefix, "ENABLED"), withDeprecatedEnvPrefix(envPrefix, "ENABLED")},
 			Category: category,
 			Action: func(_ *cli.Context, _ bool) error {
 				if _, ok := os.LookupEnv(withDeprecatedEnvPrefix(envPrefix, "ENABLED")); ok {
@@ -55,7 +53,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Name:     ExpirationFlagName,
 			Usage:    "Duration that a memstore blob/commitment pair is allowed to live.",
 			Value:    25 * time.Minute,
-			EnvVars:  append(withEnvPrefix(envPrefix, "EXPIRATION"), withDeprecatedEnvPrefix(envPrefix, "EXPIRATION")),
+			EnvVars:  []string{withEnvPrefix(envPrefix, "EXPIRATION"), withDeprecatedEnvPrefix(envPrefix, "EXPIRATION")},
 			Category: category,
 			Action: func(_ *cli.Context, _ time.Duration) error {
 				if _, ok := os.LookupEnv(withDeprecatedEnvPrefix(envPrefix, "EXPIRATION")); ok {
@@ -71,14 +69,14 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Name:     PutLatencyFlagName,
 			Usage:    "Artificial latency added for memstore backend to mimic EigenDA's dispersal latency.",
 			Value:    0,
-			EnvVars:  withEnvPrefix(envPrefix, "PUT_LATENCY"),
+			EnvVars:  []string{withEnvPrefix(envPrefix, "PUT_LATENCY")},
 			Category: category,
 		},
 		&cli.DurationFlag{
 			Name:     GetLatencyFlagName,
 			Usage:    "Artificial latency added for memstore backend to mimic EigenDA's retrieval latency.",
 			Value:    0,
-			EnvVars:  withEnvPrefix(envPrefix, "GET_LATENCY"),
+			EnvVars:  []string{withEnvPrefix(envPrefix, "GET_LATENCY")},
 			Category: category,
 		},
 	}

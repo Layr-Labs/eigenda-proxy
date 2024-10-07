@@ -40,8 +40,8 @@ func withFlagPrefix(s string) string {
 	return "eigenda." + s
 }
 
-func withEnvPrefix(envPrefix, s string) []string {
-	return []string{envPrefix + "_EIGENDA_" + s}
+func withEnvPrefix(envPrefix, s string) string {
+	return envPrefix + "_EIGENDA_" + s
 }
 
 // CLIFlags ... used for Verifier configuration
@@ -51,26 +51,26 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.BoolFlag{
 			Name:     CertVerificationDisabledFlagName,
 			Usage:    "Whether to verify certificates received from EigenDA disperser.",
-			EnvVars:  withEnvPrefix(envPrefix, "CERT_VERIFICATION_DISABLED"),
+			EnvVars:  []string{withEnvPrefix(envPrefix, "CERT_VERIFICATION_DISABLED")},
 			Value:    false,
 			Category: category,
 		},
 		&cli.StringFlag{
 			Name:     EthRPCFlagName,
 			Usage:    "JSON RPC node endpoint for the Ethereum network used for finalizing DA blobs. See available list here: https://docs.eigenlayer.xyz/eigenda/networks/",
-			EnvVars:  withEnvPrefix(envPrefix, "ETH_RPC"),
+			EnvVars:  []string{withEnvPrefix(envPrefix, "ETH_RPC")},
 			Category: category,
 		},
 		&cli.StringFlag{
 			Name:     SvcManagerAddrFlagName,
 			Usage:    "The deployed EigenDA service manager address. The list can be found here: https://github.com/Layr-Labs/eigenlayer-middleware/?tab=readme-ov-file#current-mainnet-deployment",
-			EnvVars:  withEnvPrefix(envPrefix, "SERVICE_MANAGER_ADDR"),
+			EnvVars:  []string{withEnvPrefix(envPrefix, "SERVICE_MANAGER_ADDR")},
 			Category: category,
 		},
 		&cli.Uint64Flag{
 			Name:     EthConfirmationDepthFlagName,
 			Usage:    "The number of Ethereum blocks to wait before considering a submitted blob's DA batch submission confirmed. `0` means wait for inclusion only.",
-			EnvVars:  withEnvPrefix(envPrefix, "ETH_CONFIRMATION_DEPTH"),
+			EnvVars:  []string{withEnvPrefix(envPrefix, "ETH_CONFIRMATION_DEPTH")},
 			Value:    0,
 			Category: category,
 		},
@@ -78,7 +78,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.StringFlag{
 			Name:    G1PathFlagName,
 			Usage:   "Directory path to g1.point file.",
-			EnvVars: withEnvPrefix(envPrefix, "TARGET_KZG_G1_PATH"),
+			EnvVars: []string{withEnvPrefix(envPrefix, "TARGET_KZG_G1_PATH")},
 			// we use a relative path so that the path works for both the binary and the docker container
 			// aka we assume the binary is run from root dir, and that the resources/ dir is copied into the working dir of the container
 			Value:    "resources/g1.point",
@@ -87,7 +87,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.StringFlag{
 			Name:    G2PowerOf2PathFlagName,
 			Usage:   "Directory path to g2.point.powerOf2 file. This resource is not currently used, but needed because of the shared eigenda KZG library that we use. We will eventually fix this.",
-			EnvVars: withEnvPrefix(envPrefix, "TARGET_KZG_G2_POWER_OF_2_PATH"),
+			EnvVars: []string{withEnvPrefix(envPrefix, "TARGET_KZG_G2_POWER_OF_2_PATH")},
 			// we use a relative path so that the path works for both the binary and the docker container
 			// aka we assume the binary is run from root dir, and that the resources/ dir is copied into the working dir of the container
 			Value:    "resources/g2.point.powerOf2",
@@ -96,7 +96,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.StringFlag{
 			Name:    CachePathFlagName,
 			Usage:   "Directory path to SRS tables for caching. This resource is not currently used, but needed because of the shared eigenda KZG library that we use. We will eventually fix this.",
-			EnvVars: withEnvPrefix(envPrefix, "TARGET_CACHE_PATH"),
+			EnvVars: []string{withEnvPrefix(envPrefix, "TARGET_CACHE_PATH")},
 			// we use a relative path so that the path works for both the binary and the docker container
 			// aka we assume the binary is run from root dir, and that the resources/ dir is copied into the working dir of the container
 			Value:    "resources/SRSTables/",
@@ -106,7 +106,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.StringFlag{
 			Name:    MaxBlobLengthFlagName,
 			Usage:   "Maximum blob length to be written or read from EigenDA. Determines the number of SRS points loaded into memory for KZG commitments. Example units: '30MiB', '4Kb', '30MB'. Maximum size slightly exceeds 1GB.",
-			EnvVars: withEnvPrefix(envPrefix, "MAX_BLOB_LENGTH"),
+			EnvVars: []string{withEnvPrefix(envPrefix, "MAX_BLOB_LENGTH")},
 			Value:   "16MiB",
 			// set to true to force action to run on the default Value
 			// see https://github.com/urfave/cli/issues/1973
