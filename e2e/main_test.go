@@ -5,6 +5,9 @@ import (
 	"testing"
 )
 
+// only difference between integrationTests and testnetIntegrationTests is
+// that integration tests are run against memstore whereas testnetintegration tests
+// are run against eigenda backend talking to testnet disperser
 var (
 	runTestnetIntegrationTests bool
 	runIntegrationTests        bool
