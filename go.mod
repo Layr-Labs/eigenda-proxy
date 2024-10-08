@@ -7,12 +7,12 @@ toolchain go1.22.0
 require (
 	github.com/Layr-Labs/eigenda v0.8.4
 	github.com/consensys/gnark-crypto v0.12.1
-	github.com/ethereum-optimism/optimism v1.9.3
+	github.com/ethereum-optimism/optimism v1.9.4-0.20240927020138-a9c7f349d10b
 	github.com/ethereum/go-ethereum v1.14.11
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang/mock v1.2.0
 	github.com/joho/godotenv v1.5.1
-	github.com/minio/minio-go/v7 v7.0.76
+	github.com/minio/minio-go/v7 v7.0.77
 	github.com/prometheus/client_golang v1.20.4
 	github.com/stretchr/testify v1.9.0
 	github.com/urfave/cli/v2 v2.27.4
