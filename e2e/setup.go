@@ -97,8 +97,6 @@ func startRedisContainer() error {
 		return fmt.Errorf("failed to get Redis endpoint: %w", err)
 	}
 	redisEndpoint = endpoint
-	fmt.Println("Redis endpoint: ", redisEndpoint)
-
 	return nil
 }
 
