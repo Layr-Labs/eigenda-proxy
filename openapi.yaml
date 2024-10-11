@@ -1,0 +1,108 @@
+openapi: 3.0.1
+info:
+  version: 1.0.0
+  title: EigenDA Proxy API
+  description: AltDA Proxy API for to submit and retrieve blobs from EigenDA
+
+servers:
+  - url: http://localhost:3100
+
+paths:
+  /put/{hexEncodedCommitment}:
+    post:
+      summary: Store a preimage with a known commitment
+      description: Stores a preimage and associates it with a hex-encoded commitment
+      parameters:
+        - in: path
+          name: hexEncodedCommitment
+          required: true
+          schema:
+            type: string
+            pattern: "^0x[0-9a-fA-F]{66}$"
+          description: Hex-encoded commitment of the preimage
+          examples:
+            VALID_KECCAK256:
+              value: "0x009a7d4f1c3e5b8a09d1c0fa4b3f8e1d7c6b29f1e6d8c4a7b3c2d4e5f6a7b8c9d0"
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              title: Preimage
+              type: string
+              format: binary
+            examples:
+              VALID_KECCAK256:
+                summary: Valid OP Keccak256 request
+                value:
+                  Preimage: "some data that will successfully be written to EigenDA"
+      responses:
+        "200":
+          description: Should be able to get a pet by petId
+          # Have to add this content even though this path returns an empty body
+          # because of specmatic: https://specmatic.io/documentation/service_virtualization_tutorial.html#inline-examples-for-responses-with-no-body
+          # spec says the response body is not needed, but it was buggy without and not picking up on the VALID_KECCAK256 example path parameters...
+          content:
+            text/plain:
+              schema:
+                type: string
+              examples:
+                VALID_KECCAK256:
+                  value: ""
+
+  /put:
+    post:
+      summary: Store a preimage and receive the commitment
+      description: Stores a preimage and returns the associated hex-encoded commitment
+      parameters:
+        - in: query
+          name: commitment_mode
+          schema:
+            type: string
+            enum: [simple]
+          description: Specifies the commitment mode
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: Preimage stored successfully
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+        "500":
+          description: Internal server error
+
+  /get/{hexEncodedCommitment}:
+    get:
+      summary: Retrieve a preimage
+      description: Retrieves a preimage associated with a given hex-encoded commitment
+      parameters:
+        - in: path
+          name: hexEncodedCommitment
+          required: true
+          schema:
+            type: string
+          description: Hex-encoded commitment of the preimage to retrieve
+      responses:
+        "200":
+          description: Preimage retrieved successfully
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Invalid commitment key
+        "404":
+          description: Preimage not found for the given commitment
+        "500":
+          description: Internal server error
+
+components:
+  schemas: {}

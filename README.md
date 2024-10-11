@@ -172,6 +172,10 @@ We also provide network-specific example env configuration files in `.env.exampl
 
 Container can be built via running `make docker-build`.
 
+## API
+
+We provide an OpenAPI 3.0 spec in [openapi.yaml](./openapi.yaml). We use [specmatic](https://specmatic.io/documentation.html) to test the API against our eigenda-proxy implementation.
+
 ## Commitment Schemas
 Currently, there are two commitment modes supported with unique encoding schemas for each. The `version byte` is shared for all modes and denotes which version of the EigenDA certificate is being used/requested. The following versions are currently supported:
 * `0x0`: V0 certificate type (i.e, dispersal blob info struct with verification against service manager)
