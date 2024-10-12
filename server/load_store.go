@@ -116,10 +116,14 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (store.
 		return nil, err
 	}
 
-	// determine read fallbacks
+	// create secondary storage router
 	fallbacks := populateTargets(cfg.EigenDAConfig.FallbackTargets, s3Store, redisStore)
 	caches := populateTargets(cfg.EigenDAConfig.CacheTargets, s3Store, redisStore)
+	secondary, err := store.NewSecondaryRouter(log, caches, fallbacks)
+	if err != nil {
+		return nil, err
+	}
 
 	log.Info("Creating storage router", "eigenda backend type", eigenDA != nil, "s3 backend type", s3Store != nil)
-	return store.NewRouter(eigenDA, s3Store, log, caches, fallbacks)
+	return store.NewRouter(eigenDA, s3Store, log, secondary)
 }

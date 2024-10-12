@@ -85,10 +85,6 @@ install-lint:
 	@echo "Installing golangci-lint..."
 	@sh -c $(GET_LINT_CMD)
 
-gosec:
-	@echo "Running security scan with gosec..."
-	gosec ./...
-
 submodules:
 	git submodule update --init --recursive
 

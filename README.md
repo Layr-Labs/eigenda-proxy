@@ -208,7 +208,11 @@ The `raw commitment` is an RLP-encoded [EigenDA certificate](https://github.com/
 
 ### Unit
 
-Unit tests can be ran via invoking `make test`.
+Unit tests can be ran via invoking `make test`.  Please make sure to have all test containers downloaded locally before running via:
+```
+docker pull redis
+docker pull minio
+```
 
 ### Holesky
 
