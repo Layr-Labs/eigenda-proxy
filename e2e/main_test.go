@@ -5,9 +5,11 @@ import (
 	"testing"
 )
 
-// only difference between integrationTests and testnetIntegrationTests is
-// that integration tests are run against memstore whereas testnetintegration tests
-// are run against eigenda backend talking to testnet disperser
+// Integration tests are run against memstore whereas.
+// Testnetintegration tests are run against eigenda backend talking to testnet disperser.
+// Some of the assertions in the tests are different based on the backend as well.
+// e.g, in TestProxyServerCaching we only assert to read metrics with EigenDA
+// when referencing memstore since we don't profile the eigenDAClient interactions
 var (
 	runTestnetIntegrationTests bool
 	runIntegrationTests        bool
