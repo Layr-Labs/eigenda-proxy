@@ -24,10 +24,6 @@ type Store struct {
 	eviction time.Duration
 
 	client *redis.Client
-
-	profile bool
-	reads   int
-	entries int
 }
 
 var _ store.PrecomputedKeyStore = (*Store)(nil)
@@ -52,8 +48,6 @@ func NewStore(cfg *Config) (*Store, error) {
 	return &Store{
 		eviction: cfg.Eviction,
 		client:   client,
-		profile:  cfg.Profile,
-		reads:    0,
 	}, nil
 }
 
@@ -67,22 +61,13 @@ func (r *Store) Get(ctx context.Context, key []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	if r.profile {
-		r.reads++
-	}
-
 	// cast value to byte slice
 	return []byte(value), nil
 }
 
 // Put ... inserts a value into the Redis store
 func (r *Store) Put(ctx context.Context, key []byte, value []byte) error {
-	err := r.client.Set(ctx, string(key), string(value), r.eviction).Err()
-	if err == nil && r.profile {
-		r.entries++
-	}
-
-	return err
+	return r.client.Set(ctx, string(key), string(value), r.eviction).Err()
 }
 
 func (r *Store) Verify(_ []byte, _ []byte) error {
@@ -91,11 +76,4 @@ func (r *Store) Verify(_ []byte, _ []byte) error {
 
 func (r *Store) BackendType() store.BackendType {
 	return store.RedisBackendType
-}
-
-func (r *Store) Stats() *store.Stats {
-	return &store.Stats{
-		Entries: r.entries,
-		Reads:   r.reads,
-	}
 }

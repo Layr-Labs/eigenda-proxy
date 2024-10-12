@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"fmt"
 	"net"
 	"strconv"
 
@@ -15,6 +16,7 @@ import (
 const (
 	namespace           = "eigenda_proxy"
 	httpServerSubsystem = "http_server"
+	secondarySubsystem  = "secondary"
 )
 
 // Config ... Metrics server configuration
@@ -29,7 +31,9 @@ type Config struct {
 type Metricer interface {
 	RecordInfo(version string)
 	RecordUp()
-	RecordRPCServerRequest(method string) func(status string, commitmentMode string, version string)
+
+	RecordRPCServerRequest(method string) func(status string, mode string, ver string)
+	RecordSecondaryRequest(bt string, method string) func(status string)
 
 	Document() []metrics.DocumentedMetric
 }
@@ -39,12 +43,19 @@ type Metrics struct {
 	Info *prometheus.GaugeVec
 	Up   prometheus.Gauge
 
+	// server metrics
 	HTTPServerRequestsTotal          *prometheus.CounterVec
 	HTTPServerBadRequestHeader       *prometheus.CounterVec
 	HTTPServerRequestDurationSeconds *prometheus.HistogramVec
 
+	// secondary metrics
+	SecondaryRequestsTotal      *prometheus.CounterVec
+	SecondaryRequestDurationSec *prometheus.HistogramVec
+
 	registry *prometheus.Registry
 	factory  metrics.Factory
+
+	address string
 }
 
 var _ Metricer = (*Metrics)(nil)
@@ -101,6 +112,23 @@ func NewMetrics(subsystem string) *Metrics {
 		}, []string{
 			"method", // no status on histograms because those are very expensive
 		}),
+		SecondaryRequestsTotal: factory.NewCounterVec(prometheus.CounterOpts{
+			Namespace: namespace,
+			Subsystem: secondarySubsystem,
+			Name:      "requests_total",
+			Help:      "Total requests to the secondary storage",
+		}, []string{
+			"backend_type", "method", "status",
+		}),
+		SecondaryRequestDurationSec: factory.NewHistogramVec(prometheus.HistogramOpts{
+			Namespace: namespace,
+			Subsystem: secondarySubsystem,
+			Name:      "request_duration_seconds",
+			Buckets:   prometheus.ExponentialBucketsRange(0.05, 1200, 20),
+			Help:      "Histogram of secondary storage request durations",
+		}, []string{
+			"backend_type",
+		}),
 		registry: registry,
 		factory:  factory,
 	}
@@ -131,13 +159,63 @@ func (m *Metrics) RecordRPCServerRequest(method string) func(status string, mode
 	}
 }
 
+func (m *Metrics) Address() string {
+	return m.address
+}
+
+// RecordSecondaryPut records a secondary put/get operation.
+func (m *Metrics) RecordSecondaryRequest(bt string, method string) func(status string) {
+	timer := prometheus.NewTimer(m.SecondaryRequestDurationSec.WithLabelValues(bt))
+
+	return func(status string) {
+		m.SecondaryRequestsTotal.WithLabelValues(bt, method, status).Inc()
+		timer.ObserveDuration()
+	}
+
+}
+
+// FindRandomOpenPort returns a random open port
+func FindRandomOpenPort() (int, error) {
+	// Listen on a random port
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return 0, fmt.Errorf("failed to find open port: %w", err)
+	}
+	defer listener.Close()
+
+	// Get the assigned address, which includes the port
+	addr := listener.Addr().(*net.TCPAddr)
+	return addr.Port, nil
+}
+
 // StartServer starts the metrics server on the given hostname and port.
+// StartServer starts the metrics server on the given hostname and port.
+// If port is 0, it automatically assigns an available port and returns the actual port.
 func (m *Metrics) StartServer(hostname string, port int) (*ophttp.HTTPServer, error) {
-	addr := net.JoinHostPort(hostname, strconv.Itoa(port))
+	// Create a listener with the provided host and port. If port is 0, the system will assign one.
+	if port == 0 {
+		randomPort, err := FindRandomOpenPort()
+		if err != nil {
+			return nil, fmt.Errorf("failed to find open port: %w", err)
+		}
+		port =  randomPort
+	}
+	m.address = net.JoinHostPort(hostname, strconv.Itoa(port))
+
+
+	// Set up Prometheus metrics handler
 	h := promhttp.InstrumentMetricHandler(
 		m.registry, promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{}),
 	)
-	return ophttp.StartHTTPServer(addr, h)
+	
+	// Start the HTTP server using the listener, so we can control the actual port
+	server, err := ophttp.StartHTTPServer(m.address, h)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start HTTP server: %v", err)
+	}
+
+	// Return the actual port the server is bound to
+	return server, nil
 }
 
 func (m *Metrics) Document() []metrics.DocumentedMetric {
@@ -161,4 +239,8 @@ func (n *noopMetricer) RecordUp() {
 
 func (n *noopMetricer) RecordRPCServerRequest(string) func(status, mode, ver string) {
 	return func(string, string, string) {}
+}
+
+func (n *noopMetricer) RecordSecondaryRequest(string, string) func(status string) {
+	return func(string) {}
 }

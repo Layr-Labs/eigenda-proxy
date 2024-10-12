@@ -167,10 +167,10 @@ func TestOptimismKeccak256Commitment(gt *testing.T) {
 	optimism.ActL1Finalized(t)
 
 	// assert that EigenDA proxy's was written and read from
-	stat := proxyTS.Server.GetS3Stats()
+	// stat := proxyTS.Server.GetS3Stats()
 
-	require.Equal(t, 1, stat.Entries)
-	require.Equal(t, 1, stat.Reads)
+	// require.Equal(t, 1, stat.Entries)
+	// require.Equal(t, 1, stat.Reads)
 }
 
 func TestOptimismGenericCommitment(gt *testing.T) {

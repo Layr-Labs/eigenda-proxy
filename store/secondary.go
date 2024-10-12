@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/ethereum/go-ethereum/log"
@@ -31,24 +32,22 @@ type PutNotif struct {
 type SecondaryRouter struct {
 	stream chan PutNotif
 	log    log.Logger
+	m      metrics.Metricer
 
 	caches    []PrecomputedKeyStore
-	cacheLock sync.RWMutex
+	fallbacks []PrecomputedKeyStore
 
-	fallbacks    []PrecomputedKeyStore
-	fallbackLock sync.RWMutex
+	verifyLock sync.RWMutex
 }
 
 // NewSecondaryRouter ... creates a new secondary storage router
-func NewSecondaryRouter(log log.Logger, caches []PrecomputedKeyStore, fallbacks []PrecomputedKeyStore) (ISecondary, error) {
+func NewSecondaryRouter(log log.Logger, m metrics.Metricer, caches []PrecomputedKeyStore, fallbacks []PrecomputedKeyStore) (ISecondary, error) {
 	return &SecondaryRouter{
 		stream:    make(chan PutNotif),
 		log:       log,
+		m:         m,
 		caches:    caches,
-		cacheLock: sync.RWMutex{},
-
-		fallbacks:    fallbacks,
-		fallbackLock: sync.RWMutex{},
+		fallbacks: fallbacks,
 	}, nil
 }
 
@@ -61,16 +60,10 @@ func (r *SecondaryRouter) Enabled() bool {
 }
 
 func (r *SecondaryRouter) CachingEnabled() bool {
-	r.cacheLock.RLock()
-	defer r.cacheLock.RUnlock()
-
 	return len(r.caches) > 0
 }
 
 func (r *SecondaryRouter) FallbackEnabled() bool {
-	r.fallbackLock.RLock()
-	defer r.fallbackLock.RUnlock()
-
 	return len(r.fallbacks) > 0
 }
 
@@ -80,14 +73,7 @@ func (r *SecondaryRouter) FallbackEnabled() bool {
 // caller step for different target sets vs. reading which is done conditionally to segment between a cached read type
 // vs a fallback read type
 func (r *SecondaryRouter) HandleRedundantWrites(ctx context.Context, commitment []byte, value []byte) error {
-	r.cacheLock.RLock()
-	r.fallbackLock.RLock()
-
-	defer func() {
-		r.cacheLock.RUnlock()
-		r.fallbackLock.RUnlock()
-	}()
-
+	println("HandleRedundantWrites")
 	sources := r.caches
 	sources = append(sources, r.fallbacks...)
 
@@ -95,11 +81,15 @@ func (r *SecondaryRouter) HandleRedundantWrites(ctx context.Context, commitment 
 	successes := 0
 
 	for _, src := range sources {
+		cb := r.m.RecordSecondaryRequest(src.BackendType().String(), "put")
+
 		err := src.Put(ctx, key, value)
 		if err != nil {
 			r.log.Warn("Failed to write to redundant target", "backend", src.BackendType(), "err", err)
+			cb("failure")
 		} else {
 			successes++
+			cb("success")
 		}
 	}
 
@@ -132,52 +122,47 @@ func (r *SecondaryRouter) StreamProcess(ctx context.Context) {
 func (r *SecondaryRouter) MultiSourceRead(ctx context.Context, commitment []byte, fallback bool, verify func([]byte, []byte) error) ([]byte, error) {
 	var sources []PrecomputedKeyStore
 	if fallback {
-		r.fallbackLock.RLock()
-		defer r.fallbackLock.RUnlock()
-
 		sources = r.fallbacks
 	} else {
-		r.cacheLock.RLock()
-		defer r.cacheLock.RUnlock()
-
 		sources = r.caches
 	}
 
 	key := crypto.Keccak256(commitment)
 	for _, src := range sources {
+		cb := r.m.RecordSecondaryRequest(src.BackendType().String(), "get")
 		data, err := src.Get(ctx, key)
 		if err != nil {
+			cb("failure")
 			r.log.Warn("Failed to read from redundant target", "backend", src.BackendType(), "err", err)
 			continue
 		}
 
 		if data == nil {
+			cb("miss")
 			r.log.Debug("No data found in redundant target", "backend", src.BackendType())
 			continue
 		}
 
 		// verify cert:data using provided verification function
+		r.verifyLock.Lock()
 		err = verify(commitment, data)
 		if err != nil {
+			cb("failure")
 			log.Warn("Failed to verify blob", "err", err, "backend", src.BackendType())
+			r.verifyLock.Unlock()
 			continue
 		}
-
+		r.verifyLock.Unlock()
+		cb("success")
 		return data, nil
 	}
 	return nil, errors.New("no data found in any redundant backend")
 }
 
 func (r *SecondaryRouter) Fallbacks() []PrecomputedKeyStore {
-	r.fallbackLock.RLock()
-	defer r.fallbackLock.RUnlock()
-
 	return r.fallbacks
 }
 
 func (r *SecondaryRouter) Caches() []PrecomputedKeyStore {
-	r.cacheLock.RLock()
-	defer r.cacheLock.RUnlock()
-
 	return r.caches
 }

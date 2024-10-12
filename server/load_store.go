@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/eigenda"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
@@ -49,7 +50,7 @@ func populateTargets(targets []string, s3 store.PrecomputedKeyStore, redis *redi
 }
 
 // LoadStoreRouter ... creates storage backend clients and instruments them into a storage routing abstraction
-func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (store.IRouter, error) {
+func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger, m metrics.Metricer) (store.IRouter, error) {
 	// create S3 backend store (if enabled)
 	var err error
 	var s3Store store.PrecomputedKeyStore
@@ -119,17 +120,14 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (store.
 	// create secondary storage router
 	fallbacks := populateTargets(cfg.EigenDAConfig.FallbackTargets, s3Store, redisStore)
 	caches := populateTargets(cfg.EigenDAConfig.CacheTargets, s3Store, redisStore)
-	secondary, err := store.NewSecondaryRouter(log, caches, fallbacks)
+	secondary, err := store.NewSecondaryRouter(log, m, caches, fallbacks)
 	if err != nil {
 		return nil, err
 	}
 
 	if secondary.Enabled() { // only spin-up go routines if secondary storage is enabled
 		log.Debug("Starting secondary stream processing routines")
-
-		for i := 0; i < 10; i++ {
-			go secondary.StreamProcess(ctx)
-		}
+		go secondary.StreamProcess(ctx)
 	}
 
 	log.Info("Creating storage router", "eigenda backend type", eigenDA != nil, "s3 backend type", s3Store != nil)
