@@ -64,7 +64,7 @@ func startMinioContainer() error {
 	defer cancel()
 
 	minioContainer, err := miniotc.Run(ctx,
-		"minio/minio:latest",
+		"minio/minio:RELEASE.2024-10-02T17-50-41Z",
 		miniotc.WithUsername("minioadmin"),
 		miniotc.WithPassword("minioadmin"),
 	)
