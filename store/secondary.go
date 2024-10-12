@@ -14,15 +14,23 @@ type ISecondary interface {
 	Fallbacks() []PrecomputedKeyStore
 	Caches() []PrecomputedKeyStore
 	Enabled() bool
+	Ingress() chan<- PutNotif
 	CachingEnabled() bool
 	FallbackEnabled() bool
 	HandleRedundantWrites(ctx context.Context, commitment []byte, value []byte) error
 	MultiSourceRead(context.Context, []byte, bool, func([]byte, []byte) error) ([]byte, error)
+	StreamProcess(context.Context)
+}
+
+type PutNotif struct {
+	Commitment []byte
+	Value      []byte
 }
 
 // SecondaryRouter ... routing abstraction for secondary storage backends
 type SecondaryRouter struct {
-	log log.Logger
+	stream chan PutNotif
+	log    log.Logger
 
 	caches    []PrecomputedKeyStore
 	cacheLock sync.RWMutex
@@ -34,6 +42,7 @@ type SecondaryRouter struct {
 // NewSecondaryRouter ... creates a new secondary storage router
 func NewSecondaryRouter(log log.Logger, caches []PrecomputedKeyStore, fallbacks []PrecomputedKeyStore) (ISecondary, error) {
 	return &SecondaryRouter{
+		stream:    make(chan PutNotif),
 		log:       log,
 		caches:    caches,
 		cacheLock: sync.RWMutex{},
@@ -41,6 +50,10 @@ func NewSecondaryRouter(log log.Logger, caches []PrecomputedKeyStore, fallbacks 
 		fallbacks:    fallbacks,
 		fallbackLock: sync.RWMutex{},
 	}, nil
+}
+
+func (r *SecondaryRouter) Ingress() chan<- PutNotif {
+	return r.stream
 }
 
 func (r *SecondaryRouter) Enabled() bool {
@@ -97,7 +110,25 @@ func (r *SecondaryRouter) HandleRedundantWrites(ctx context.Context, commitment 
 	return nil
 }
 
+func (r *SecondaryRouter) StreamProcess(ctx context.Context) {
+	for {
+		select {
+		case notif := <-r.stream:
+			err := r.HandleRedundantWrites(context.Background(), notif.Commitment, notif.Value)
+			if err != nil {
+				r.log.Error("Failed to write to redundant targets", "err", err)
+			}
+
+		case <-ctx.Done():
+			return
+		}
+	}
+
+}
+
 // MultiSourceRead ... reads from a set of backends and returns the first successfully read blob
+// NOTE: - this can also be parallelized when reading from multiple sources and discarding connections that fail
+//   - for complete optimization we can profile secondary storage backends to determine the fastest / most reliable and always rout to it first
 func (r *SecondaryRouter) MultiSourceRead(ctx context.Context, commitment []byte, fallback bool, verify func([]byte, []byte) error) ([]byte, error) {
 	var sources []PrecomputedKeyStore
 	if fallback {

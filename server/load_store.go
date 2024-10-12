@@ -124,6 +124,12 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (store.
 		return nil, err
 	}
 
+	if secondary.Enabled() { // only spin-up go routine if secondary storage is enabled
+		// NOTE: the number of workers is set to 1 for now but it should be possible to increase
+		log.Debug("Starting secondary stream processing routine")
+		go secondary.StreamProcess(ctx)
+	}
+
 	log.Info("Creating storage router", "eigenda backend type", eigenDA != nil, "s3 backend type", s3Store != nil)
 	return store.NewRouter(eigenDA, s3Store, log, secondary)
 }

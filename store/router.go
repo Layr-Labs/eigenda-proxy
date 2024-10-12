@@ -127,9 +127,10 @@ func (r *Router) Put(ctx context.Context, cm commitments.CommitmentMode, key, va
 	}
 
 	if r.secondary.Enabled() {
-		err = r.secondary.HandleRedundantWrites(ctx, commit, value)
-		if err != nil {
-			log.Error("Failed to write to redundant backends", "err", err)
+
+		r.secondary.Ingress() <- PutNotif{
+			Commitment: commit,
+			Value:      value,
 		}
 	}
 
