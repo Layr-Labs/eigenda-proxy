@@ -353,7 +353,7 @@ func TestProxyServerCaching(t *testing.T) {
 	// ensure that read was from cache
 	labels := metrics.BuildSecondaryCountLabels(store.S3BackendType.String(), http.MethodGet, "success")
 
-	ms, err := ts.MetricPoller.PollMetricsWithRetry(metrics.SecondaryRequestStatuses, labels, 5)
+	ms, err := ts.MetricPoller.PollCountMetricsWithRetry(metrics.SecondaryRequestStatuses, labels, 5)
 	require.NoError(t, err)
 	require.Len(t, ms, 1)
 
@@ -399,7 +399,7 @@ func TestProxyServerCachingWithRedis(t *testing.T) {
 
 	// ensure that read was from cache
 	labels := metrics.BuildSecondaryCountLabels(store.RedisBackendType.String(), http.MethodGet, "success")
-	ms, err := ts.MetricPoller.PollMetrics(metrics.SecondaryRequestStatuses, labels)
+	ms, err := ts.MetricPoller.PollCountMetricsWithRetry(metrics.SecondaryRequestStatuses, labels, 5)
 	require.NoError(t, err)
 	require.NotEmpty(t, ms)
 	require.Len(t, ms, 1)
@@ -457,7 +457,7 @@ func TestProxyServerReadFallback(t *testing.T) {
 
 	labels := metrics.BuildSecondaryCountLabels(store.S3BackendType.String(), http.MethodGet, "success")
 
-	ms, err := ts.MetricPoller.PollMetricsWithRetry(metrics.SecondaryRequestStatuses, labels, 5)
+	ms, err := ts.MetricPoller.PollCountMetricsWithRetry(metrics.SecondaryRequestStatuses, labels, 5)
 	require.NoError(t, err)
 	require.NotEmpty(t, ms)
 	require.Len(t, ms, 1)

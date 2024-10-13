@@ -3,6 +3,7 @@ package e2e_test
 import (
 	"testing"
 
+	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/e2e"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
@@ -168,10 +169,10 @@ func TestOptimismKeccak256Commitment(gt *testing.T) {
 	optimism.ActL1Finalized(t)
 
 	// assert that keccak256 primary store was written and read from
-	labels := metrics.BuildServerRPCLabels("put", "", "optimism_keccak256", "0")
+	labels := metrics.BuildServerRPCLabels("put", "", string(commitments.OptimismKeccak), "0")
 	delete(labels, "method")
 
-	ms, err := proxyTS.MetricPoller.PollMetricsWithRetry(metrics.ServerRPCStatuses, labels, 5)
+	ms, err := proxyTS.MetricPoller.PollCountMetricsWithRetry(metrics.ServerRPCStatuses, labels, 5)
 	require.NoError(t, err)
 	require.NotEmpty(t, ms)
 	require.Len(t, ms, 2)
@@ -231,10 +232,10 @@ func TestOptimismGenericCommitment(gt *testing.T) {
 	// assert that EigenDA proxy's was written and read from
 
 	// assert that EigenDA's primary store was written and read from
-	labels := metrics.BuildServerRPCLabels("put", "", "optimism_generic", "0")
+	labels := metrics.BuildServerRPCLabels("put", "", string(commitments.OptimismGeneric), "0")
 	delete(labels, "method")
 
-	ms, err := proxyTS.MetricPoller.PollMetricsWithRetry(metrics.ServerRPCStatuses, labels, 5)
+	ms, err := proxyTS.MetricPoller.PollCountMetricsWithRetry(metrics.ServerRPCStatuses, labels, 5)
 	require.NoError(t, err)
 	require.NotEmpty(t, ms)
 	require.Len(t, ms, 2)
