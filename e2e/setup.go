@@ -178,7 +178,7 @@ type TestSuite struct {
 	Ctx          context.Context
 	Log          log.Logger
 	Server       *server.Server
-	MetricPoller *metrics.MetricsPoller
+	MetricPoller *metrics.PollerClient
 	MetricSvr    *httputil.HTTPServer
 }
 
@@ -197,7 +197,6 @@ func CreateTestSuite(t *testing.T, testSuiteCfg server.CLIConfig) (TestSuite, fu
 		log,
 		m,
 	)
-
 
 	require.NoError(t, err)
 	proxySvr := server.NewServer(host, 0, store, log, m)
@@ -226,7 +225,7 @@ func CreateTestSuite(t *testing.T, testSuiteCfg server.CLIConfig) (TestSuite, fu
 		Ctx:          ctx,
 		Log:          log,
 		Server:       proxySvr,
-		MetricPoller: metrics.NewPoller(fmt.Sprintf("http://%s", m.Address())),
+		MetricPoller: metrics.NewPoller(fmt.Sprintf("http://%s", metricsSvr.Addr().String())),
 		MetricSvr:    metricsSvr,
 	}, kill
 }

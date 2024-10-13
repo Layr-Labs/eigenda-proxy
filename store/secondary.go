@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"errors"
+	"net/http"
 	"sync"
 
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
@@ -15,22 +16,22 @@ type ISecondary interface {
 	Fallbacks() []PrecomputedKeyStore
 	Caches() []PrecomputedKeyStore
 	Enabled() bool
-	Ingress() chan<- PutNotif
+	Topic() chan<- PutNotify
 	CachingEnabled() bool
 	FallbackEnabled() bool
 	HandleRedundantWrites(ctx context.Context, commitment []byte, value []byte) error
 	MultiSourceRead(context.Context, []byte, bool, func([]byte, []byte) error) ([]byte, error)
-	StreamProcess(context.Context)
+	SubscribeToPutNotif(context.Context)
 }
 
-type PutNotif struct {
+type PutNotify struct {
 	Commitment []byte
 	Value      []byte
 }
 
 // SecondaryRouter ... routing abstraction for secondary storage backends
 type SecondaryRouter struct {
-	stream chan PutNotif
+	stream chan PutNotify
 	log    log.Logger
 	m      metrics.Metricer
 
@@ -43,7 +44,7 @@ type SecondaryRouter struct {
 // NewSecondaryRouter ... creates a new secondary storage router
 func NewSecondaryRouter(log log.Logger, m metrics.Metricer, caches []PrecomputedKeyStore, fallbacks []PrecomputedKeyStore) (ISecondary, error) {
 	return &SecondaryRouter{
-		stream:    make(chan PutNotif),
+		stream:    make(chan PutNotify),
 		log:       log,
 		m:         m,
 		caches:    caches,
@@ -51,7 +52,7 @@ func NewSecondaryRouter(log log.Logger, m metrics.Metricer, caches []Precomputed
 	}, nil
 }
 
-func (r *SecondaryRouter) Ingress() chan<- PutNotif {
+func (r *SecondaryRouter) Topic() chan<- PutNotify {
 	return r.stream
 }
 
@@ -73,7 +74,6 @@ func (r *SecondaryRouter) FallbackEnabled() bool {
 // caller step for different target sets vs. reading which is done conditionally to segment between a cached read type
 // vs a fallback read type
 func (r *SecondaryRouter) HandleRedundantWrites(ctx context.Context, commitment []byte, value []byte) error {
-	println("HandleRedundantWrites")
 	sources := r.caches
 	sources = append(sources, r.fallbacks...)
 
@@ -81,7 +81,7 @@ func (r *SecondaryRouter) HandleRedundantWrites(ctx context.Context, commitment 
 	successes := 0
 
 	for _, src := range sources {
-		cb := r.m.RecordSecondaryRequest(src.BackendType().String(), "put")
+		cb := r.m.RecordSecondaryRequest(src.BackendType().String(), http.MethodPut)
 
 		err := src.Put(ctx, key, value)
 		if err != nil {
@@ -100,7 +100,7 @@ func (r *SecondaryRouter) HandleRedundantWrites(ctx context.Context, commitment 
 	return nil
 }
 
-func (r *SecondaryRouter) StreamProcess(ctx context.Context) {
+func (r *SecondaryRouter) SubscribeToPutNotif(ctx context.Context) {
 	for {
 		select {
 		case notif := <-r.stream:
@@ -113,7 +113,6 @@ func (r *SecondaryRouter) StreamProcess(ctx context.Context) {
 			return
 		}
 	}
-
 }
 
 // MultiSourceRead ... reads from a set of backends and returns the first successfully read blob
@@ -129,7 +128,7 @@ func (r *SecondaryRouter) MultiSourceRead(ctx context.Context, commitment []byte
 
 	key := crypto.Keccak256(commitment)
 	for _, src := range sources {
-		cb := r.m.RecordSecondaryRequest(src.BackendType().String(), "get")
+		cb := r.m.RecordSecondaryRequest(src.BackendType().String(), http.MethodGet)
 		data, err := src.Get(ctx, key)
 		if err != nil {
 			cb("failure")

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/Layr-Labs/eigenda-proxy/e2e"
+	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/ethereum-optimism/optimism/op-e2e/actions"
 	"github.com/ethereum-optimism/optimism/op-e2e/config"
@@ -166,11 +167,18 @@ func TestOptimismKeccak256Commitment(gt *testing.T) {
 	optimism.sequencer.ActL2PipelineFull(t)
 	optimism.ActL1Finalized(t)
 
-	// assert that EigenDA proxy's was written and read from
-	// stat := proxyTS.Server.GetS3Stats()
+	// assert that keccak256 primary store was written and read from
+	labels := metrics.BuildServerRPCLabels("put", "", "optimism_keccak256", "0")
+	delete(labels, "method")
 
-	// require.Equal(t, 1, stat.Entries)
-	// require.Equal(t, 1, stat.Reads)
+	ms, err := proxyTS.MetricPoller.PollMetricsWithRetry(metrics.ServerRPCStatuses, labels, 5)
+	require.NoError(t, err)
+	require.NotEmpty(t, ms)
+	require.Len(t, ms, 2)
+
+	require.True(t, ms[0].Count > 0)
+	require.True(t, ms[1].Count > 0)
+
 }
 
 func TestOptimismGenericCommitment(gt *testing.T) {
@@ -222,9 +230,15 @@ func TestOptimismGenericCommitment(gt *testing.T) {
 
 	// assert that EigenDA proxy's was written and read from
 
-	if useMemory() {
-		stat := proxyTS.Server.GetEigenDAStats()
-		require.Equal(t, 1, stat.Entries)
-		require.Equal(t, 1, stat.Reads)
-	}
+	// assert that EigenDA's primary store was written and read from
+	labels := metrics.BuildServerRPCLabels("put", "", "optimism_generic", "0")
+	delete(labels, "method")
+
+	ms, err := proxyTS.MetricPoller.PollMetricsWithRetry(metrics.ServerRPCStatuses, labels, 5)
+	require.NoError(t, err)
+	require.NotEmpty(t, ms)
+	require.Len(t, ms, 2)
+
+	require.True(t, ms[0].Count > 0)
+	require.True(t, ms[1].Count > 0)
 }

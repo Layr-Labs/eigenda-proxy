@@ -16,9 +16,6 @@ type IRouter interface {
 	Put(ctx context.Context, cm commitments.CommitmentMode, key, value []byte) ([]byte, error)
 
 	GetEigenDAStore() GeneratedKeyStore
-	GetS3Store() PrecomputedKeyStore
-	Caches() []PrecomputedKeyStore
-	Fallbacks() []PrecomputedKeyStore
 }
 
 // Router ... storage backend routing layer
@@ -127,8 +124,7 @@ func (r *Router) Put(ctx context.Context, cm commitments.CommitmentMode, key, va
 	}
 
 	if r.secondary.Enabled() {
-
-		r.secondary.Ingress() <- PutNotif{
+		r.secondary.Topic() <- PutNotify{
 			Commitment: commit,
 			Value:      value,
 		}
@@ -164,19 +160,4 @@ func (r *Router) putWithKey(ctx context.Context, key []byte, value []byte) ([]by
 // GetEigenDAStore ...
 func (r *Router) GetEigenDAStore() GeneratedKeyStore {
 	return r.eigenda
-}
-
-// GetS3Store ...
-func (r *Router) GetS3Store() PrecomputedKeyStore {
-	return r.s3
-}
-
-// Caches ...
-func (r *Router) Caches() []PrecomputedKeyStore {
-	return r.secondary.Caches()
-}
-
-// Fallbacks ...
-func (r *Router) Fallbacks() []PrecomputedKeyStore {
-	return r.secondary.Fallbacks()
 }

@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/client"
+	"github.com/Layr-Labs/eigenda-proxy/metrics"
+	"github.com/Layr-Labs/eigenda-proxy/store"
 
 	"github.com/Layr-Labs/eigenda-proxy/e2e"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
@@ -349,10 +351,13 @@ func TestProxyServerCaching(t *testing.T) {
 	require.Equal(t, testPreimage, preimage)
 
 	// ensure that read was from cache
-	val, err := ts.MetricPoller.Poll("secondary.requests_total")
-	require.NoError(t, err)
+	labels := metrics.BuildSecondaryCountLabels(store.S3BackendType.String(), http.MethodGet, "success")
 
-	println(val)
+	ms, err := ts.MetricPoller.PollMetricsWithRetry(metrics.SecondaryRequestStatuses, labels, 5)
+	require.NoError(t, err)
+	require.Len(t, ms, 1)
+
+	require.True(t, ms[0].Count > 0)
 
 	if useMemory() { // ensure that eigenda was not read from
 		memStats := ts.Server.GetEigenDAStats()
@@ -393,12 +398,14 @@ func TestProxyServerCachingWithRedis(t *testing.T) {
 	require.Equal(t, testPreimage, preimage)
 
 	// ensure that read was from cache
-	// redStats, err := ts.Server.GetStoreStats(store.RedisBackendType)
-	// require.NoError(t, err)
+	labels := metrics.BuildSecondaryCountLabels(store.RedisBackendType.String(), http.MethodGet, "success")
+	ms, err := ts.MetricPoller.PollMetrics(metrics.SecondaryRequestStatuses, labels)
+	require.NoError(t, err)
+	require.NotEmpty(t, ms)
+	require.Len(t, ms, 1)
+	require.True(t, ms[0].Count >= 1)
 
-	// require.Equal(t, 1, redStats.Reads)
-	// require.Equal(t, 1, redStats.Entries)
-
+	// TODO: Add metrics for EigenDA dispersal/retrieval
 	if useMemory() { // ensure that eigenda was not read from
 		memStats := ts.Server.GetEigenDAStats()
 		require.Equal(t, 0, memStats.Reads)
@@ -420,6 +427,7 @@ func TestProxyServerReadFallback(t *testing.T) {
 
 	t.Parallel()
 
+	// setup server with S3 as a fallback option
 	testCfg := e2e.TestConfig(useMemory())
 	testCfg.UseS3Fallback = true
 	testCfg.Expiration = time.Millisecond * 1
@@ -447,11 +455,16 @@ func TestProxyServerReadFallback(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, testPreimage, preimage)
 
-	// ensure that read was from fallback target location (i.e, S3 for this test)
-	// s3Stats := ts.Server.GetS3Stats()
-	// require.Equal(t, 1, s3Stats.Reads)
-	// require.Equal(t, 1, s3Stats.Entries)
+	labels := metrics.BuildSecondaryCountLabels(store.S3BackendType.String(), http.MethodGet, "success")
 
+	ms, err := ts.MetricPoller.PollMetricsWithRetry(metrics.SecondaryRequestStatuses, labels, 5)
+	require.NoError(t, err)
+	require.NotEmpty(t, ms)
+	require.Len(t, ms, 1)
+
+	require.True(t, ms[0].Count > 0)
+
+	// TODO - remove this in favor of metrics sampling
 	if useMemory() { // ensure that an eigenda read was attempted with zero data available
 		memStats := ts.Server.GetEigenDAStats()
 		require.Equal(t, 1, memStats.Reads)

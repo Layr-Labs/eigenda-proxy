@@ -69,6 +69,7 @@ func WithMetrics(
 		if err != nil {
 			var metaErr MetaError
 			if errors.As(err, &metaErr) {
+				// TODO: Figure out why status is defaulting to ""
 				recordDur(w.Header().Get("status"), string(metaErr.Meta.Mode), string(metaErr.Meta.CertVersion))
 			} else {
 				recordDur(w.Header().Get("status"), string("NoCommitmentMode"), string("NoCertVersion"))
@@ -76,7 +77,7 @@ func WithMetrics(
 			return err
 		}
 		// we assume that every route will set the status header
-		recordDur(w.Header().Get("status"), string(meta.Mode), string(meta.CertVersion))
+		recordDur(w.Header().Get("status"), string(meta.Mode), strconv.Itoa(int(meta.CertVersion)))
 		return nil
 	}
 }

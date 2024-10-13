@@ -54,8 +54,6 @@ type Metrics struct {
 
 	registry *prometheus.Registry
 	factory  metrics.Factory
-
-	address string
 }
 
 var _ Metricer = (*Metrics)(nil)
@@ -91,7 +89,7 @@ func NewMetrics(subsystem string) *Metrics {
 			Name:      "requests_total",
 			Help:      "Total requests to the HTTP server",
 		}, []string{
-			"method", "status", "commitment_mode", "DA_cert_version",
+			"method", "status", "commitment_mode", "cert_version",
 		}),
 		HTTPServerBadRequestHeader: factory.NewCounterVec(prometheus.CounterOpts{
 			Namespace: namespace,
@@ -149,7 +147,7 @@ func (m *Metrics) RecordUp() {
 // RecordRPCServerRequest is a helper method to record an incoming HTTP request.
 // It bumps the requests metric, and tracks how long it takes to serve a response,
 // including the HTTP status code.
-func (m *Metrics) RecordRPCServerRequest(method string) func(status string, mode string, ver string) {
+func (m *Metrics) RecordRPCServerRequest(method string) func(status, mode, ver string) {
 	// we don't want to track the status code on the histogram because that would
 	// create a huge number of labels, and cost a lot on cloud hosted services
 	timer := prometheus.NewTimer(m.HTTPServerRequestDurationSeconds.WithLabelValues(method))
@@ -157,10 +155,6 @@ func (m *Metrics) RecordRPCServerRequest(method string) func(status string, mode
 		m.HTTPServerRequestsTotal.WithLabelValues(method, status, mode, ver).Inc()
 		timer.ObserveDuration()
 	}
-}
-
-func (m *Metrics) Address() string {
-	return m.address
 }
 
 // RecordSecondaryPut records a secondary put/get operation.
@@ -171,50 +165,22 @@ func (m *Metrics) RecordSecondaryRequest(bt string, method string) func(status s
 		m.SecondaryRequestsTotal.WithLabelValues(bt, method, status).Inc()
 		timer.ObserveDuration()
 	}
-
 }
 
-// FindRandomOpenPort returns a random open port
-func FindRandomOpenPort() (int, error) {
-	// Listen on a random port
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		return 0, fmt.Errorf("failed to find open port: %w", err)
-	}
-	defer listener.Close()
-
-	// Get the assigned address, which includes the port
-	addr := listener.Addr().(*net.TCPAddr)
-	return addr.Port, nil
-}
-
-// StartServer starts the metrics server on the given hostname and port.
 // StartServer starts the metrics server on the given hostname and port.
 // If port is 0, it automatically assigns an available port and returns the actual port.
 func (m *Metrics) StartServer(hostname string, port int) (*ophttp.HTTPServer, error) {
-	// Create a listener with the provided host and port. If port is 0, the system will assign one.
-	if port == 0 {
-		randomPort, err := FindRandomOpenPort()
-		if err != nil {
-			return nil, fmt.Errorf("failed to find open port: %w", err)
-		}
-		port =  randomPort
-	}
-	m.address = net.JoinHostPort(hostname, strconv.Itoa(port))
+	address := net.JoinHostPort(hostname, strconv.Itoa(port))
 
-
-	// Set up Prometheus metrics handler
 	h := promhttp.InstrumentMetricHandler(
 		m.registry, promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{}),
 	)
-	
-	// Start the HTTP server using the listener, so we can control the actual port
-	server, err := ophttp.StartHTTPServer(m.address, h)
+
+	server, err := ophttp.StartHTTPServer(address, h)
 	if err != nil {
-		return nil, fmt.Errorf("failed to start HTTP server: %v", err)
+		return nil, fmt.Errorf("failed to start HTTP server: %w", err)
 	}
 
-	// Return the actual port the server is bound to
 	return server, nil
 }
 
