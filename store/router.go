@@ -123,8 +123,8 @@ func (r *Router) Put(ctx context.Context, cm commitments.CommitmentMode, key, va
 		return nil, err
 	}
 
-	if r.secondary.Enabled() {
-		r.secondary.Topic() <- PutNotify{
+	if r.secondary.Enabled() { // publish put notification to secondary's subscription on PutNotification topic
+		r.secondary.Subscription() <- PutNotify{
 			Commitment: commit,
 			Value:      value,
 		}

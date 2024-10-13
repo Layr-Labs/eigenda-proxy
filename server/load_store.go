@@ -91,7 +91,7 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger, m metri
 	// create EigenDA backend store
 	var eigenDA store.GeneratedKeyStore
 	if cfg.EigenDAConfig.MemstoreEnabled {
-		log.Info("Using mem-store backend for EigenDA")
+		log.Info("Using memstore backend for EigenDA")
 		eigenDA, err = memstore.New(ctx, verifier, log, cfg.EigenDAConfig.MemstoreConfig)
 	} else {
 		var client *clients.EigenDAClient
@@ -120,14 +120,12 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger, m metri
 	// create secondary storage router
 	fallbacks := populateTargets(cfg.EigenDAConfig.FallbackTargets, s3Store, redisStore)
 	caches := populateTargets(cfg.EigenDAConfig.CacheTargets, s3Store, redisStore)
-	secondary, err := store.NewSecondaryRouter(log, m, caches, fallbacks)
-	if err != nil {
-		return nil, err
-	}
+	secondary := store.NewSecondaryRouter(log, m, caches, fallbacks)
 
 	if secondary.Enabled() { // only spin-up go routines if secondary storage is enabled
-		log.Debug("Starting secondary stream processing routines")
-		go secondary.SubscribeToPutNotif(ctx)
+		// NOTE: in the future the number of threads could be made configurable via env
+		log.Debug("Starting secondary write loop")
+		go secondary.WriteLoop(ctx)
 	}
 
 	log.Info("Creating storage router", "eigenda backend type", eigenDA != nil, "s3 backend type", s3Store != nil)

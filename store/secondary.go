@@ -13,15 +13,13 @@ import (
 )
 
 type ISecondary interface {
-	Fallbacks() []PrecomputedKeyStore
-	Caches() []PrecomputedKeyStore
 	Enabled() bool
-	Topic() chan<- PutNotify
+	Subscription() chan<- PutNotify
 	CachingEnabled() bool
 	FallbackEnabled() bool
 	HandleRedundantWrites(ctx context.Context, commitment []byte, value []byte) error
 	MultiSourceRead(context.Context, []byte, bool, func([]byte, []byte) error) ([]byte, error)
-	SubscribeToPutNotif(context.Context)
+	WriteLoop(context.Context)
 }
 
 type PutNotify struct {
@@ -31,29 +29,29 @@ type PutNotify struct {
 
 // SecondaryRouter ... routing abstraction for secondary storage backends
 type SecondaryRouter struct {
-	stream chan PutNotify
-	log    log.Logger
-	m      metrics.Metricer
+	log log.Logger
+	m   metrics.Metricer
 
 	caches    []PrecomputedKeyStore
 	fallbacks []PrecomputedKeyStore
 
-	verifyLock sync.RWMutex
+	verifyLock   sync.RWMutex
+	subscription chan PutNotify
 }
 
 // NewSecondaryRouter ... creates a new secondary storage router
-func NewSecondaryRouter(log log.Logger, m metrics.Metricer, caches []PrecomputedKeyStore, fallbacks []PrecomputedKeyStore) (ISecondary, error) {
+func NewSecondaryRouter(log log.Logger, m metrics.Metricer, caches []PrecomputedKeyStore, fallbacks []PrecomputedKeyStore) ISecondary {
 	return &SecondaryRouter{
-		stream:    make(chan PutNotify),
-		log:       log,
-		m:         m,
-		caches:    caches,
-		fallbacks: fallbacks,
-	}, nil
+		subscription: make(chan PutNotify), // unbuffering channel is critical to ensure that secondary bottlenecks don't impact /put latency for eigenda blob dispersals
+		log:          log,
+		m:            m,
+		caches:       caches,
+		fallbacks:    fallbacks,
+	}
 }
 
-func (r *SecondaryRouter) Topic() chan<- PutNotify {
-	return r.stream
+func (r *SecondaryRouter) Subscription() chan<- PutNotify {
+	return r.subscription
 }
 
 func (r *SecondaryRouter) Enabled() bool {
@@ -70,9 +68,6 @@ func (r *SecondaryRouter) FallbackEnabled() bool {
 
 // handleRedundantWrites ... writes to both sets of backends (i.e, fallback, cache)
 // and returns an error if NONE of them succeed
-// NOTE: multi-target set writes are done at once to avoid re-invocation of the same write function at the same
-// caller step for different target sets vs. reading which is done conditionally to segment between a cached read type
-// vs a fallback read type
 func (r *SecondaryRouter) HandleRedundantWrites(ctx context.Context, commitment []byte, value []byte) error {
 	sources := r.caches
 	sources = append(sources, r.fallbacks...)
@@ -100,16 +95,18 @@ func (r *SecondaryRouter) HandleRedundantWrites(ctx context.Context, commitment 
 	return nil
 }
 
-func (r *SecondaryRouter) SubscribeToPutNotif(ctx context.Context) {
+// WriteLoop ... waits for notifications published to subscription channel to make backend writes
+func (r *SecondaryRouter) WriteLoop(ctx context.Context) {
 	for {
 		select {
-		case notif := <-r.stream:
+		case notif := <-r.subscription:
 			err := r.HandleRedundantWrites(context.Background(), notif.Commitment, notif.Value)
 			if err != nil {
 				r.log.Error("Failed to write to redundant targets", "err", err)
 			}
 
 		case <-ctx.Done():
+			r.log.Debug("Terminating secondary event loop")
 			return
 		}
 	}
@@ -156,12 +153,4 @@ func (r *SecondaryRouter) MultiSourceRead(ctx context.Context, commitment []byte
 		return data, nil
 	}
 	return nil, errors.New("no data found in any redundant backend")
-}
-
-func (r *SecondaryRouter) Fallbacks() []PrecomputedKeyStore {
-	return r.fallbacks
-}
-
-func (r *SecondaryRouter) Caches() []PrecomputedKeyStore {
-	return r.caches
 }
