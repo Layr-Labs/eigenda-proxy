@@ -18,8 +18,3 @@ func (me MetaError) Error() string {
 		me.Meta.Mode,
 		me.Meta.CertVersion)
 }
-
-// NewMetaError creates a new MetaError
-func NewMetaError(err error, meta commitments.CommitmentMeta) MetaError {
-	return MetaError{Err: err, Meta: meta}
-}
