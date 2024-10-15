@@ -46,10 +46,30 @@ func (svr *Server) registerRoutes(r *mux.Router) {
 			http.Error(w, fmt.Sprintf("unsupported commitment type %s", commitType), http.StatusBadRequest)
 		},
 	)
-	// we need to handle both: see https://github.com/ethereum-optimism/optimism/pull/12081
-	// /put is for generic commitments, and /put/ for keccak256 commitments
-	// TODO: we should probably separate their handlers?
-	// r.HandleFunc("/put", WithLogging(WithMetrics(svr.handlePut, svr.m), svr.log)).Methods("POST")
-	// r.HandleFunc("/put/", WithLogging(WithMetrics(svr.handlePut, svr.m), svr.log)).Methods("POST")
+
+	subrouterPOST := r.Methods("POST").PathPrefix("/put").Subrouter()
+	// simple commitments (for nitro)
+	subrouterPOST.HandleFunc("", // commitment is calculated by the server using the body data
+		withLogging(withMetrics(svr.handlePutSimpleCommitment, svr.m, commitments.SimpleCommitmentMode), svr.log),
+	).Queries("commitment_mode", "simple")
+	// op keccak256 commitments (write to S3)
+	subrouterPOST.HandleFunc("/"+
+		"{optional_prefix:(?:0x)?}"+ // commitments can be prefixed with 0x
+		// TODO: do we need this 0x00 byte? keccak commitments are the only ones that have anything after /put/
+		"{commit_type_byte_hex:00}"+ // 00 for keccak256 commitments
+		// TODO: should these be present..?? README says they should but server_test didn't have them
+		// "{da_layer_byte:[0-9a-fA-F]{2}}"+ // should always be 0x00 for eigenDA but we let others through to return a 404
+		// "{version_byte_hex:[0-9a-fA-F]{2}}"+ // should always be 0x00 for now but we let others through to return a 404
+		"{raw_commitment_hex}",
+		withLogging(withMetrics(svr.handlePutOPKeccakCommitment, svr.m, commitments.OptimismKeccak), svr.log),
+	)
+	// op generic commitments (write to EigenDA)
+	subrouterPOST.HandleFunc("", // commitment is calculated by the server using the body data
+		withLogging(withMetrics(svr.handlePutOPGenericCommitment, svr.m, commitments.OptimismGeneric), svr.log),
+	)
+	subrouterPOST.HandleFunc("/", // commitment is calculated by the server using the body data
+		withLogging(withMetrics(svr.handlePutOPGenericCommitment, svr.m, commitments.OptimismGeneric), svr.log),
+	)
+
 	r.HandleFunc("/health", withLogging(svr.handleHealth, svr.log)).Methods("GET")
 }

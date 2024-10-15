@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"path"
 
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/store"
@@ -18,6 +17,10 @@ func (svr *Server) handleHealth(w http.ResponseWriter, _ *http.Request) error {
 	w.WriteHeader(http.StatusOK)
 	return nil
 }
+
+// =================================================================================================
+// GET ROUTES
+// =================================================================================================
 
 func (svr *Server) handleGetSimpleCommitment(w http.ResponseWriter, r *http.Request) error {
 	versionByte, err := parseVersionByte(r)
@@ -111,22 +114,56 @@ func (svr *Server) handleGetShared(ctx context.Context, w http.ResponseWriter, c
 	return nil
 }
 
-// handlePut handles the PUT request for commitments.
-// Note: even when an error is returned, the commitment meta is still returned,
-// because it is needed for metrics (see the WithMetrics middleware).
-// TODO: we should change this behavior and instead use a custom error that contains the commitment meta.
-func (svr *Server) handlePut(w http.ResponseWriter, r *http.Request) (commitments.CommitmentMeta, error) {
-	meta, err := readCommitmentMeta(r)
-	if err != nil {
-		err = fmt.Errorf("invalid commitment mode: %w", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return commitments.CommitmentMeta{}, err
-	}
-	// ReadCommitmentMeta function invoked inside HandlePut will not return a valid certVersion
-	// Current simple fix is using the hardcoded default value of 0 (also the only supported value)
-	//TODO: smarter decode needed when there's more than one version
-	meta.CertVersion = byte(commitments.CertV0)
+// =================================================================================================
+// PUT ROUTES
+// =================================================================================================
 
+func (svr *Server) handlePutSimpleCommitment(w http.ResponseWriter, r *http.Request) error {
+	svr.log.Info("Processing simple commitment")
+	commitmentMeta := commitments.CommitmentMeta{
+		Mode:        commitments.SimpleCommitmentMode,
+		CertVersion: byte(commitments.CertV0), // TODO: hardcoded for now
+	}
+	return svr.handlePutShared(w, r, nil, commitmentMeta)
+}
+
+// handleGetOPKeccakCommitment handles the GET request for optimism keccak commitments.
+func (svr *Server) handlePutOPKeccakCommitment(w http.ResponseWriter, r *http.Request) error {
+	// TODO: do we use a version byte in OPKeccak commitments? README seems to say so, but server_test didn't
+	// versionByte, err := parseVersionByte(r)
+	// if err != nil {
+	// 	err = fmt.Errorf("error parsing version byte: %w", err)
+	// 	http.Error(w, err.Error(), http.StatusBadRequest)
+	// 	return err
+	// }
+	commitmentMeta := commitments.CommitmentMeta{
+		Mode:        commitments.OptimismKeccak,
+		CertVersion: byte(commitments.CertV0),
+	}
+
+	rawCommitmentHex, ok := mux.Vars(r)["raw_commitment_hex"]
+	if !ok {
+		return fmt.Errorf("commitment not found in path: %s", r.URL.Path)
+	}
+	commitment, err := hex.DecodeString(rawCommitmentHex)
+	if err != nil {
+		return fmt.Errorf("failed to decode commitment %s: %w", rawCommitmentHex, err)
+	}
+
+	svr.log.Info("Processing op keccak commitment", "commitment", rawCommitmentHex, "commitmentMeta", commitmentMeta)
+	return svr.handlePutShared(w, r, commitment, commitmentMeta)
+}
+
+func (svr *Server) handlePutOPGenericCommitment(w http.ResponseWriter, r *http.Request) error {
+	svr.log.Info("Processing simple commitment")
+	commitmentMeta := commitments.CommitmentMeta{
+		Mode:        commitments.OptimismGeneric,
+		CertVersion: byte(commitments.CertV0), // TODO: hardcoded for now
+	}
+	return svr.handlePutShared(w, r, nil, commitmentMeta)
+}
+
+func (svr *Server) handlePutShared(w http.ResponseWriter, r *http.Request, comm []byte, meta commitments.CommitmentMeta) error {
 	input, err := io.ReadAll(r.Body)
 	if err != nil {
 		err = MetaError{
@@ -134,22 +171,7 @@ func (svr *Server) handlePut(w http.ResponseWriter, r *http.Request) (commitment
 			Meta: meta,
 		}
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		return commitments.CommitmentMeta{}, err
-	}
-
-	key := path.Base(r.URL.Path)
-	var comm []byte
-
-	if len(key) > 0 && key != Put { // commitment key already provided (keccak256)
-		comm, err = commitments.StringToDecodedCommitment(key, meta.Mode)
-		if err != nil {
-			err = MetaError{
-				Err:  fmt.Errorf("failed to decode commitment from key %v (commitment mode %v): %w", key, meta.Mode, err),
-				Meta: meta,
-			}
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return commitments.CommitmentMeta{}, err
-		}
+		return err
 	}
 
 	commitment, err := svr.router.Put(r.Context(), meta.Mode, comm, input)
@@ -165,7 +187,7 @@ func (svr *Server) handlePut(w http.ResponseWriter, r *http.Request) (commitment
 		} else {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
-		return commitments.CommitmentMeta{}, err
+		return err
 	}
 
 	responseCommit, err := commitments.EncodeCommitment(commitment, meta.Mode)
@@ -175,7 +197,7 @@ func (svr *Server) handlePut(w http.ResponseWriter, r *http.Request) (commitment
 			Meta: meta,
 		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return commitments.CommitmentMeta{}, err
+		return err
 	}
 
 	svr.log.Info(fmt.Sprintf("response commitment: %x\n", responseCommit))
@@ -183,5 +205,5 @@ func (svr *Server) handlePut(w http.ResponseWriter, r *http.Request) (commitment
 	if meta.Mode != commitments.OptimismKeccak {
 		svr.writeResponse(w, responseCommit)
 	}
-	return meta, nil
+	return nil
 }

@@ -7,15 +7,12 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"path"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/store"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/gorilla/mux"
 )
@@ -114,89 +111,6 @@ func (svr *Server) Port() int {
 	_, portStr, _ := net.SplitHostPort(svr.listener.Addr().String())
 	port, _ := strconv.Atoi(portStr)
 	return port
-}
-
-// Read both commitment mode and version
-func readCommitmentMeta(r *http.Request) (commitments.CommitmentMeta, error) {
-	// label requests with commitment mode and version
-	ct, err := readCommitmentMode(r)
-	if err != nil {
-		return commitments.CommitmentMeta{}, fmt.Errorf("failed to read commitment mode: %w", err)
-	}
-	if ct == "" {
-		return commitments.CommitmentMeta{}, fmt.Errorf("commitment mode is empty")
-	}
-	cv, err := readCommitmentVersion(r, ct)
-	if err != nil {
-		// default to version 0
-		return commitments.CommitmentMeta{Mode: ct, CertVersion: cv}, err
-	}
-	return commitments.CommitmentMeta{Mode: ct, CertVersion: cv}, nil
-}
-
-func readCommitmentMode(r *http.Request) (commitments.CommitmentMode, error) {
-	query := r.URL.Query()
-	// if commitment mode is provided in the query params, use it
-	// eg. /get/0x123..?commitment_mode=simple
-	// TODO: should we only allow simple commitment to be set in the query params?
-	key := query.Get(CommitmentModeKey)
-	if key != "" {
-		return commitments.StringToCommitmentMode(key)
-	}
-
-	// else, we need to parse the first byte of the commitment
-	commit := path.Base(r.URL.Path)
-	if len(commit) > 0 && commit != Put { // provided commitment in request params (op keccak256)
-		if !strings.HasPrefix(commit, "0x") {
-			commit = "0x" + commit
-		}
-
-		decodedCommit, err := hexutil.Decode(commit)
-		if err != nil {
-			return "", err
-		}
-
-		if len(decodedCommit) < 3 {
-			return "", fmt.Errorf("commitment is too short")
-		}
-
-		switch decodedCommit[0] {
-		case byte(commitments.GenericCommitmentType):
-			return commitments.OptimismGeneric, nil
-
-		case byte(commitments.Keccak256CommitmentType):
-			return commitments.OptimismKeccak, nil
-
-		default:
-			return commitments.SimpleCommitmentMode, fmt.Errorf("unknown commit byte prefix")
-		}
-	}
-	return commitments.OptimismGeneric, nil
-}
-
-func readCommitmentVersion(r *http.Request, mode commitments.CommitmentMode) (byte, error) {
-	commit := path.Base(r.URL.Path)
-	if len(commit) > 0 && commit != Put { // provided commitment in request params (op keccak256)
-		if !strings.HasPrefix(commit, "0x") {
-			commit = "0x" + commit
-		}
-
-		decodedCommit, err := hexutil.Decode(commit)
-		if err != nil {
-			return 0, err
-		}
-
-		if len(decodedCommit) < 3 {
-			return 0, fmt.Errorf("commitment is too short")
-		}
-
-		if mode == commitments.OptimismGeneric || mode == commitments.SimpleCommitmentMode {
-			return decodedCommit[2], nil
-		}
-
-		return decodedCommit[0], nil
-	}
-	return 0, nil
 }
 
 func (svr *Server) GetEigenDAStats() *store.Stats {
