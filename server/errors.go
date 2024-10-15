@@ -18,3 +18,7 @@ func (me MetaError) Error() string {
 		me.Meta.Mode,
 		me.Meta.CertVersion)
 }
+
+func (me MetaError) Unwrap() error {
+	return me.Err
+}

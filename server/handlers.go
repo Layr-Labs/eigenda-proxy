@@ -23,7 +23,7 @@ func (svr *Server) handleHealth(w http.ResponseWriter, _ *http.Request) error {
 // =================================================================================================
 
 func (svr *Server) handleGetSimpleCommitment(w http.ResponseWriter, r *http.Request) error {
-	versionByte, err := parseVersionByte(r)
+	versionByte, err := parseVersionByte(w, r)
 	if err != nil {
 		return fmt.Errorf("error parsing version byte: %w", err)
 	}
@@ -73,7 +73,7 @@ func (svr *Server) handleGetOPKeccakCommitment(w http.ResponseWriter, r *http.Re
 }
 
 func (svr *Server) handleGetOPGenericCommitment(w http.ResponseWriter, r *http.Request) error {
-	versionByte, err := parseVersionByte(r)
+	versionByte, err := parseVersionByte(w, r)
 	if err != nil {
 		return fmt.Errorf("error parsing version byte: %w", err)
 	}

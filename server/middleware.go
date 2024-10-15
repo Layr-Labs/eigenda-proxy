@@ -31,7 +31,7 @@ func withMetrics(
 			return err
 		}
 		// we assume that every route will set the status header
-		versionByte, err := parseVersionByte(r)
+		versionByte, err := parseVersionByte(w, r)
 		if err != nil {
 			return fmt.Errorf("metrics middleware: error parsing version byte: %w", err)
 		}

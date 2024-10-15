@@ -139,7 +139,7 @@ func (svr *Server) GetStoreStats(bt store.BackendType) (*store.Stats, error) {
 	return nil, fmt.Errorf("store not found")
 }
 
-func parseVersionByte(r *http.Request) (byte, error) {
+func parseVersionByte(w http.ResponseWriter, r *http.Request) (byte, error) {
 	vars := mux.Vars(r)
 	// decode version byte
 	versionByteHex, ok := vars["version_byte_hex"]
@@ -157,6 +157,7 @@ func parseVersionByte(r *http.Request) (byte, error) {
 	case byte(commitments.CertV0):
 		return versionByte[0], nil
 	default:
+		http.Error(w, fmt.Sprintf("unsupported version byte %x", versionByte), http.StatusBadRequest)
 		return 0, fmt.Errorf("unsupported version byte %x", versionByte)
 	}
 }
