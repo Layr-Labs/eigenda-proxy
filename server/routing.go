@@ -9,11 +9,7 @@ import (
 )
 
 func (svr *Server) registerRoutes(r *mux.Router) {
-	r.HandleFunc("/test", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("testtesttest")
-	})
 	subrouterGET := r.Methods("GET").PathPrefix("/get").Subrouter()
-
 	// simple commitments (for nitro)
 	subrouterGET.HandleFunc("/"+
 		"{optional_prefix:(?:0x)?}"+ // commitments can be prefixed with 0x

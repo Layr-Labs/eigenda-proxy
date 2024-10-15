@@ -52,6 +52,7 @@ func withLogging(
 		start := time.Now()
 		err := handleFn(w, r)
 		var metaErr MetaError
+		//nolint:gocritic // ifElseChain is not a good replacement with errors.As
 		if errors.As(err, &metaErr) {
 			log.Info("request", "method", r.Method, "url", r.URL, "duration", time.Since(start),
 				"err", err, "status", w.Header().Get("status"),
