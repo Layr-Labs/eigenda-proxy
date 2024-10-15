@@ -154,7 +154,7 @@ func TestHandleOPCommitments(t *testing.T) {
 			// To add the vars to the context,
 			// we need to create a router through which we can pass the request.
 			r := mux.NewRouter()
-			server.RegisterRoutes(r)
+			server.registerRoutes(r)
 			r.ServeHTTP(rec, req)
 
 			require.Equal(t, tt.expectedCode, rec.Code)
