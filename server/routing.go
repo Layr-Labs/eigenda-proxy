@@ -14,7 +14,7 @@ func (svr *Server) registerRoutes(r *mux.Router) {
 	subrouterGET.HandleFunc("/"+
 		"{optional_prefix:(?:0x)?}"+ // commitments can be prefixed with 0x
 		"{version_byte_hex:[0-9a-fA-F]{2}}"+ // should always be 0x00 for now but we let others through to return a 404
-		"{raw_commitment_hex}",
+		"{raw_commitment_hex:[0-9a-fA-F]*}",
 		withLogging(withMetrics(svr.handleGetSimpleCommitment, svr.m, commitments.SimpleCommitmentMode), svr.log),
 	).Queries("commitment_mode", "simple")
 	// op keccak256 commitments (write to S3)
@@ -41,11 +41,11 @@ func (svr *Server) registerRoutes(r *mux.Router) {
 		"{optional_prefix:(?:0x)?}"+ // commitments can be prefixed with 0x
 		"{commit_type_byte_hex:[0-9a-fA-F]{2}}",
 		func(w http.ResponseWriter, r *http.Request) {
-			svr.log.Info("unrecognized commitment type", "commit_type_byte_hex", mux.Vars(r)["commit_type_byte_hex"])
+			svr.log.Info("unsupported commitment type", "commit_type_byte_hex", mux.Vars(r)["commit_type_byte_hex"])
 			commitType := mux.Vars(r)["commit_type_byte_hex"]
 			http.Error(w, fmt.Sprintf("unsupported commitment type %s", commitType), http.StatusBadRequest)
 		},
-	)
+	).MatcherFunc(notCommitmentModeSimple)
 
 	subrouterPOST := r.Methods("POST").PathPrefix("/put").Subrouter()
 	// simple commitments (for nitro)
@@ -72,4 +72,9 @@ func (svr *Server) registerRoutes(r *mux.Router) {
 	)
 
 	r.HandleFunc("/health", withLogging(svr.handleHealth, svr.log)).Methods("GET")
+}
+
+func notCommitmentModeSimple(r *http.Request, _ *mux.RouteMatch) bool {
+	commitmentMode := r.URL.Query().Get("commitment_mode")
+	return commitmentMode == "" || commitmentMode != "simple"
 }
