@@ -26,7 +26,7 @@ func withMetrics(
 			if errors.As(err, &metaErr) {
 				recordDur(w.Header().Get("status"), string(metaErr.Meta.Mode), string(metaErr.Meta.CertVersion))
 			} else {
-				recordDur(w.Header().Get("status"), string("NoCommitmentMode"), string("NoCertVersion"))
+				recordDur(w.Header().Get("status"), string("unknown"), string("unknown"))
 			}
 			return err
 		}
