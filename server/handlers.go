@@ -22,6 +22,7 @@ func (svr *Server) handleHealth(w http.ResponseWriter, _ *http.Request) error {
 // GET ROUTES
 // =================================================================================================
 
+// handleGetSimpleCommitment handles the GET request for simple commitments.
 func (svr *Server) handleGetSimpleCommitment(w http.ResponseWriter, r *http.Request) error {
 	versionByte, err := parseVersionByte(w, r)
 	if err != nil {
@@ -72,6 +73,7 @@ func (svr *Server) handleGetOPKeccakCommitment(w http.ResponseWriter, r *http.Re
 	return svr.handleGetShared(r.Context(), w, commitment, commitmentMeta)
 }
 
+// handleGetOPGenericCommitment handles the GET request for optimism generic commitments.
 func (svr *Server) handleGetOPGenericCommitment(w http.ResponseWriter, r *http.Request) error {
 	versionByte, err := parseVersionByte(w, r)
 	if err != nil {
@@ -118,6 +120,7 @@ func (svr *Server) handleGetShared(ctx context.Context, w http.ResponseWriter, c
 // PUT ROUTES
 // =================================================================================================
 
+// handlePutSimpleCommitment handles the POST request for simple commitments.
 func (svr *Server) handlePutSimpleCommitment(w http.ResponseWriter, r *http.Request) error {
 	svr.log.Info("Processing simple commitment")
 	commitmentMeta := commitments.CommitmentMeta{
@@ -127,7 +130,7 @@ func (svr *Server) handlePutSimpleCommitment(w http.ResponseWriter, r *http.Requ
 	return svr.handlePutShared(w, r, nil, commitmentMeta)
 }
 
-// handleGetOPKeccakCommitment handles the GET request for optimism keccak commitments.
+// handlePutOPKeccakCommitment handles the POST request for optimism keccak commitments.
 func (svr *Server) handlePutOPKeccakCommitment(w http.ResponseWriter, r *http.Request) error {
 	// TODO: do we use a version byte in OPKeccak commitments? README seems to say so, but server_test didn't
 	// versionByte, err := parseVersionByte(r)
@@ -154,6 +157,7 @@ func (svr *Server) handlePutOPKeccakCommitment(w http.ResponseWriter, r *http.Re
 	return svr.handlePutShared(w, r, commitment, commitmentMeta)
 }
 
+// handlePutOPGenericCommitment handles the POST request for optimism generic commitments.
 func (svr *Server) handlePutOPGenericCommitment(w http.ResponseWriter, r *http.Request) error {
 	svr.log.Info("Processing simple commitment")
 	commitmentMeta := commitments.CommitmentMeta{
