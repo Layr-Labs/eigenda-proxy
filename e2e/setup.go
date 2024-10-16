@@ -48,7 +48,7 @@ var (
 )
 
 func init() {
-	err := startMinioContainer()
+	err := startMinIOContainer()
 	if err != nil {
 		panic(err)
 	}
@@ -58,8 +58,8 @@ func init() {
 	}
 }
 
-// startMinioContainer starts a MinIO container and sets the minioEndpoint global variable
-func startMinioContainer() error {
+// startMinIOContainer starts a MinIO container and sets the minioEndpoint global variable
+func startMinIOContainer() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
