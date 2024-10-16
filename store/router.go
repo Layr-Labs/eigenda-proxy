@@ -117,30 +117,28 @@ func (r *Router) Get(ctx context.Context, key []byte, cm commitments.CommitmentM
 
 // Put ... inserts a value into a storage backend based on the commitment mode
 func (r *Router) Put(ctx context.Context, cm commitments.CommitmentMode, key, value []byte) ([]byte, error) {
-	var commit []byte
-	var err error
-
 	switch cm {
 	case commitments.OptimismKeccak: // caching and fallbacks are unsupported for this commitment mode
 		return r.putWithKey(ctx, key, value)
 	case commitments.OptimismGeneric, commitments.SimpleCommitmentMode:
-		commit, err = r.putWithoutKey(ctx, value)
+		commit, err := r.putWithoutKey(ctx, value)
+		if err != nil {
+			return nil, err
+		}
+
+		if r.cacheEnabled() || r.fallbackEnabled() {
+			// FIXME commit here might be nil for OptimismKeccak mode
+			err = r.handleRedundantWrites(ctx, commit, value)
+			if err != nil {
+				log.Error("Failed to write to redundant backends", "err", err)
+			}
+		}
+
+		return commit, nil
 	default:
 		return nil, fmt.Errorf("unknown commitment mode")
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
-	if r.cacheEnabled() || r.fallbackEnabled() {
-		err = r.handleRedundantWrites(ctx, commit, value)
-		if err != nil {
-			log.Error("Failed to write to redundant backends", "err", err)
-		}
-	}
-
-	return commit, nil
 }
 
 // handleRedundantWrites ... writes to both sets of backends (i.e, fallback, cache)
