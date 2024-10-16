@@ -56,7 +56,7 @@ func (svr *Server) registerRoutes(r *mux.Router) {
 	subrouterPOST := r.Methods("POST").PathPrefix("/put").Subrouter()
 	// simple commitments (for nitro)
 	subrouterPOST.HandleFunc("", // commitment is calculated by the server using the body data
-		withLogging(withMetrics(svr.handlePutSimpleCommitment, svr.m, commitments.SimpleCommitmentMode), svr.log),
+		withLogging(withMetrics(svr.handlePostSimpleCommitment, svr.m, commitments.SimpleCommitmentMode), svr.log),
 	).Queries("commitment_mode", "simple")
 	// op keccak256 commitments (write to S3)
 	subrouterPOST.HandleFunc("/"+
@@ -67,14 +67,14 @@ func (svr *Server) registerRoutes(r *mux.Router) {
 		// but perhaps we should (in case we want a v2 to use another hash for eg?)
 		// "{version_byte_hex:[0-9a-fA-F]{2}}"+ // should always be 0x00 for now but we let others through to return a 404
 		"{"+routingVarNameRawCommitmentHex+"}",
-		withLogging(withMetrics(svr.handlePutOPKeccakCommitment, svr.m, commitments.OptimismKeccak), svr.log),
+		withLogging(withMetrics(svr.handlePostOPKeccakCommitment, svr.m, commitments.OptimismKeccak), svr.log),
 	)
 	// op generic commitments (write to EigenDA)
 	subrouterPOST.HandleFunc("", // commitment is calculated by the server using the body data
-		withLogging(withMetrics(svr.handlePutOPGenericCommitment, svr.m, commitments.OptimismGeneric), svr.log),
+		withLogging(withMetrics(svr.handlePostOPGenericCommitment, svr.m, commitments.OptimismGeneric), svr.log),
 	)
 	subrouterPOST.HandleFunc("/", // commitment is calculated by the server using the body data
-		withLogging(withMetrics(svr.handlePutOPGenericCommitment, svr.m, commitments.OptimismGeneric), svr.log),
+		withLogging(withMetrics(svr.handlePostOPGenericCommitment, svr.m, commitments.OptimismGeneric), svr.log),
 	)
 
 	r.HandleFunc("/health", withLogging(svr.handleHealth, svr.log)).Methods("GET")

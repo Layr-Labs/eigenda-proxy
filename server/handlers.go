@@ -69,7 +69,7 @@ func (svr *Server) handleGetOPKeccakCommitment(w http.ResponseWriter, r *http.Re
 		return fmt.Errorf("failed to decode commitment %s: %w", rawCommitmentHex, err)
 	}
 
-	svr.log.Info("Processing op keccak commitment", "commitment", rawCommitmentHex, "commitmentMeta", commitmentMeta)
+	svr.log.Info("Processing op keccak commitment GET", "commitment", rawCommitmentHex, "commitmentMeta", commitmentMeta)
 	return svr.handleGetShared(r.Context(), w, commitment, commitmentMeta)
 }
 
@@ -93,7 +93,7 @@ func (svr *Server) handleGetOPGenericCommitment(w http.ResponseWriter, r *http.R
 		return fmt.Errorf("failed to decode commitment %s: %w", rawCommitmentHex, err)
 	}
 
-	svr.log.Info("Processing op keccak commitment", "commitment", rawCommitmentHex, "commitmentMeta", commitmentMeta)
+	svr.log.Info("Processing op generic commitment GET", "commitment", rawCommitmentHex, "commitmentMeta", commitmentMeta)
 	return svr.handleGetShared(r.Context(), w, commitment, commitmentMeta)
 }
 
@@ -117,21 +117,21 @@ func (svr *Server) handleGetShared(ctx context.Context, w http.ResponseWriter, c
 }
 
 // =================================================================================================
-// PUT ROUTES
+// POST ROUTES
 // =================================================================================================
 
-// handlePutSimpleCommitment handles the POST request for simple commitments.
-func (svr *Server) handlePutSimpleCommitment(w http.ResponseWriter, r *http.Request) error {
+// handlePostSimpleCommitment handles the POST request for simple commitments.
+func (svr *Server) handlePostSimpleCommitment(w http.ResponseWriter, r *http.Request) error {
 	svr.log.Info("Processing simple commitment")
 	commitmentMeta := commitments.CommitmentMeta{
 		Mode:        commitments.SimpleCommitmentMode,
 		CertVersion: byte(commitments.CertV0), // TODO: hardcoded for now
 	}
-	return svr.handlePutShared(w, r, nil, commitmentMeta)
+	return svr.handlePostShared(w, r, nil, commitmentMeta)
 }
 
-// handlePutOPKeccakCommitment handles the POST request for optimism keccak commitments.
-func (svr *Server) handlePutOPKeccakCommitment(w http.ResponseWriter, r *http.Request) error {
+// handlePostOPKeccakCommitment handles the POST request for optimism keccak commitments.
+func (svr *Server) handlePostOPKeccakCommitment(w http.ResponseWriter, r *http.Request) error {
 	// TODO: do we use a version byte in OPKeccak commitments? README seems to say so, but server_test didn't
 	// versionByte, err := parseVersionByte(r)
 	// if err != nil {
@@ -153,21 +153,21 @@ func (svr *Server) handlePutOPKeccakCommitment(w http.ResponseWriter, r *http.Re
 		return fmt.Errorf("failed to decode commitment %s: %w", rawCommitmentHex, err)
 	}
 
-	svr.log.Info("Processing op keccak commitment", "commitment", rawCommitmentHex, "commitmentMeta", commitmentMeta)
-	return svr.handlePutShared(w, r, commitment, commitmentMeta)
+	svr.log.Info("Processing op keccak commitment POST", "commitment", rawCommitmentHex, "commitmentMeta", commitmentMeta)
+	return svr.handlePostShared(w, r, commitment, commitmentMeta)
 }
 
-// handlePutOPGenericCommitment handles the POST request for optimism generic commitments.
-func (svr *Server) handlePutOPGenericCommitment(w http.ResponseWriter, r *http.Request) error {
+// handlePostOPGenericCommitment handles the POST request for optimism generic commitments.
+func (svr *Server) handlePostOPGenericCommitment(w http.ResponseWriter, r *http.Request) error {
 	svr.log.Info("Processing simple commitment")
 	commitmentMeta := commitments.CommitmentMeta{
 		Mode:        commitments.OptimismGeneric,
 		CertVersion: byte(commitments.CertV0), // TODO: hardcoded for now
 	}
-	return svr.handlePutShared(w, r, nil, commitmentMeta)
+	return svr.handlePostShared(w, r, nil, commitmentMeta)
 }
 
-func (svr *Server) handlePutShared(w http.ResponseWriter, r *http.Request, comm []byte, meta commitments.CommitmentMeta) error {
+func (svr *Server) handlePostShared(w http.ResponseWriter, r *http.Request, comm []byte, meta commitments.CommitmentMeta) error {
 	input, err := io.ReadAll(r.Body)
 	if err != nil {
 		err = MetaError{
