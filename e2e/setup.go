@@ -47,6 +47,10 @@ var (
 	redisEndpoint = ""
 )
 
+// TODO: we shouldn't start the containers in the init function like this.
+// Need to find a better way to start the containers and set the endpoints.
+// Even better would be for the endpoints not to be global variables injected into the test configs.
+// Starting the containers on init like this also makes it harder to import this file into other tests.
 func init() {
 	err := startMinIOContainer()
 	if err != nil {
