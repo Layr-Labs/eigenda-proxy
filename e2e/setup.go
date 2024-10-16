@@ -58,7 +58,7 @@ func init() {
 	}
 }
 
-// startMinioContainer starts a MinIO container and returns the container instance and its endpoint
+// startMinioContainer starts a MinIO container and sets the minioEndpoint global variable
 func startMinioContainer() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -81,6 +81,7 @@ func startMinioContainer() error {
 	return nil
 }
 
+// startRedisContainer starts a Redis container and sets the redisEndpoint global variable
 func startRedisContainer() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
