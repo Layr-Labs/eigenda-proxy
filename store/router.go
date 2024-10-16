@@ -29,6 +29,7 @@ type Router struct {
 	secondary ISecondary
 }
 
+// NewRouter ... Init
 func NewRouter(eigenda GeneratedKeyStore, s3 PrecomputedKeyStore, l log.Logger,
 	secondary ISecondary) (IRouter, error) {
 	return &Router{
@@ -124,7 +125,7 @@ func (r *Router) Put(ctx context.Context, cm commitments.CommitmentMode, key, va
 	}
 
 	if r.secondary.Enabled() { // publish put notification to secondary's subscription on PutNotification topic
-		r.secondary.Subscription() <- PutNotify{
+		r.secondary.Topic() <- PutNotify{
 			Commitment: commit,
 			Value:      value,
 		}

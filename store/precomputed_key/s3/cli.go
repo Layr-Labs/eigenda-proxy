@@ -1,8 +1,6 @@
 package s3
 
 import (
-	"time"
-
 	"github.com/urfave/cli/v2"
 )
 
@@ -80,13 +78,13 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			EnvVars:  withEnvPrefix(envPrefix, "BACKUP"),
 			Category: category,
 		},
-		&cli.DurationFlag{
-			Name:     TimeoutFlagName,
-			Usage:    "timeout for S3 storage operations (e.g. get, put)",
-			Value:    5 * time.Second,
-			EnvVars:  withEnvPrefix(envPrefix, "TIMEOUT"),
-			Category: category,
-		},
+		// &cli.DurationFlag{
+		// 	Name:     TimeoutFlagName,
+		// 	Usage:    "timeout for S3 storage operations (e.g. get, put)",
+		// 	Value:    5 * time.Second,
+		// 	EnvVars:  withEnvPrefix(envPrefix, "TIMEOUT"),
+		// 	Category: category,
+		// },
 	}
 }
 
@@ -100,6 +98,6 @@ func ReadConfig(ctx *cli.Context) Config {
 		Bucket:          ctx.String(BucketFlagName),
 		Path:            ctx.String(PathFlagName),
 		Backup:          ctx.Bool(BackupFlagName),
-		Timeout:         ctx.Duration(TimeoutFlagName),
+		// Timeout:         ctx.Duration(TimeoutFlagName),
 	}
 }

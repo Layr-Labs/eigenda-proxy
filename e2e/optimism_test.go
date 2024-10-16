@@ -172,7 +172,7 @@ func TestOptimismKeccak256Commitment(gt *testing.T) {
 	labels := metrics.BuildServerRPCLabels("put", "", string(commitments.OptimismKeccak), "0")
 	delete(labels, "method")
 
-	ms, err := proxyTS.MetricPoller.PollCountMetricsWithRetry(metrics.ServerRPCStatuses, labels, 5)
+	ms, err := proxyTS.MetricPoller.PollCountMetricsWithRetry(metrics.ServerRPCStatuses, labels, 20)
 	require.NoError(t, err)
 	require.NotEmpty(t, ms)
 	require.Len(t, ms, 2)
@@ -235,7 +235,7 @@ func TestOptimismGenericCommitment(gt *testing.T) {
 	labels := metrics.BuildServerRPCLabels("put", "", string(commitments.OptimismGeneric), "0")
 	delete(labels, "method")
 
-	ms, err := proxyTS.MetricPoller.PollCountMetricsWithRetry(metrics.ServerRPCStatuses, labels, 5)
+	ms, err := proxyTS.MetricPoller.PollCountMetricsWithRetry(metrics.ServerRPCStatuses, labels, 20)
 	require.NoError(t, err)
 	require.NotEmpty(t, ms)
 	require.Len(t, ms, 2)

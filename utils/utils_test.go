@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Layr-Labs/eigenda-proxy/utils"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseByteAmount(t *testing.T) {
@@ -55,4 +56,13 @@ func TestParseByteAmount(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAtomicRefWithInt(t *testing.T) {
+	expected := 69
+
+	ref := utils.NewAtomicRef[int](expected)
+	actual := ref.Value()
+
+	require.Equal(t, expected, actual)
 }

@@ -9,7 +9,6 @@ import (
 	"io"
 	"path"
 	"strings"
-	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -47,9 +46,10 @@ type Config struct {
 	Bucket          string
 	Path            string
 	Backup          bool
-	Timeout         time.Duration
 }
 
+// Store ... S3 store
+// client safe for concurrent use: https://github.com/minio/minio-go/issues/598#issuecomment-569457863
 type Store struct {
 	cfg              Config
 	client           *minio.Client

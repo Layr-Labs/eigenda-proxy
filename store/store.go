@@ -65,7 +65,6 @@ type Stats struct {
 }
 
 type Store interface {
-
 	// Backend returns the backend type provider of the store.
 	BackendType() BackendType
 	// Verify verifies the given key-value pair.

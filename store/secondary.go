@@ -7,21 +7,32 @@ import (
 	"sync"
 
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
+	"github.com/ethereum-optimism/optimism/op-service/retry"
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/ethereum/go-ethereum/log"
 )
 
+type MetricExpression = string
+
+const (
+	Miss    MetricExpression = "miss"
+	Success MetricExpression = "success"
+	Failed  MetricExpression = "failed"
+)
+
 type ISecondary interface {
 	Enabled() bool
-	Subscription() chan<- PutNotify
+	Topic() chan<- PutNotify
 	CachingEnabled() bool
 	FallbackEnabled() bool
 	HandleRedundantWrites(ctx context.Context, commitment []byte, value []byte) error
 	MultiSourceRead(context.Context, []byte, bool, func([]byte, []byte) error) ([]byte, error)
-	WriteLoop(context.Context)
+	WriteSubscriptionLoop(ctx context.Context)
 }
 
+// PutNotify ... notification received by primary router to perform insertion across
+// secondary storage backends
 type PutNotify struct {
 	Commitment []byte
 	Value      []byte
@@ -35,23 +46,25 @@ type SecondaryRouter struct {
 	caches    []PrecomputedKeyStore
 	fallbacks []PrecomputedKeyStore
 
-	verifyLock   sync.RWMutex
-	subscription chan PutNotify
+	verifyLock sync.RWMutex
+	topic      chan PutNotify
 }
 
 // NewSecondaryRouter ... creates a new secondary storage router
 func NewSecondaryRouter(log log.Logger, m metrics.Metricer, caches []PrecomputedKeyStore, fallbacks []PrecomputedKeyStore) ISecondary {
 	return &SecondaryRouter{
-		subscription: make(chan PutNotify), // unbuffering channel is critical to ensure that secondary bottlenecks don't impact /put latency for eigenda blob dispersals
-		log:          log,
-		m:            m,
-		caches:       caches,
-		fallbacks:    fallbacks,
+		topic:      make(chan PutNotify), // yes channel is un-buffered which dispersing consumption across routines helps alleviate
+		log:        log,
+		m:          m,
+		caches:     caches,
+		fallbacks:  fallbacks,
+		verifyLock: sync.RWMutex{},
 	}
 }
 
-func (r *SecondaryRouter) Subscription() chan<- PutNotify {
-	return r.subscription
+// Topic ...
+func (r *SecondaryRouter) Topic() chan<- PutNotify {
+	return r.topic
 }
 
 func (r *SecondaryRouter) Enabled() bool {
@@ -78,13 +91,17 @@ func (r *SecondaryRouter) HandleRedundantWrites(ctx context.Context, commitment 
 	for _, src := range sources {
 		cb := r.m.RecordSecondaryRequest(src.BackendType().String(), http.MethodPut)
 
-		err := src.Put(ctx, key, value)
+		// for added safety - we retry the insertion 10x times using an exponential backoff
+		_, err := retry.Do[any](ctx, 10, retry.Exponential(),
+			func() (any, error) {
+				return 0, src.Put(ctx, key, value) // this implementation assumes that all secondary clients are thread safe
+			})
 		if err != nil {
 			r.log.Warn("Failed to write to redundant target", "backend", src.BackendType(), "err", err)
-			cb("failure")
+			cb(Failed)
 		} else {
 			successes++
-			cb("success")
+			cb(Success)
 		}
 	}
 
@@ -95,11 +112,11 @@ func (r *SecondaryRouter) HandleRedundantWrites(ctx context.Context, commitment 
 	return nil
 }
 
-// WriteLoop ... waits for notifications published to subscription channel to make backend writes
-func (r *SecondaryRouter) WriteLoop(ctx context.Context) {
+// WriteSubscriptionLoop ... subscribes to put notifications posted to shared topic with primary router
+func (r *SecondaryRouter) WriteSubscriptionLoop(ctx context.Context) {
 	for {
 		select {
-		case notif := <-r.subscription:
+		case notif := <-r.topic:
 			err := r.HandleRedundantWrites(context.Background(), notif.Commitment, notif.Value)
 			if err != nil {
 				r.log.Error("Failed to write to redundant targets", "err", err)
@@ -128,13 +145,13 @@ func (r *SecondaryRouter) MultiSourceRead(ctx context.Context, commitment []byte
 		cb := r.m.RecordSecondaryRequest(src.BackendType().String(), http.MethodGet)
 		data, err := src.Get(ctx, key)
 		if err != nil {
-			cb("failure")
+			cb(Failed)
 			r.log.Warn("Failed to read from redundant target", "backend", src.BackendType(), "err", err)
 			continue
 		}
 
 		if data == nil {
-			cb("miss")
+			cb(Miss)
 			r.log.Debug("No data found in redundant target", "backend", src.BackendType())
 			continue
 		}
@@ -143,13 +160,13 @@ func (r *SecondaryRouter) MultiSourceRead(ctx context.Context, commitment []byte
 		r.verifyLock.Lock()
 		err = verify(commitment, data)
 		if err != nil {
-			cb("failure")
+			cb(Failed)
 			log.Warn("Failed to verify blob", "err", err, "backend", src.BackendType())
 			r.verifyLock.Unlock()
 			continue
 		}
 		r.verifyLock.Unlock()
-		cb("success")
+		cb(Success)
 		return data, nil
 	}
 	return nil, errors.New("no data found in any redundant backend")

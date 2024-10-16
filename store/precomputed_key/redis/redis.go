@@ -19,7 +19,8 @@ type Config struct {
 	Profile  bool
 }
 
-// Store ... Redis storage backend implementation (This not safe for concurrent usage)
+// Store ... Redis storage backend implementation
+// go-redis client is safe for concurrent usage: https://github.com/redis/go-redis/blob/v8.11.5/redis.go#L535-L544
 type Store struct {
 	eviction time.Duration
 

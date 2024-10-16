@@ -125,7 +125,10 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger, m metri
 	if secondary.Enabled() { // only spin-up go routines if secondary storage is enabled
 		// NOTE: in the future the number of threads could be made configurable via env
 		log.Debug("Starting secondary write loop")
-		go secondary.WriteLoop(ctx)
+
+		for i := 0; i < 5; i++ {
+			go secondary.WriteSubscriptionLoop(ctx)
+		}
 	}
 
 	log.Info("Creating storage router", "eigenda backend type", eigenDA != nil, "s3 backend type", s3Store != nil)
