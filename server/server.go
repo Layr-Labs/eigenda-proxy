@@ -142,7 +142,7 @@ func (svr *Server) GetStoreStats(bt store.BackendType) (*store.Stats, error) {
 func parseVersionByte(w http.ResponseWriter, r *http.Request) (byte, error) {
 	vars := mux.Vars(r)
 	// decode version byte
-	versionByteHex, ok := vars["version_byte_hex"]
+	versionByteHex, ok := vars[routingVarNameVersionByteHex]
 	if !ok {
 		return 0, fmt.Errorf("version byte not found in path: %s", r.URL.Path)
 	}
