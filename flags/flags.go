@@ -31,7 +31,7 @@ const (
 	// TODO: change "routing" --> "secondary"
 	FallbackTargetsFlagName = "routing.fallback-targets"
 	CacheTargetsFlagName    = "routing.cache-targets"
-	ConcurrentWriteThreads = "routing.concurrent-write-routines"
+	ConcurrentWriteThreads  = "routing.concurrent-write-routines"
 )
 
 const EnvVarPrefix = "EIGENDA_PROXY"
