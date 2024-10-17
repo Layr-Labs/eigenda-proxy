@@ -22,7 +22,6 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"golang.org/x/exp/rand"
 
-	"github.com/ethereum-optimism/optimism/op-service/httputil"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 
@@ -175,11 +174,10 @@ func TestSuiteConfig(t *testing.T, testCfg *Cfg) server.CLIConfig {
 }
 
 type TestSuite struct {
-	Ctx          context.Context
-	Log          log.Logger
-	Server       *server.Server
-	MetricPoller *metrics.PollerClient
-	MetricSvr    *httputil.HTTPServer
+	Ctx     context.Context
+	Log     log.Logger
+	Server  *server.Server
+	Metrics *metrics.InMemoryMetricer
 }
 
 func CreateTestSuite(t *testing.T, testSuiteCfg server.CLIConfig) (TestSuite, func()) {
@@ -189,8 +187,8 @@ func CreateTestSuite(t *testing.T, testSuiteCfg server.CLIConfig) (TestSuite, fu
 		Color:  true,
 	}).New("role", svcName)
 
+	m := metrics.NewInMemoryMetricer()
 	ctx := context.Background()
-	m := metrics.NewMetrics("default")
 	store, err := server.LoadStoreRouter(
 		ctx,
 		testSuiteCfg,
@@ -205,28 +203,17 @@ func CreateTestSuite(t *testing.T, testSuiteCfg server.CLIConfig) (TestSuite, fu
 	err = proxySvr.Start()
 	require.NoError(t, err)
 
-	metricsSvr, err := m.StartServer(host, 0)
-	t.Log("Starting metrics server...")
-
-	require.NoError(t, err)
-
 	kill := func() {
 		if err := proxySvr.Stop(); err != nil {
 			log.Error("failed to stop proxy server", "err", err)
 		}
-
-		if err := metricsSvr.Stop(context.Background()); err != nil {
-			log.Error("failed to stop metrics server", "err", err)
-		}
 	}
-	log.Info("started metrics server", "addr", metricsSvr.Addr())
 
 	return TestSuite{
-		Ctx:          ctx,
-		Log:          log,
-		Server:       proxySvr,
-		MetricPoller: metrics.NewPoller(fmt.Sprintf("http://%s", metricsSvr.Addr().String())),
-		MetricSvr:    metricsSvr,
+		Ctx:     ctx,
+		Log:     log,
+		Server:  proxySvr,
+		Metrics: m,
 	}, kill
 }
 

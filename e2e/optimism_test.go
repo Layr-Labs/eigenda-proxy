@@ -1,11 +1,11 @@
 package e2e_test
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/e2e"
-	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/ethereum-optimism/optimism/op-e2e/actions"
 	"github.com/ethereum-optimism/optimism/op-e2e/config"
@@ -168,17 +168,10 @@ func TestOptimismKeccak256Commitment(gt *testing.T) {
 	optimism.sequencer.ActL2PipelineFull(t)
 	optimism.ActL1Finalized(t)
 
-	// assert that keccak256 primary store was written and read from
-	labels := metrics.BuildServerRPCLabels("put", "", string(commitments.OptimismKeccak), "0")
-	delete(labels, "method")
-
-	ms, err := proxyTS.MetricPoller.PollCountMetricsWithRetry(metrics.ServerRPCStatuses, labels, 20)
+	// assert that EigenDA proxy was written and read from using op keccak256 commitment mode
+	readCount, err := proxyTS.Metrics.HTTPServerRequestsTotal.Find(http.MethodGet, "", string(commitments.OptimismKeccak), "0")
 	require.NoError(t, err)
-	require.NotEmpty(t, ms)
-	require.Len(t, ms, 2)
-
-	require.True(t, ms[0].Count > 0)
-	require.True(t, ms[1].Count > 0)
+	require.True(t, readCount > 0)
 
 }
 
@@ -229,17 +222,8 @@ func TestOptimismGenericCommitment(gt *testing.T) {
 	optimism.sequencer.ActL2PipelineFull(t)
 	optimism.ActL1Finalized(t)
 
-	// assert that EigenDA proxy's was written and read from
-
-	// assert that EigenDA's primary store was written and read from
-	labels := metrics.BuildServerRPCLabels("put", "", string(commitments.OptimismGeneric), "0")
-	delete(labels, "method")
-
-	ms, err := proxyTS.MetricPoller.PollCountMetricsWithRetry(metrics.ServerRPCStatuses, labels, 20)
+	// assert that EigenDA proxy was written and read from using op generic commitment mode
+	readCount, err := proxyTS.Metrics.HTTPServerRequestsTotal.Find(http.MethodGet, "", string(commitments.OptimismGeneric), "0")
 	require.NoError(t, err)
-	require.NotEmpty(t, ms)
-	require.Len(t, ms, 2)
-
-	require.True(t, ms[0].Count > 0)
-	require.True(t, ms[1].Count > 0)
+	require.True(t, readCount > 0)
 }

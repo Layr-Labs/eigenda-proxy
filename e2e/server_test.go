@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/client"
-	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 
 	"github.com/Layr-Labs/eigenda-proxy/e2e"
@@ -351,13 +350,10 @@ func TestProxyServerCaching(t *testing.T) {
 	require.Equal(t, testPreimage, preimage)
 
 	// ensure that read was from cache
-	labels := metrics.BuildSecondaryCountLabels(store.S3BackendType.String(), http.MethodGet, "success")
 
-	ms, err := ts.MetricPoller.PollCountMetricsWithRetry(metrics.SecondaryRequestStatuses, labels, 20)
+	count, err := ts.Metrics.SecondaryRequestsTotal.Find(store.S3BackendType.String(), http.MethodGet, "success")
 	require.NoError(t, err)
-	require.Len(t, ms, 1)
-
-	require.True(t, ms[0].Count > 0)
+	require.True(t, count > 0)
 
 	if useMemory() { // ensure that eigenda was not read from
 		memStats := ts.Server.GetEigenDAStats()
@@ -398,14 +394,10 @@ func TestProxyServerCachingWithRedis(t *testing.T) {
 	require.Equal(t, testPreimage, preimage)
 
 	// ensure that read was from cache
-	labels := metrics.BuildSecondaryCountLabels(store.RedisBackendType.String(), http.MethodGet, "success")
-	ms, err := ts.MetricPoller.PollCountMetricsWithRetry(metrics.SecondaryRequestStatuses, labels, 20)
+	readCount, err := ts.Metrics.SecondaryRequestsTotal.Find(store.RedisBackendType.String(), http.MethodGet, "success")
 	require.NoError(t, err)
-	require.NotEmpty(t, ms)
-	require.Len(t, ms, 1)
-	require.True(t, ms[0].Count >= 1)
+	require.True(t, readCount > 0)
 
-	// TODO: Add metrics for EigenDA dispersal/retrieval
 	if useMemory() { // ensure that eigenda was not read from
 		memStats := ts.Server.GetEigenDAStats()
 		require.Equal(t, 0, memStats.Reads)
@@ -455,14 +447,9 @@ func TestProxyServerReadFallback(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, testPreimage, preimage)
 
-	labels := metrics.BuildSecondaryCountLabels(store.S3BackendType.String(), http.MethodGet, "success")
-
-	ms, err := ts.MetricPoller.PollCountMetricsWithRetry(metrics.SecondaryRequestStatuses, labels, 20)
+	count, err := ts.Metrics.SecondaryRequestsTotal.Find(store.S3BackendType.String(), http.MethodGet, "success")
 	require.NoError(t, err)
-	require.NotEmpty(t, ms)
-	require.Len(t, ms, 1)
-
-	require.True(t, ms[0].Count > 0)
+	require.True(t, count > 0)
 
 	// TODO - remove this in favor of metrics sampling
 	if useMemory() { // ensure that an eigenda read was attempted with zero data available

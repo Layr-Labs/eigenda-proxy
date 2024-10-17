@@ -2,28 +2,9 @@ package utils
 
 import (
 	"fmt"
-	"net"
 	"strconv"
 	"strings"
 )
-
-// FindRandomOpenPort returns a random open port
-func FindRandomOpenPort() (int, error) {
-	// Listen on a random port
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		return 0, fmt.Errorf("failed to find open port: %w", err)
-	}
-	defer listener.Close()
-
-	// Get the assigned address, which includes the port
-	addr, ok := listener.Addr().(*net.TCPAddr)
-	if !ok {
-		return 0, fmt.Errorf("failed to cast listener address to TCPAddr")
-	}
-
-	return addr.Port, nil
-}
 
 // Helper utility functions //
 
