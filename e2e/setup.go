@@ -145,7 +145,6 @@ func createS3Config(eigendaCfg server.Config) server.CLIConfig {
 	createS3Bucket(bucketName)
 
 	eigendaCfg.S3Config = s3.Config{
-		Profiling:       true,
 		Bucket:          bucketName,
 		Path:            "",
 		Endpoint:        minioEndpoint,
@@ -243,9 +242,10 @@ func TestSuiteConfig(t *testing.T, testCfg *Cfg) server.CLIConfig {
 }
 
 type TestSuite struct {
-	Ctx    context.Context
-	Log    log.Logger
-	Server *server.Server
+	Ctx     context.Context
+	Log     log.Logger
+	Server  *server.Server
+	Metrics *metrics.InMemoryMetricer
 }
 
 func CreateTestSuite(t *testing.T, testSuiteCfg server.CLIConfig) (TestSuite, func()) {
@@ -255,29 +255,33 @@ func CreateTestSuite(t *testing.T, testSuiteCfg server.CLIConfig) (TestSuite, fu
 		Color:  true,
 	}).New("role", svcName)
 
+	m := metrics.NewInMemoryMetricer()
 	ctx := context.Background()
 	store, err := server.LoadStoreRouter(
 		ctx,
 		testSuiteCfg,
 		log,
+		m,
 	)
+
 	require.NoError(t, err)
-	server := server.NewServer(host, 0, store, log, metrics.NoopMetrics)
+	proxySvr := server.NewServer(host, 0, store, log, m)
 
 	t.Log("Starting proxy server...")
-	err = server.Start()
+	err = proxySvr.Start()
 	require.NoError(t, err)
 
 	kill := func() {
-		if err := server.Stop(); err != nil {
-			panic(err)
+		if err := proxySvr.Stop(); err != nil {
+			log.Error("failed to stop proxy server", "err", err)
 		}
 	}
 
 	return TestSuite{
-		Ctx:    ctx,
-		Log:    log,
-		Server: server,
+		Ctx:     ctx,
+		Log:     log,
+		Server:  proxySvr,
+		Metrics: m,
 	}, kill
 }
 

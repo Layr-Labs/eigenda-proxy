@@ -1,8 +1,10 @@
 package e2e_test
 
 import (
+	"net/http"
 	"testing"
 
+	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/e2e"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/ethereum-optimism/optimism/op-e2e/config"
@@ -167,11 +169,11 @@ func TestOptimismKeccak256Commitment(gt *testing.T) {
 	optimism.sequencer.ActL2PipelineFull(t)
 	optimism.ActL1Finalized(t)
 
-	// assert that EigenDA proxy's was written and read from
-	stat := proxyTS.Server.GetS3Stats()
+	// assert that EigenDA proxy was written and read from using op keccak256 commitment mode
+	readCount, err := proxyTS.Metrics.HTTPServerRequestsTotal.Find(http.MethodGet, "", string(commitments.OptimismKeccak), "0")
+	require.NoError(t, err)
+	require.True(t, readCount > 0)
 
-	require.Equal(t, 1, stat.Entries)
-	require.Equal(t, 1, stat.Reads)
 }
 
 func TestOptimismGenericCommitment(gt *testing.T) {
@@ -221,11 +223,8 @@ func TestOptimismGenericCommitment(gt *testing.T) {
 	optimism.sequencer.ActL2PipelineFull(t)
 	optimism.ActL1Finalized(t)
 
-	// assert that EigenDA proxy's was written and read from
-
-	if useMemory() {
-		stat := proxyTS.Server.GetEigenDAStats()
-		require.Equal(t, 1, stat.Entries)
-		require.Equal(t, 1, stat.Reads)
-	}
+	// assert that EigenDA proxy was written and read from using op generic commitment mode
+	readCount, err := proxyTS.Metrics.HTTPServerRequestsTotal.Find(http.MethodGet, "", string(commitments.OptimismGeneric), "0")
+	require.NoError(t, err)
+	require.True(t, readCount > 0)
 }

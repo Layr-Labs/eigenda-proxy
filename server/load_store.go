@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/eigenda"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
@@ -49,7 +50,7 @@ func populateTargets(targets []string, s3 store.PrecomputedKeyStore, redis *redi
 }
 
 // LoadStoreRouter ... creates storage backend clients and instruments them into a storage routing abstraction
-func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (store.IRouter, error) {
+func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger, m metrics.Metricer) (store.IRouter, error) {
 	// create S3 backend store (if enabled)
 	var err error
 	var s3Store store.PrecomputedKeyStore
@@ -90,7 +91,7 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (store.
 	// create EigenDA backend store
 	var eigenDA store.GeneratedKeyStore
 	if cfg.EigenDAConfig.MemstoreEnabled {
-		log.Info("Using mem-store backend for EigenDA")
+		log.Info("Using memstore backend for EigenDA")
 		eigenDA, err = memstore.New(ctx, verifier, log, cfg.EigenDAConfig.MemstoreConfig)
 	} else {
 		var client *clients.EigenDAClient
@@ -116,10 +117,20 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (store.
 		return nil, err
 	}
 
-	// determine read fallbacks
+	// create secondary storage router
 	fallbacks := populateTargets(cfg.EigenDAConfig.FallbackTargets, s3Store, redisStore)
 	caches := populateTargets(cfg.EigenDAConfig.CacheTargets, s3Store, redisStore)
+	secondary := store.NewSecondaryRouter(log, m, caches, fallbacks)
+
+	if secondary.Enabled() { // only spin-up go routines if secondary storage is enabled
+		// NOTE: in the future the number of threads could be made configurable via env
+		log.Debug("Starting secondary write loop")
+
+		for i := 0; i < cfg.EigenDAConfig.AsyncPutWorkers; i++ {
+			go secondary.WriteSubscriptionLoop(ctx)
+		}
+	}
 
 	log.Info("Creating storage router", "eigenda backend type", eigenDA != nil, "s3 backend type", s3Store != nil)
-	return store.NewRouter(eigenDA, s3Store, log, caches, fallbacks)
+	return store.NewRouter(eigenDA, s3Store, log, secondary)
 }

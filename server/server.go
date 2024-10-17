@@ -67,6 +67,7 @@ func WithMetrics(
 		if err != nil {
 			var metaErr MetaError
 			if errors.As(err, &metaErr) {
+				// TODO: Figure out why status is defaulting to ""
 				recordDur(w.Header().Get("status"), string(metaErr.Meta.Mode), string(metaErr.Meta.CertVersion))
 			} else {
 				recordDur(w.Header().Get("status"), string("NoCommitmentMode"), string("NoCertVersion"))
@@ -74,7 +75,7 @@ func WithMetrics(
 			return err
 		}
 		// we assume that every route will set the status header
-		recordDur(w.Header().Get("status"), string(meta.Mode), string(meta.CertVersion))
+		recordDur(w.Header().Get("status"), string(meta.Mode), strconv.Itoa(int(meta.CertVersion)))
 		return nil
 	}
 }
@@ -379,26 +380,4 @@ func ReadCommitmentVersion(r *http.Request, mode commitments.CommitmentMode) (by
 
 func (svr *Server) GetEigenDAStats() *store.Stats {
 	return svr.router.GetEigenDAStore().Stats()
-}
-
-func (svr *Server) GetS3Stats() *store.Stats {
-	return svr.router.GetS3Store().Stats()
-}
-
-func (svr *Server) GetStoreStats(bt store.BackendType) (*store.Stats, error) {
-	// first check if the store is a cache
-	for _, cache := range svr.router.Caches() {
-		if cache.BackendType() == bt {
-			return cache.Stats(), nil
-		}
-	}
-
-	// then check if the store is a fallback
-	for _, fallback := range svr.router.Fallbacks() {
-		if fallback.BackendType() == bt {
-			return fallback.Stats(), nil
-		}
-	}
-
-	return nil, fmt.Errorf("store not found")
 }
