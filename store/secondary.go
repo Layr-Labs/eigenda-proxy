@@ -22,6 +22,7 @@ const (
 )
 
 type ISecondary interface {
+	AsyncEntry() bool
 	Enabled() bool
 	Topic() chan<- PutNotify
 	CachingEnabled() bool
@@ -48,6 +49,7 @@ type SecondaryRouter struct {
 
 	verifyLock sync.RWMutex
 	topic      chan PutNotify
+	decoupled bool
 }
 
 // NewSecondaryRouter ... creates a new secondary storage router
@@ -111,9 +113,15 @@ func (r *SecondaryRouter) HandleRedundantWrites(ctx context.Context, commitment 
 
 	return nil
 }
+// AsyncEntry ... subscribes to put notifications posted to shared topic with primary router
+func (r *SecondaryRouter) AsyncEntry() bool {
+	return r.decoupled
+}
 
 // WriteSubscriptionLoop ... subscribes to put notifications posted to shared topic with primary router
 func (r *SecondaryRouter) WriteSubscriptionLoop(ctx context.Context) {
+	r.decoupled = true
+
 	for {
 		select {
 		case notif := <-r.topic:

@@ -126,7 +126,7 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger, m metri
 		// NOTE: in the future the number of threads could be made configurable via env
 		log.Debug("Starting secondary write loop")
 
-		for i := 0; i < 5; i++ {
+		for i := 0; i < cfg.EigenDAConfig.AsyncPutWorkers; i++ {
 			go secondary.WriteSubscriptionLoop(ctx)
 		}
 	}

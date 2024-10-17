@@ -124,10 +124,15 @@ func (r *Router) Put(ctx context.Context, cm commitments.CommitmentMode, key, va
 		return nil, err
 	}
 
-	if r.secondary.Enabled() { // publish put notification to secondary's subscription on PutNotification topic
+	if r.secondary.Enabled() && r.secondary.AsyncEntry() { // publish put notification to secondary's subscription on PutNotification topic
 		r.secondary.Topic() <- PutNotify{
 			Commitment: commit,
 			Value:      value,
+		}
+	} else if r.secondary.Enabled() && !r.secondary.AsyncEntry() { // secondary is available only for synchronous writes
+		err := r.secondary.HandleRedundantWrites(ctx, commit, value)
+		if err != nil {
+			r.log.Error("Secondary insertions failed", "error", err.Error())
 		}
 	}
 
