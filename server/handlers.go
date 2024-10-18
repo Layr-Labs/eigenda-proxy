@@ -42,7 +42,6 @@ func (svr *Server) handleGetSimpleCommitment(w http.ResponseWriter, r *http.Requ
 		return fmt.Errorf("failed to decode commitment %s: %w", rawCommitmentHex, err)
 	}
 
-	svr.log.Info("Processing simple commitment", "commitment", rawCommitmentHex, "commitmentMeta", commitmentMeta)
 	return svr.handleGetShared(r.Context(), w, commitment, commitmentMeta)
 }
 
@@ -69,7 +68,6 @@ func (svr *Server) handleGetOPKeccakCommitment(w http.ResponseWriter, r *http.Re
 		return fmt.Errorf("failed to decode commitment %s: %w", rawCommitmentHex, err)
 	}
 
-	svr.log.Info("Processing op keccak commitment GET", "commitment", rawCommitmentHex, "commitmentMeta", commitmentMeta)
 	return svr.handleGetShared(r.Context(), w, commitment, commitmentMeta)
 }
 
@@ -93,11 +91,11 @@ func (svr *Server) handleGetOPGenericCommitment(w http.ResponseWriter, r *http.R
 		return fmt.Errorf("failed to decode commitment %s: %w", rawCommitmentHex, err)
 	}
 
-	svr.log.Info("Processing op generic commitment GET", "commitment", rawCommitmentHex, "commitmentMeta", commitmentMeta)
 	return svr.handleGetShared(r.Context(), w, commitment, commitmentMeta)
 }
 
 func (svr *Server) handleGetShared(ctx context.Context, w http.ResponseWriter, comm []byte, meta commitments.CommitmentMeta) error {
+	svr.log.Info("Processing GET request", "commitment", hex.EncodeToString(comm), "commitmentMeta", meta)
 	input, err := svr.router.Get(ctx, comm, meta.Mode)
 	if err != nil {
 		err = MetaError{
@@ -122,7 +120,6 @@ func (svr *Server) handleGetShared(ctx context.Context, w http.ResponseWriter, c
 
 // handlePostSimpleCommitment handles the POST request for simple commitments.
 func (svr *Server) handlePostSimpleCommitment(w http.ResponseWriter, r *http.Request) error {
-	svr.log.Info("Processing simple commitment")
 	commitmentMeta := commitments.CommitmentMeta{
 		Mode:        commitments.SimpleCommitmentMode,
 		CertVersion: byte(commitments.CertV0), // TODO: hardcoded for now
@@ -153,13 +150,11 @@ func (svr *Server) handlePostOPKeccakCommitment(w http.ResponseWriter, r *http.R
 		return fmt.Errorf("failed to decode commitment %s: %w", rawCommitmentHex, err)
 	}
 
-	svr.log.Info("Processing op keccak commitment POST", "commitment", rawCommitmentHex, "commitmentMeta", commitmentMeta)
 	return svr.handlePostShared(w, r, commitment, commitmentMeta)
 }
 
 // handlePostOPGenericCommitment handles the POST request for optimism generic commitments.
 func (svr *Server) handlePostOPGenericCommitment(w http.ResponseWriter, r *http.Request) error {
-	svr.log.Info("Processing simple commitment")
 	commitmentMeta := commitments.CommitmentMeta{
 		Mode:        commitments.OptimismGeneric,
 		CertVersion: byte(commitments.CertV0), // TODO: hardcoded for now
@@ -168,6 +163,7 @@ func (svr *Server) handlePostOPGenericCommitment(w http.ResponseWriter, r *http.
 }
 
 func (svr *Server) handlePostShared(w http.ResponseWriter, r *http.Request, comm []byte, meta commitments.CommitmentMeta) error {
+	svr.log.Info("Processing POST request", "commitment", hex.EncodeToString(comm), "commitmentMeta", meta)
 	input, err := io.ReadAll(r.Body)
 	if err != nil {
 		err = MetaError{
