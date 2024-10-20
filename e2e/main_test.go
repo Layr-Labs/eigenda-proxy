@@ -5,8 +5,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/Layr-Labs/eigenda-proxy/client"
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
+	"github.com/Layr-Labs/eigenda-proxy/e2e"
 	"github.com/Layr-Labs/eigenda-proxy/store"
+	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/stretchr/testify/require"
@@ -42,8 +45,8 @@ func requireDispersalRetrievalEigenDA(t *testing.T, cm *metrics.CountMap, mode c
 	require.True(t, readCount > 0)
 }
 
-// requireSecondaryWriteRead ... ensure that secondary backend was successfully written/read to/from
-func requireSecondaryWriteRead(t *testing.T, cm *metrics.CountMap, bt store.BackendType) {
+// requireWriteReadSecondary ... ensure that secondary backend was successfully written/read to/from
+func requireWriteReadSecondary(t *testing.T, cm *metrics.CountMap, bt store.BackendType) {
 	writeCount, err := cm.Get(http.MethodPut, store.Success, bt.String())
 	require.NoError(t, err)
 	require.True(t, writeCount > 0)
@@ -51,4 +54,36 @@ func requireSecondaryWriteRead(t *testing.T, cm *metrics.CountMap, bt store.Back
 	readCount, err := cm.Get(http.MethodGet, store.Success, bt.String())
 	require.NoError(t, err)
 	require.True(t, readCount > 0)
+}
+
+// requireSimpleClientSetGet ... ensures that simple proxy client can disperse and read a blob
+func requireSimpleClientSetGet(t *testing.T, ts e2e.TestSuite, blob []byte) {
+	cfg := &client.Config{
+		URL: ts.Address(),
+	}
+	daClient := client.New(cfg)
+
+	t.Log("Setting input data on proxy server...")
+	blobInfo, err := daClient.SetData(ts.Ctx, blob)
+	require.NoError(t, err)
+
+	t.Log("Getting input data from proxy server...")
+	preimage, err := daClient.GetData(ts.Ctx, blobInfo)
+	require.NoError(t, err)
+	require.Equal(t, blob, preimage)
+
+}
+
+// requireOPClientSetGet ... ensures that alt-da client can disperse and read a blob
+func requireOPClientSetGet(t *testing.T, ts e2e.TestSuite, blob []byte, precompute bool) {
+	daClient := altda.NewDAClient(ts.Address(), false, precompute)
+
+	commit, err := daClient.SetInput(ts.Ctx, blob)
+	require.NoError(t, err)
+
+	preimage, err := daClient.GetInput(ts.Ctx, commit)
+	require.NoError(t, err)
+	require.Equal(t, blob, preimage)
+	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.OptimismKeccak)
+
 }

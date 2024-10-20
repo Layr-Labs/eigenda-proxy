@@ -119,7 +119,7 @@ func TestProxyClientMalformedInputCases(t *testing.T) {
 		assert.True(t, strings.Contains(err.Error(),
 			"commitment is too short") && !isNilPtrDerefPanic(err.Error()))
 
-		testCert = []byte(e2e.RandString(10000))
+		testCert = e2e.Rand[[]byte](10000)
 		_, err = daClient.GetData(ts.Ctx, testCert)
 		require.Error(t, err)
 		assert.True(t, strings.Contains(err.Error(),
@@ -149,7 +149,7 @@ func TestKeccak256CommitmentRequestErrorsWhenS3NotSet(t *testing.T) {
 
 	daClient := altda.NewDAClient(ts.Address(), false, true)
 
-	testPreimage := []byte(e2e.RandString(100))
+	testPreimage := e2e.Rand[[]byte](100)
 
 	_, err := daClient.SetInput(ts.Ctx, testPreimage)
 	// TODO: the server currently returns an internal server error. Should it return a 400 instead?
@@ -172,7 +172,7 @@ func TestOversizedBlobRequestErrors(t *testing.T) {
 	}
 	daClient := client.New(cfg)
 	//  17MB blob
-	testPreimage := []byte(e2e.RandString(17_000_0000))
+	testPreimage := e2e.Rand[[]byte](17_000_0000)
 
 	t.Log("Setting input data on proxy server...")
 	blobInfo, err := daClient.SetData(ts.Ctx, testPreimage)
