@@ -15,6 +15,8 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
+// TODO - create structured abstraction for dependency injection vs. overloading stateless functions
+
 // populateTargets ... creates a list of storage backends based on the provided target strings
 func populateTargets(targets []string, s3 store.PrecomputedKeyStore, redis *redis.Store) []store.PrecomputedKeyStore {
 	stores := make([]store.PrecomputedKeyStore, len(targets))
@@ -49,8 +51,8 @@ func populateTargets(targets []string, s3 store.PrecomputedKeyStore, redis *redi
 	return stores
 }
 
-// LoadStoreRouter ... creates storage backend clients and instruments them into a storage routing abstraction
-func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger, m metrics.Metricer) (store.IRouter, error) {
+// LoadStoreManager ... creates storage backend clients and instruments them into a storage routing abstraction
+func LoadStoreManager(ctx context.Context, cfg CLIConfig, log log.Logger, m metrics.Metricer) (store.IManager, error) {
 	// create S3 backend store (if enabled)
 	var err error
 	var s3Store store.PrecomputedKeyStore
@@ -120,11 +122,11 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger, m metri
 	// create secondary storage router
 	fallbacks := populateTargets(cfg.EigenDAConfig.FallbackTargets, s3Store, redisStore)
 	caches := populateTargets(cfg.EigenDAConfig.CacheTargets, s3Store, redisStore)
-	secondary := store.NewSecondaryRouter(log, m, caches, fallbacks)
+	secondary := store.NewSecondaryManager(log, m, caches, fallbacks)
 
 	if secondary.Enabled() { // only spin-up go routines if secondary storage is enabled
 		// NOTE: in the future the number of threads could be made configurable via env
-		log.Debug("Starting secondary write loop")
+		log.Debug("Starting secondary write loop(s)", "count", cfg.EigenDAConfig.AsyncPutWorkers)
 
 		for i := 0; i < cfg.EigenDAConfig.AsyncPutWorkers; i++ {
 			go secondary.WriteSubscriptionLoop(ctx)
@@ -132,5 +134,5 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger, m metri
 	}
 
 	log.Info("Creating storage router", "eigenda backend type", eigenDA != nil, "s3 backend type", s3Store != nil)
-	return store.NewRouter(eigenDA, s3Store, log, secondary)
+	return store.NewManager(eigenDA, s3Store, log, secondary)
 }

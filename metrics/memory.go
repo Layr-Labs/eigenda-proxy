@@ -11,7 +11,8 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-func keyLabels(labels []string) (common.Hash, error) {
+// fingerprint ... Construct a deterministic hash key for a label set
+func fingerprint(labels []string) (common.Hash, error) {
 	sort.Strings(labels) // in-place sort strings so keys are order agnostic
 
 	encodedBytes, err := rlp.EncodeToBytes(labels)
@@ -24,27 +25,30 @@ func keyLabels(labels []string) (common.Hash, error) {
 	return hash, nil
 }
 
-type MetricCountMap struct {
+// CountMap ... In memory representation of a prometheus Count metric type
+type CountMap struct {
 	m *sync.Map
 }
 
-func NewCountMap() *MetricCountMap {
-	return &MetricCountMap{
+// NewCountMap ... Init
+func NewCountMap() *CountMap {
+	return &CountMap{
 		m: new(sync.Map),
 	}
 }
 
-func (mcm *MetricCountMap) insert(values ...string) error {
-	key, err := keyLabels(values)
+// insert ... increments or sets value associated with fingerprint
+func (cm *CountMap) insert(labels ...string) error {
+	key, err := fingerprint(labels)
 
 	if err != nil {
 		return err
 	}
 
 	// update or add count entry
-	value, exists := mcm.m.Load(key.Hex())
+	value, exists := cm.m.Load(key.Hex())
 	if !exists {
-		mcm.m.Store(key.Hex(), uint64(1))
+		cm.m.Store(key.Hex(), uint64(1))
 		return nil
 	}
 	uint64Val, ok := value.(uint64)
@@ -52,18 +56,19 @@ func (mcm *MetricCountMap) insert(values ...string) error {
 		return fmt.Errorf("could not read uint64 from sync map")
 	}
 
-	mcm.m.Store(key.Hex(), uint64Val+uint64(1))
+	cm.m.Store(key.Hex(), uint64Val+uint64(1))
 	return nil
 }
 
-func (mcm *MetricCountMap) Find(values ...string) (uint64, error) {
-	key, err := keyLabels(values)
+// Get ... fetches the value count associated with a deterministic label key
+func (cm *CountMap) Get(labels ...string) (uint64, error) {
+	key, err := fingerprint(labels)
 
 	if err != nil {
 		return 0, err
 	}
 
-	val, exists := mcm.m.Load(key.Hex())
+	val, exists := cm.m.Load(key.Hex())
 	if !exists {
 		return 0, fmt.Errorf("value doesn't exist")
 	}
@@ -75,41 +80,50 @@ func (mcm *MetricCountMap) Find(values ...string) (uint64, error) {
 	return uint64Val, nil
 }
 
-type InMemoryMetricer struct {
-	HTTPServerRequestsTotal *MetricCountMap
+// EmulatedMetricer ... allows for tracking count metrics in memory
+// and is only used for E2E testing. This is needed since prometheus/client_golang doesn't provide
+// an interface for reading the count values from the codified metric.
+type EmulatedMetricer struct {
+	HTTPServerRequestsTotal *CountMap
 	// secondary metrics
-	SecondaryRequestsTotal *MetricCountMap
+	SecondaryRequestsTotal *CountMap
 }
 
-func NewInMemoryMetricer() *InMemoryMetricer {
-	return &InMemoryMetricer{
+// NewEmulatedMetricer ... constructor
+func NewEmulatedMetricer() *EmulatedMetricer {
+	return &EmulatedMetricer{
 		HTTPServerRequestsTotal: NewCountMap(),
 		SecondaryRequestsTotal:  NewCountMap(),
 	}
 }
 
-var _ Metricer = NewInMemoryMetricer()
+var _ Metricer = NewEmulatedMetricer()
 
-func (n *InMemoryMetricer) Document() []metrics.DocumentedMetric {
+// Document ... noop
+func (n *EmulatedMetricer) Document() []metrics.DocumentedMetric {
 	return nil
 }
 
-func (n *InMemoryMetricer) RecordInfo(_ string) {
+// RecordInfo ... noop
+func (n *EmulatedMetricer) RecordInfo(_ string) {
 }
 
-func (n *InMemoryMetricer) RecordUp() {
+// RecordUp ... noop
+func (n *EmulatedMetricer) RecordUp() {
 }
 
-func (n *InMemoryMetricer) RecordRPCServerRequest(endpoint string) func(status, mode, ver string) {
-	return func(x string, y string, z string) {
-		err := n.HTTPServerRequestsTotal.insert(endpoint, x, y, z)
-		if err != nil {
+// RecordRPCServerRequest ... updates server requests counter associated with label fingerprint
+func (n *EmulatedMetricer) RecordRPCServerRequest(method string) func(status, mode, ver string) {
+	return func(_ string, mode string, _ string) {
+		err := n.HTTPServerRequestsTotal.insert(method, mode)
+		if err != nil { // panicking here is ok since this is only ran per E2E testing and never in server logic.
 			panic(err)
 		}
 	}
 }
 
-func (n *InMemoryMetricer) RecordSecondaryRequest(x string, y string) func(status string) {
+// RecordSecondaryRequest ... updates secondary insertion counter associated with label fingerprint
+func (n *EmulatedMetricer) RecordSecondaryRequest(x string, y string) func(status string) {
 	return func(z string) {
 		err := n.SecondaryRequestsTotal.insert(x, y, z)
 		if err != nil {

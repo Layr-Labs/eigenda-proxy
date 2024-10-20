@@ -1,4 +1,4 @@
-//go:generate mockgen -package mocks --destination ../mocks/router.go . IRouter
+//go:generate mockgen -package mocks --destination ../mocks/router.go . IManager
 
 package store
 
@@ -11,15 +11,14 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
-type IRouter interface {
+// IManager ... read/write interface
+type IManager interface {
 	Get(ctx context.Context, key []byte, cm commitments.CommitmentMode) ([]byte, error)
 	Put(ctx context.Context, cm commitments.CommitmentMode, key, value []byte) ([]byte, error)
-
-	GetEigenDAStore() GeneratedKeyStore
 }
 
-// Router ... storage backend routing layer
-type Router struct {
+// Manager ... storage backend routing layer
+type Manager struct {
 	log log.Logger
 	// primary storage backends
 	eigenda GeneratedKeyStore   // ALT DA commitment type for OP mode && simple commitment mode for standard /client
@@ -29,10 +28,10 @@ type Router struct {
 	secondary ISecondary
 }
 
-// NewRouter ... Init
-func NewRouter(eigenda GeneratedKeyStore, s3 PrecomputedKeyStore, l log.Logger,
-	secondary ISecondary) (IRouter, error) {
-	return &Router{
+// NewManager ... Init
+func NewManager(eigenda GeneratedKeyStore, s3 PrecomputedKeyStore, l log.Logger,
+	secondary ISecondary) (IManager, error) {
+	return &Manager{
 		log:       l,
 		eigenda:   eigenda,
 		s3:        s3,
@@ -41,47 +40,49 @@ func NewRouter(eigenda GeneratedKeyStore, s3 PrecomputedKeyStore, l log.Logger,
 }
 
 // Get ... fetches a value from a storage backend based on the (commitment mode, type)
-func (r *Router) Get(ctx context.Context, key []byte, cm commitments.CommitmentMode) ([]byte, error) {
+func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.CommitmentMode) ([]byte, error) {
 	switch cm {
 	case commitments.OptimismKeccak:
 
-		if r.s3 == nil {
+		if m.s3 == nil {
 			return nil, errors.New("expected S3 backend for OP keccak256 commitment type, but none configured")
 		}
 
-		r.log.Debug("Retrieving data from S3 backend")
-		value, err := r.s3.Get(ctx, key)
+		// 1 - read blob from S3 backend
+		m.log.Debug("Retrieving data from S3 backend")
+		value, err := m.s3.Get(ctx, key)
 		if err != nil {
 			return nil, err
 		}
 
-		err = r.s3.Verify(key, value)
+		// 2 - verify blob hash against commitment key digest
+		err = m.s3.Verify(key, value)
 		if err != nil {
 			return nil, err
 		}
 		return value, nil
 
 	case commitments.SimpleCommitmentMode, commitments.OptimismGeneric:
-		if r.eigenda == nil {
+		if m.eigenda == nil {
 			return nil, errors.New("expected EigenDA backend for DA commitment type, but none configured")
 		}
 
 		// 1 - read blob from cache if enabled
-		if r.secondary.CachingEnabled() {
-			r.log.Debug("Retrieving data from cached backends")
-			data, err := r.secondary.MultiSourceRead(ctx, key, false, r.eigenda.Verify)
+		if m.secondary.CachingEnabled() {
+			m.log.Debug("Retrieving data from cached backends")
+			data, err := m.secondary.MultiSourceRead(ctx, key, false, m.eigenda.Verify)
 			if err == nil {
 				return data, nil
 			}
 
-			r.log.Warn("Failed to read from cache targets", "err", err)
+			m.log.Warn("Failed to read from cache targets", "err", err)
 		}
 
 		// 2 - read blob from EigenDA
-		data, err := r.eigenda.Get(ctx, key)
+		data, err := m.eigenda.Get(ctx, key)
 		if err == nil {
 			// verify
-			err = r.eigenda.Verify(key, data)
+			err = m.eigenda.Verify(key, data)
 			if err != nil {
 				return nil, err
 			}
@@ -89,10 +90,10 @@ func (r *Router) Get(ctx context.Context, key []byte, cm commitments.CommitmentM
 		}
 
 		// 3 - read blob from fallbacks if enabled and data is non-retrievable from EigenDA
-		if r.secondary.FallbackEnabled() {
-			data, err = r.secondary.MultiSourceRead(ctx, key, true, r.eigenda.Verify)
+		if m.secondary.FallbackEnabled() {
+			data, err = m.secondary.MultiSourceRead(ctx, key, true, m.eigenda.Verify)
 			if err != nil {
-				r.log.Error("Failed to read from fallback targets", "err", err)
+				m.log.Error("Failed to read from fallback targets", "err", err)
 				return nil, err
 			}
 		} else {
@@ -107,15 +108,16 @@ func (r *Router) Get(ctx context.Context, key []byte, cm commitments.CommitmentM
 }
 
 // Put ... inserts a value into a storage backend based on the commitment mode
-func (r *Router) Put(ctx context.Context, cm commitments.CommitmentMode, key, value []byte) ([]byte, error) {
+func (m *Manager) Put(ctx context.Context, cm commitments.CommitmentMode, key, value []byte) ([]byte, error) {
 	var commit []byte
 	var err error
 
+	// 1 - Put blob into primary storage backend
 	switch cm {
 	case commitments.OptimismKeccak: // caching and fallbacks are unsupported for this commitment mode
-		return r.putWithKey(ctx, key, value)
+		return m.putKeccak256Mode(ctx, key, value)
 	case commitments.OptimismGeneric, commitments.SimpleCommitmentMode:
-		commit, err = r.putWithoutKey(ctx, value)
+		commit, err = m.putEigenDAMode(ctx, value)
 	default:
 		return nil, fmt.Errorf("unknown commitment mode")
 	}
@@ -124,46 +126,42 @@ func (r *Router) Put(ctx context.Context, cm commitments.CommitmentMode, key, va
 		return nil, err
 	}
 
-	if r.secondary.Enabled() && r.secondary.AsyncEntry() { // publish put notification to secondary's subscription on PutNotification topic
-		r.secondary.Topic() <- PutNotify{
+	// 2 - Put blob into secondary storage backends
+	if m.secondary.Enabled() && m.secondary.AsyncWriteEntry() { // publish put notification to secondary's subscription on PutNotify topic
+		m.secondary.Topic() <- PutNotify{
 			Commitment: commit,
 			Value:      value,
 		}
-	} else if r.secondary.Enabled() && !r.secondary.AsyncEntry() { // secondary is available only for synchronous writes
-		err := r.secondary.HandleRedundantWrites(ctx, commit, value)
+	} else if m.secondary.Enabled() && !m.secondary.AsyncWriteEntry() { // secondary is available only for synchronous writes
+		err := m.secondary.HandleRedundantWrites(ctx, commit, value)
 		if err != nil {
-			r.log.Error("Secondary insertions failed", "error", err.Error())
+			m.log.Error("Secondary insertions failed", "error", err.Error())
 		}
 	}
 
 	return commit, nil
 }
 
-// putWithoutKey ... inserts a value into a storage backend that computes the key on-demand (i.e, EigenDA)
-func (r *Router) putWithoutKey(ctx context.Context, value []byte) ([]byte, error) {
-	if r.eigenda != nil {
-		r.log.Debug("Storing data to EigenDA backend")
-		return r.eigenda.Put(ctx, value)
+// putEigenDAMode ... disperses blob to EigenDA backend
+func (m *Manager) putEigenDAMode(ctx context.Context, value []byte) ([]byte, error) {
+	if m.eigenda != nil {
+		m.log.Debug("Storing data to EigenDA backend")
+		return m.eigenda.Put(ctx, value)
 	}
 
 	return nil, errors.New("no DA storage backend found")
 }
 
-// putWithKey ... only supported for S3 storage backends using OP's alt-da keccak256 commitment type
-func (r *Router) putWithKey(ctx context.Context, key []byte, value []byte) ([]byte, error) {
-	if r.s3 == nil {
+// putKeccak256Mode ... put blob into S3 compatible backend
+func (m *Manager) putKeccak256Mode(ctx context.Context, key []byte, value []byte) ([]byte, error) {
+	if m.s3 == nil {
 		return nil, errors.New("S3 is disabled but is only supported for posting known commitment keys")
 	}
 
-	err := r.s3.Verify(key, value)
+	err := m.s3.Verify(key, value)
 	if err != nil {
 		return nil, err
 	}
 
-	return key, r.s3.Put(ctx, key, value)
-}
-
-// GetEigenDAStore ...
-func (r *Router) GetEigenDAStore() GeneratedKeyStore {
-	return r.eigenda
+	return key, m.s3.Put(ctx, key, value)
 }

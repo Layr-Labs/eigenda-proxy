@@ -85,12 +85,12 @@ install-lint:
 	@echo "Installing golangci-lint..."
 	@sh -c $(GET_LINT_CMD)
 
-submodules:
-	git submodule update --init --recursive
-
 op-devnet-allocs:
 	@echo "Generating devnet allocs..."
 	@./scripts/op-devnet-allocs.sh
+
+benchmark:
+	go test -benchmem -run=^$ -bench . ./e2e -test.parallel 4 -deploy-config ../.devnet/devnetL1.json
 
 .PHONY: \
 	clean \

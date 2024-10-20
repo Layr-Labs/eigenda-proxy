@@ -34,20 +34,20 @@ const (
 type Server struct {
 	log        log.Logger
 	endpoint   string
-	router     store.IRouter
+	sm         store.IManager
 	m          metrics.Metricer
 	httpServer *http.Server
 	listener   net.Listener
 }
 
-func NewServer(host string, port int, router store.IRouter, log log.Logger,
+func NewServer(host string, port int, sm store.IManager, log log.Logger,
 	m metrics.Metricer) *Server {
 	endpoint := net.JoinHostPort(host, strconv.Itoa(port))
 	return &Server{
 		m:        m,
 		log:      log,
 		endpoint: endpoint,
-		router:   router,
+		sm:       sm,
 		httpServer: &http.Server{
 			Addr:              endpoint,
 			ReadHeaderTimeout: 10 * time.Second,
@@ -174,7 +174,7 @@ func (svr *Server) HandleGet(w http.ResponseWriter, r *http.Request) (commitment
 		}
 	}
 
-	input, err := svr.router.Get(r.Context(), comm, meta.Mode)
+	input, err := svr.sm.Get(r.Context(), comm, meta.Mode)
 	if err != nil {
 		err = fmt.Errorf("get request failed with commitment %v (commitment mode %v): %w", comm, meta.Mode, err)
 		if errors.Is(err, ErrNotFound) {
@@ -233,7 +233,7 @@ func (svr *Server) HandlePut(w http.ResponseWriter, r *http.Request) (commitment
 		}
 	}
 
-	commitment, err := svr.router.Put(r.Context(), meta.Mode, comm, input)
+	commitment, err := svr.sm.Put(r.Context(), meta.Mode, comm, input)
 	if err != nil {
 		err = fmt.Errorf("put request failed with commitment %v (commitment mode %v): %w", comm, meta.Mode, err)
 
@@ -374,8 +374,4 @@ func ReadCommitmentVersion(r *http.Request, mode commitments.CommitmentMode) (by
 		return decodedCommit[0], nil
 	}
 	return 0, nil
-}
-
-func (svr *Server) GetEigenDAStats() *store.Stats {
-	return svr.router.GetEigenDAStore().Stats()
 }

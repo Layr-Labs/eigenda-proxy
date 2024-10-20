@@ -22,7 +22,7 @@ const (
 )
 
 type ISecondary interface {
-	AsyncEntry() bool
+	AsyncWriteEntry() bool
 	Enabled() bool
 	Topic() chan<- PutNotify
 	CachingEnabled() bool
@@ -39,22 +39,22 @@ type PutNotify struct {
 	Value      []byte
 }
 
-// SecondaryRouter ... routing abstraction for secondary storage backends
-type SecondaryRouter struct {
+// SecondaryManager ... routing abstraction for secondary storage backends
+type SecondaryManager struct {
 	log log.Logger
 	m   metrics.Metricer
 
 	caches    []PrecomputedKeyStore
 	fallbacks []PrecomputedKeyStore
 
-	verifyLock sync.RWMutex
-	topic      chan PutNotify
-	decoupled  bool
+	verifyLock       sync.RWMutex
+	topic            chan PutNotify
+	concurrentWrites bool
 }
 
-// NewSecondaryRouter ... creates a new secondary storage router
-func NewSecondaryRouter(log log.Logger, m metrics.Metricer, caches []PrecomputedKeyStore, fallbacks []PrecomputedKeyStore) ISecondary {
-	return &SecondaryRouter{
+// NewSecondaryManager ... creates a new secondary storage router
+func NewSecondaryManager(log log.Logger, m metrics.Metricer, caches []PrecomputedKeyStore, fallbacks []PrecomputedKeyStore) ISecondary {
+	return &SecondaryManager{
 		topic:      make(chan PutNotify), // yes channel is un-buffered which dispersing consumption across routines helps alleviate
 		log:        log,
 		m:          m,
@@ -65,41 +65,41 @@ func NewSecondaryRouter(log log.Logger, m metrics.Metricer, caches []Precomputed
 }
 
 // Topic ...
-func (r *SecondaryRouter) Topic() chan<- PutNotify {
-	return r.topic
+func (sm *SecondaryManager) Topic() chan<- PutNotify {
+	return sm.topic
 }
 
-func (r *SecondaryRouter) Enabled() bool {
-	return r.CachingEnabled() || r.FallbackEnabled()
+func (sm *SecondaryManager) Enabled() bool {
+	return sm.CachingEnabled() || sm.FallbackEnabled()
 }
 
-func (r *SecondaryRouter) CachingEnabled() bool {
-	return len(r.caches) > 0
+func (sm *SecondaryManager) CachingEnabled() bool {
+	return len(sm.caches) > 0
 }
 
-func (r *SecondaryRouter) FallbackEnabled() bool {
-	return len(r.fallbacks) > 0
+func (sm *SecondaryManager) FallbackEnabled() bool {
+	return len(sm.fallbacks) > 0
 }
 
 // handleRedundantWrites ... writes to both sets of backends (i.e, fallback, cache)
 // and returns an error if NONE of them succeed
-func (r *SecondaryRouter) HandleRedundantWrites(ctx context.Context, commitment []byte, value []byte) error {
-	sources := r.caches
-	sources = append(sources, r.fallbacks...)
+func (sm *SecondaryManager) HandleRedundantWrites(ctx context.Context, commitment []byte, value []byte) error {
+	sources := sm.caches
+	sources = append(sources, sm.fallbacks...)
 
 	key := crypto.Keccak256(commitment)
 	successes := 0
 
 	for _, src := range sources {
-		cb := r.m.RecordSecondaryRequest(src.BackendType().String(), http.MethodPut)
+		cb := sm.m.RecordSecondaryRequest(src.BackendType().String(), http.MethodPut)
 
-		// for added safety - we retry the insertion 10x times using an exponential backoff
-		_, err := retry.Do[any](ctx, 10, retry.Exponential(),
+		// for added safety - we retry the insertion 5x using a default exponential backoff
+		_, err := retry.Do[any](ctx, 5, retry.Exponential(),
 			func() (any, error) {
 				return 0, src.Put(ctx, key, value) // this implementation assumes that all secondary clients are thread safe
 			})
 		if err != nil {
-			r.log.Warn("Failed to write to redundant target", "backend", src.BackendType(), "err", err)
+			sm.log.Warn("Failed to write to redundant target", "backend", src.BackendType(), "err", err)
 			cb(Failed)
 		} else {
 			successes++
@@ -114,25 +114,25 @@ func (r *SecondaryRouter) HandleRedundantWrites(ctx context.Context, commitment 
 	return nil
 }
 
-// AsyncEntry ... subscribes to put notifications posted to shared topic with primary router
-func (r *SecondaryRouter) AsyncEntry() bool {
-	return r.decoupled
+// AsyncWriteEntry ... subscribes to put notifications posted to shared topic with primary router
+func (sm *SecondaryManager) AsyncWriteEntry() bool {
+	return sm.concurrentWrites
 }
 
 // WriteSubscriptionLoop ... subscribes to put notifications posted to shared topic with primary router
-func (r *SecondaryRouter) WriteSubscriptionLoop(ctx context.Context) {
-	r.decoupled = true
+func (sm *SecondaryManager) WriteSubscriptionLoop(ctx context.Context) {
+	sm.concurrentWrites = true
 
 	for {
 		select {
-		case notif := <-r.topic:
-			err := r.HandleRedundantWrites(context.Background(), notif.Commitment, notif.Value)
+		case notif := <-sm.topic:
+			err := sm.HandleRedundantWrites(context.Background(), notif.Commitment, notif.Value)
 			if err != nil {
-				r.log.Error("Failed to write to redundant targets", "err", err)
+				sm.log.Error("Failed to write to redundant targets", "err", err)
 			}
 
 		case <-ctx.Done():
-			r.log.Debug("Terminating secondary event loop")
+			sm.log.Debug("Terminating secondary event loop")
 			return
 		}
 	}
@@ -141,40 +141,40 @@ func (r *SecondaryRouter) WriteSubscriptionLoop(ctx context.Context) {
 // MultiSourceRead ... reads from a set of backends and returns the first successfully read blob
 // NOTE: - this can also be parallelized when reading from multiple sources and discarding connections that fail
 //   - for complete optimization we can profile secondary storage backends to determine the fastest / most reliable and always rout to it first
-func (r *SecondaryRouter) MultiSourceRead(ctx context.Context, commitment []byte, fallback bool, verify func([]byte, []byte) error) ([]byte, error) {
+func (sm *SecondaryManager) MultiSourceRead(ctx context.Context, commitment []byte, fallback bool, verify func([]byte, []byte) error) ([]byte, error) {
 	var sources []PrecomputedKeyStore
 	if fallback {
-		sources = r.fallbacks
+		sources = sm.fallbacks
 	} else {
-		sources = r.caches
+		sources = sm.caches
 	}
 
 	key := crypto.Keccak256(commitment)
 	for _, src := range sources {
-		cb := r.m.RecordSecondaryRequest(src.BackendType().String(), http.MethodGet)
+		cb := sm.m.RecordSecondaryRequest(src.BackendType().String(), http.MethodGet)
 		data, err := src.Get(ctx, key)
 		if err != nil {
 			cb(Failed)
-			r.log.Warn("Failed to read from redundant target", "backend", src.BackendType(), "err", err)
+			sm.log.Warn("Failed to read from redundant target", "backend", src.BackendType(), "err", err)
 			continue
 		}
 
 		if data == nil {
 			cb(Miss)
-			r.log.Debug("No data found in redundant target", "backend", src.BackendType())
+			sm.log.Debug("No data found in redundant target", "backend", src.BackendType())
 			continue
 		}
 
 		// verify cert:data using provided verification function
-		r.verifyLock.Lock()
+		sm.verifyLock.Lock()
 		err = verify(commitment, data)
 		if err != nil {
 			cb(Failed)
 			log.Warn("Failed to verify blob", "err", err, "backend", src.BackendType())
-			r.verifyLock.Unlock()
+			sm.verifyLock.Unlock()
 			continue
 		}
-		r.verifyLock.Unlock()
+		sm.verifyLock.Unlock()
 		cb(Success)
 		return data, nil
 	}

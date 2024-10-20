@@ -1,7 +1,6 @@
 package e2e_test
 
 import (
-	"net/http"
 	"testing"
 
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
@@ -126,8 +125,8 @@ func TestOptimismKeccak256Commitment(gt *testing.T) {
 	testCfg := e2e.TestConfig(useMemory())
 	testCfg.UseKeccak256ModeS3 = true
 
-	tsConfig := e2e.TestSuiteConfig(gt, testCfg)
-	proxyTS, shutDown := e2e.CreateTestSuite(gt, tsConfig)
+	tsConfig := e2e.TestSuiteConfig(testCfg)
+	proxyTS, shutDown := e2e.CreateTestSuite(tsConfig)
 	defer shutDown()
 
 	t := actions.NewDefaultTesting(gt)
@@ -168,11 +167,7 @@ func TestOptimismKeccak256Commitment(gt *testing.T) {
 	optimism.sequencer.ActL2PipelineFull(t)
 	optimism.ActL1Finalized(t)
 
-	// assert that EigenDA proxy was written and read from using op keccak256 commitment mode
-	readCount, err := proxyTS.Metrics.HTTPServerRequestsTotal.Find(http.MethodGet, "", string(commitments.OptimismKeccak), "0")
-	require.NoError(t, err)
-	require.True(t, readCount > 0)
-
+	requireDispersalRetrievalEigenDA(gt, proxyTS.Metrics.HTTPServerRequestsTotal, commitments.OptimismKeccak)
 }
 
 func TestOptimismGenericCommitment(gt *testing.T) {
@@ -180,8 +175,8 @@ func TestOptimismGenericCommitment(gt *testing.T) {
 		gt.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
 	}
 
-	tsConfig := e2e.TestSuiteConfig(gt, e2e.TestConfig(useMemory()))
-	proxyTS, shutDown := e2e.CreateTestSuite(gt, tsConfig)
+	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory()))
+	proxyTS, shutDown := e2e.CreateTestSuite(tsConfig)
 	defer shutDown()
 
 	t := actions.NewDefaultTesting(gt)
@@ -222,8 +217,5 @@ func TestOptimismGenericCommitment(gt *testing.T) {
 	optimism.sequencer.ActL2PipelineFull(t)
 	optimism.ActL1Finalized(t)
 
-	// assert that EigenDA proxy was written and read from using op generic commitment mode
-	readCount, err := proxyTS.Metrics.HTTPServerRequestsTotal.Find(http.MethodGet, "", string(commitments.OptimismGeneric), "0")
-	require.NoError(t, err)
-	require.True(t, readCount > 0)
+	requireDispersalRetrievalEigenDA(gt, proxyTS.Metrics.HTTPServerRequestsTotal, commitments.OptimismGeneric)
 }

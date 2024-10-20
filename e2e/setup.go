@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-	"testing"
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
@@ -24,8 +23,6 @@ import (
 
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
-
-	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -45,6 +42,7 @@ type Cfg struct {
 	UseS3Caching       bool
 	UseRedisCaching    bool
 	UseS3Fallback      bool
+	WriteThreadCount   int
 }
 
 func TestConfig(useMemory bool) *Cfg {
@@ -55,6 +53,7 @@ func TestConfig(useMemory bool) *Cfg {
 		UseS3Caching:       false,
 		UseRedisCaching:    false,
 		UseS3Fallback:      false,
+		WriteThreadCount:   0,
 	}
 }
 
@@ -84,24 +83,23 @@ func createS3Config(eigendaCfg server.Config) server.CLIConfig {
 		AccessKeySecret: "minioadmin",
 		AccessKeyID:     "minioadmin",
 		CredentialType:  s3.CredentialTypeStatic,
-		Backup:          false,
 	}
 	return server.CLIConfig{
 		EigenDAConfig: eigendaCfg,
 	}
 }
 
-func TestSuiteConfig(t *testing.T, testCfg *Cfg) server.CLIConfig {
+func TestSuiteConfig(testCfg *Cfg) server.CLIConfig {
 	// load signer key from environment
 	pk := os.Getenv(privateKey)
 	if pk == "" && !testCfg.UseMemory {
-		t.Fatal("SIGNER_PRIVATE_KEY environment variable not set")
+		panic("SIGNER_PRIVATE_KEY environment variable not set")
 	}
 
 	// load node url from environment
 	ethRPC := os.Getenv(ethRPC)
 	if ethRPC == "" && !testCfg.UseMemory {
-		t.Fatal("ETHEREUM_RPC environment variable is not set")
+		panic("ETHEREUM_RPC environment variable is not set")
 	}
 
 	var pollInterval time.Duration
@@ -112,7 +110,10 @@ func TestSuiteConfig(t *testing.T, testCfg *Cfg) server.CLIConfig {
 	}
 
 	maxBlobLengthBytes, err := utils.ParseBytesAmount("16mib")
-	require.NoError(t, err)
+	if err != nil {
+		panic(err)
+	}
+
 	eigendaCfg := server.Config{
 		EdaClientConfig: clients.EigenDAClientConfig{
 			RPC:                      holeskyDA,
@@ -140,6 +141,7 @@ func TestSuiteConfig(t *testing.T, testCfg *Cfg) server.CLIConfig {
 			BlobExpiration:   testCfg.Expiration,
 			MaxBlobSizeBytes: maxBlobLengthBytes,
 		},
+		AsyncPutWorkers: testCfg.WriteThreadCount,
 	}
 
 	if testCfg.UseMemory {
@@ -177,31 +179,36 @@ type TestSuite struct {
 	Ctx     context.Context
 	Log     log.Logger
 	Server  *server.Server
-	Metrics *metrics.InMemoryMetricer
+	Metrics *metrics.EmulatedMetricer
 }
 
-func CreateTestSuite(t *testing.T, testSuiteCfg server.CLIConfig) (TestSuite, func()) {
+func CreateTestSuite(testSuiteCfg server.CLIConfig) (TestSuite, func()) {
 	log := oplog.NewLogger(os.Stdout, oplog.CLIConfig{
 		Level:  log.LevelDebug,
 		Format: oplog.FormatLogFmt,
 		Color:  true,
 	}).New("role", svcName)
 
-	m := metrics.NewInMemoryMetricer()
+	m := metrics.NewEmulatedMetricer()
 	ctx := context.Background()
-	store, err := server.LoadStoreRouter(
+	sm, err := server.LoadStoreManager(
 		ctx,
 		testSuiteCfg,
 		log,
 		m,
 	)
 
-	require.NoError(t, err)
-	proxySvr := server.NewServer(host, 0, store, log, m)
+	if err != nil {
+		panic(err)
+	}
 
-	t.Log("Starting proxy server...")
+	proxySvr := server.NewServer(host, 0, sm, log, m)
+
+	log.Info("Starting proxy server...")
 	err = proxySvr.Start()
-	require.NoError(t, err)
+	if err != nil {
+		panic(err)
+	}
 
 	kill := func() {
 		if err := proxySvr.Stop(); err != nil {

@@ -45,7 +45,6 @@ type Config struct {
 	AccessKeySecret string
 	Bucket          string
 	Path            string
-	Backup          bool
 }
 
 // Store ... S3 store
