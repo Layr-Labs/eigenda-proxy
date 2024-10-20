@@ -14,6 +14,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func isNilPtrDerefPanic(err string) bool {
+	return strings.Contains(err, "panic") && strings.Contains(err, "SIGSEGV") &&
+		strings.Contains(err, "nil pointer dereference")
+}
+
 // TestOpClientKeccak256MalformedInputs tests the NewDAClient from altda by setting and getting against []byte("")
 // preimage. It sets the precompute option to false on the NewDAClient.
 func TestOpClientKeccak256MalformedInputs(t *testing.T) {

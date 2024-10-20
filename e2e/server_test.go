@@ -1,23 +1,19 @@
 package e2e_test
 
 import (
-	"strings"
 	"testing"
 	"time"
 
+	"github.com/Layr-Labs/eigenda-proxy/client"
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/store"
+	"github.com/stretchr/testify/require"
 
 	"github.com/Layr-Labs/eigenda-proxy/e2e"
 )
 
 func useMemory() bool {
 	return !runTestnetIntegrationTests
-}
-
-func isNilPtrDerefPanic(err string) bool {
-	return strings.Contains(err, "panic") && strings.Contains(err, "SIGSEGV") &&
-		strings.Contains(err, "nil pointer dereference")
 }
 
 func TestOptimismClientWithKeccak256Commitment(t *testing.T) {
@@ -145,11 +141,26 @@ func TestProxyReadFallback(t *testing.T) {
 	testCfg := e2e.TestConfig(useMemory())
 	testCfg.UseS3Fallback = true
 	// ensure that blob memstore eviction times result in near immediate activation
-	testCfg.Expiration = time.Nanosecond * 1
+	testCfg.Expiration = time.Millisecond * 1
 
 	tsConfig := e2e.TestSuiteConfig(testCfg)
 	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
+
+	cfg := &client.Config{
+		URL: ts.Address(),
+	}
+	daClient := client.New(cfg)
+	expectedBlob := e2e.Rand[[]byte](1_000_000)
+	t.Log("Setting input data on proxy server...")
+	blobInfo, err := daClient.SetData(ts.Ctx, expectedBlob)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Second)
+	t.Log("Getting input data from proxy server...")
+	actualBlob, err := daClient.GetData(ts.Ctx, blobInfo)
+	require.NoError(t, err)
+	require.Equal(t, expectedBlob, actualBlob)
 
 	requireSimpleClientSetGet(t, ts, e2e.Rand[[]byte](1_000_000))
 	requireWriteReadSecondary(t, ts.Metrics.SecondaryRequestsTotal, store.S3BackendType)

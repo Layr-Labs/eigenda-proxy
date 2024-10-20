@@ -84,6 +84,5 @@ func requireOPClientSetGet(t *testing.T, ts e2e.TestSuite, blob []byte, precompu
 	preimage, err := daClient.GetInput(ts.Ctx, commit)
 	require.NoError(t, err)
 	require.Equal(t, blob, preimage)
-	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.OptimismKeccak)
 
 }

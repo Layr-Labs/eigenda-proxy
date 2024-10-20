@@ -70,7 +70,7 @@ func (cm *CountMap) Get(labels ...string) (uint64, error) {
 
 	val, exists := cm.m.Load(key.Hex())
 	if !exists {
-		return 0, fmt.Errorf("value doesn't exist")
+		return 0, fmt.Errorf("value doesn't exist for key %s", key.String())
 	}
 	uint64Val, ok := val.(uint64)
 	if !ok {
