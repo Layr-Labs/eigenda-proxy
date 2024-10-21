@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
-
 	"github.com/stretchr/testify/require"
 
 	actions "github.com/ethereum-optimism/optimism/op-e2e/actions/helpers"
