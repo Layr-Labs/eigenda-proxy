@@ -1,4 +1,4 @@
-//go:generate mockgen -package mocks --destination ../mocks/router.go . IManager
+//go:generate mockgen -package mocks --destination ../mocks/manager.go . IManager
 
 package store
 
