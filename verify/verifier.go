@@ -151,8 +151,9 @@ func (v *Verifier) VerifySecurityParams(blobHeader BlobHeader, batchHeader bindi
 		if blobHeader.QuorumBlobParams[i].AdversaryThresholdPercentage > blobHeader.QuorumBlobParams[i].ConfirmationThresholdPercentage {
 			return fmt.Errorf("adversary threshold percentage must be greater than or equal to confirmation threshold percentage")
 		}
-		// we get the quorum adversary threshold at the batch's reference block number, since that is the parameter
-		// that the eigenda disperser used to verify the batch signature's validity
+		// we get the quorum adversary threshold at the batch's reference block number. This is not strictly needed right now
+		// since this threshold is hardcoded into the contract: https://github.com/Layr-Labs/eigenda/blob/master/contracts/src/core/EigenDAServiceManagerStorage.sol
+		// but it is good practice in case the contract changes in the future
 		quorumAdversaryThreshold, err := v.getQuorumAdversaryThreshold(blobHeader.QuorumBlobParams[i].QuorumNumber, int64(batchHeader.ReferenceBlockNumber))
 		if err != nil {
 			log.Warn("failed to get quorum adversary threshold", "err", err)
