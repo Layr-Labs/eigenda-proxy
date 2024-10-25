@@ -5,7 +5,10 @@ go 1.22
 toolchain go1.22.0
 
 require (
-	github.com/Layr-Labs/eigenda v0.8.4
+	// pointing to latest commit of https://github.com/Layr-Labs/eigenda/pull/821
+	// TODO: merge eigenda-client PR first, and then point to the latest master commit
+	//       instead of PR commit (which will get squash and merged)
+	github.com/Layr-Labs/eigenda v0.8.5-0.20241025110857-96ad889d3c17
 	github.com/consensys/gnark-crypto v0.12.1
 	github.com/ethereum-optimism/optimism v1.9.4-0.20240927020138-a9c7f349d10b
 	github.com/ethereum/go-ethereum v1.14.11
@@ -173,7 +176,7 @@ require (
 	github.com/marten-seemann/tcp v0.0.0-20210406111302-dfbc87cc63fd // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mattn/go-runewidth v0.0.14 // indirect
+	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/miekg/dns v1.1.62 // indirect
 	github.com/mikioh/tcpinfo v0.0.0-20190314235526-30a79bb1804b // indirect
 	github.com/mikioh/tcpopt v0.0.0-20190314235656-172688c1accc // indirect
