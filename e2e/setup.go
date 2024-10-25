@@ -189,6 +189,7 @@ func TestSuiteConfig(t *testing.T, testCfg *Cfg) server.CLIConfig {
 			StatusQueryRetryInterval: pollInterval,
 			DisableTLS:               false,
 			SignerPrivateKeyHex:      pk,
+			WaitForFinalization:      false,
 		},
 		VerifierConfig: verify.Config{
 			VerifyCerts:          false,
