@@ -1,9 +1,13 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
+	"github.com/Layr-Labs/eigenda-proxy/store"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // MetaError includes both an error and commitment metadata
@@ -21,4 +25,22 @@ func (me MetaError) Error() string {
 
 func (me MetaError) Unwrap() error {
 	return me.Err
+}
+
+func is400(err error) bool {
+	// proxy requests are super simple (clients basically only pass bytes), so the only 400 possible
+	// is passing a blob that's too big.
+	//
+	// Any 400s returned by the disperser are due to formatting bugs in proxy code, for eg. badly
+	// IFFT'ing or encoding the blob, so we shouldn't return a 400 to the client.
+	// See https://github.com/Layr-Labs/eigenda/blob/bee55ed9207f16153c3fd8ebf73c219e68685def/api/errors.go#L22
+	// for the 400s returned by the disperser server (currently only INVALID_ARGUMENT).
+	return errors.Is(err, store.ErrProxyOversizedBlob)
+}
+
+func is429(err error) bool {
+	// grpc RESOURCE_EXHAUSTED is returned by the disperser server when the client has sent too many requests
+	// in a short period of time. This is a client-side issue, so we should return the 429 to the client.
+	st, isGRPCError := status.FromError(err)
+	return isGRPCError && st.Code() == codes.ResourceExhausted
 }

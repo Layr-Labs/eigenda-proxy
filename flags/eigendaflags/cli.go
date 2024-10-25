@@ -27,6 +27,8 @@ var (
 	ConfirmationDepthFlagName            = withFlagPrefix("confirmation-depth")
 	EthRPCURLFlagName                    = withFlagPrefix("eth-rpc")
 	SvcManagerAddrFlagName               = withFlagPrefix("svc-manager-addr")
+	// Flags that are proxy specific, and not used by the eigenda-client
+	PutRetriesFlagName = withFlagPrefix("put-retries")
 )
 
 func withFlagPrefix(s string) string {
@@ -136,6 +138,15 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			EnvVars:  []string{withEnvPrefix(envPrefix, "SERVICE_MANAGER_ADDR")},
 			Category: category,
 			Required: true,
+		},
+		// Flags that are proxy specific, and not used by the eigenda-client
+		// TODO: should we move this to a more specific category, like EIGENDA_STORE?
+		&cli.UintFlag{
+			Name:     PutRetriesFlagName,
+			Usage:    "Number of times to retry blob dispersals.",
+			Value:    3,
+			EnvVars:  []string{withEnvPrefix(envPrefix, "PUT_RETRIES")},
+			Category: category,
 		},
 	}
 }

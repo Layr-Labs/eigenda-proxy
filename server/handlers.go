@@ -9,7 +9,7 @@ import (
 	"net/http"
 
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
-	"github.com/Layr-Labs/eigenda-proxy/common"
+	"github.com/Layr-Labs/eigenda/api"
 	"github.com/gorilla/mux"
 )
 
@@ -181,11 +181,15 @@ func (svr *Server) handlePostShared(w http.ResponseWriter, r *http.Request, comm
 			Err:  fmt.Errorf("put request failed with commitment %v (commitment mode %v): %w", comm, meta.Mode, err),
 			Meta: meta,
 		}
-		if errors.Is(err, common.ErrEigenDAOversizedBlob) || errors.Is(err, common.ErrProxyOversizedBlob) {
-			// we add here any error that should be returned as a 400 instead of a 500.
-			// currently only includes oversized blob requests
+		switch {
+		case is400(err):
 			http.Error(w, err.Error(), http.StatusBadRequest)
-		} else {
+		case is429(err):
+			http.Error(w, err.Error(), http.StatusTooManyRequests)
+		case errors.Is(err, &api.ErrorFailover{}):
+			// this tells the caller (batcher) to failover to ethda b/c eigenda is temporarily down
+			http.Error(w, err.Error(), http.StatusServiceUnavailable)
+		default:
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 		return err
