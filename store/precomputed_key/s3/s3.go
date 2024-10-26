@@ -38,13 +38,13 @@ var _ common.PrecomputedKeyStore = (*Store)(nil)
 
 type CredentialType string
 type Config struct {
-	CredentialType  CredentialType
-	Endpoint        string
-	EnableTLS       bool
-	AccessKeyID     string
-	AccessKeySecret string
-	Bucket          string
-	Path            string
+	CredentialType  CredentialType `json:"credential_type"`
+	Endpoint        string         `json:"endpoint"`
+	EnableTLS       bool           `json:"enable_tls"`
+	AccessKeyID     string         `json:"access_key_id"`
+	AccessKeySecret string         `json:"-"`
+	Bucket          string         `json:"bucket"`
+	Path            string         `json:"path"`
 }
 
 // Store ... S3 store

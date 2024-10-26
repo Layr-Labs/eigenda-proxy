@@ -12,11 +12,10 @@ import (
 
 // Config ... user configurable
 type Config struct {
-	Endpoint string
-	Password string
-	DB       int
-	Eviction time.Duration
-	Profile  bool
+	Endpoint string        `json:"endpoint"`
+	Password string        `json:"-"`
+	DB       int           `json:"database"`
+	Eviction time.Duration `json:"eviction"`
 }
 
 // Store ... Redis storage backend implementation
