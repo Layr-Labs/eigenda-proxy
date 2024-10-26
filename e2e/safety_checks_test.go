@@ -122,7 +122,7 @@ func TestProxyClientMalformedInputCases(t *testing.T) {
 	t.Run("get data edge cases - huge cert", func(t *testing.T) {
 		// TODO: we need to add the 0 version byte at the beginning.
 		// should this not be done automatically by the simple_commitment client?
-		testCert := append([]byte{0}, e2e.Rand[[]byte](10000)...)
+		testCert := append([]byte{0}, e2e.RandBytes(10000)...)
 		_, err := daClient.GetData(ts.Ctx, testCert)
 		require.Error(t, err)
 		assert.True(t, strings.Contains(err.Error(),
@@ -151,7 +151,7 @@ func TestKeccak256CommitmentRequestErrorsWhenS3NotSet(t *testing.T) {
 
 	daClient := altda.NewDAClient(ts.Address(), false, true)
 
-	testPreimage := e2e.Rand[[]byte](100)
+	testPreimage := e2e.RandBytes(100)
 
 	_, err := daClient.SetInput(ts.Ctx, testPreimage)
 	// TODO: the server currently returns an internal server error. Should it return a 400 instead?
@@ -174,7 +174,7 @@ func TestOversizedBlobRequestErrors(t *testing.T) {
 	}
 	daClient := client.New(cfg)
 	//  17MB blob
-	testPreimage := e2e.Rand[[]byte](17_000_0000)
+	testPreimage := e2e.RandBytes(17_000_0000)
 
 	t.Log("Setting input data on proxy server...")
 	blobInfo, err := daClient.SetData(ts.Ctx, testPreimage)

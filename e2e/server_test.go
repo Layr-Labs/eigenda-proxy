@@ -29,7 +29,7 @@ func TestOptimismClientWithKeccak256Commitment(t *testing.T) {
 	tsConfig := e2e.TestSuiteConfig(testCfg)
 	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
-	requireOPClientSetGet(t, ts, e2e.Rand[[]byte](100), true)
+	requireOPClientSetGet(t, ts, e2e.RandBytes(100), true)
 }
 
 /*
@@ -48,7 +48,7 @@ func TestOptimismClientWithGenericCommitment(t *testing.T) {
 	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 
-	requireOPClientSetGet(t, ts, e2e.Rand[[]byte](100), false)
+	requireOPClientSetGet(t, ts, e2e.RandBytes(100), false)
 	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.OptimismGeneric)
 }
 
@@ -63,7 +63,7 @@ func TestProxyClientWriteRead(t *testing.T) {
 	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 
-	requireSimpleClientSetGet(t, ts, e2e.Rand[[]byte](100))
+	requireSimpleClientSetGet(t, ts, e2e.RandBytes(100))
 	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.SimpleCommitmentMode)
 }
 
@@ -78,7 +78,7 @@ func TestProxyWithMaximumSizedBlob(t *testing.T) {
 	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 
-	requireSimpleClientSetGet(t, ts, e2e.Rand[[]byte](16_000_000))
+	requireSimpleClientSetGet(t, ts, e2e.RandBytes(16_000_000))
 	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.SimpleCommitmentMode)
 }
 
@@ -99,7 +99,7 @@ func TestProxyCaching(t *testing.T) {
 	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 
-	requireSimpleClientSetGet(t, ts, e2e.Rand[[]byte](1_000_000))
+	requireSimpleClientSetGet(t, ts, e2e.RandBytes(1_000_000))
 	requireWriteReadSecondary(t, ts.Metrics.SecondaryRequestsTotal, store.S3BackendType)
 	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.SimpleCommitmentMode)
 }
@@ -118,7 +118,7 @@ func TestProxyCachingWithRedis(t *testing.T) {
 	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 
-	requireSimpleClientSetGet(t, ts, e2e.Rand[[]byte](1_000_000))
+	requireSimpleClientSetGet(t, ts, e2e.RandBytes(1_000_000))
 	requireWriteReadSecondary(t, ts.Metrics.SecondaryRequestsTotal, store.RedisBackendType)
 	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.SimpleCommitmentMode)
 }
@@ -151,7 +151,7 @@ func TestProxyReadFallback(t *testing.T) {
 		URL: ts.Address(),
 	}
 	daClient := client.New(cfg)
-	expectedBlob := e2e.Rand[[]byte](1_000_000)
+	expectedBlob := e2e.RandBytes(1_000_000)
 	t.Log("Setting input data on proxy server...")
 	blobInfo, err := daClient.SetData(ts.Ctx, expectedBlob)
 	require.NoError(t, err)
@@ -162,7 +162,7 @@ func TestProxyReadFallback(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, expectedBlob, actualBlob)
 
-	requireSimpleClientSetGet(t, ts, e2e.Rand[[]byte](1_000_000))
+	requireSimpleClientSetGet(t, ts, e2e.RandBytes(1_000_000))
 	requireWriteReadSecondary(t, ts.Metrics.SecondaryRequestsTotal, store.S3BackendType)
 	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.SimpleCommitmentMode)
 }

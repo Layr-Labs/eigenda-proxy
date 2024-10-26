@@ -104,14 +104,14 @@ func startRedisContainer() error {
 }
 
 type Cfg struct {
-	UseMemory  bool
-	Expiration time.Duration
+	UseMemory        bool
+	Expiration       time.Duration
+	WriteThreadCount int
 	// at most one of the below options should be true
 	UseKeccak256ModeS3 bool
 	UseS3Caching       bool
 	UseRedisCaching    bool
 	UseS3Fallback      bool
-	WriteThreadCount   int
 }
 
 func TestConfig(useMemory bool) *Cfg {
@@ -141,7 +141,7 @@ func createRedisConfig(eigendaCfg server.Config) server.CLIConfig {
 
 func createS3Config(eigendaCfg server.Config) server.CLIConfig {
 	// generate random string
-	bucketName := "eigenda-proxy-test-" + Rand[string](10)
+	bucketName := "eigenda-proxy-test-" + RandStr(10)
 	createS3Bucket(bucketName)
 
 	eigendaCfg.S3Config = s3.Config{
@@ -332,12 +332,7 @@ func createS3Bucket(bucketName string) {
 	}
 }
 
-// StringOrByte ... constraint that generic type is either "string" or "[]byte"
-type StringOrByte interface {
-	string | []byte
-}
-
-func randStr(n int) string {
+func RandStr(n int) string {
 	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz")
 	b := make([]rune, n)
 	for i := range b {
@@ -346,18 +341,6 @@ func randStr(n int) string {
 	return string(b)
 }
 
-// Rand generates either a random string or byte slice depending on the type T
-func Rand[T StringOrByte](length int) T {
-	str := randStr(length)
-
-	// Use type switch to return the correct type
-	var result any
-	switch any(new(T)).(type) {
-	case *string:
-		result = str
-	case *[]byte:
-		result = []byte(str)
-	}
-
-	return result.(T)
+func RandBytes(n int) []byte {
+	return []byte(RandStr(n))
 }
