@@ -62,7 +62,7 @@ func (cv *CertVerifier) verifyBatchConfirmedOnChain(
 	// no longer valid. The eigenda batcher does check for these reorgs and updates the batch's confirmation block number:
 	// https://github.com/Layr-Labs/eigenda/blob/bee55ed9207f16153c3fd8ebf73c219e68685def/disperser/batcher/finalizer.go#L198
 	// TODO: We could require the disperser for the new batch, or try to reconstruct it ourselves by querying the chain,
-	// but for now we opt to simply fail the verification, which will force teh batcher to resubmit the batch to eigenda.
+	// but for now we opt to simply fail the verification, which will force the batcher to resubmit the batch to eigenda.
 	confirmationBlockNumber := batchMetadata.GetConfirmationBlockNumber()
 	confirmationBlockNumberBigInt := big.NewInt(0).SetInt64(int64(confirmationBlockNumber))
 	_, err := cv.retrieveBatchMetadataHash(ctx, batchID, confirmationBlockNumberBigInt)
@@ -73,7 +73,7 @@ func (cv *CertVerifier) verifyBatchConfirmedOnChain(
 	// 2. Verify that the confirmation status has been reached.
 	// The eigenda-client already checks for this, but it is possible for either
 	//  1. a reorg to happen, causing the batch to be confirmed by fewer number of blocks than required
-	//  2. proxy's node is behind the eigenda_client's node that deemed the batch confirmed, or 
+	//  2. proxy's node is behind the eigenda_client's node that deemed the batch confirmed, or
 	//     even if we use the same url, that the connection drops and we get load-balanced to a different eth node.
 	// We retry up to 60 seconds (allowing for reorgs up to 5 blocks deep), but we only wait 3 seconds between each retry,
 	// in case (2) is the case and the node simply needs to resync, which could happen fast.
