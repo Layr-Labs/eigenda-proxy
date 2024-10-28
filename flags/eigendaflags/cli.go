@@ -2,6 +2,7 @@ package eigendaflags
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -118,7 +119,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			EnvVars:  []string{withEnvPrefix(envPrefix, "CONFIRMATION_DEPTH")},
 			Value:    "0",
 			Category: category,
-			Action: func(ctx *cli.Context, val string) error {
+			Action: func(_ *cli.Context, val string) error {
 				return validateConfirmationFlag(val)
 			},
 		},
@@ -158,8 +159,8 @@ func ReadConfig(ctx *cli.Context) clients.EigenDAClientConfig {
 	}
 }
 
-// Helper to parse the flag value into config fields
-func parseConfirmationFlag(val string) (waitForFinalization bool, confirmationDepth uint64) {
+// parse the val (either "finalized" or a number) into waitForFinalization (bool) and confirmationDepth (uint64).
+func parseConfirmationFlag(val string) (bool, uint64) {
 	if val == "finalized" {
 		return true, 0
 	}
@@ -183,7 +184,7 @@ func validateConfirmationFlag(val string) error {
 	}
 
 	if depth >= 64 {
-		fmt.Printf("Warning: confirmation depth set to %d, which is > 2 epochs (64). Consider using 'finalized' instead.\n", depth)
+		log.Printf("Warning: confirmation depth set to %d, which is > 2 epochs (64). Consider using 'finalized' instead.\n", depth)
 	}
 
 	return nil
