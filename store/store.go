@@ -39,7 +39,6 @@ func (cfg *Config) checkTargets(targets []string) error {
 
 // Check ... verifies that configuration values are adequately set
 func (cfg *Config) Check() error {
-
 	if cfg.S3Config.CredentialType == s3.CredentialTypeUnknown && cfg.S3Config.Endpoint != "" {
 		return fmt.Errorf("s3 credential type must be set")
 	}
