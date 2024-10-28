@@ -70,10 +70,14 @@ func (cv *CertVerifier) verifyBatchConfirmedOnChain(
 		return fmt.Errorf("batch not found onchain at supposedly confirmed block %d: %w", confirmationBlockNumber, err)
 	}
 
-	// 2. verify that the confirmation status has been reached
-	// We retry 5 times waiting 12 seconds (block time) between each retry,
-	// in case our eth node is behind that of the eigenda_client's node that deemed the batch confirmed
-	onchainHash, err := retry.Do(ctx, 5, retry.Fixed(12*time.Second), func() ([32]byte, error) {
+	// 2. Verify that the confirmation status has been reached.
+	// The eigenda-client already checks for this, but it is possible for either
+	//  1. a reorg to happen, causing the batch to be confirmed by fewer number of blocks than required
+	//  2. proxy's node is behind the eigenda_client's node that deemed the batch confirmed, or 
+	//     even if we use the same url, that the connection drops and we get load-balanced to a different eth node.
+	// We retry up to 60 seconds (allowing for reorgs up to 5 blocks deep), but we only wait 3 seconds between each retry,
+	// in case (2) is the case and the node simply needs to resync, which could happen fast.
+	onchainHash, err := retry.Do(ctx, 20, retry.Fixed(3*time.Second), func() ([32]byte, error) {
 		blockNumber, err := cv.getConfDeepBlockNumber(ctx)
 		if err != nil {
 			return [32]byte{}, fmt.Errorf("failed to get context block: %w", err)
@@ -84,7 +88,7 @@ func (cv *CertVerifier) verifyBatchConfirmedOnChain(
 		return fmt.Errorf("retrieving batch that was confirmed at block %v: %w", confirmationBlockNumber, err)
 	}
 
-	// 3. compute the hash of the batch metadata received as argument
+	// 3. Compute the hash of the batch metadata received as argument.
 	header := &binding.IEigenDAServiceManagerBatchHeader{
 		BlobHeadersRoot:       [32]byte(batchMetadata.GetBatchHeader().GetBatchRoot()),
 		QuorumNumbers:         batchMetadata.GetBatchHeader().GetQuorumNumbers(),
@@ -97,7 +101,7 @@ func (cv *CertVerifier) verifyBatchConfirmedOnChain(
 		return fmt.Errorf("failed to hash batch metadata: %w", err)
 	}
 
-	// 4. ensure that hash generated from local cert matches one stored on-chain
+	// 4. Ensure that hash generated from local cert matches one stored on-chain.
 	equal := slices.Equal(onchainHash[:], computedHash[:])
 	if !equal {
 		return fmt.Errorf("batch hash mismatch, onchain: %x, computed: %x", onchainHash, computedHash)
