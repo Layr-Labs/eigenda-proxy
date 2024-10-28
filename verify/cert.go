@@ -56,10 +56,13 @@ func NewCertVerifier(cfg *Config, l log.Logger) (*CertVerifier, error) {
 func (cv *CertVerifier) verifyBatchConfirmedOnChain(
 	ctx context.Context, batchID uint32, batchMetadata *disperser.BatchMetadata,
 ) error {
-	// 1. verify batch is actually onchain at the batchMetadata's state confirmedBlockNumber
-	// This assert is technically not necessary, but it's a good sanity check.
-	// It could technically happen that a confirmed batch's block gets reorged out,
-	// yet the tx is included in an earlier or later block, making this check fail...
+	// 1. Verify batch is actually onchain at the batchMetadata's state confirmedBlockNumber.
+	// This is super unlikely if the disperser is honest, but it could technically happen that a confirmed batch's block gets reorged out,
+	// yet the tx is included in an earlier or later block, making the batchMetadata received from the disperser
+	// no longer valid. The eigenda batcher does check for these reorgs and updates the batch's confirmation block number:
+	// https://github.com/Layr-Labs/eigenda/blob/bee55ed9207f16153c3fd8ebf73c219e68685def/disperser/batcher/finalizer.go#L198
+	// TODO: We could require the disperser for the new batch, or try to reconstruct it ourselves by querying the chain,
+	// but for now we opt to simply fail the verification, which will force teh batcher to resubmit the batch to eigenda.
 	confirmationBlockNumber := batchMetadata.GetConfirmationBlockNumber()
 	confirmationBlockNumberBigInt := big.NewInt(0).SetInt64(int64(confirmationBlockNumber))
 	_, err := cv.retrieveBatchMetadataHash(ctx, batchID, confirmationBlockNumberBigInt)
