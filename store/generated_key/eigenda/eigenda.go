@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Layr-Labs/eigenda-proxy/store"
+	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/ethereum/go-ethereum/log"
@@ -31,7 +31,7 @@ type Store struct {
 	log      log.Logger
 }
 
-var _ store.GeneratedKeyStore = (*Store)(nil)
+var _ common.GeneratedKeyStore = (*Store)(nil)
 
 func NewStore(client *clients.EigenDAClient,
 	v *verify.Verifier, log log.Logger, cfg *StoreConfig) (*Store, error) {
@@ -67,7 +67,7 @@ func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 		return nil, fmt.Errorf("EigenDA client failed to re-encode blob: %w", err)
 	}
 	if uint64(len(encodedBlob)) > e.cfg.MaxBlobSizeBytes {
-		return nil, fmt.Errorf("%w: blob length %d, max blob size %d", store.ErrProxyOversizedBlob, len(value), e.cfg.MaxBlobSizeBytes)
+		return nil, fmt.Errorf("%w: blob length %d, max blob size %d", common.ErrProxyOversizedBlob, len(value), e.cfg.MaxBlobSizeBytes)
 	}
 
 	dispersalStart := time.Now()
@@ -116,14 +116,9 @@ func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 	return bytes, nil
 }
 
-// Entries are a no-op for EigenDA Store
-func (e Store) Stats() *store.Stats {
-	return nil
-}
-
 // Backend returns the backend type for EigenDA Store
-func (e Store) BackendType() store.BackendType {
-	return store.EigenDABackendType
+func (e Store) BackendType() common.BackendType {
+	return common.EigenDABackendType
 }
 
 // Key is used to recover certificate fields and that verifies blob
