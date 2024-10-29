@@ -28,8 +28,8 @@ func withDeprecatedFlagPrefix(s string) string {
 	return "eigenda-" + s
 }
 
-func withDeprecatedEnvPrefix(envPrefix, s string) []string {
-	return []string{envPrefix + "_" + s}
+func withDeprecatedEnvPrefix(envPrefix, s string) string {
+	return envPrefix + "_" + s
 }
 
 // CLIFlags ... used for EigenDA client configuration
@@ -38,7 +38,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.StringFlag{
 			Name:     DeprecatedDisperserRPCFlagName,
 			Usage:    "RPC endpoint of the EigenDA disperser.",
-			EnvVars:  withDeprecatedEnvPrefix(envPrefix, "DISPERSER_RPC"),
+			EnvVars:  []string{withDeprecatedEnvPrefix(envPrefix, "DISPERSER_RPC")},
 			Category: category,
 			Action: func(*cli.Context, string) error {
 				return fmt.Errorf("flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
@@ -50,7 +50,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 			Name:     DeprecatedStatusQueryTimeoutFlagName,
 			Usage:    "Duration to wait for a blob to finalize after being sent for dispersal. Default is 30 minutes.",
 			Value:    30 * time.Minute,
-			EnvVars:  withDeprecatedEnvPrefix(envPrefix, "STATUS_QUERY_TIMEOUT"),
+			EnvVars:  []string{withDeprecatedEnvPrefix(envPrefix, "STATUS_QUERY_TIMEOUT")},
 			Category: category,
 			Action: func(*cli.Context, time.Duration) error {
 				return fmt.Errorf("flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
@@ -62,7 +62,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 			Name:     DeprecatedStatusQueryRetryIntervalFlagName,
 			Usage:    "Interval between retries when awaiting network blob finalization. Default is 5 seconds.",
 			Value:    5 * time.Second,
-			EnvVars:  withDeprecatedEnvPrefix(envPrefix, "STATUS_QUERY_INTERVAL"),
+			EnvVars:  []string{withDeprecatedEnvPrefix(envPrefix, "STATUS_QUERY_INTERVAL")},
 			Category: category,
 			Action: func(*cli.Context, time.Duration) error {
 				return fmt.Errorf("flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
@@ -74,7 +74,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 			Name:     DeprecatedDisableTLSFlagName,
 			Usage:    "Disable TLS for gRPC communication with the EigenDA disperser. Default is false.",
 			Value:    false,
-			EnvVars:  withDeprecatedEnvPrefix(envPrefix, "GRPC_DISABLE_TLS"),
+			EnvVars:  []string{withDeprecatedEnvPrefix(envPrefix, "GRPC_DISABLE_TLS")},
 			Category: category,
 			Action: func(*cli.Context, bool) error {
 				return fmt.Errorf("flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
@@ -86,7 +86,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 			Name:     DeprecatedResponseTimeoutFlagName,
 			Usage:    "Total time to wait for a response from the EigenDA disperser. Default is 60 seconds.",
 			Value:    60 * time.Second,
-			EnvVars:  withDeprecatedEnvPrefix(envPrefix, "RESPONSE_TIMEOUT"),
+			EnvVars:  []string{withDeprecatedEnvPrefix(envPrefix, "RESPONSE_TIMEOUT")},
 			Category: category,
 			Action: func(*cli.Context, time.Duration) error {
 				return fmt.Errorf("flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
@@ -98,7 +98,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 			Name:     DeprecatedCustomQuorumIDsFlagName,
 			Usage:    "Custom quorum IDs for writing blobs. Should not include default quorums 0 or 1.",
 			Value:    cli.NewUintSlice(),
-			EnvVars:  withDeprecatedEnvPrefix(envPrefix, "CUSTOM_QUORUM_IDS"),
+			EnvVars:  []string{withDeprecatedEnvPrefix(envPrefix, "CUSTOM_QUORUM_IDS")},
 			Category: category,
 			Action: func(*cli.Context, []uint) error {
 				return fmt.Errorf("flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
@@ -109,7 +109,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.StringFlag{
 			Name:     DeprecatedSignerPrivateKeyHexFlagName,
 			Usage:    "Hex-encoded signer private key. This key should not be associated with an Ethereum address holding any funds.",
-			EnvVars:  withDeprecatedEnvPrefix(envPrefix, "SIGNER_PRIVATE_KEY_HEX"),
+			EnvVars:  []string{withDeprecatedEnvPrefix(envPrefix, "SIGNER_PRIVATE_KEY_HEX")},
 			Category: category,
 			Action: func(*cli.Context, string) error {
 				return fmt.Errorf("flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
@@ -120,7 +120,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.UintFlag{
 			Name:     DeprecatedPutBlobEncodingVersionFlagName,
 			Usage:    "Blob encoding version to use when writing blobs from the high-level interface.",
-			EnvVars:  withDeprecatedEnvPrefix(envPrefix, "PUT_BLOB_ENCODING_VERSION"),
+			EnvVars:  []string{withDeprecatedEnvPrefix(envPrefix, "PUT_BLOB_ENCODING_VERSION")},
 			Value:    0,
 			Category: category,
 			Action: func(*cli.Context, uint) error {
@@ -132,7 +132,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.BoolFlag{
 			Name:     DeprecatedDisablePointVerificationModeFlagName,
 			Usage:    "Disable point verification mode. This mode performs IFFT on data before writing and FFT on data after reading. Disabling requires supplying the entire blob for verification against the KZG commitment.",
-			EnvVars:  withDeprecatedEnvPrefix(envPrefix, "DISABLE_POINT_VERIFICATION_MODE"),
+			EnvVars:  []string{withDeprecatedEnvPrefix(envPrefix, "DISABLE_POINT_VERIFICATION_MODE")},
 			Value:    false,
 			Category: category,
 			Action: func(*cli.Context, bool) error {

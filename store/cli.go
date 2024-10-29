@@ -13,14 +13,14 @@ var (
 )
 
 func withFlagPrefix(s string) string {
-	return "store." + s
+	return "storage." + s
 }
 
 func withEnvPrefix(envPrefix, s string) []string {
-	return []string{envPrefix + "_STORE_" + s}
+	return []string{envPrefix + "_STORAGE_" + s}
 }
 
-// CLIFlags ... used for Redis backend configuration
+// CLIFlags ... used for storage configuration
 // category is used to group the flags in the help output (see https://cli.urfave.org/v2/examples/flags/#grouping)
 func CLIFlags(envPrefix, category string) []cli.Flag {
 	return []cli.Flag{
