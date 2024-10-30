@@ -5,7 +5,9 @@ go 1.22
 toolchain go1.22.0
 
 require (
-	github.com/Layr-Labs/eigenda v0.8.5-0.20241028201743-5fe3e910a22d
+	// TODO: merge https://github.com/Layr-Labs/eigenda/pull/849 first
+	// and then update this dep to the merged commit.
+	github.com/Layr-Labs/eigenda v0.8.5-0.20241030205712-b301232f7804
 	github.com/consensys/gnark-crypto v0.12.1
 	github.com/ethereum-optimism/optimism v1.9.4-0.20240927020138-a9c7f349d10b
 	github.com/ethereum/go-ethereum v1.14.11
