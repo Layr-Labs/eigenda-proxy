@@ -183,7 +183,7 @@ func TestSuiteConfig(testCfg *Cfg) server.CLIConfig {
 		panic(err)
 	}
 
-	svcManagerAddr := "0xD4A7E1Bd8015057293f0D0A557088c286942e84b" // incompatible with non holeskly networks
+	svcManagerAddr := "0xD4A7E1Bd8015057293f0D0A557088c286942e84b" // holesky testnet
 	eigendaCfg := server.Config{
 		EdaClientConfig: clients.EigenDAClientConfig{
 			RPC:                      holeskyDA,
