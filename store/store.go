@@ -1,27 +1,36 @@
 package store
 
-import "context"
+import (
+	"context"
+	"fmt"
+	"strings"
+)
 
 type BackendType uint8
 
 const (
-	EigenDA BackendType = iota
-	Memory
-	S3
-	Redis
+	EigenDABackendType BackendType = iota
+	MemoryBackendType
+	S3BackendType
+	RedisBackendType
 
 	Unknown
 )
 
+var (
+	ErrProxyOversizedBlob   = fmt.Errorf("encoded blob is larger than max blob size")
+	ErrEigenDAOversizedBlob = fmt.Errorf("blob size cannot exceed")
+)
+
 func (b BackendType) String() string {
 	switch b {
-	case EigenDA:
+	case EigenDABackendType:
 		return "EigenDA"
-	case Memory:
+	case MemoryBackendType:
 		return "Memory"
-	case S3:
+	case S3BackendType:
 		return "S3"
-	case Redis:
+	case RedisBackendType:
 		return "Redis"
 	case Unknown:
 		fallthrough
@@ -31,16 +40,18 @@ func (b BackendType) String() string {
 }
 
 func StringToBackendType(s string) BackendType {
-	switch s {
-	case "EigenDA":
-		return EigenDA
-	case "Memory":
-		return Memory
-	case "S3":
-		return S3
-	case "Redis":
-		return Redis
-	case "Unknown":
+	lower := strings.ToLower(s)
+
+	switch lower {
+	case "eigenda":
+		return EigenDABackendType
+	case "memory":
+		return MemoryBackendType
+	case "s3":
+		return S3BackendType
+	case "redis":
+		return RedisBackendType
+	case "unknown":
 		fallthrough
 	default:
 		return Unknown
@@ -54,15 +65,13 @@ type Stats struct {
 }
 
 type Store interface {
-	// Stats returns the current usage metrics of the key-value data store.
-	Stats() *Stats
 	// Backend returns the backend type provider of the store.
 	BackendType() BackendType
 	// Verify verifies the given key-value pair.
-	Verify(key []byte, value []byte) error
+	Verify(ctx context.Context, key []byte, value []byte) error
 }
 
-type KeyGeneratedStore interface {
+type GeneratedKeyStore interface {
 	Store
 	// Get retrieves the given key if it's present in the key-value data store.
 	Get(ctx context.Context, key []byte) ([]byte, error)
@@ -71,7 +80,7 @@ type KeyGeneratedStore interface {
 }
 
 type WVMedKeyGeneratedStore interface {
-	KeyGeneratedStore
+	GeneratedKeyStore
 	GetWvmTxHashByCommitment(ctx context.Context, key []byte) (string, error)
 	GetBlobFromWvm(ctx context.Context, key []byte) ([]byte, error)
 }

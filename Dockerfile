@@ -1,6 +1,6 @@
 # multi container builds ftw
 
-FROM golang:1.21.10-alpine3.19 as builder
+FROM golang:1.22.8-alpine3.19 AS builder
 
 RUN apk add --no-cache make gcc musl-dev linux-headers jq bash git
 
@@ -13,7 +13,7 @@ COPY go.mod go.sum ./
 # Download all dependencies. Dependencies will be cached if the go.mod and go.sum files are not changed
 RUN go mod download
 
-# Copy the rest of the application code
+# Copy the rest of the application code (filtered by .dockerignore)
 COPY . .
 
 # Build the application binary
@@ -32,4 +32,4 @@ COPY --from=builder /app/resources/ /app/resources/
 EXPOSE 4242 7300
 
 # Run app
-CMD ["./eigenda-proxy"]
+ENTRYPOINT ["./eigenda-proxy"]

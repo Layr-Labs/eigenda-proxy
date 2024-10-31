@@ -13,26 +13,14 @@ jobs:
     steps:
       - uses: actions/setup-go@v3
         with:
-          go-version: '1.21' # The Go version to download (if necessary) and use.
+          go-version: '1.22' # The Go version to download (if necessary) and use.
       - run: go version
 
-      - name: Checkout EigenDA
+      - name: Checkout code
         uses: actions/checkout@v3
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.60
+          version: v1.61
           args: --timeout 3m
-
-  go-sec:
-    runs-on: ubuntu-latest
-    env:
-      GO111MODULE: on
-    steps:
-      - name: Checkout Source
-        uses: actions/checkout@v3
-      - name: Run Gosec Security Scanner
-        uses: securego/gosec@master
-        with:
-          args: ./...

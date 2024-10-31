@@ -1,4 +1,4 @@
-package store
+package memstore
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 
+	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/api/clients/codecs"
 	"github.com/Layr-Labs/eigenda/api/grpc/common"
@@ -22,6 +23,14 @@ const (
 	DefaultPruneInterval = 500 * time.Millisecond
 )
 
+type Config struct {
+	MaxBlobSizeBytes uint64
+	BlobExpiration   time.Duration
+	// artificial latency added for memstore backend to mimic eigenda's latency
+	PutLatency time.Duration
+	GetLatency time.Duration
+}
+
 /*
 MemStore is a simple in-memory store for blobs which uses an expiration
 time to evict blobs to best emulate the ephemeral nature of blobs dispersed to
@@ -30,42 +39,41 @@ EigenDA operators.
 type MemStore struct {
 	sync.RWMutex
 
+	config    Config
 	l         log.Logger
 	keyStarts map[string]time.Time
 	store     map[string][]byte
 	verifier  *verify.Verifier
 	codec     codecs.BlobCodec
 
-	maxBlobSizeBytes uint64
-	blobExpiration   time.Duration
-	reads            int
+	reads int
 }
 
-var _ KeyGeneratedStore = (*MemStore)(nil)
+var _ store.GeneratedKeyStore = (*MemStore)(nil)
 
-// NewMemStore ... constructor
-func NewMemStore(ctx context.Context, verifier *verify.Verifier, l log.Logger,
-	maxBlobSizeBytes uint64, blobExpiration time.Duration) (*MemStore, error) {
+// New ... constructor
+func New(
+	ctx context.Context, verifier *verify.Verifier, l log.Logger, config Config,
+) (*MemStore, error) {
 	store := &MemStore{
-		l:                l,
-		keyStarts:        make(map[string]time.Time),
-		store:            make(map[string][]byte),
-		verifier:         verifier,
-		codec:            codecs.NewIFFTCodec(codecs.NewDefaultBlobCodec()),
-		maxBlobSizeBytes: maxBlobSizeBytes,
-		blobExpiration:   blobExpiration,
+		l:         l,
+		config:    config,
+		keyStarts: make(map[string]time.Time),
+		store:     make(map[string][]byte),
+		verifier:  verifier,
+		codec:     codecs.NewIFFTCodec(codecs.NewDefaultBlobCodec()),
 	}
 
-	if store.blobExpiration != 0 {
-		l.Info("memstore expiration enabled", "time", store.blobExpiration)
-		go store.EventLoop(ctx)
+	if store.config.BlobExpiration != 0 {
+		l.Info("memstore expiration enabled", "time", store.config.BlobExpiration)
+		go store.pruningLoop(ctx)
 	}
 
 	return store, nil
 }
 
-// EventLoop ... runs a background goroutine to prune expired blobs from the store on a regular interval.
-func (e *MemStore) EventLoop(ctx context.Context) {
+// pruningLoop ... runs a background goroutine to prune expired blobs from the store on a regular interval.
+func (e *MemStore) pruningLoop(ctx context.Context) {
 	timer := time.NewTicker(DefaultPruneInterval)
 
 	for {
@@ -86,7 +94,7 @@ func (e *MemStore) pruneExpired() {
 	defer e.Unlock()
 
 	for commit, dur := range e.keyStarts {
-		if time.Since(dur) >= e.blobExpiration {
+		if time.Since(dur) >= e.config.BlobExpiration {
 			delete(e.keyStarts, commit)
 			delete(e.store, commit)
 
@@ -97,6 +105,7 @@ func (e *MemStore) pruneExpired() {
 
 // Get fetches a value from the store.
 func (e *MemStore) Get(_ context.Context, commit []byte) ([]byte, error) {
+	time.Sleep(e.config.GetLatency)
 	e.reads++
 	e.RLock()
 	defer e.RUnlock()
@@ -124,17 +133,18 @@ func (e *MemStore) Get(_ context.Context, commit []byte) ([]byte, error) {
 
 // Put inserts a value into the store.
 func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
-	if uint64(len(value)) > e.maxBlobSizeBytes {
-		return nil, fmt.Errorf("blob is larger than max blob size: blob length %d, max blob size %d", len(value), e.maxBlobSizeBytes)
-	}
-
-	e.Lock()
-	defer e.Unlock()
-
+	time.Sleep(e.config.PutLatency)
 	encodedVal, err := e.codec.EncodeBlob(value)
 	if err != nil {
 		return nil, err
 	}
+
+	if uint64(len(encodedVal)) > e.config.MaxBlobSizeBytes {
+		return nil, fmt.Errorf("%w: blob length %d, max blob size %d", store.ErrProxyOversizedBlob, len(value), e.config.MaxBlobSizeBytes)
+	}
+
+	e.Lock()
+	defer e.Unlock()
 
 	commitment, err := e.verifier.Commit(encodedVal)
 	if err != nil {
@@ -150,7 +160,7 @@ func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
 	mockBatchRoot := crypto.Keccak256Hash(entropy)
 	blockNum, _ := rand.Int(rand.Reader, big.NewInt(1000))
 
-	num := uint32(blockNum.Uint64())
+	num := uint32(blockNum.Uint64()) // #nosec G115
 
 	cert := &verify.Certificate{
 		BlobHeader: &disperser.BlobHeader{
@@ -158,7 +168,7 @@ func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
 				X: commitment.X.Marshal(),
 				Y: commitment.Y.Marshal(),
 			},
-			DataLength: uint32(len(encodedVal)),
+			DataLength: uint32(len(encodedVal)), // #nosec G115
 			BlobQuorumParams: []*disperser.BlobQuorumParam{
 				{
 					QuorumNumber:                    1,
@@ -208,20 +218,20 @@ func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
 	return certBytes, nil
 }
 
-func (e *MemStore) Verify(_, _ []byte) error {
+func (e *MemStore) Verify(_ context.Context, _, _ []byte) error {
 	return nil
 }
 
 // Stats ... returns the current usage metrics of the in-memory key-value data store.
-func (e *MemStore) Stats() *Stats {
+func (e *MemStore) Stats() *store.Stats {
 	e.RLock()
 	defer e.RUnlock()
-	return &Stats{
+	return &store.Stats{
 		Entries: len(e.store),
 		Reads:   e.reads,
 	}
 }
 
-func (e *MemStore) BackendType() BackendType {
-	return Memory
+func (e *MemStore) BackendType() store.BackendType {
+	return store.MemoryBackendType
 }
