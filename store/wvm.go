@@ -26,7 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/patrickmn/go-cache"
+	cache "github.com/patrickmn/go-cache"
 )
 
 type WVMClient struct {
@@ -36,15 +36,15 @@ type WVMClient struct {
 }
 
 const (
-	wvmRpcUrl  = "https://testnet-rpc.wvm.dev" // wvm alphanet rpc url
-	wvmChainId = 9496                          // wvm alphanet chain id
+	wvmRPCURL  = "https://testnet-rpc.wvm.dev" // wvm alphanet rpc url
+	wvmChainID = 9496                          // wvm alphanet chain id
 
 	wvmArchiverAddress    = "0xF8a5a479f04d1565b925A67D088b8fC3f8f0b7eF" // we use it as a "from" address
 	wvmArchivePoolAddress = "0x606dc1BE30A5966FcF3C10D907d1B76A7B1Bbbd9" // we use it as a "to" address
 )
 
 func NewWVMClient(log log.Logger) *WVMClient {
-	client, err := ethclient.Dial(wvmRpcUrl)
+	client, err := ethclient.Dial(wvmRPCURL)
 	if err != nil {
 		panic(fmt.Sprintf("failed to connect to the WVM client: %v", err))
 	}
@@ -144,7 +144,7 @@ func (wvm *WVMClient) WvmDecode(calldataBlob string) ([]byte, error) {
 
 // GetWvmTxHashByCommitment uses commitment to get wvm tx hash from the internal map(temprorary hack)
 // and returns it to the caller
-func (wvm *WVMClient) GetWvmTxHashByCommitment(ctx context.Context, cert *verify.Certificate) (string, error) {
+func (wvm *WVMClient) GetWvmTxHashByCommitment(cert *verify.Certificate) (string, error) {
 	wvmTxHash, found := wvm.wvmCache.Get(commitmentKey(cert.BlobVerificationProof.BatchId, cert.BlobVerificationProof.BlobIndex))
 	if !found {
 		wvm.log.Info("wvm tx hash using provided commitment NOT FOUND", "provided key", commitmentKey(cert.BlobVerificationProof.BatchId, cert.BlobVerificationProof.BlobIndex))
@@ -157,7 +157,9 @@ func (wvm *WVMClient) GetWvmTxHashByCommitment(ctx context.Context, cert *verify
 }
 
 func (wvm *WVMClient) GetBlobFromWvm(ctx context.Context, wvmTxHash string) ([]byte, error) {
-	r, err := http.Get(fmt.Sprintf("https://wvm-data-retriever.shuttleapp.rs/calldata/%s", wvmTxHash))
+	r, err := http.NewRequestWithContext(ctx, http.MethodGet,
+		fmt.Sprintf("https://wvm-data-retriever.shuttleapp.rs/calldata/%s",
+			wvmTxHash), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to call wvm-data-retriever")
 	}
@@ -305,7 +307,7 @@ func (wvm *WVMClient) createRawTransaction(ctx context.Context, to string, data 
 
 	toAddr := common.HexToAddress(to)
 	txData := types.DynamicFeeTx{
-		ChainID:   big.NewInt(wvmChainId),
+		ChainID:   big.NewInt(wvmChainID),
 		Nonce:     nonce,
 		GasTipCap: big.NewInt(0),
 		GasFeeCap: gasFeeCap,
@@ -315,8 +317,7 @@ func (wvm *WVMClient) createRawTransaction(ctx context.Context, to string, data 
 	}
 
 	tx := types.NewTx(&txData)
-	signedTx, err := types.SignTx(tx, types.LatestSignerForChainID(big.NewInt(wvmChainId)), ecdsaPrivateKey)
-
+	signedTx, err := types.SignTx(tx, types.LatestSignerForChainID(big.NewInt(wvmChainID)), ecdsaPrivateKey)
 	if err != nil {
 		return "", err
 	}
@@ -324,7 +325,6 @@ func (wvm *WVMClient) createRawTransaction(ctx context.Context, to string, data 
 	// Encode the signed transaction into RLP (Recursive Length Prefix) format for transmission.
 	var buf bytes.Buffer
 	err = signedTx.EncodeRLP(&buf)
-
 	if err != nil {
 		return "", err
 	}

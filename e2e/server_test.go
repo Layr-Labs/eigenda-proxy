@@ -1,14 +1,15 @@
 package e2e_test
 
 import (
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/client"
-	"github.com/Layr-Labs/eigenda-proxy/e2e"
-	op_plasma "github.com/ethereum-optimism/optimism/op-plasma"
+	"github.com/Layr-Labs/eigenda-proxy/commitments"
+	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Layr-Labs/eigenda-proxy/e2e"
 )
 
 func useMemory() bool {
@@ -25,19 +26,10 @@ func TestOptimismClientWithKeccak256Commitment(t *testing.T) {
 	testCfg := e2e.TestConfig(useMemory())
 	testCfg.UseKeccak256ModeS3 = true
 
-	ts, kill := e2e.CreateTestSuite(t, testCfg)
+	tsConfig := e2e.TestSuiteConfig(testCfg)
+	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
-
-	daClient := op_plasma.NewDAClient(ts.Address(), false, true)
-
-	testPreimage := []byte(e2e.RandString(100))
-
-	commit, err := daClient.SetInput(ts.Ctx, testPreimage)
-	require.NoError(t, err)
-
-	preimage, err := daClient.GetInput(ts.Ctx, commit)
-	require.NoError(t, err)
-	require.Equal(t, testPreimage, preimage)
+	requireOPClientSetGet(t, ts, e2e.RandBytes(100), true)
 }
 
 /*
@@ -52,116 +44,48 @@ func TestOptimismClientWithGenericCommitment(t *testing.T) {
 
 	t.Parallel()
 
-	ts, kill := e2e.CreateTestSuite(t, e2e.TestConfig(useMemory()))
+	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory()))
+	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 
-	daClient := op_plasma.NewDAClient(ts.Address(), false, false)
-
-	testPreimage := []byte(e2e.RandString(100))
-
-	t.Log("Setting input data on proxy server...")
-	commit, err := daClient.SetInput(ts.Ctx, testPreimage)
-	require.NoError(t, err)
-
-	t.Log("Getting input data from proxy server...")
-	preimage, err := daClient.GetInput(ts.Ctx, commit)
-	require.NoError(t, err)
-	require.Equal(t, testPreimage, preimage)
+	requireOPClientSetGet(t, ts, e2e.RandBytes(100), false)
+	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.OptimismGeneric)
 }
 
-func TestProxyClient(t *testing.T) {
+func TestProxyClientWriteRead(t *testing.T) {
 	if !runIntegrationTests && !runTestnetIntegrationTests {
 		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
 	}
 
 	t.Parallel()
 
-	ts, kill := e2e.CreateTestSuite(t, e2e.TestConfig(useMemory()))
+	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory()))
+	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 
-	cfg := &client.Config{
-		URL: ts.Address(),
-	}
-	daClient := client.New(cfg)
-
-	testPreimage := []byte(e2e.RandString(100))
-
-	t.Log("Setting input data on proxy server...")
-	blobInfo, err := daClient.SetData(ts.Ctx, testPreimage)
-	require.NoError(t, err)
-
-	t.Log("Getting input data from proxy server...")
-	preimage, err := daClient.GetData(ts.Ctx, blobInfo)
-	require.NoError(t, err)
-	require.Equal(t, testPreimage, preimage)
+	requireSimpleClientSetGet(t, ts, e2e.RandBytes(100))
+	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.SimpleCommitmentMode)
 }
 
-func TestProxyServerWithLargeBlob(t *testing.T) {
+func TestProxyWithMaximumSizedBlob(t *testing.T) {
 	if !runIntegrationTests && !runTestnetIntegrationTests {
 		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
 	}
 
 	t.Parallel()
 
-	ts, kill := e2e.CreateTestSuite(t, e2e.TestConfig(useMemory()))
+	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory()))
+	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 
-	cfg := &client.Config{
-		URL: ts.Address(),
-	}
-	daClient := client.New(cfg)
-	//  4MB blob
-	testPreimage := []byte(e2e.RandString(4_000_000))
-
-	t.Log("Setting input data on proxy server...")
-	blobInfo, err := daClient.SetData(ts.Ctx, testPreimage)
-	require.NoError(t, err)
-
-	t.Log("Getting input data from proxy server...")
-	preimage, err := daClient.GetData(ts.Ctx, blobInfo)
-	require.NoError(t, err)
-	require.Equal(t, testPreimage, preimage)
-}
-
-func TestProxyServerWithOversizedBlob(t *testing.T) {
-	if !runIntegrationTests && !runTestnetIntegrationTests {
-		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
-	}
-
-	t.Parallel()
-
-	ts, kill := e2e.CreateTestSuite(t, e2e.TestConfig(useMemory()))
-	defer kill()
-
-	cfg := &client.Config{
-		URL: ts.Address(),
-	}
-	daClient := client.New(cfg)
-	//  17MB blob
-	testPreimage := []byte(e2e.RandString(17_000_0000))
-
-	t.Log("Setting input data on proxy server...")
-	blobInfo, err := daClient.SetData(ts.Ctx, testPreimage)
-	require.Empty(t, blobInfo)
-	require.Error(t, err)
-
-	oversizedError := false
-	if strings.Contains(err.Error(), "blob is larger than max blob size") {
-		oversizedError = true
-	}
-
-	if strings.Contains(err.Error(), "blob size cannot exceed") {
-		oversizedError = true
-	}
-
-	require.True(t, oversizedError)
-
+	requireSimpleClientSetGet(t, ts, e2e.RandBytes(16_000_000))
+	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.SimpleCommitmentMode)
 }
 
 /*
 Ensure that proxy is able to write/read from a cache backend when enabled
 */
-func TestProxyServerCaching(t *testing.T) {
+func TestProxyCaching(t *testing.T) {
 	if !runIntegrationTests && !runTestnetIntegrationTests {
 		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
 	}
@@ -171,36 +95,32 @@ func TestProxyServerCaching(t *testing.T) {
 	testCfg := e2e.TestConfig(useMemory())
 	testCfg.UseS3Caching = true
 
-	ts, kill := e2e.CreateTestSuite(t, testCfg)
+	tsConfig := e2e.TestSuiteConfig(testCfg)
+	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 
-	cfg := &client.Config{
-		URL: ts.Address(),
+	requireSimpleClientSetGet(t, ts, e2e.RandBytes(1_000_000))
+	requireWriteReadSecondary(t, ts.Metrics.SecondaryRequestsTotal, store.S3BackendType)
+	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.SimpleCommitmentMode)
+}
+
+func TestProxyCachingWithRedis(t *testing.T) {
+	if !runIntegrationTests && !runTestnetIntegrationTests {
+		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
 	}
-	daClient := client.New(cfg)
-	//  1mb blob
-	testPreimage := []byte(e2e.RandString(1_0000))
 
-	t.Log("Setting input data on proxy server...")
-	blobInfo, err := daClient.SetData(ts.Ctx, testPreimage)
-	require.NotEmpty(t, blobInfo)
-	require.NoError(t, err)
+	t.Parallel()
 
-	t.Log("Getting input data from proxy server...")
-	preimage, err := daClient.GetData(ts.Ctx, blobInfo)
-	require.NoError(t, err)
-	require.Equal(t, testPreimage, preimage)
+	testCfg := e2e.TestConfig(useMemory())
+	testCfg.UseRedisCaching = true
 
-	// ensure that read was from cache
-	s3Stats := ts.Server.GetS3Stats()
-	require.Equal(t, 1, s3Stats.Reads)
-	require.Equal(t, 1, s3Stats.Entries)
+	tsConfig := e2e.TestSuiteConfig(testCfg)
+	ts, kill := e2e.CreateTestSuite(tsConfig)
+	defer kill()
 
-	if useMemory() { // ensure that eigenda was not read from
-		memStats := ts.Server.GetEigenDAStats()
-		require.Equal(t, 0, memStats.Reads)
-		require.Equal(t, 1, memStats.Entries)
-	}
+	requireSimpleClientSetGet(t, ts, e2e.RandBytes(1_000_000))
+	requireWriteReadSecondary(t, ts.Metrics.SecondaryRequestsTotal, store.RedisBackendType)
+	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.SimpleCommitmentMode)
 }
 
 /*
@@ -209,7 +129,7 @@ func TestProxyServerCaching(t *testing.T) {
 	before attempting to read it.
 */
 
-func TestProxyServerReadFallback(t *testing.T) {
+func TestProxyReadFallback(t *testing.T) {
 	// test can't be ran against holesky since read failure case can't be manually triggered
 	if !runIntegrationTests || runTestnetIntegrationTests {
 		t.Skip("Skipping test as INTEGRATION env var not set")
@@ -217,40 +137,32 @@ func TestProxyServerReadFallback(t *testing.T) {
 
 	t.Parallel()
 
+	// setup server with S3 as a fallback option
 	testCfg := e2e.TestConfig(useMemory())
 	testCfg.UseS3Fallback = true
+	// ensure that blob memstore eviction times result in near immediate activation
 	testCfg.Expiration = time.Millisecond * 1
 
-	ts, kill := e2e.CreateTestSuite(t, testCfg)
+	tsConfig := e2e.TestSuiteConfig(testCfg)
+	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 
 	cfg := &client.Config{
 		URL: ts.Address(),
 	}
 	daClient := client.New(cfg)
-	//  1mb blob
-	testPreimage := []byte(e2e.RandString(1_0000))
-
+	expectedBlob := e2e.RandBytes(1_000_000)
 	t.Log("Setting input data on proxy server...")
-	blobInfo, err := daClient.SetData(ts.Ctx, testPreimage)
-	require.NotEmpty(t, blobInfo)
+	blobInfo, err := daClient.SetData(ts.Ctx, expectedBlob)
 	require.NoError(t, err)
 
-	time.Sleep(time.Second * 1)
-
+	time.Sleep(1 * time.Second)
 	t.Log("Getting input data from proxy server...")
-	preimage, err := daClient.GetData(ts.Ctx, blobInfo)
+	actualBlob, err := daClient.GetData(ts.Ctx, blobInfo)
 	require.NoError(t, err)
-	require.Equal(t, testPreimage, preimage)
+	require.Equal(t, expectedBlob, actualBlob)
 
-	// ensure that read was from fallback target location (i.e, S3 for this test)
-	s3Stats := ts.Server.GetS3Stats()
-	require.Equal(t, 1, s3Stats.Reads)
-	require.Equal(t, 1, s3Stats.Entries)
-
-	if useMemory() { // ensure that an eigenda read was attempted with zero data available
-		memStats := ts.Server.GetEigenDAStats()
-		require.Equal(t, 1, memStats.Reads)
-		require.Equal(t, 0, memStats.Entries)
-	}
+	requireSimpleClientSetGet(t, ts, e2e.RandBytes(1_000_000))
+	requireWriteReadSecondary(t, ts.Metrics.SecondaryRequestsTotal, store.S3BackendType)
+	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.SimpleCommitmentMode)
 }

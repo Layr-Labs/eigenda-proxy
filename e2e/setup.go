@@ -4,13 +4,19 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"testing"
+	"runtime"
+	"strings"
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/server"
-	"github.com/Layr-Labs/eigenda-proxy/store"
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
+	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
+	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
+	"github.com/Layr-Labs/eigenda-proxy/utils"
+	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/api/clients"
+	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -19,7 +25,8 @@ import (
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 
-	"github.com/stretchr/testify/require"
+	miniotc "github.com/testcontainers/testcontainers-go/modules/minio"
+	redistc "github.com/testcontainers/testcontainers-go/modules/redis"
 )
 
 const (
@@ -31,11 +38,79 @@ const (
 	holeskyDA  = "disperser-holesky.eigenda.xyz:443"
 )
 
+var (
+	// set by startMinioContainer
+	minioEndpoint = ""
+	// set by startRedisContainer
+	redisEndpoint = ""
+)
+
+// TODO: we shouldn't start the containers in the init function like this.
+// Need to find a better way to start the containers and set the endpoints.
+// Even better would be for the endpoints not to be global variables injected into the test configs.
+// Starting the containers on init like this also makes it harder to import this file into other tests.
+func init() {
+	err := startMinIOContainer()
+	if err != nil {
+		panic(err)
+	}
+	err = startRedisContainer()
+	if err != nil {
+		panic(err)
+	}
+}
+
+// startMinIOContainer starts a MinIO container and sets the minioEndpoint global variable
+func startMinIOContainer() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	minioContainer, err := miniotc.Run(ctx,
+		"minio/minio:RELEASE.2024-10-02T17-50-41Z",
+		miniotc.WithUsername("minioadmin"),
+		miniotc.WithPassword("minioadmin"),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to start MinIO container: %w", err)
+	}
+
+	endpoint, err := minioContainer.Endpoint(ctx, "")
+	if err != nil {
+		return fmt.Errorf("failed to get MinIO endpoint: %w", err)
+	}
+
+	minioEndpoint = strings.TrimPrefix(endpoint, "http://")
+	return nil
+}
+
+// startRedisContainer starts a Redis container and sets the redisEndpoint global variable
+func startRedisContainer() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	redisContainer, err := redistc.Run(ctx,
+		"docker.io/redis:7",
+	)
+	if err != nil {
+		return fmt.Errorf("failed to start Redis container: %w", err)
+	}
+
+	endpoint, err := redisContainer.Endpoint(ctx, "")
+	if err != nil {
+		return fmt.Errorf("failed to get Redis endpoint: %w", err)
+	}
+	redisEndpoint = endpoint
+	return nil
+}
+
 type Cfg struct {
-	UseMemory          bool
-	Expiration         time.Duration
+	UseMemory        bool
+	Expiration       time.Duration
+	WriteThreadCount int
+	// at most one of the below options should be true
 	UseKeccak256ModeS3 bool
 	UseS3Caching       bool
+	UseRedisCaching    bool
 	UseS3Fallback      bool
 }
 
@@ -45,49 +120,55 @@ func TestConfig(useMemory bool) *Cfg {
 		Expiration:         14 * 24 * time.Hour,
 		UseKeccak256ModeS3: false,
 		UseS3Caching:       false,
+		UseRedisCaching:    false,
 		UseS3Fallback:      false,
+		WriteThreadCount:   0,
+	}
+}
+
+func createRedisConfig(eigendaCfg server.Config) server.CLIConfig {
+	eigendaCfg.RedisConfig = redis.Config{
+		Endpoint: redisEndpoint,
+		Password: "",
+		DB:       0,
+		Eviction: 10 * time.Minute,
+		Profile:  true,
+	}
+	return server.CLIConfig{
+		EigenDAConfig: eigendaCfg,
 	}
 }
 
 func createS3Config(eigendaCfg server.Config) server.CLIConfig {
 	// generate random string
-	bucketName := "eigenda-proxy-test-" + RandString(10)
+	bucketName := "eigenda-proxy-test-" + RandStr(10)
 	createS3Bucket(bucketName)
 
+	eigendaCfg.S3Config = s3.Config{
+		Bucket:          bucketName,
+		Path:            "",
+		Endpoint:        minioEndpoint,
+		EnableTLS:       false,
+		AccessKeySecret: "minioadmin",
+		AccessKeyID:     "minioadmin",
+		CredentialType:  s3.CredentialTypeStatic,
+	}
 	return server.CLIConfig{
 		EigenDAConfig: eigendaCfg,
-		S3Config: store.S3Config{
-			Profiling:        true,
-			Bucket:           bucketName,
-			Path:             "",
-			Endpoint:         "localhost:4566",
-			AccessKeySecret:  "minioadmin",
-			AccessKeyID:      "minioadmin",
-			S3CredentialType: store.S3CredentialStatic,
-			Backup:           false,
-		},
 	}
 }
 
-type TestSuite struct {
-	Ctx    context.Context
-	Log    log.Logger
-	Server *server.Server
-}
-
-func CreateTestSuite(t *testing.T, testCfg *Cfg) (TestSuite, func()) {
-	ctx := context.Background()
-
+func TestSuiteConfig(testCfg *Cfg) server.CLIConfig {
 	// load signer key from environment
 	pk := os.Getenv(privateKey)
 	if pk == "" && !testCfg.UseMemory {
-		t.Fatal("SIGNER_PRIVATE_KEY environment variable not set")
+		panic("SIGNER_PRIVATE_KEY environment variable not set")
 	}
 
 	// load node url from environment
 	ethRPC := os.Getenv(ethRPC)
 	if ethRPC == "" && !testCfg.UseMemory {
-		t.Fatal("ETHEREUM_RPC environment variable is not set")
+		panic("ETHEREUM_RPC environment variable is not set")
 	}
 
 	var pollInterval time.Duration
@@ -97,38 +178,46 @@ func CreateTestSuite(t *testing.T, testCfg *Cfg) (TestSuite, func()) {
 		pollInterval = time.Minute * 1
 	}
 
-	log := oplog.NewLogger(os.Stdout, oplog.CLIConfig{
-		Level:  log.LevelDebug,
-		Format: oplog.FormatLogFmt,
-		Color:  true,
-	}).New("role", svcName)
+	maxBlobLengthBytes, err := utils.ParseBytesAmount("16mib")
+	if err != nil {
+		panic(err)
+	}
 
 	eigendaCfg := server.Config{
-		ClientConfig: clients.EigenDAClientConfig{
+		EdaClientConfig: clients.EigenDAClientConfig{
 			RPC:                      holeskyDA,
 			StatusQueryTimeout:       time.Minute * 45,
 			StatusQueryRetryInterval: pollInterval,
 			DisableTLS:               false,
 			SignerPrivateKeyHex:      pk,
 		},
-		EthRPC:                 ethRPC,
-		SvcManagerAddr:         "0xD4A7E1Bd8015057293f0D0A557088c286942e84b", // incompatible with non holeskly networks
-		CacheDir:               "../resources/SRSTables",
-		G1Path:                 "../resources/g1.point",
-		MaxBlobLength:          "16mib",
-		G2PowerOfTauPath:       "../resources/g2.point.powerOf2",
-		PutBlobEncodingVersion: 0x00,
-		MemstoreEnabled:        testCfg.UseMemory,
-		MemstoreBlobExpiration: testCfg.Expiration,
-		EthConfirmationDepth:   0,
+		VerifierConfig: verify.Config{
+			VerifyCerts:          false,
+			RPCURL:               ethRPC,
+			SvcManagerAddr:       "0xD4A7E1Bd8015057293f0D0A557088c286942e84b", // incompatible with non holeskly networks
+			EthConfirmationDepth: 0,
+			KzgConfig: &kzg.KzgConfig{
+				G1Path:          "../resources/g1.point",
+				G2PowerOf2Path:  "../resources/g2.point.powerOf2",
+				CacheDir:        "../resources/SRSTables",
+				SRSOrder:        268435456,
+				SRSNumberToLoad: maxBlobLengthBytes / 32,
+				NumWorker:       uint64(runtime.GOMAXPROCS(0)), // #nosec G115
+			},
+		},
+		MemstoreEnabled: testCfg.UseMemory,
+		MemstoreConfig: memstore.Config{
+			BlobExpiration:   testCfg.Expiration,
+			MaxBlobSizeBytes: maxBlobLengthBytes,
+		},
+		AsyncPutWorkers: testCfg.WriteThreadCount,
 	}
 
 	if testCfg.UseMemory {
-		eigendaCfg.ClientConfig.SignerPrivateKeyHex = "0000000000000000000100000000000000000000000000000000000000000000"
+		eigendaCfg.EdaClientConfig.SignerPrivateKeyHex = "0000000000000000000100000000000000000000000000000000000000000000"
 	}
 
 	var cfg server.CLIConfig
-
 	switch {
 	case testCfg.UseKeccak256ModeS3:
 		cfg = createS3Config(eigendaCfg)
@@ -141,6 +230,10 @@ func CreateTestSuite(t *testing.T, testCfg *Cfg) (TestSuite, func()) {
 		eigendaCfg.FallbackTargets = []string{"S3"}
 		cfg = createS3Config(eigendaCfg)
 
+	case testCfg.UseRedisCaching:
+		eigendaCfg.CacheTargets = []string{"redis"}
+		cfg = createRedisConfig(eigendaCfg)
+
 	default:
 		cfg = server.CLIConfig{
 			EigenDAConfig: eigendaCfg,
@@ -148,28 +241,55 @@ func CreateTestSuite(t *testing.T, testCfg *Cfg) (TestSuite, func()) {
 		}
 	}
 
-	store, err := server.LoadStoreRouter(
-		ctx,
-		cfg,
-		log,
-	)
-	require.NoError(t, err)
-	server := server.NewServer(host, 0, store, log, metrics.NoopMetrics)
+	return cfg
+}
 
-	t.Log("Starting proxy server...")
-	err = server.Start()
-	require.NoError(t, err)
+type TestSuite struct {
+	Ctx     context.Context
+	Log     log.Logger
+	Server  *server.Server
+	Metrics *metrics.EmulatedMetricer
+}
+
+func CreateTestSuite(testSuiteCfg server.CLIConfig) (TestSuite, func()) {
+	log := oplog.NewLogger(os.Stdout, oplog.CLIConfig{
+		Level:  log.LevelDebug,
+		Format: oplog.FormatLogFmt,
+		Color:  true,
+	}).New("role", svcName)
+
+	m := metrics.NewEmulatedMetricer()
+	ctx := context.Background()
+	sm, err := server.LoadStoreManager(
+		ctx,
+		testSuiteCfg,
+		log,
+		m,
+	)
+
+	if err != nil {
+		panic(err)
+	}
+
+	proxySvr := server.NewServer(host, 0, sm, log, m)
+
+	log.Info("Starting proxy server...")
+	err = proxySvr.Start()
+	if err != nil {
+		panic(err)
+	}
 
 	kill := func() {
-		if err := server.Stop(); err != nil {
-			panic(err)
+		if err := proxySvr.Stop(); err != nil {
+			log.Error("failed to stop proxy server", "err", err)
 		}
 	}
 
 	return TestSuite{
-		Ctx:    ctx,
-		Log:    log,
-		Server: server,
+		Ctx:     ctx,
+		Log:     log,
+		Server:  proxySvr,
+		Metrics: m,
 	}, kill
 }
 
@@ -182,7 +302,7 @@ func (ts *TestSuite) Address() string {
 
 func createS3Bucket(bucketName string) {
 	// Initialize minio client object.
-	endpoint := "localhost:4566"
+	endpoint := minioEndpoint
 	accessKeyID := "minioadmin"
 	secretAccessKey := "minioadmin"
 	useSSL := false
@@ -212,11 +332,15 @@ func createS3Bucket(bucketName string) {
 	}
 }
 
-func RandString(n int) string {
+func RandStr(n int) string {
 	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz")
 	b := make([]rune, n)
 	for i := range b {
 		b[i] = letterRunes[rand.Intn(len(letterRunes))]
 	}
 	return string(b)
+}
+
+func RandBytes(n int) []byte {
+	return []byte(RandStr(n))
 }

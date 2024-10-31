@@ -2,39 +2,43 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
+	"github.com/Layr-Labs/eigenda-proxy/flags"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/server"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/urfave/cli/v2"
 
+	"github.com/ethereum-optimism/optimism/op-service/ctxinterrupt"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
-	"github.com/ethereum-optimism/optimism/op-service/opio"
 )
 
 func StartProxySvr(cliCtx *cli.Context) error {
-	if err := server.CheckRequired(cliCtx); err != nil {
-		return err
-	}
+	log := oplog.NewLogger(oplog.AppOut(cliCtx), oplog.ReadCLIConfig(cliCtx)).New("role", "eigenda_proxy")
+	oplog.SetGlobalLogHandler(log.Handler())
+	log.Info("Starting EigenDA Proxy Server", "version", Version, "date", Date, "commit", Commit)
+
 	cfg := server.ReadCLIConfig(cliCtx)
 	if err := cfg.Check(); err != nil {
 		return err
 	}
-	ctx, ctxCancel := context.WithCancel(cliCtx.Context)
-	defer ctxCancel()
+	err := prettyPrintConfig(cliCtx, log)
+	if err != nil {
+		return fmt.Errorf("failed to pretty print config: %w", err)
+	}
 
 	m := metrics.NewMetrics("default")
 
-	log := oplog.NewLogger(oplog.AppOut(cliCtx), oplog.ReadCLIConfig(cliCtx)).New("role", "eigenda_proxy")
-	oplog.SetGlobalLogHandler(log.Handler())
+	ctx, ctxCancel := context.WithCancel(cliCtx.Context)
+	defer ctxCancel()
 
-	log.Info("Initializing EigenDA proxy server...")
-
-	daRouter, err := server.LoadStoreRouter(ctx, cfg, log)
+	sm, err := server.LoadStoreManager(ctx, cfg, log, m)
 	if err != nil {
 		return fmt.Errorf("failed to create store: %w", err)
 	}
-	server := server.NewServer(cliCtx.String(server.ListenAddrFlagName), cliCtx.Int(server.PortFlagName), daRouter, log, m)
+	server := server.NewServer(cliCtx.String(flags.ListenAddrFlagName), cliCtx.Int(flags.PortFlagName), sm, log, m)
 
 	if err := server.Start(); err != nil {
 		return fmt.Errorf("failed to start the DA server: %w", err)
@@ -65,7 +69,21 @@ func StartProxySvr(cliCtx *cli.Context) error {
 		m.RecordUp()
 	}
 
-	opio.BlockOnInterrupts()
+	return ctxinterrupt.Wait(cliCtx.Context)
+}
 
+// TODO: we should probably just change EdaClientConfig struct definition in eigenda-client
+// to have a `json:"-"` tag on the SignerPrivateKeyHex field, to prevent the privateKey from being marshaled at all
+func prettyPrintConfig(cliCtx *cli.Context, log log.Logger) error {
+	// we read a new config which we modify to hide private info in order to log the rest
+	cfg := server.ReadCLIConfig(cliCtx)
+	cfg.EigenDAConfig.EdaClientConfig.SignerPrivateKeyHex = "HIDDEN"
+	cfg.EigenDAConfig.VerifierConfig.RPCURL = "HIDDEN"
+
+	configJSON, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+	log.Info(fmt.Sprintf("Initializing EigenDA proxy server with config: %v", string(configJSON)))
 	return nil
 }
