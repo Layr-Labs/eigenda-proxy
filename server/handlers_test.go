@@ -27,7 +27,7 @@ const (
 	testCommitStr = "9a7d4f1c3e5b8a09d1c0fa4b3f8e1d7c6b29f1e6d8c4a7b3c2d4e5f6a7b8c9d0"
 )
 
-func TestHandleOPCommitments(t *testing.T) {
+func TestHandlerGet(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockStorageMgr := mocks.NewMockIManager(ctrl)
@@ -95,9 +95,11 @@ func TestHandleOPCommitments(t *testing.T) {
 			r.ServeHTTP(rec, req)
 
 			require.Equal(t, tt.expectedCode, rec.Code)
-			// We don't test for bodies because it's a specific error message
-			// that contains a lot of information
-			// require.Equal(t, tt.expectedBody, rec.Body.String())
+			// We only test for bodies for 200s because error messages contain a lot of information
+			// that isn't very important to test (plus its annoying to always change if error msg changes slightly).
+			if tt.expectedCode == http.StatusOK {
+				require.Equal(t, tt.expectedBody, rec.Body.String())
+			}
 
 		})
 	}
@@ -140,6 +142,17 @@ func TestHandlerPut(t *testing.T) {
 			expectError:  false,
 		},
 		{
+			name: "Failure OP Mode Keccak256 - InternalServerError",
+			url:  fmt.Sprintf("/put/0x00%s", testCommitStr),
+			body: []byte("some data that will trigger an internal error"),
+			mockBehavior: func() {
+				mockStorageMgr.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("internal error"))
+			},
+			expectedCode: http.StatusInternalServerError,
+			expectedBody: "",
+			expectError:  true,
+		},
+		{
 			name: "Success OP Mode Keccak256",
 			url:  fmt.Sprintf("/put/0x00%s", testCommitStr),
 			body: []byte("some data that will successfully be written to EigenDA"),
@@ -149,6 +162,17 @@ func TestHandlerPut(t *testing.T) {
 			expectedCode: http.StatusOK,
 			expectedBody: "",
 			expectError:  false,
+		},
+		{
+			name: "Failure Simple Commitment Mode - InternalServerError",
+			url:  "/put?commitment_mode=simple",
+			body: []byte("some data that will trigger an internal error"),
+			mockBehavior: func() {
+				mockStorageMgr.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("internal error"))
+			},
+			expectedCode: http.StatusInternalServerError,
+			expectedBody: "",
+			expectError:  true,
 		},
 		{
 			name: "Success Simple Commitment Mode",
