@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
-	"github.com/Layr-Labs/eigenda-proxy/store"
+	"github.com/Layr-Labs/eigenda-proxy/common"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -35,7 +35,7 @@ func is400(err error) bool {
 	// IFFT'ing or encoding the blob, so we shouldn't return a 400 to the client.
 	// See https://github.com/Layr-Labs/eigenda/blob/bee55ed9207f16153c3fd8ebf73c219e68685def/api/errors.go#L22
 	// for the 400s returned by the disperser server (currently only INVALID_ARGUMENT).
-	return errors.Is(err, store.ErrProxyOversizedBlob)
+	return errors.Is(err, common.ErrProxyOversizedBlob)
 }
 
 func is429(err error) bool {

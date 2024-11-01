@@ -12,9 +12,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/mocks"
-	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda/api"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/golang/mock/gomock"
@@ -237,7 +237,7 @@ func TestHandlerPutErrors(t *testing.T) {
 		{
 			// only 400s are due to oversized blobs right now
 			name:                         "Failure - BadRequest 400",
-			mockStorageMgrPutReturnedErr: store.ErrProxyOversizedBlob,
+			mockStorageMgrPutReturnedErr: common.ErrProxyOversizedBlob,
 			expectedHTTPCode:             http.StatusBadRequest,
 		},
 	}
