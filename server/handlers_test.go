@@ -1,5 +1,8 @@
 package server
 
+// The tests in this file test not only the handlers but also the middlewares,
+// because server.registerRoutes(r) registers the handlers wrapped with middlewares.
+
 import (
 	"bytes"
 	"fmt"
@@ -27,11 +30,7 @@ const (
 func TestHandleOPCommitments(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
-	mockRouter := mocks.NewMockIManager(ctrl)
-
-	m := metrics.NewMetrics("default")
-	server := NewServer("localhost", 8080, mockRouter, log.New(), m)
+	mockStorageMgr := mocks.NewMockIManager(ctrl)
 
 	tests := []struct {
 		name         string
@@ -44,7 +43,7 @@ func TestHandleOPCommitments(t *testing.T) {
 			name: "Failure - OP Keccak256 Internal Server Error",
 			url:  fmt.Sprintf("/get/0x00%s", testCommitStr),
 			mockBehavior: func() {
-				mockRouter.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("internal error"))
+				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("internal error"))
 			},
 			expectedCode: http.StatusInternalServerError,
 			expectedBody: "",
@@ -53,7 +52,7 @@ func TestHandleOPCommitments(t *testing.T) {
 			name: "Success - OP Keccak256",
 			url:  fmt.Sprintf("/get/0x00%s", testCommitStr),
 			mockBehavior: func() {
-				mockRouter.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte(testCommitStr), nil)
+				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte(testCommitStr), nil)
 			},
 			expectedCode: http.StatusOK,
 			expectedBody: testCommitStr,
@@ -62,7 +61,7 @@ func TestHandleOPCommitments(t *testing.T) {
 			name: "Failure - OP Alt-DA Internal Server Error",
 			url:  fmt.Sprintf("/get/0x010000%s", testCommitStr),
 			mockBehavior: func() {
-				mockRouter.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("internal error"))
+				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("internal error"))
 			},
 			expectedCode: http.StatusInternalServerError,
 			expectedBody: "",
@@ -71,7 +70,7 @@ func TestHandleOPCommitments(t *testing.T) {
 			name: "Success - OP Alt-DA",
 			url:  fmt.Sprintf("/get/0x010000%s", testCommitStr),
 			mockBehavior: func() {
-				mockRouter.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte(testCommitStr), nil)
+				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte(testCommitStr), nil)
 			},
 			expectedCode: http.StatusOK,
 			expectedBody: testCommitStr,
@@ -88,6 +87,10 @@ func TestHandleOPCommitments(t *testing.T) {
 			// To add the vars to the context,
 			// we need to create a router through which we can pass the request.
 			r := mux.NewRouter()
+			// enable this logger to help debug tests
+			// logger := log.NewLogger(log.NewTerminalHandler(os.Stderr, true)).With("test_name", t.Name())
+			noopLogger := log.NewLogger(log.DiscardHandler())
+			server := NewServer("localhost", 0, mockStorageMgr, noopLogger, metrics.NoopMetrics)
 			server.registerRoutes(r)
 			r.ServeHTTP(rec, req)
 
@@ -103,9 +106,7 @@ func TestHandleOPCommitments(t *testing.T) {
 func TestHandlerPut(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-
-	mockRouter := mocks.NewMockIManager(ctrl)
-	server := NewServer("localhost", 8080, mockRouter, log.New(), metrics.NoopMetrics)
+	mockStorageMgr := mocks.NewMockIManager(ctrl)
 
 	tests := []struct {
 		name         string
@@ -121,7 +122,7 @@ func TestHandlerPut(t *testing.T) {
 			url:  "/put",
 			body: []byte("some data that will trigger an internal error"),
 			mockBehavior: func() {
-				mockRouter.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("internal error"))
+				mockStorageMgr.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("internal error"))
 			},
 			expectedCode: http.StatusInternalServerError,
 			expectedBody: "",
@@ -132,7 +133,7 @@ func TestHandlerPut(t *testing.T) {
 			url:  "/put",
 			body: []byte("some data that will successfully be written to EigenDA"),
 			mockBehavior: func() {
-				mockRouter.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte(testCommitStr), nil)
+				mockStorageMgr.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte(testCommitStr), nil)
 			},
 			expectedCode: http.StatusOK,
 			expectedBody: opGenericPrefixStr + testCommitStr,
@@ -143,7 +144,7 @@ func TestHandlerPut(t *testing.T) {
 			url:  fmt.Sprintf("/put/0x00%s", testCommitStr),
 			body: []byte("some data that will successfully be written to EigenDA"),
 			mockBehavior: func() {
-				mockRouter.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte(testCommitStr), nil)
+				mockStorageMgr.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte(testCommitStr), nil)
 			},
 			expectedCode: http.StatusOK,
 			expectedBody: "",
@@ -154,7 +155,7 @@ func TestHandlerPut(t *testing.T) {
 			url:  "/put?commitment_mode=simple",
 			body: []byte("some data that will successfully be written to EigenDA"),
 			mockBehavior: func() {
-				mockRouter.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte(testCommitStr), nil)
+				mockStorageMgr.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte(testCommitStr), nil)
 			},
 			expectedCode: http.StatusOK,
 			expectedBody: simpleCommitmentPrefix + testCommitStr,
@@ -172,6 +173,10 @@ func TestHandlerPut(t *testing.T) {
 			// To add the vars to the context,
 			// we need to create a router through which we can pass the request.
 			r := mux.NewRouter()
+			// enable this logger to help debug tests
+			// logger := log.NewLogger(log.NewTerminalHandler(os.Stderr, true)).With("test_name", t.Name())
+			noopLogger := log.NewLogger(log.DiscardHandler())
+			server := NewServer("localhost", 0, mockStorageMgr, noopLogger, metrics.NoopMetrics)
 			server.registerRoutes(r)
 			r.ServeHTTP(rec, req)
 
