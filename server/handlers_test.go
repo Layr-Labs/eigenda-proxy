@@ -8,14 +8,20 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/mocks"
+	"github.com/Layr-Labs/eigenda-proxy/store"
+	"github.com/Layr-Labs/eigenda/api"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -105,7 +111,7 @@ func TestHandlerGet(t *testing.T) {
 	}
 }
 
-func TestHandlerPut(t *testing.T) {
+func TestHandlerPutSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockStorageMgr := mocks.NewMockIManager(ctrl)
@@ -119,16 +125,6 @@ func TestHandlerPut(t *testing.T) {
 		expectedBody string
 	}{
 		{
-			name: "Failure OP Mode Alt-DA - InternalServerError",
-			url:  "/put",
-			body: []byte("some data that will trigger an internal error"),
-			mockBehavior: func() {
-				mockStorageMgr.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("internal error"))
-			},
-			expectedCode: http.StatusInternalServerError,
-			expectedBody: "",
-		},
-		{
 			name: "Success OP Mode Alt-DA",
 			url:  "/put",
 			body: []byte("some data that will successfully be written to EigenDA"),
@@ -139,16 +135,6 @@ func TestHandlerPut(t *testing.T) {
 			expectedBody: opGenericPrefixStr + testCommitStr,
 		},
 		{
-			name: "Failure OP Mode Keccak256 - InternalServerError",
-			url:  fmt.Sprintf("/put/0x00%s", testCommitStr),
-			body: []byte("some data that will trigger an internal error"),
-			mockBehavior: func() {
-				mockStorageMgr.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("internal error"))
-			},
-			expectedCode: http.StatusInternalServerError,
-			expectedBody: "",
-		},
-		{
 			name: "Success OP Mode Keccak256",
 			url:  fmt.Sprintf("/put/0x00%s", testCommitStr),
 			body: []byte("some data that will successfully be written to EigenDA"),
@@ -156,16 +142,6 @@ func TestHandlerPut(t *testing.T) {
 				mockStorageMgr.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte(testCommitStr), nil)
 			},
 			expectedCode: http.StatusOK,
-			expectedBody: "",
-		},
-		{
-			name: "Failure Simple Commitment Mode - InternalServerError",
-			url:  "/put?commitment_mode=simple",
-			body: []byte("some data that will trigger an internal error"),
-			mockBehavior: func() {
-				mockStorageMgr.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("internal error"))
-			},
-			expectedCode: http.StatusInternalServerError,
 			expectedBody: "",
 		},
 		{
@@ -205,4 +181,88 @@ func TestHandlerPut(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHandlerPutErrors(t *testing.T) {
+	// Each test is run against all 3 different modes.
+	modes := []struct {
+		name string
+		url  string
+	}{
+		{
+			name: "OP Mode Alt-DA",
+			url:  "/put",
+		},
+		{
+			name: "OP Mode Keccak256",
+			url:  fmt.Sprintf("/put/0x00%s", testCommitStr),
+		},
+		{
+			name: "Simple Commitment Mode",
+			url:  "/put?commitment_mode=simple",
+		},
+	}
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStorageMgr := mocks.NewMockIManager(ctrl)
+
+	tests := []struct {
+		name                         string
+		mockStorageMgrPutReturnedErr error
+		expectedHTTPCode             int
+	}{
+		{
+			// we only test OK status here. Returned commitment is checked in TestHandlerPut
+			name:                         "Success - 200",
+			mockStorageMgrPutReturnedErr: nil,
+			expectedHTTPCode:             http.StatusOK,
+		},
+		{
+			name:                         "Failure - InternalServerError 500",
+			mockStorageMgrPutReturnedErr: fmt.Errorf("internal error"),
+			expectedHTTPCode:             http.StatusInternalServerError,
+		},
+		{
+			// if /put results in ErrorFailover (returned by eigenda-client), we should return 503
+			name:                         "Failure - Failover 503",
+			mockStorageMgrPutReturnedErr: &api.ErrorFailover{},
+			expectedHTTPCode:             http.StatusServiceUnavailable,
+		},
+		{
+			name:                         "Failure - TooManyRequests 429",
+			mockStorageMgrPutReturnedErr: status.Errorf(codes.ResourceExhausted, "too many requests"),
+			expectedHTTPCode:             http.StatusTooManyRequests,
+		},
+		{
+			// only 400s are due to oversized blobs right now
+			name:                         "Failure - BadRequest 400",
+			mockStorageMgrPutReturnedErr: store.ErrProxyOversizedBlob,
+			expectedHTTPCode:             http.StatusBadRequest,
+		},
+	}
+
+	for _, tt := range tests {
+		for _, mode := range modes {
+			t.Run(tt.name+" / "+mode.name, func(t *testing.T) {
+				mockStorageMgr.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, tt.mockStorageMgrPutReturnedErr)
+
+				req := httptest.NewRequest(http.MethodPost, mode.url, strings.NewReader("optional body to be sent to eigenda"))
+				rec := httptest.NewRecorder()
+
+				// To add the vars to the context,
+				// we need to create a router through which we can pass the request.
+				r := mux.NewRouter()
+				// enable this logger to help debug tests
+				logger := log.NewLogger(log.NewTerminalHandler(os.Stdout, true)).With("test_name", t.Name())
+				// noopLogger := log.NewLogger(log.DiscardHandler())
+				server := NewServer("localhost", 0, mockStorageMgr, logger, metrics.NoopMetrics)
+				server.registerRoutes(r)
+				r.ServeHTTP(rec, req)
+
+				require.Equal(t, tt.expectedHTTPCode, rec.Code)
+			})
+		}
+	}
+
 }
