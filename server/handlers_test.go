@@ -117,7 +117,6 @@ func TestHandlerPut(t *testing.T) {
 		mockBehavior func()
 		expectedCode int
 		expectedBody string
-		expectError  bool
 	}{
 		{
 			name: "Failure OP Mode Alt-DA - InternalServerError",
@@ -128,7 +127,6 @@ func TestHandlerPut(t *testing.T) {
 			},
 			expectedCode: http.StatusInternalServerError,
 			expectedBody: "",
-			expectError:  true,
 		},
 		{
 			name: "Success OP Mode Alt-DA",
@@ -139,7 +137,6 @@ func TestHandlerPut(t *testing.T) {
 			},
 			expectedCode: http.StatusOK,
 			expectedBody: opGenericPrefixStr + testCommitStr,
-			expectError:  false,
 		},
 		{
 			name: "Failure OP Mode Keccak256 - InternalServerError",
@@ -150,7 +147,6 @@ func TestHandlerPut(t *testing.T) {
 			},
 			expectedCode: http.StatusInternalServerError,
 			expectedBody: "",
-			expectError:  true,
 		},
 		{
 			name: "Success OP Mode Keccak256",
@@ -161,7 +157,6 @@ func TestHandlerPut(t *testing.T) {
 			},
 			expectedCode: http.StatusOK,
 			expectedBody: "",
-			expectError:  false,
 		},
 		{
 			name: "Failure Simple Commitment Mode - InternalServerError",
@@ -172,7 +167,6 @@ func TestHandlerPut(t *testing.T) {
 			},
 			expectedCode: http.StatusInternalServerError,
 			expectedBody: "",
-			expectError:  true,
 		},
 		{
 			name: "Success Simple Commitment Mode",
@@ -183,7 +177,6 @@ func TestHandlerPut(t *testing.T) {
 			},
 			expectedCode: http.StatusOK,
 			expectedBody: simpleCommitmentPrefix + testCommitStr,
-			expectError:  false,
 		},
 	}
 
@@ -205,12 +198,10 @@ func TestHandlerPut(t *testing.T) {
 			r.ServeHTTP(rec, req)
 
 			require.Equal(t, tt.expectedCode, rec.Code)
-			if !tt.expectError && tt.expectedBody != "" {
-				require.Equal(t, []byte(tt.expectedBody), rec.Body.Bytes())
-			}
-
-			if !tt.expectError && tt.expectedBody == "" {
-				require.Equal(t, []byte(nil), rec.Body.Bytes())
+			// We only test for bodies for 200s because error messages contain a lot of information
+			// that isn't very important to test (plus its annoying to always change if error msg changes slightly).
+			if tt.expectedCode == http.StatusOK {
+				require.Equal(t, tt.expectedBody, rec.Body.String())
 			}
 		})
 	}
