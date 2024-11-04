@@ -51,7 +51,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		},
 		&cli.DurationFlag{
 			Name:     ResponseTimeoutFlagName,
-			Usage:    "Total time to wait for a response from the EigenDA disperser. Default is 60 seconds.",
+			Usage:    "Flag used to configure the underlying disperser-client. Total time to wait for the disperseBlob call to return or disperseAuthenticatedBlob stream to finish and close.",
 			Value:    60 * time.Second,
 			EnvVars:  []string{withEnvPrefix(envPrefix, "RESPONSE_TIMEOUT")},
 			Category: category,
