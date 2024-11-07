@@ -6,6 +6,7 @@ import (
 
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/common"
+	"github.com/Layr-Labs/eigenda/api"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -43,4 +44,10 @@ func is429(err error) bool {
 	// in a short period of time. This is a client-side issue, so we should return the 429 to the client.
 	st, isGRPCError := status.FromError(err)
 	return isGRPCError && st.Code() == codes.ResourceExhausted
+}
+
+// 503 is returned to tell the caller (batcher) to failover to ethda b/c eigenda is temporarily down
+func is503(err error) bool {
+	// TODO: would be cleaner to define a sentinel error in eigenda-core and use that instead
+	return errors.Is(err, &api.ErrorFailover{})
 }
