@@ -19,6 +19,7 @@ Features:
 * Performs DA certificate verification during retrieval to ensure that data represented by bad DA certificates do not become part of the canonical chain.
 * Compatibility with Optimism's alt-da commitment type with eigenda backend.
 * Compatibility with Optimism's keccak-256 commitment type with S3 storage.
+* Blobs permanent backup storage option via [WeaveVM](./store/precomputed_key/wvm). 
 
 In order to disperse to the EigenDA network in production, or at high throughput on testnet, please register your authentication ethereum address through [this form](https://forms.gle/3QRNTYhSMacVFNcU8). Your EigenDA authentication keypair address should not be associated with any funds anywhere.
 

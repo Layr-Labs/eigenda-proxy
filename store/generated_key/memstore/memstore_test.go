@@ -93,7 +93,6 @@ func TestExpiration(t *testing.T) {
 
 	_, err = ms.Get(ctx, key)
 	require.Error(t, err)
-
 }
 
 func TestLatency(t *testing.T) {
@@ -125,5 +124,4 @@ func TestLatency(t *testing.T) {
 	_, err = ms.Get(ctx, key)
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, time.Since(timeBeforeGet), getLatency)
-
 }

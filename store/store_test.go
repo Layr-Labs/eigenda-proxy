@@ -7,6 +7,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
+	wvm "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/wvm/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,6 +26,12 @@ func validCfg() *store.Config {
 			EnableTLS:       false,
 			AccessKeyID:     "access-key-id",
 			AccessKeySecret: "access-key-secret",
+		},
+		WVMConfig: wvm.Config{
+			Enabled:            true,
+			Endpoint:           "https://testnet-rpc.wvm.dev/",
+			ChainID:            9496,
+			Web3SignerEndpoint: "http://localhost:9000",
 		},
 	}
 }
@@ -108,6 +115,15 @@ func TestConfigVerification(t *testing.T) {
 	t.Run("BadRedisConfiguration", func(t *testing.T) {
 		cfg := validCfg()
 		cfg.RedisConfig.Endpoint = ""
+
+		err := cfg.Check()
+		require.Error(t, err)
+	})
+
+	t.Run("BadWvmConfiguration", func(t *testing.T) {
+		cfg := validCfg()
+		cfg.WVMConfig.Endpoint = ""
+		cfg.WVMConfig.Enabled = true
 
 		err := cfg.Check()
 		require.Error(t, err)

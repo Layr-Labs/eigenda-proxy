@@ -36,16 +36,18 @@ func StringToCredentialType(s string) CredentialType {
 
 var _ common.PrecomputedKeyStore = (*Store)(nil)
 
-type CredentialType string
-type Config struct {
-	CredentialType  CredentialType
-	Endpoint        string
-	EnableTLS       bool
-	AccessKeyID     string
-	AccessKeySecret string
-	Bucket          string
-	Path            string
-}
+type (
+	CredentialType string
+	Config         struct {
+		CredentialType  CredentialType
+		Endpoint        string
+		EnableTLS       bool
+		AccessKeyID     string
+		AccessKeySecret string
+		Bucket          string
+		Path            string
+	}
+)
 
 // Store ... S3 store
 // client safe for concurrent use: https://github.com/minio/minio-go/issues/598#issuecomment-569457863

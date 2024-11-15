@@ -6,6 +6,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
+	wvm "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/wvm/types"
 )
 
 type Config struct {
@@ -16,6 +17,7 @@ type Config struct {
 	// secondary storage cfgs
 	RedisConfig redis.Config
 	S3Config    s3.Config
+	WVMConfig   wvm.Config
 }
 
 // checkTargets ... verifies that a backend target slice is constructed correctly
@@ -50,6 +52,10 @@ func (cfg *Config) Check() error {
 
 	if cfg.RedisConfig.Endpoint == "" && cfg.RedisConfig.Password != "" {
 		return fmt.Errorf("redis password is set, but endpoint is not")
+	}
+
+	if cfg.WVMConfig.Enabled && (cfg.WVMConfig.Endpoint == "" || cfg.WVMConfig.ChainID == 0) {
+		return fmt.Errorf("wvm enabled but endpoint or chain id has not been provided")
 	}
 
 	err := cfg.checkTargets(cfg.FallbackTargets)

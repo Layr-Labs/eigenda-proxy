@@ -15,6 +15,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
+	wvm "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/wvm/types"
 	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
@@ -113,6 +114,7 @@ type Cfg struct {
 	UseS3Caching       bool
 	UseRedisCaching    bool
 	UseS3Fallback      bool
+	UseWVMFallback     bool
 }
 
 func TestConfig(useMemory bool) *Cfg {
@@ -123,6 +125,7 @@ func TestConfig(useMemory bool) *Cfg {
 		UseS3Caching:       false,
 		UseRedisCaching:    false,
 		UseS3Fallback:      false,
+		UseWVMFallback:     false,
 		WriteThreadCount:   0,
 	}
 }
@@ -153,6 +156,19 @@ func createS3Config(eigendaCfg server.Config) server.CLIConfig {
 		AccessKeySecret: "minioadmin",
 		AccessKeyID:     "minioadmin",
 		CredentialType:  s3.CredentialTypeStatic,
+	}
+	return server.CLIConfig{
+		EigenDAConfig: eigendaCfg,
+	}
+}
+
+func createWVMConfig(eigendaCfg server.Config) server.CLIConfig {
+	eigendaCfg.StorageConfig.WVMConfig = wvm.Config{
+		Enabled:  true,
+		Endpoint: "https://testnet-rpc.wvm.dev/",
+		ChainID:  9496,
+		// set higher than 5s in e2e tests
+		Timeout: 10 * time.Second,
 	}
 	return server.CLIConfig{
 		EigenDAConfig: eigendaCfg,
@@ -237,6 +253,10 @@ func TestSuiteConfig(testCfg *Cfg) server.CLIConfig {
 		eigendaCfg.StorageConfig.FallbackTargets = []string{"S3"}
 		cfg = createS3Config(eigendaCfg)
 
+	case testCfg.UseWVMFallback:
+		eigendaCfg.StorageConfig.FallbackTargets = []string{"wvm"}
+		cfg = createWVMConfig(eigendaCfg)
+
 	case testCfg.UseRedisCaching:
 		eigendaCfg.StorageConfig.CacheTargets = []string{"redis"}
 		cfg = createRedisConfig(eigendaCfg)
@@ -273,7 +293,6 @@ func CreateTestSuite(testSuiteCfg server.CLIConfig) (TestSuite, func()) {
 		log,
 		m,
 	)
-
 	if err != nil {
 		panic(err)
 	}
@@ -340,7 +359,7 @@ func createS3Bucket(bucketName string) {
 }
 
 func RandStr(n int) string {
-	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz")
+	letterRunes := []rune("abcdefghijklmnopqrstuvwxyz")
 	b := make([]rune, n)
 	for i := range b {
 		b[i] = letterRunes[rand.Intn(len(letterRunes))]
