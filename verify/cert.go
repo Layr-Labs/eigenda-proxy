@@ -19,9 +19,9 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-// CertVerifier verifies the DA certificate against on-chain EigenDA contracts
+// BridgedCertVerifier verifies the DA certificate against on-chain EigenDA contracts
 // to ensure disperser returned fields haven't been tampered with
-type CertVerifier struct {
+type BridgedCertVerifier struct {
 	l                    log.Logger
 	ethConfirmationDepth uint64
 	waitForFinalization  bool
@@ -29,7 +29,7 @@ type CertVerifier struct {
 	ethClient            *ethclient.Client
 }
 
-func NewCertVerifier(cfg *Config, l log.Logger) (*CertVerifier, error) {
+func NewBridgedCertVerifier(cfg *Config, l log.Logger) (*BridgedCertVerifier, error) {
 	log.Info("Enabling certificate verification", "confirmation_depth", cfg.EthConfirmationDepth)
 
 	client, err := ethclient.Dial(cfg.RPCURL)
@@ -43,7 +43,7 @@ func NewCertVerifier(cfg *Config, l log.Logger) (*CertVerifier, error) {
 		return nil, err
 	}
 
-	return &CertVerifier{
+	return &BridgedCertVerifier{
 		l:                    l,
 		manager:              m,
 		ethConfirmationDepth: cfg.EthConfirmationDepth,
@@ -53,7 +53,7 @@ func NewCertVerifier(cfg *Config, l log.Logger) (*CertVerifier, error) {
 
 // verifyBatchConfirmedOnChain verifies that batchMetadata (typically part of a received cert)
 // matches the batch metadata hash stored on-chain
-func (cv *CertVerifier) verifyBatchConfirmedOnChain(
+func (bcv *BridgedCertVerifier) verifyBatchConfirmedOnChain(
 	ctx context.Context, batchID uint32, batchMetadata *disperser.BatchMetadata,
 ) error {
 	// 1. Verify batch is actually onchain at the batchMetadata's state confirmedBlockNumber.
@@ -65,7 +65,7 @@ func (cv *CertVerifier) verifyBatchConfirmedOnChain(
 	// but for now we opt to simply fail the verification, which will force the batcher to resubmit the batch to eigenda.
 	confirmationBlockNumber := batchMetadata.GetConfirmationBlockNumber()
 	confirmationBlockNumberBigInt := big.NewInt(0).SetInt64(int64(confirmationBlockNumber))
-	_, err := cv.retrieveBatchMetadataHash(ctx, batchID, confirmationBlockNumberBigInt)
+	_, err := bcv.retrieveBatchMetadataHash(ctx, batchID, confirmationBlockNumberBigInt)
 	if err != nil {
 		return fmt.Errorf("batch not found onchain at supposedly confirmed block %d: %w", confirmationBlockNumber, err)
 	}
@@ -78,11 +78,11 @@ func (cv *CertVerifier) verifyBatchConfirmedOnChain(
 	// We retry up to 60 seconds (allowing for reorgs up to 5 blocks deep), but we only wait 3 seconds between each retry,
 	// in case (2) is the case and the node simply needs to resync, which could happen fast.
 	onchainHash, err := retry.Do(ctx, 20, retry.Fixed(3*time.Second), func() ([32]byte, error) {
-		blockNumber, err := cv.getConfDeepBlockNumber(ctx)
+		blockNumber, err := bcv.getConfDeepBlockNumber(ctx)
 		if err != nil {
 			return [32]byte{}, fmt.Errorf("failed to get context block: %w", err)
 		}
-		return cv.retrieveBatchMetadataHash(ctx, batchID, blockNumber)
+		return bcv.retrieveBatchMetadataHash(ctx, batchID, blockNumber)
 	})
 	if err != nil {
 		return fmt.Errorf("retrieving batch that was confirmed at block %v: %w", confirmationBlockNumber, err)
@@ -111,7 +111,7 @@ func (cv *CertVerifier) verifyBatchConfirmedOnChain(
 }
 
 // verifies the blob batch inclusion proof against the blob root hash
-func (cv *CertVerifier) verifyMerkleProof(inclusionProof []byte, root []byte,
+func (bcv *BridgedCertVerifier) verifyMerkleProof(inclusionProof []byte, root []byte,
 	blobIndex uint32, blobHeader BlobHeader) error {
 	leafHash, err := HashEncodeBlobHeader(blobHeader)
 	if err != nil {
@@ -132,32 +132,32 @@ func (cv *CertVerifier) verifyMerkleProof(inclusionProof []byte, root []byte,
 }
 
 // fetches a block number provided a subtraction of a user defined conf depth from latest block
-func (cv *CertVerifier) getConfDeepBlockNumber(ctx context.Context) (*big.Int, error) {
-	if cv.waitForFinalization {
+func (bcv *BridgedCertVerifier) getConfDeepBlockNumber(ctx context.Context) (*big.Int, error) {
+	if bcv.waitForFinalization {
 		var header = types.Header{}
 		// We ask for the latest finalized block. The second parameter "hydrated txs" is set to false because we don't need full txs.
 		// See https://github.com/ethereum/execution-apis/blob/4140e528360fea53c34a766d86a000c6c039100e/src/eth/block.yaml#L61
 		// This is equivalent to `cast block finalized`, as opposed to `cast block finalized --full`.
-		err := cv.ethClient.Client().CallContext(ctx, &header, "eth_getBlockByNumber", "finalized", false)
+		err := bcv.ethClient.Client().CallContext(ctx, &header, "eth_getBlockByNumber", "finalized", false)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get finalized block: %w", err)
 		}
 		return header.Number, nil
 	}
-	blockNumber, err := cv.ethClient.BlockNumber(ctx)
+	blockNumber, err := bcv.ethClient.BlockNumber(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get latest block number: %w", err)
 	}
-	if blockNumber < cv.ethConfirmationDepth {
+	if blockNumber < bcv.ethConfirmationDepth {
 		return big.NewInt(0), nil
 	}
-	return new(big.Int).SetUint64(blockNumber - cv.ethConfirmationDepth), nil
+	return new(big.Int).SetUint64(blockNumber - bcv.ethConfirmationDepth), nil
 }
 
 // retrieveBatchMetadataHash retrieves the batch metadata hash stored on-chain at a specific blockNumber for a given batchID
 // returns an error if some problem calling the contract happens, or the hash is not found
-func (cv *CertVerifier) retrieveBatchMetadataHash(ctx context.Context, batchID uint32, blockNumber *big.Int) ([32]byte, error) {
-	onchainHash, err := cv.manager.BatchIdToBatchMetadataHash(&bind.CallOpts{Context: ctx, BlockNumber: blockNumber}, batchID)
+func (bcv *BridgedCertVerifier) retrieveBatchMetadataHash(ctx context.Context, batchID uint32, blockNumber *big.Int) ([32]byte, error) {
+	onchainHash, err := bcv.manager.BatchIdToBatchMetadataHash(&bind.CallOpts{Context: ctx, BlockNumber: blockNumber}, batchID)
 	if err != nil {
 		return [32]byte{}, fmt.Errorf("calling EigenDAServiceManager.BatchIdToBatchMetadataHash: %w", err)
 	}

@@ -83,7 +83,9 @@ func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to verify commitment: %w", err)
 	}
 
-	err = e.verifier.VerifyCert(ctx, cert)
+	// TODO: Add an optional "waitForSigning" flag which denotes to use the V2
+	// dispersal flow and type switches for verification
+	err = e.verifier.VerifyBridgeCert(ctx, cert)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify DA cert: %w", err)
 	}
@@ -122,6 +124,8 @@ func (e Store) Verify(ctx context.Context, key []byte, value []byte) error {
 		return fmt.Errorf("failed to verify commitment: %w", err)
 	}
 
+	// TODO: Add an optional "waitForSigning" flag which denotes to use the V2
+	// dispersal flow and type switches for verification
 	// verify DA certificate against EigenDA's batch metadata that's bridged to Ethereum
-	return e.verifier.VerifyCert(ctx, &cert)
+	return e.verifier.VerifyBridgeCert(ctx, &cert)
 }

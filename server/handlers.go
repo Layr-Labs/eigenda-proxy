@@ -191,7 +191,11 @@ func (svr *Server) handlePostShared(w http.ResponseWriter, r *http.Request, comm
 		return err
 	}
 
-	responseCommit, err := commitments.EncodeCommitment(commitment, meta.Mode)
+	// TODO: Pass in certificate version when encoding commitment. This will also be based on the
+	// "waitForSignatures" flag. Ideally the conception of V2 will be sufficiently obfuscated from the rollup user.
+	// I.e, triggering V2 mode should be done within proxy directly and not live as a hardcoded system cfg field within the rollup
+	// itself.
+	responseCommit, err := commitments.EncodeCommitment(commitment, meta.Mode, commitments.CertV0)
 	if err != nil {
 		err = MetaError{
 			Err:  fmt.Errorf("failed to encode commitment %v (commitment mode %v): %w", commitment, meta.Mode, err),

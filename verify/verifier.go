@@ -34,15 +34,15 @@ type Verifier struct {
 	kzgVerifier *kzgverifier.Verifier
 	// cert verification is optional, and verifies certs retrieved from eigenDA when turned on
 	verifyCerts bool
-	cv          *CertVerifier
+	bcv         *BridgedCertVerifier
 }
 
 func NewVerifier(cfg *Config, l log.Logger) (*Verifier, error) {
-	var cv *CertVerifier
+	var bcv *BridgedCertVerifier
 	var err error
 
 	if cfg.VerifyCerts {
-		cv, err = NewCertVerifier(cfg, l)
+		bcv, err = NewBridgedCertVerifier(cfg, l)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create cert verifier: %w", err)
 		}
@@ -56,24 +56,24 @@ func NewVerifier(cfg *Config, l log.Logger) (*Verifier, error) {
 	return &Verifier{
 		kzgVerifier: kzgVerifier,
 		verifyCerts: cfg.VerifyCerts,
-		cv:          cv,
+		bcv:         bcv,
 	}, nil
 }
 
 // verifies V0 eigenda certificate type
-func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate) error {
+func (v *Verifier) VerifyBridgeCert(ctx context.Context, cert *Certificate) error {
 	if !v.verifyCerts {
 		return nil
 	}
 
 	// 1 - verify batch in the cert is confirmed onchain
-	err := v.cv.verifyBatchConfirmedOnChain(ctx, cert.Proof().GetBatchId(), cert.Proof().GetBatchMetadata())
+	err := v.bcv.verifyBatchConfirmedOnChain(ctx, cert.Proof().GetBatchId(), cert.Proof().GetBatchMetadata())
 	if err != nil {
 		return fmt.Errorf("failed to verify batch: %w", err)
 	}
 
 	// 2 - verify merkle inclusion proof
-	err = v.cv.verifyMerkleProof(cert.Proof().GetInclusionProof(), cert.BatchHeaderRoot(), cert.Proof().GetBlobIndex(), cert.ReadBlobHeader())
+	err = v.bcv.verifyMerkleProof(cert.Proof().GetInclusionProof(), cert.BatchHeaderRoot(), cert.Proof().GetBlobIndex(), cert.ReadBlobHeader())
 	if err != nil {
 		return fmt.Errorf("failed to verify merkle proof: %w", err)
 	}
@@ -165,7 +165,7 @@ func (v *Verifier) verifySecurityParams(blobHeader BlobHeader, batchHeader *disp
 		confirmedQuorums[blobHeader.QuorumBlobParams[i].QuorumNumber] = true
 	}
 
-	requiredQuorums, err := v.cv.manager.QuorumNumbersRequired(&bind.CallOpts{BlockNumber: big.NewInt(int64(batchHeader.ReferenceBlockNumber))})
+	requiredQuorums, err := v.bcv.manager.QuorumNumbersRequired(&bind.CallOpts{BlockNumber: big.NewInt(int64(batchHeader.ReferenceBlockNumber))})
 	if err != nil {
 		log.Warn("failed to get required quorum numbers at block number", "err", err, "referenceBlockNumber", batchHeader.ReferenceBlockNumber)
 	}
@@ -183,7 +183,7 @@ func (v *Verifier) verifySecurityParams(blobHeader BlobHeader, batchHeader *disp
 // getQuorumAdversaryThreshold reads the adversarial threshold percentage for a given quorum number,
 // at a given block number. If the quorum number does not exist, it returns 0.
 func (v *Verifier) getQuorumAdversaryThreshold(quorumNum uint8, blockNumber int64) (uint8, error) {
-	percentages, err := v.cv.manager.QuorumAdversaryThresholdPercentages(&bind.CallOpts{BlockNumber: big.NewInt(blockNumber)})
+	percentages, err := v.bcv.manager.QuorumAdversaryThresholdPercentages(&bind.CallOpts{BlockNumber: big.NewInt(blockNumber)})
 	if err != nil {
 		return 0, err
 	}
