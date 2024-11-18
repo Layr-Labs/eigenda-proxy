@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -12,10 +13,23 @@ import (
 
 // Config ... user configurable
 type Config struct {
-	Endpoint string        `json:"endpoint"`
-	Password string        `json:"-"` // hide password when marshaling (only used to print config on startup)
-	DB       int           `json:"database"`
-	Eviction time.Duration `json:"eviction"`
+	Endpoint string
+	Password string
+	DB       int
+	Eviction time.Duration
+}
+
+// Custom MarshalJSON function to control what gets included in the JSON output.
+// TODO: Probably best would be to separate config from secrets everywhere.
+// Then we could just log the config and not worry about secrets.
+func (c Config) MarshalJSON() ([]byte, error) {
+	type Alias Config // Use an alias to avoid recursion with MarshalJSON
+	aux := (Alias)(c)
+	// Conditionally include a masked password if it is set
+	if aux.Password != "" {
+		aux.Password = "*****"
+	}
+	return json.Marshal(aux)
 }
 
 // Store ... Redis storage backend implementation

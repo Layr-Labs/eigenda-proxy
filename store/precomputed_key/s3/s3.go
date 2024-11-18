@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -38,13 +39,26 @@ var _ common.PrecomputedKeyStore = (*Store)(nil)
 
 type CredentialType string
 type Config struct {
-	CredentialType  CredentialType `json:"credential_type"`
-	Endpoint        string         `json:"endpoint"`
-	EnableTLS       bool           `json:"enable_tls"`
-	AccessKeyID     string         `json:"access_key_id"`
-	AccessKeySecret string         `json:"-"` // hide key when marshaling (only used to print config on startup)
-	Bucket          string         `json:"bucket"`
-	Path            string         `json:"path"`
+	CredentialType  CredentialType
+	Endpoint        string
+	EnableTLS       bool
+	AccessKeyID     string
+	AccessKeySecret string
+	Bucket          string
+	Path            string
+}
+
+// Custom MarshalJSON function to control what gets included in the JSON output
+// TODO: Probably best would be to separate config from secrets everywhere.
+// Then we could just log the config and not worry about secrets.
+func (c Config) MarshalJSON() ([]byte, error) {
+	type Alias Config // Use an alias to avoid recursion with MarshalJSON
+	aux := (Alias)(c)
+	// Conditionally include a masked password if it is set
+	if aux.AccessKeySecret != "" {
+		aux.AccessKeySecret = "*****"
+	}
+	return json.Marshal(aux)
 }
 
 // Store ... S3 store
