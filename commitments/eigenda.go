@@ -27,7 +27,7 @@ func NewCertCommitment(input []byte, version CertEncodingCommitment) (CertCommit
 		return NewV1CertCommitment(input), nil
 
 	default:
-		return nil, fmt.Errorf("Invalid cert version provided")
+		return nil, fmt.Errorf("invalid cert version provided")
 	}
 }
 
