@@ -95,6 +95,5 @@ func withLogging(
 			args = append(args, "commitment_mode", metaErr.Meta.Mode, "cert_version", metaErr.Meta.CertVersion)
 		}
 		log.Info("request", args...)
-
 	}
 }
