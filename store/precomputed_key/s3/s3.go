@@ -42,7 +42,7 @@ type Config struct {
 	Endpoint        string         `json:"endpoint"`
 	EnableTLS       bool           `json:"enable_tls"`
 	AccessKeyID     string         `json:"access_key_id"`
-	AccessKeySecret string         `json:"-"`
+	AccessKeySecret string         `json:"-"` // hide key when marshaling (only used to print config on startup)
 	Bucket          string         `json:"bucket"`
 	Path            string         `json:"path"`
 }

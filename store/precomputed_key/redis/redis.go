@@ -13,7 +13,7 @@ import (
 // Config ... user configurable
 type Config struct {
 	Endpoint string        `json:"endpoint"`
-	Password string        `json:"-"`
+	Password string        `json:"-"` // hide password when marshaling (only used to print config on startup)
 	DB       int           `json:"database"`
 	Eviction time.Duration `json:"eviction"`
 }
