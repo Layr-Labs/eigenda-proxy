@@ -118,7 +118,7 @@ func parseVersionByte(w http.ResponseWriter, r *http.Request) (byte, error) {
 	// only GET routes use gorilla parsed vars to separate header bytes from the raw commitment bytes.
 	// POST routes parse them by hand because they neeed to send the entire
 	// request (including the type/version header bytes) to the server.
-	// TODO: perhaps for consistency we should also use gorilla vars for POST routes, 
+	// TODO: perhaps for consistency we should also use gorilla vars for POST routes,
 	// and then just reconstruct the full commitment in the handlers?
 	versionByteHex, isGETRoute := vars[routingVarNameVersionByteHex]
 	if !isGETRoute {
