@@ -63,7 +63,7 @@ you should also set `EIGENDA_PROXY_WEAVE_VM_PRIV_KEY_HEX` enviroment variable wi
 
 > Remote signing is complex and risky. Remote signing is generally only desirable for enterprise users or users with unique security requirements.
 
-> Web3Signer is not maintained by WeaveVM team. The Web3Signer tool is maintained by Consensys, the same team that maintains Teku. The WeavVM team does not maintain Web3Signer or make any guarantees about its safety or effectiveness.
+> Web3Signer is not maintained by WeaveVM team. The Web3Signer tool is maintained by Consensys, the same team that maintains Teku. The WeaveVM team does not maintain Web3Signer or make any guarantees about its safety or effectiveness.
 
 - For a simple test deployment of a local Web3Signer setup, refer to: <https://github.com/allnil/web3signer_test_deploy>
 - For complete documentation, consult: <https://docs.web3signer.consensys.io/>

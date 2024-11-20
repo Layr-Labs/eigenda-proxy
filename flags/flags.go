@@ -25,7 +25,7 @@ const (
 	S3Category                 = "S3 Cache/Fallback"
 	VerifierCategory           = "KZG and Cert Verifier"
 	VerifierDeprecatedCategory = "DEPRECATED VERIFIER FLAGS -- THESE WILL BE REMOVED IN V2.0.0"
-	WeavVMCategory             = "WeaveVM Fallback/Perm Storage option"
+	WeaveVMCategory            = "WeaveVM Fallback/Perm Storage option"
 )
 
 const (
