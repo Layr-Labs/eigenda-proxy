@@ -24,6 +24,7 @@ import (
 var (
 	runTestnetIntegrationTests bool // holesky tests
 	runIntegrationTests        bool // memstore tests
+	runWeaveVMTests            bool
 )
 
 // ParseEnv ... reads testing cfg fields. Go test flags don't work for this library due to the dependency on Optimism's E2E framework
@@ -34,6 +35,7 @@ func ParseEnv() {
 	if runIntegrationTests && runTestnetIntegrationTests {
 		panic("only one of INTEGRATION=true or TESTNET=true env var can be set")
 	}
+	runWeaveVMTests = os.Getenv("EIGENDA_PROXY_WEAVE_VM_PRIV_KEY_HEX") != ""
 }
 
 // TestMain ... run main controller
@@ -80,7 +82,6 @@ func requireSimpleClientSetGet(t *testing.T, ts e2e.TestSuite, blob []byte) {
 	preimage, err := daClient.GetData(ts.Ctx, blobInfo)
 	require.NoError(t, err)
 	require.Equal(t, blob, preimage)
-
 }
 
 // requireOPClientSetGet ... ensures that alt-da client can disperse and read a blob
@@ -93,5 +94,4 @@ func requireOPClientSetGet(t *testing.T, ts e2e.TestSuite, blob []byte, precompu
 	preimage, err := daClient.GetInput(ts.Ctx, commit)
 	require.NoError(t, err)
 	require.Equal(t, blob, preimage)
-
 }

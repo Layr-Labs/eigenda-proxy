@@ -1,7 +1,6 @@
 package e2e_test
 
 import (
-	"os"
 	"testing"
 	"time"
 
@@ -171,8 +170,7 @@ Tests fallback when weaveVM secondary backend is used.
 Works only when WeaveVM_PRIV_KEY is set
 */
 func TestProxyReadFallbackOnWvm(t *testing.T) {
-	privateKey := os.Getenv("EIGENDA_PROXY_WEAVE_VM_PRIV_KEY_HEX")
-	if privateKey == "" {
+	if !runWeaveVMTests {
 		t.Skip("Skipping test as EIGENDA_PROXY_WEAVE_VM_PRIV_KEY has not been set")
 	}
 

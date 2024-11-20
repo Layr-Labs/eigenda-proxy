@@ -13,6 +13,7 @@ var (
 	ChainIDFlagName  = withFlagPrefix("chain_id")
 	TimeoutFlagName  = withFlagPrefix("timeout")
 
+	PrivateKeyHexFlagName           = withFlagPrefix("private_key_hex")
 	Web3SignerEndpointFlagName      = withFlagPrefix("web3signer_endpoint")
 	Web3SignerTLSCertFileFlagName   = withFlagPrefix("web3signer_tls_cert_file")
 	Web3SignerTLSKeyFileFlagName    = withFlagPrefix("web3signer_tls_key_file")
@@ -48,6 +49,12 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Name:     ChainIDFlagName,
 			Usage:    "chain ID of WeaveVM chain",
 			EnvVars:  withEnvPrefix(envPrefix, "CHAIN_ID"),
+			Category: category,
+		},
+		&cli.StringFlag{
+			Name:     PrivateKeyHexFlagName,
+			Usage:    "private key hex of WeaveVM chain",
+			EnvVars:  withEnvPrefix(envPrefix, "PRIVATE_KEY_HEX"),
 			Category: category,
 		},
 		&cli.StringFlag{
@@ -91,6 +98,7 @@ func ReadConfig(ctx *cli.Context) weaveVMtypes.Config {
 		Enabled:  ctx.Bool(EnabledFlagName),
 		Timeout:  ctx.Duration(TimeoutFlagName),
 
+		PrivateKeyHex:           ctx.String(PrivateKeyHexFlagName),
 		Web3SignerEndpoint:      ctx.String(Web3SignerEndpointFlagName),
 		Web3SignerTLSCertFile:   ctx.String(Web3SignerTLSCertFileFlagName),
 		Web3SignerTLSKeyFile:    ctx.String(Web3SignerTLSKeyFileFlagName),

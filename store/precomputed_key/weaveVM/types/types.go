@@ -18,6 +18,8 @@ type Config struct {
 	// Timeout on WeaveVM calls in seconds
 	Timeout time.Duration
 
+	// WeaveVm Private Key
+	PrivateKeyHex string
 	// Web3Signer configuration
 	Web3SignerEndpoint      string
 	Web3SignerTLSCertFile   string

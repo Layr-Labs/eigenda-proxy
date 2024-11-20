@@ -168,7 +168,8 @@ func createWeaveVMConfig(eigendaCfg server.Config) server.CLIConfig {
 		Endpoint: "https://testnet-rpc.weaveVM.dev/",
 		ChainID:  9496,
 		// set higher than 5s in e2e tests
-		Timeout: 10 * time.Second,
+		Timeout:       10 * time.Second,
+		PrivateKeyHex: os.Getenv("EIGENDA_PROXY_WEAVE_VM_PRIV_KEY_HEX"),
 	}
 	return server.CLIConfig{
 		EigenDAConfig: eigendaCfg,
