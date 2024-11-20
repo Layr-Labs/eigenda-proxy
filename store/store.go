@@ -55,7 +55,10 @@ func (cfg *Config) Check() error {
 	}
 
 	if cfg.WeaveVMConfig.Enabled && (cfg.WeaveVMConfig.Endpoint == "" || cfg.WeaveVMConfig.ChainID == 0) {
-		return fmt.Errorf("weaveVM enabled but endpoint or chain id has not been provided")
+		return fmt.Errorf("weaveVM secondary backend enabled but endpoint or chain id has not been provided")
+	}
+	if cfg.WeaveVMConfig.Enabled && (cfg.WeaveVMConfig.PrivateKeyHex == "" && cfg.WeaveVMConfig.Web3SignerEndpoint == "") {
+		return fmt.Errorf("weaveVM enabled but both private key and web3 signer endpoints are empty")
 	}
 
 	err := cfg.checkTargets(cfg.FallbackTargets)
