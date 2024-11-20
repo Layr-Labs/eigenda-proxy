@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -60,10 +61,8 @@ func withMetrics(
 		}
 		versionByte, err := parseVersionByte(w, r)
 		if err != nil {
-			// Some routes don't have a version byte, such as /put simple commitments.
-			// In that case, we set versionByte to 0.
-			// TODO: make sure every route has a version byte
-			versionByte = byte(0)
+			recordDur(strconv.Itoa(scw.status), string(mode), "unknown")
+			return fmt.Errorf("metrics middleware: parsing version byte: %w", err)
 		}
 		recordDur(strconv.Itoa(scw.status), string(mode), string(versionByte))
 		return nil
