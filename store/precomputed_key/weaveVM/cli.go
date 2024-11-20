@@ -1,9 +1,9 @@
-package weaveVM
+package weavevm
 
 import (
 	"time"
 
-	weaveVMtypes "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weaveVM/types"
+	weaveVMtypes "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weavevm/types"
 	"github.com/urfave/cli/v2"
 )
 
@@ -21,11 +21,11 @@ var (
 )
 
 func withFlagPrefix(s string) string {
-	return "weaveVM." + s
+	return "weavevm." + s
 }
 
 func withEnvPrefix(envPrefix, s string) []string {
-	return []string{envPrefix + "_WeaveVM_" + s}
+	return []string{envPrefix + "_WEAVE_VM_" + s}
 }
 
 // CLIFlags ... used for WeaveVM backend configuration

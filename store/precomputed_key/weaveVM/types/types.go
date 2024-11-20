@@ -31,5 +31,5 @@ type RetrieverResponse struct {
 	ArweaveBlockHash   string `json:"arweave_block_hash"`
 	Calldata           string `json:"calldata"`
 	WarDecodedCalldata string `json:"war_decoded_calldata"`
-	WvmBlockHash       string `json:"weaveVM_block_hash"`
+	WvmBlockHash       string `json:"wvm_block_hash"`
 }

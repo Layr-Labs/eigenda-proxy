@@ -1,4 +1,4 @@
-package weaveVM
+package weavevm
 
 import (
 	"bytes"
@@ -8,14 +8,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
-	rpc "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weaveVM/rpc"
-	signer "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weaveVM/signer"
-	weaveVMtypes "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weaveVM/types"
+	rpc "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weavevm/rpc"
+	signer "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weavevm/signer"
+	weaveVMtypes "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weavevm/types"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
@@ -50,12 +49,11 @@ func NewStore(cfg *weaveVMtypes.Config, log log.Logger) (*Store, error) {
 		return store, nil
 	}
 
-	// Us PrivateKey signer
-	privateKey := os.Getenv("WeaveVM_PRIV_KEY")
-	if privateKey == "" {
-		return nil, fmt.Errorf("weaveVM archiver private key is empty and weaveVM web3 signer is empty")
+	// Use PrivateKey signer
+	if cfg.PrivateKeyHex == "" {
+		return nil, fmt.Errorf("weaveVM private key is empty and weaveVM web3 signer is empty")
 	}
-	privateKeySigner := signer.NewPrivateKeySigner(privateKey, log, cfg.ChainID)
+	privateKeySigner := signer.NewPrivateKeySigner(cfg.PrivateKeyHex, log, cfg.ChainID)
 	weaveVMClient, err := rpc.NewWvmRPCClient(log, cfg, privateKeySigner)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize rpc client for weaveVM chain: %w", err)
@@ -128,7 +126,7 @@ func (weaveVM *Store) getWvmTxHashByCommitment(key []byte) (string, error) {
 	return weaveVMTxHash.(string), nil
 }
 
-const weaveVMGatewayURL = "https://gateway.weaveVM.dev/calldata/%s"
+const weaveVMGatewayURL = "https://gateway.wvm.dev/calldata/%s"
 
 // Modified get function with improved error handling
 func (weaveVM *Store) getFromGateway(ctx context.Context, weaveVMTxHash string) ([]byte, error) {

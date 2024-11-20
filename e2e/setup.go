@@ -15,7 +15,8 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
-	weaveVM "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weaveVM/types"
+	weavevm "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weavevm/types"
+
 	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
@@ -163,13 +164,14 @@ func createS3Config(eigendaCfg server.Config) server.CLIConfig {
 }
 
 func createWeaveVMConfig(eigendaCfg server.Config) server.CLIConfig {
-	eigendaCfg.StorageConfig.WeaveVMConfig = weaveVM.Config{
+	pkHex := os.Getenv("EIGENDA_PROXY_WEAVE_VM_PRIV_KEY_HEX")
+	eigendaCfg.StorageConfig.WeaveVMConfig = weavevm.Config{
 		Enabled:  true,
-		Endpoint: "https://testnet-rpc.weaveVM.dev/",
+		Endpoint: "https://testnet-rpc.wvm.dev/",
 		ChainID:  9496,
 		// set higher than 5s in e2e tests
 		Timeout:       10 * time.Second,
-		PrivateKeyHex: os.Getenv("EIGENDA_PROXY_WEAVE_VM_PRIV_KEY_HEX"),
+		PrivateKeyHex: pkHex,
 	}
 	return server.CLIConfig{
 		EigenDAConfig: eigendaCfg,
@@ -255,7 +257,7 @@ func TestSuiteConfig(testCfg *Cfg) server.CLIConfig {
 		cfg = createS3Config(eigendaCfg)
 
 	case testCfg.UseWeaveVMFallback:
-		eigendaCfg.StorageConfig.FallbackTargets = []string{"weaveVM"}
+		eigendaCfg.StorageConfig.FallbackTargets = []string{"weavevm"}
 		cfg = createWeaveVMConfig(eigendaCfg)
 
 	case testCfg.UseRedisCaching:

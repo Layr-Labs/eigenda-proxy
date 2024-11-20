@@ -53,7 +53,7 @@ func StringToBackendType(s string) BackendType {
 		return S3BackendType
 	case "redis":
 		return RedisBackendType
-	case "weaveVM":
+	case "weavevm":
 		return WeaveVMBackendType
 	case "unknown":
 		fallthrough

@@ -175,7 +175,7 @@ curl -X GET "https://eigenda-proxy-1047776281941.us-central1.run.app/wvm/get/txh
 
 ### 5) Get the EigenDA archived blob's decoded data from WeaveVM
 
-This method use WeaveVM's `wvm://` data retrieval gateway to retrieve the data associated with a WeaveVM transaction (calldata) natively from WeaveVM's self-DA layer and Arweave's permanent WeaveVM-ExEx data protocol. [Check out the `wvm-data-retriever` codebase here](https://github.com/weavevM/wvm-data-retriever)
+This method use WeaveVM's `wvm://` data retrieval gateway to retrieve the data associated with a WeaveVM transaction (calldata) natively from WeaveVM's self-DA layer and Arweave's permanent WeaveVM-ExEx data protocol. [Check out the `wvm-data-retriever` codebase here](https://github.com/weaveVM/wvm-data-retriever)
 
 ```bash
 curl -X GET "https://eigenda-proxy-1047776281941.us-central1.run.app/wvm/get/0x$COMMITMENT?commitment_mode=simple" \

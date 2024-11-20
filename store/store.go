@@ -6,7 +6,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
-	weaveVM "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weaveVM/types"
+	weavevm "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weavevm/types"
 )
 
 type Config struct {
@@ -17,7 +17,7 @@ type Config struct {
 	// secondary storage cfgs
 	RedisConfig   redis.Config
 	S3Config      s3.Config
-	WeaveVMConfig weaveVM.Config
+	WeaveVMConfig weavevm.Config
 }
 
 // checkTargets ... verifies that a backend target slice is constructed correctly

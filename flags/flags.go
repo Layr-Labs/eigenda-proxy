@@ -6,7 +6,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
-	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weaveVM"
+	weavevm "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weavevm"
 	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/urfave/cli/v2"
 
@@ -75,5 +75,5 @@ func init() {
 	Flags = append(Flags, memstore.CLIFlags(EnvVarPrefix, MemstoreFlagsCategory)...)
 	Flags = append(Flags, verify.CLIFlags(EnvVarPrefix, VerifierCategory)...)
 	Flags = append(Flags, verify.DeprecatedCLIFlags(EnvVarPrefix, VerifierDeprecatedCategory)...)
-	Flags = append(Flags, weaveVM.CLIFlags(EnvVarPrefix, WeaveVMCategory)...)
+	Flags = append(Flags, weavevm.CLIFlags(EnvVarPrefix, WeaveVMCategory)...)
 }
