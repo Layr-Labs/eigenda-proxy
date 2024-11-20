@@ -21,25 +21,25 @@ Check the `.env` file for configuration settings specific to the Holesky testnet
 ```env
 # WeaveVM secondary storage related environment variables
 
-# Set to true to enable WVM chain as a secondary storage
-# EIGENDA_PROXY_WVM_ENABLED=
+# Set to true to enable WeaveVM chain as a secondary storage
+# EIGENDA_PROXY_WEAVE_VM_ENABLED=
 
 # WeaveVM Alphanet RPC endpoint
-# EIGENDA_PROXY_WVM_ENDPOINT=https://testnet-rpc.wvm.dev/
+# EIGENDA_PROXY_WEAVE_VM_ENDPOINT=https://testnet-rpc.wvm.dev/
 
 # WeaveVM chain id
-# EIGENDA_PROXY_WVM_CHAIN_ID=9496
+# EIGENDA_PROXY_WEAVE_VM_CHAIN_ID=9496
 
 # WeaveVM web3signer endpoint
-# EIGENDA_PROXY_WVM_WEB3_SIGNER_ENDPOINT=
+# EIGENDA_PROXY_WEAVE_VM_WEB3_SIGNER_ENDPOINT=
 
 # WeaveVM private key in case you don't use web3signer, not recommended
-# WVM_PRIV_KEY= ""
+# EIGENDA_PROXY_WEAVE_VM_PRIV_KEY_HEX= ""
 ```
 
-## Setup Guide: Booting EigenDA proxy with WeaveVM as a secondary storage 
+## Setup Guide: Booting EigenDA proxy with WeaveVM as a secondary storage
 
-### Option 1: without signer
+### Option 1: with weave vm private key
 
 ```log
 ./bin/eigenda-proxy \
@@ -55,7 +55,7 @@ Check the `.env` file for configuration settings specific to the Holesky testnet
 --storage.concurrent-write-routines 2
 ```
 
-you should also set `WVM_PRIV_KEY` enviroment variable with the private key of your WeaveVM EOA.
+you should also set `EIGENDA_PROXY_WEAVE_VM_PRIV_KEY_HEX` enviroment variable with the private key of your WeaveVM EOA.
 
 ### Option 2: with web3signer
 
@@ -65,9 +65,8 @@ you should also set `WVM_PRIV_KEY` enviroment variable with the private key of y
 
 > Web3Signer is not maintained by WeaveVM team. The Web3Signer tool is maintained by Consensys, the same team that maintains Teku. The WeavVM team does not maintain Web3Signer or make any guarantees about its safety or effectiveness.
 
-
-- For a simple test deployment of a local Web3Signer setup, refer to: https://github.com/allnil/web3signer_test_deploy
-- For complete documentation, consult: https://docs.web3signer.consensys.io/
+- For a simple test deployment of a local Web3Signer setup, refer to: <https://github.com/allnil/web3signer_test_deploy>
+- For complete documentation, consult: <https://docs.web3signer.consensys.io/>
 
 To run EigenDA Sidecar Service Proxy with WeaveVM as secondary storage and Web3Signer:
 
@@ -92,9 +91,10 @@ On each `PUT` request, the proxy stores the encoded EigenDA blob on WeaveVM as a
 
 ***The stage of this integration is as PoC and an experimental feature.*** In this first v0 iteration the proxy internally stores mapping of eigenda blob as `key-> wvm_tx_hash`
 
-### Commands and example of usage:
+### Commands and example of usage
 
 #### 1) Put
+
 ```bash
 curl -X POST "http://127.0.0.1:3100/put?commitment_mode=simple" \
       --data-binary "some data that will successfully be written to EigenDA" \
@@ -102,7 +102,7 @@ curl -X POST "http://127.0.0.1:3100/put?commitment_mode=simple" \
       --output response.bin
 ```
 
-####  2) Get
+#### 2) Get
 
 ```bash
 COMMITMENT=$(xxd -p response.bin | tr -d '\n' | tr -d ' ')
@@ -126,13 +126,14 @@ curl -X GET "http:/127.0.0.1:3100/get/0x$COMMITMENT?commitment_mode=simple" \
 some data that will successfully be written to EigenDA%
 ```
 
-
 ## Data pipelines
 
 ### PUT blob workflow
+
 ![](./media/put-workflow.png)
 
 ### GET blob workflow
+
 ![](./media/get-workflow.png)
 
 ## Full test workflow example
@@ -141,9 +142,9 @@ some data that will successfully be written to EigenDA%
 - Archive pool address: [0x0000000000000000000000000000000000000000](https://explorer.wvm.dev/address/0x0000000000000000000000000000000000000000)
 - EigenDA network: Holesky
 - WeaveVM network: Alphanet
-- WeaveVM-EigenDA sidecar server proxy endpoint: https://eigenda-proxy-1047776281941.us-central1.run.app
+- WeaveVM-EigenDA sidecar server proxy endpoint: <https://eigenda-proxy-1047776281941.us-central1.run.app>
 
-### 1) Post data 
+### 1) Post data
 
 ```bash
  curl -X POST "https://eigenda-proxy-1047776281941.us-central1.run.app/put/?commitment_mode=simple" \
@@ -151,6 +152,7 @@ some data that will successfully be written to EigenDA%
       -H "Content-Type: application/octet-stream" \
       --output response.bin
 ```
+
 ### 2) Trim the blob commitment
 
 ```bash
@@ -163,6 +165,7 @@ COMMITMENT=$(xxd -p response.bin | tr -d '\n' | tr -d ' ')
 curl -X GET "https://eigenda-proxy-1047776281941.us-central1.run.app/get/0x$COMMITMENT?commitment_mode=simple" \
  -H "Content-Type: application/octet-stream"
 ```
+
 ### 4) Get the WeaveVM data TXID for a commitment
 
 ```bash
@@ -178,8 +181,9 @@ This method use WeaveVM's `wvm://` data retrieval gateway to retrieve the data a
 curl -X GET "https://eigenda-proxy-1047776281941.us-central1.run.app/wvm/get/0x$COMMITMENT?commitment_mode=simple" \
  -H "Content-Type: application/octet-stream"
 ```
+
 ## Helpful Links
 
-- WeaveVM Explorer: https://explorer.wvm.dev
-- WeaveVM tWVM faucet: https://wvm.dev/faucet
-- Discord: https://dsc.gg/wvm
+- WeaveVM Explorer: <https://explorer.wvm.dev>
+- WeaveVM tWeaveVM faucet: <https://wvm.dev/faucet>
+- Discord: <https://dsc.gg/wvm>

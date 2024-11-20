@@ -6,7 +6,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
-	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/wvm"
+	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weaveVM"
 	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/urfave/cli/v2"
 
@@ -25,7 +25,7 @@ const (
 	S3Category                 = "S3 Cache/Fallback"
 	VerifierCategory           = "KZG and Cert Verifier"
 	VerifierDeprecatedCategory = "DEPRECATED VERIFIER FLAGS -- THESE WILL BE REMOVED IN V2.0.0"
-	WVMCategory                = "WVM Fallback/Perm Storage option"
+	WeavVMCategory             = "WeaveVM Fallback/Perm Storage option"
 )
 
 const (
@@ -75,5 +75,5 @@ func init() {
 	Flags = append(Flags, memstore.CLIFlags(EnvVarPrefix, MemstoreFlagsCategory)...)
 	Flags = append(Flags, verify.CLIFlags(EnvVarPrefix, VerifierCategory)...)
 	Flags = append(Flags, verify.DeprecatedCLIFlags(EnvVarPrefix, VerifierDeprecatedCategory)...)
-	Flags = append(Flags, wvm.CLIFlags(EnvVarPrefix, WVMCategory)...)
+	Flags = append(Flags, weaveVM.CLIFlags(EnvVarPrefix, WeaveVMCategory)...)
 }

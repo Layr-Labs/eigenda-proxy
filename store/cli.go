@@ -3,7 +3,7 @@ package store
 import (
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
-	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/wvm"
+	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weaveVM"
 	"github.com/urfave/cli/v2"
 )
 
@@ -56,6 +56,6 @@ func ReadConfig(ctx *cli.Context) Config {
 		CacheTargets:    ctx.StringSlice(CacheTargetsFlagName),
 		RedisConfig:     redis.ReadConfig(ctx),
 		S3Config:        s3.ReadConfig(ctx),
-		WVMConfig:       wvm.ReadConfig(ctx),
+		WeaveVMConfig:   weaveVM.ReadConfig(ctx),
 	}
 }

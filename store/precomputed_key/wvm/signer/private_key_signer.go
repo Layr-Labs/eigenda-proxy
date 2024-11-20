@@ -9,7 +9,7 @@ import (
 	"math/big"
 	"strings"
 
-	wvmtypes "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/wvm/types"
+	weaveVMtypes "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weaveVM/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -28,7 +28,7 @@ func NewPrivateKeySigner(privateKey string, log log.Logger, chainID int64) *Priv
 	return &PrivateKeySigner{privateKey: privateKey, log: log, chainID: chainID}
 }
 
-func (pks *PrivateKeySigner) SignTransaction(_ context.Context, signData *wvmtypes.SignData) (string, error) {
+func (pks *PrivateKeySigner) SignTransaction(_ context.Context, signData *weaveVMtypes.SignData) (string, error) {
 	return pks.signTxWithPrivateKey(signData.To, signData.Data, signData.GasFeeCap, signData.GasLimit, signData.Nonce)
 }
 

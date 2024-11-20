@@ -11,7 +11,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
-	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/wvm"
+	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weaveVM"
 	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/ethereum/go-ethereum/log"
@@ -20,7 +20,7 @@ import (
 // TODO - create structured abstraction for dependency injection vs. overloading stateless functions
 
 // populateTargets ... creates a list of storage backends based on the provided target strings
-func populateTargets(targets []string, s3 common.PrecomputedKeyStore, redis *redis.Store, wvm common.PrecomputedKeyStore) []common.PrecomputedKeyStore {
+func populateTargets(targets []string, s3 common.PrecomputedKeyStore, redis *redis.Store, weaveVM common.PrecomputedKeyStore) []common.PrecomputedKeyStore {
 	stores := make([]common.PrecomputedKeyStore, len(targets))
 
 	for i, f := range targets {
@@ -39,11 +39,11 @@ func populateTargets(targets []string, s3 common.PrecomputedKeyStore, redis *red
 			}
 			stores[i] = s3
 
-		case common.WVMBackendType:
-			if wvm == nil {
-				panic(fmt.Sprintf("WVM backend is not configured but specified in targets: %s", f))
+		case common.WeaveVMBackendType:
+			if weaveVM == nil {
+				panic(fmt.Sprintf("WeaveVM backend is not configured but specified in targets: %s", f))
 			}
-			stores[i] = wvm
+			stores[i] = weaveVM
 
 		case common.EigenDABackendType, common.MemoryBackendType:
 			panic(fmt.Sprintf("Invalid target for fallback: %s", f))
@@ -65,7 +65,7 @@ func LoadStoreManager(ctx context.Context, cfg CLIConfig, log log.Logger, m metr
 	var err error
 	var s3Store *s3.Store
 	var redisStore *redis.Store
-	var wvmStore *wvm.Store
+	var weaveVMStore *weaveVM.Store
 
 	if cfg.EigenDAConfig.StorageConfig.S3Config.Bucket != "" && cfg.EigenDAConfig.StorageConfig.S3Config.Endpoint != "" {
 		log.Info("Using S3 backend")
@@ -75,12 +75,12 @@ func LoadStoreManager(ctx context.Context, cfg CLIConfig, log log.Logger, m metr
 		}
 	}
 
-	if cfg.EigenDAConfig.StorageConfig.WVMConfig.Enabled {
-		if cfg.EigenDAConfig.StorageConfig.WVMConfig.Endpoint != "" {
-			log.Info("Using WVM backend")
-			wvmStore, err = wvm.NewStore(&cfg.EigenDAConfig.StorageConfig.WVMConfig, log)
+	if cfg.EigenDAConfig.StorageConfig.WeaveVMConfig.Enabled {
+		if cfg.EigenDAConfig.StorageConfig.WeaveVMConfig.Endpoint != "" {
+			log.Info("Using WeaveVM backend")
+			weaveVMStore, err = weaveVM.NewStore(&cfg.EigenDAConfig.StorageConfig.WeaveVMConfig, log)
 			if err != nil {
-				return nil, fmt.Errorf("failed to create WVM store: %w", err)
+				return nil, fmt.Errorf("failed to create WeaveVM store: %w", err)
 			}
 		}
 	}
@@ -140,8 +140,8 @@ func LoadStoreManager(ctx context.Context, cfg CLIConfig, log log.Logger, m metr
 	}
 
 	// create secondary storage router
-	fallbacks := populateTargets(cfg.EigenDAConfig.StorageConfig.FallbackTargets, s3Store, redisStore, wvmStore)
-	caches := populateTargets(cfg.EigenDAConfig.StorageConfig.CacheTargets, s3Store, redisStore, wvmStore)
+	fallbacks := populateTargets(cfg.EigenDAConfig.StorageConfig.FallbackTargets, s3Store, redisStore, weaveVMStore)
+	caches := populateTargets(cfg.EigenDAConfig.StorageConfig.CacheTargets, s3Store, redisStore, weaveVMStore)
 	secondary := store.NewSecondaryManager(log, m, caches, fallbacks)
 
 	if secondary.Enabled() { // only spin-up go routines if secondary storage is enabled
@@ -153,6 +153,6 @@ func LoadStoreManager(ctx context.Context, cfg CLIConfig, log log.Logger, m metr
 		}
 	}
 
-	log.Info("Creating storage router", "eigenda backend type", eigenDA != nil, "s3 backend type", s3Store != nil, "wvm backend type", wvmStore != nil)
+	log.Info("Creating storage router", "eigenda backend type", eigenDA != nil, "s3 backend type", s3Store != nil, "weaveVM backend type", weaveVMStore != nil)
 	return store.NewManager(eigenDA, s3Store, log, secondary)
 }

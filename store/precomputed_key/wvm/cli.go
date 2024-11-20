@@ -1,9 +1,9 @@
-package wvm
+package weaveVM
 
 import (
 	"time"
 
-	wvmtypes "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/wvm/types"
+	weaveVMtypes "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weaveVM/types"
 	"github.com/urfave/cli/v2"
 )
 
@@ -20,33 +20,33 @@ var (
 )
 
 func withFlagPrefix(s string) string {
-	return "wvm." + s
+	return "weaveVM." + s
 }
 
 func withEnvPrefix(envPrefix, s string) []string {
-	return []string{envPrefix + "_WVM_" + s}
+	return []string{envPrefix + "_WeaveVM_" + s}
 }
 
-// CLIFlags ... used for WVM backend configuration
+// CLIFlags ... used for WeaveVM backend configuration
 // category is used to group the flags in the help output (see https://cli.urfave.org/v2/examples/flags/#grouping)
 func CLIFlags(envPrefix, category string) []cli.Flag {
 	return []cli.Flag{
 		&cli.BoolFlag{
 			Name:     EnabledFlagName,
 			Value:    false,
-			Usage:    "enable WVM perm storage",
+			Usage:    "enable WeaveVM perm storage",
 			EnvVars:  withEnvPrefix(envPrefix, "ENABLED"),
 			Category: category,
 		},
 		&cli.StringFlag{
 			Name:     EndpointFlagName,
-			Usage:    "endpoint for WVM chain rpc",
+			Usage:    "endpoint for WeaveVM chain rpc",
 			EnvVars:  withEnvPrefix(envPrefix, "ENDPOINT"),
 			Category: category,
 		},
 		&cli.StringFlag{
 			Name:     ChainIDFlagName,
-			Usage:    "chain ID of WVM chain",
+			Usage:    "chain ID of WeaveVM chain",
 			EnvVars:  withEnvPrefix(envPrefix, "CHAIN_ID"),
 			Category: category,
 		},
@@ -76,7 +76,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		},
 		&cli.DurationFlag{
 			Name:     TimeoutFlagName,
-			Usage:    "timeout for WVM requests operations (e.g. get, put)",
+			Usage:    "timeout for WeaveVM requests operations (e.g. get, put)",
 			Value:    5 * time.Second,
 			EnvVars:  withEnvPrefix(envPrefix, "TIMEOUT"),
 			Category: category,
@@ -84,8 +84,8 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 	}
 }
 
-func ReadConfig(ctx *cli.Context) wvmtypes.Config {
-	return wvmtypes.Config{
+func ReadConfig(ctx *cli.Context) weaveVMtypes.Config {
+	return weaveVMtypes.Config{
 		Endpoint: ctx.String(EndpointFlagName),
 		ChainID:  ctx.Int64(ChainIDFlagName),
 		Enabled:  ctx.Bool(EnabledFlagName),

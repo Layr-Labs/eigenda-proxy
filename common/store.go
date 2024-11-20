@@ -17,7 +17,7 @@ const (
 
 	UnknownBackendType
 
-	WVMBackendType
+	WeaveVMBackendType
 )
 
 var ErrProxyOversizedBlob = fmt.Errorf("encoded blob is larger than max blob size")
@@ -32,8 +32,8 @@ func (b BackendType) String() string {
 		return "S3"
 	case RedisBackendType:
 		return "Redis"
-	case WVMBackendType:
-		return "WVM"
+	case WeaveVMBackendType:
+		return "WeaveVM"
 	case UnknownBackendType:
 		fallthrough
 	default:
@@ -53,8 +53,8 @@ func StringToBackendType(s string) BackendType {
 		return S3BackendType
 	case "redis":
 		return RedisBackendType
-	case "wvm":
-		return WVMBackendType
+	case "weaveVM":
+		return WeaveVMBackendType
 	case "unknown":
 		fallthrough
 	default:

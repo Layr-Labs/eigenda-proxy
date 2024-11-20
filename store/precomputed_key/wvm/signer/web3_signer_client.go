@@ -14,7 +14,7 @@ import (
 	"os"
 	"strings"
 
-	wvmtypes "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/wvm/types"
+	weaveVMtypes "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weaveVM/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/log"
@@ -27,7 +27,7 @@ type Web3SignerClient struct {
 	client   *http.Client
 }
 
-func NewWeb3SignerClient(cfg *wvmtypes.Config, log log.Logger) (*Web3SignerClient, error) {
+func NewWeb3SignerClient(cfg *weaveVMtypes.Config, log log.Logger) (*Web3SignerClient, error) {
 	transport := &http.Transport{
 		DialContext: (&net.Dialer{
 			Timeout: cfg.Timeout,
@@ -56,7 +56,7 @@ func NewWeb3SignerClient(cfg *wvmtypes.Config, log log.Logger) (*Web3SignerClien
 	}, nil
 }
 
-func configureTransportTLS(transport *http.Transport, cfg *wvmtypes.Config) error {
+func configureTransportTLS(transport *http.Transport, cfg *weaveVMtypes.Config) error {
 	tlsConfig := &tls.Config{
 		MinVersion: tls.VersionTLS12,
 	}
@@ -96,7 +96,7 @@ func configureTransportTLS(transport *http.Transport, cfg *wvmtypes.Config) erro
 	return nil
 }
 
-func (web3s *Web3SignerClient) SignTransaction(ctx context.Context, signData *wvmtypes.SignData) (string, error) {
+func (web3s *Web3SignerClient) SignTransaction(ctx context.Context, signData *weaveVMtypes.SignData) (string, error) {
 	return web3s.signTxWithWeb3Signer(ctx, signData.To, signData.Data, signData.GasFeeCap, signData.GasLimit, signData.Nonce)
 }
 
@@ -154,7 +154,7 @@ func (web3s *Web3SignerClient) GetAccount(ctx context.Context) (common.Address, 
 
 // GetAccount retrieves the account addresses from Web3Signer
 func (web3s *Web3SignerClient) getAccounts(ctx context.Context) ([]common.Address, error) {
-	request := wvmtypes.SignerJSONRPCRequest{
+	request := weaveVMtypes.SignerJSONRPCRequest{
 		Version: "2.0",
 		Method:  "eth_accounts",
 		Params:  []interface{}{},
@@ -190,7 +190,7 @@ func (web3s *Web3SignerClient) getAccounts(ctx context.Context) ([]common.Addres
 
 // SignTransaction signs a transaction using Web3Signer
 func (web3s *Web3SignerClient) signTransaction(ctx context.Context, tx interface{}) (string, error) {
-	request := wvmtypes.SignerJSONRPCRequest{
+	request := weaveVMtypes.SignerJSONRPCRequest{
 		Version: "2.0",
 		Method:  "eth_signTransaction",
 		Params:  []interface{}{tx},
@@ -216,7 +216,7 @@ func (web3s *Web3SignerClient) signTransaction(ctx context.Context, tx interface
 }
 
 // doRequest performs the HTTP request to the Web3Signer endpoint
-func (web3s *Web3SignerClient) doRequest(ctx context.Context, request *wvmtypes.SignerJSONRPCRequest) (*wvmtypes.SignerJSONRPCResponse, error) {
+func (web3s *Web3SignerClient) doRequest(ctx context.Context, request *weaveVMtypes.SignerJSONRPCRequest) (*weaveVMtypes.SignerJSONRPCResponse, error) {
 	reqBody, err := json.Marshal(request)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
@@ -239,7 +239,7 @@ func (web3s *Web3SignerClient) doRequest(ctx context.Context, request *wvmtypes.
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	var jsonRPCResponse wvmtypes.SignerJSONRPCResponse
+	var jsonRPCResponse weaveVMtypes.SignerJSONRPCResponse
 	if err := json.Unmarshal(body, &jsonRPCResponse); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}

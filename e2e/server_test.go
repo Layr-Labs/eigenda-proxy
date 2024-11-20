@@ -167,13 +167,13 @@ func TestProxyReadFallback(t *testing.T) {
 }
 
 /*
-Tests fallback when wvm secondary backend is used.
-Works only when WVM_PRIV_KEY is set
+Tests fallback when weaveVM secondary backend is used.
+Works only when WeaveVM_PRIV_KEY is set
 */
 func TestProxyReadFallbackOnWvm(t *testing.T) {
-	privateKey := os.Getenv("WVM_PRIV_KEY")
+	privateKey := os.Getenv("EIGENDA_PROXY_WEAVE_VM_PRIV_KEY_HEX")
 	if privateKey == "" {
-		t.Skip("Skipping test as WVM_PRIV_KEY has not been set")
+		t.Skip("Skipping test as EIGENDA_PROXY_WEAVE_VM_PRIV_KEY has not been set")
 	}
 
 	// test can't be ran against holesky since read failure case can't be manually triggered
@@ -185,7 +185,7 @@ func TestProxyReadFallbackOnWvm(t *testing.T) {
 
 	// setup server with S3 as a fallback option
 	testCfg := e2e.TestConfig(useMemory())
-	testCfg.UseWVMFallback = true
+	testCfg.UseWeaveVMFallback = true
 	// ensure that blob memstore eviction times result in near immediate activation
 	testCfg.Expiration = time.Millisecond * 1
 
@@ -209,6 +209,6 @@ func TestProxyReadFallbackOnWvm(t *testing.T) {
 	require.Equal(t, expectedBlob, actualBlob)
 
 	requireSimpleClientSetGet(t, ts, e2e.RandBytes(1_000_000))
-	requireWriteReadSecondary(t, ts.Metrics.SecondaryRequestsTotal, common.WVMBackendType)
+	requireWriteReadSecondary(t, ts.Metrics.SecondaryRequestsTotal, common.WeaveVMBackendType)
 	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.SimpleCommitmentMode)
 }

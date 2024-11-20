@@ -1,4 +1,4 @@
-package wvm
+package weaveVM
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	wvmtypes "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/wvm/types"
+	weaveVMtypes "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weaveVM/types"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -22,10 +22,10 @@ import (
 
 type Signer interface {
 	GetAccount(ctx context.Context) (common.Address, error)
-	SignTransaction(ctx context.Context, signData *wvmtypes.SignData) (string, error)
+	SignTransaction(ctx context.Context, signData *weaveVMtypes.SignData) (string, error)
 }
 
-// WVM RPC client
+// WeaveVM RPC client
 type RPCClient struct {
 	log     log.Logger
 	client  *ethclient.Client
@@ -33,10 +33,10 @@ type RPCClient struct {
 	signer  Signer
 }
 
-func NewWvmRPCClient(log log.Logger, cfg *wvmtypes.Config, signer Signer) (*RPCClient, error) {
+func NewWvmRPCClient(log log.Logger, cfg *weaveVMtypes.Config, signer Signer) (*RPCClient, error) {
 	client, err := ethclient.Dial(cfg.Endpoint)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to the WVM client: %w", err)
+		return nil, fmt.Errorf("failed to connect to the WeaveVM client: %w", err)
 	}
 
 	ethRPCClient := &RPCClient{
@@ -52,20 +52,20 @@ func NewWvmRPCClient(log log.Logger, cfg *wvmtypes.Config, signer Signer) (*RPCC
 func (rpc *RPCClient) SendTransaction(ctx context.Context, to string, data []byte) (string, error) {
 	gas, err := rpc.estimateGas(ctx, to, data)
 	if err != nil {
-		return "", fmt.Errorf("failed to store data in wvm: failed estimate gas: %w", err)
+		return "", fmt.Errorf("failed to store data in weaveVM: failed estimate gas: %w", err)
 	}
 
-	wvmRawTx, err := rpc.createRawTransaction(ctx, to, string(data), gas)
+	weaveVMRawTx, err := rpc.createRawTransaction(ctx, to, string(data), gas)
 	if err != nil {
-		return "", fmt.Errorf("failed to store data in wvm: failed create transaction: %w", err)
+		return "", fmt.Errorf("failed to store data in weaveVM: failed create transaction: %w", err)
 	}
 
-	wvmTxHash, err := rpc.sendRawTransaction(ctx, wvmRawTx)
+	weaveVMTxHash, err := rpc.sendRawTransaction(ctx, weaveVMRawTx)
 	if err != nil {
-		return "", fmt.Errorf("failed to store data in wvm: failed to send transaction: %w", err)
+		return "", fmt.Errorf("failed to store data in weaveVM: failed to send transaction: %w", err)
 	}
 
-	return wvmTxHash, nil
+	return weaveVMTxHash, nil
 }
 
 // estimateGas tries estimates the suggested amount of gas that required to execute a given transaction.
@@ -105,7 +105,7 @@ func (rpc *RPCClient) estimateGas(ctx context.Context, to string, data []byte) (
 		return 0, err
 	}
 
-	rpc.log.Info("wvm: estimated tx gas price", "price", gas)
+	rpc.log.Info("weaveVM: estimated tx gas price", "price", gas)
 
 	return gas, nil
 }
@@ -126,7 +126,7 @@ func (rpc *RPCClient) createRawTransaction(ctx context.Context, to string, data 
 		return "", err
 	}
 
-	signData := wvmtypes.SignData{To: to, Data: data, GasLimit: gasLimit, GasFeeCap: baseFee, Nonce: nonce}
+	signData := weaveVMtypes.SignData{To: to, Data: data, GasLimit: gasLimit, GasFeeCap: baseFee, Nonce: nonce}
 	return rpc.signer.SignTransaction(ctx, &signData)
 }
 
@@ -160,7 +160,7 @@ func (rpc *RPCClient) sendRawTransaction(ctx context.Context, signedTxHex string
 		return "", err
 	}
 
-	rpc.log.Info("wvm: successfully sent transaction", "tx hash", tx.Hash().String())
+	rpc.log.Info("weaveVM: successfully sent transaction", "tx hash", tx.Hash().String())
 
 	err = rpc.logReceipt(tx)
 	if err != nil {
@@ -195,7 +195,7 @@ func (rpc *RPCClient) logReceipt(tx *ethtypes.Transaction) error {
 		return err
 	}
 
-	rpc.log.Info("wvm: transaction receipt", "tx receipt", string(txJSON))
+	rpc.log.Info("weaveVM: transaction receipt", "tx receipt", string(txJSON))
 	return nil
 }
 

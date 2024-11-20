@@ -15,7 +15,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
-	wvm "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/wvm/types"
+	weaveVM "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weaveVM/types"
 	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
@@ -114,7 +114,7 @@ type Cfg struct {
 	UseS3Caching       bool
 	UseRedisCaching    bool
 	UseS3Fallback      bool
-	UseWVMFallback     bool
+	UseWeaveVMFallback bool
 }
 
 func TestConfig(useMemory bool) *Cfg {
@@ -125,7 +125,7 @@ func TestConfig(useMemory bool) *Cfg {
 		UseS3Caching:       false,
 		UseRedisCaching:    false,
 		UseS3Fallback:      false,
-		UseWVMFallback:     false,
+		UseWeaveVMFallback: false,
 		WriteThreadCount:   0,
 	}
 }
@@ -162,10 +162,10 @@ func createS3Config(eigendaCfg server.Config) server.CLIConfig {
 	}
 }
 
-func createWVMConfig(eigendaCfg server.Config) server.CLIConfig {
-	eigendaCfg.StorageConfig.WVMConfig = wvm.Config{
+func createWeaveVMConfig(eigendaCfg server.Config) server.CLIConfig {
+	eigendaCfg.StorageConfig.WeaveVMConfig = weaveVM.Config{
 		Enabled:  true,
-		Endpoint: "https://testnet-rpc.wvm.dev/",
+		Endpoint: "https://testnet-rpc.weaveVM.dev/",
 		ChainID:  9496,
 		// set higher than 5s in e2e tests
 		Timeout: 10 * time.Second,
@@ -253,9 +253,9 @@ func TestSuiteConfig(testCfg *Cfg) server.CLIConfig {
 		eigendaCfg.StorageConfig.FallbackTargets = []string{"S3"}
 		cfg = createS3Config(eigendaCfg)
 
-	case testCfg.UseWVMFallback:
-		eigendaCfg.StorageConfig.FallbackTargets = []string{"wvm"}
-		cfg = createWVMConfig(eigendaCfg)
+	case testCfg.UseWeaveVMFallback:
+		eigendaCfg.StorageConfig.FallbackTargets = []string{"weaveVM"}
+		cfg = createWeaveVMConfig(eigendaCfg)
 
 	case testCfg.UseRedisCaching:
 		eigendaCfg.StorageConfig.CacheTargets = []string{"redis"}
