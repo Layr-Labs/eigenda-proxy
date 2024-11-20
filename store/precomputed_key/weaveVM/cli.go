@@ -83,7 +83,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		},
 		&cli.DurationFlag{
 			Name:     TimeoutFlagName,
-			Usage:    "timeout for WeaveVM requests operations (e.g. get, put)",
+			Usage:    "timeout for WeaveVM HTTP requests operations (e.g. get, put)",
 			Value:    5 * time.Second,
 			EnvVars:  withEnvPrefix(envPrefix, "TIMEOUT"),
 			Category: category,
