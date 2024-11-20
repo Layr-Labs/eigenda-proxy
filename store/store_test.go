@@ -120,7 +120,7 @@ func TestConfigVerification(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	t.Run("BadWvmConfiguration", func(t *testing.T) {
+	t.Run("BadWeaveVMConfiguration", func(t *testing.T) {
 		cfg := validCfg()
 		cfg.WeaveVMConfig.Endpoint = ""
 		cfg.WeaveVMConfig.Enabled = true
