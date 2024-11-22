@@ -236,31 +236,14 @@ An E2E test exists which spins up a local OP sequencer instance using the [op-e2
 
 *text description and main reason and benefits*
 
-Max encoded calldata allowed in tx is around 8mb (8388608 bytes)
+WeaveVM is in public testnet.
+Extensive description, docs, limits and params can be seen on a site (link).
+Max encoded blob size allowed in tx is 8mb (8388608 bytes).
 
 ### Prerequisites
 
-Check the `.env` file for configuration settings specific to the Holesky testnet
-
-```env
-# WeaveVM secondary storage related environment variables
-
-# Set to true to enable WeaveVM chain as a secondary storage
-# EIGENDA_PROXY_WEAVE_VM_ENABLED=
-
-# WeaveVM Alphanet RPC endpoint
-# EIGENDA_PROXY_WEAVE_VM_ENDPOINT=https://testnet-rpc.wvm.dev/
-
-# WeaveVM chain id
-# EIGENDA_PROXY_WEAVE_VM_CHAIN_ID=9496
-
-# WeaveVM web3signer endpoint
-# EIGENDA_PROXY_WEAVE_VM_WEB3_SIGNER_ENDPOINT=
-
-# WeaveVM private key in case you don't use web3signer, not recommended
-# EIGENDA_PROXY_WEAVE_VM_PRIV_KEY_HEX= ""
-```
-
+Check the table with configuration params above and `.env` related to Holesky network
+Get the tWVM token which will be used to pay fees.
 
 ## Setup Guide: Booting EigenDA proxy with WeaveVM as a secondary storage
 
@@ -280,8 +263,6 @@ Check the `.env` file for configuration settings specific to the Holesky testnet
 --storage.fallback-targets weavevm \
 --storage.concurrent-write-routines 2
 ```
-
-you should also set `EIGENDA_PROXY_WEAVE_VM_PRIV_KEY_HEX` enviroment variable with the private key of your WeaveVM EOA.
 
 ### Option 2: with web3signer
 
