@@ -167,7 +167,7 @@ func TestProxyReadFallback(t *testing.T) {
 
 /*
 Tests fallback when weaveVM secondary backend is used.
-Works only when WeaveVM_PRIV_KEY is set
+Works only when EIGENDA_PROXY_WEAVE_VM_PRIV_KEY is set
 */
 func TestProxyReadFallbackOnWvm(t *testing.T) {
 	if !runWeaveVMTests {
