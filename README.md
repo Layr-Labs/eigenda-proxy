@@ -19,7 +19,7 @@ Features:
 * Performs DA certificate verification during retrieval to ensure that data represented by bad DA certificates do not become part of the canonical chain.
 * Compatibility with Optimism's alt-da commitment type with eigenda backend.
 * Compatibility with Optimism's keccak-256 commitment type with S3 storage.
-* Blobs permanent backup storage option via [WeaveVM](./store/precomputed_key/wvm). 
+* Blobs permanent backup storage option via WeaveVM. 
 
 In order to disperse to the EigenDA network in production, or at high throughput on testnet, please register your authentication ethereum address through [this form](https://forms.gle/3QRNTYhSMacVFNcU8). Your EigenDA authentication keypair address should not be associated with any funds anywhere.
 
@@ -231,3 +231,88 @@ An E2E test exists which spins up a local OP sequencer instance using the [op-e2
 * [op-stack](https://github.com/ethereum-optimism/optimism)
 * [Alt-DA spec](https://specs.optimism.io/experimental/alt-da.html)
 * [eigen da](https://github.com/Layr-Labs/eigenda)
+
+## WeaveVM Secondary Backend
+
+*text description and main reason and benefits*
+
+Max encoded calldata allowed in tx is around 8mb (8388608 bytes)
+
+### Prerequisites
+
+Check the `.env` file for configuration settings specific to the Holesky testnet
+
+```env
+# WeaveVM secondary storage related environment variables
+
+# Set to true to enable WeaveVM chain as a secondary storage
+# EIGENDA_PROXY_WEAVE_VM_ENABLED=
+
+# WeaveVM Alphanet RPC endpoint
+# EIGENDA_PROXY_WEAVE_VM_ENDPOINT=https://testnet-rpc.wvm.dev/
+
+# WeaveVM chain id
+# EIGENDA_PROXY_WEAVE_VM_CHAIN_ID=9496
+
+# WeaveVM web3signer endpoint
+# EIGENDA_PROXY_WEAVE_VM_WEB3_SIGNER_ENDPOINT=
+
+# WeaveVM private key in case you don't use web3signer, not recommended
+# EIGENDA_PROXY_WEAVE_VM_PRIV_KEY_HEX= ""
+```
+
+
+## Setup Guide: Booting EigenDA proxy with WeaveVM as a secondary storage
+
+### Option 1: with weave vm private key
+
+```log
+./bin/eigenda-proxy \
+    --addr 127.0.0.1 \
+    --port 3100 \
+    --eigenda.disperser-rpc disperser-holesky.eigenda.xyz:443 \
+    --eigenda.signer-private-key-hex $PRIVATE_KEY \
+    --eigenda.eth-rpc https://ethereum-holesky-rpc.publicnode.com \
+    --eigenda.svc-manager-addr 0xD4A7E1Bd8015057293f0D0A557088c286942e84b \
+--weavevm.endpoint https://testnet-rpc.wvm.dev/ \
+--weavevm.chain_id 9496 \
+--weavevm.private-key-hex $WVM_PRIVATE_KEY \
+--storage.fallback-targets weavevm \
+--storage.concurrent-write-routines 2
+```
+
+you should also set `EIGENDA_PROXY_WEAVE_VM_PRIV_KEY_HEX` enviroment variable with the private key of your WeaveVM EOA.
+
+### Option 2: with web3signer
+
+***Disclaimer: Using a remote signer comes with risks, please read the following warnings before proceeding:***
+
+> Remote signing is complex and risky. Remote signing is generally only desirable for enterprise users or users with unique security requirements.
+
+> Web3Signer is not maintained by WeaveVM team. The Web3Signer tool is maintained by Consensys, the same team that maintains Teku. The WeaveVM team does not maintain Web3Signer or make any guarantees about its safety or effectiveness.
+
+- For a simple test deployment of a local Web3Signer setup, refer to: <https://github.com/allnil/web3signer_test_deploy>
+- For complete documentation, consult: <https://docs.web3signer.consensys.io/>
+
+To run EigenDA Sidecar Service Proxy with WeaveVM as secondary storage and Web3Signer:
+
+```log
+./bin/eigenda-proxy \
+    --addr 127.0.0.1 \
+    --port 3100 \
+    --eigenda.disperser-rpc disperser-holesky.eigenda.xyz:443 \
+    --eigenda.signer-private-key-hex $PRIVATE_KEY \
+    --eigenda.eth-rpc https://ethereum-holesky-rpc.publicnode.com \
+    --eigenda.svc-manager-addr 0xD4A7E1Bd8015057293f0D0A557088c286942e84b \
+--weavevm.endpoint https://testnet-rpc.wvm.dev/ \
+--weavevm.chain_id 9496 \
+--storage.fallback-targets weavevm \
+--storage.concurrent-write-routines 2 \
+--weavevm.web3signer_endpoint http://localhost:9000
+```
+
+### Resources
+
+* WeaveVM Explorer: <https://explorer.wvm.dev>
+*  WeaveVM tWeaveVM faucet: <https://wvm.dev/faucet>
+* Discord: <https://dsc.gg/wvm>
