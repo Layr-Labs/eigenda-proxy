@@ -232,40 +232,27 @@ A holesky integration test can be ran using `make holesky-test` to assert proper
 
 An E2E test exists which spins up a local OP sequencer instance using the [op-e2e](https://github.com/ethereum-optimism/optimism/tree/develop/op-e2e) framework for asserting correct interaction behaviors with batch submission and state derivation. These tests can be ran via `make optimism-test`.
 
-## Resources
 
-* [op-stack](https://github.com/ethereum-optimism/optimism)
-* [Alt-DA spec](https://specs.optimism.io/experimental/alt-da.html)
-* [eigen da](https://github.com/Layr-Labs/eigenda)
+## WeaveVM: Secondary Blobs Storage
 
-## WeaveVM Secondary Backend
+[WeaveVM](https://wvm.dev) is a sovereign EVM rollup that uses Arweave for permanent ledger archival and data storage. In this scope, WeaveVM provides an EVM gateway/interface for EigenDA blobs on Arweave's Permaweb, removing the need for trust assumptions and relying on centralized third party services to sync historical data and provides a "pay once, save forever" data storage feature for EigenDA blobs.
 
-Using weaveVm should remove a trust assumption on needing an archival node to sync from using a confirmed/finalized rollup head since the data is also permanently persisted to weaveVM.
-WeaveVM provides a gateway for permanent storage of Arweave into EigenDA.
+### Key Details
 
-### Key details
-
-WeaveVM provides a gateway for permanent storage of Arweave into EigenDA.
-
-Current maximum encoded blob size is 8MB (8388608 bytes).
-WeaveVM currently operating in public testnet - not recommend to use it in production environment.
+* WeaveVM provides a gateway for Arweave's permanent with its own (WeaveVM) high data throughput of the permanently stored data into EigenDA.
+* Current maximum encoded blob size is 8 MB (8_388_608 bytes).
+* ***WeaveVM currently operating in public testnet (Alphanet) - not recommended to use it in production environment.***
 
 ### Prerequisites and Resources
 
-Check the table with configuration params above and `.env` related to Holesky network.
-You may obtain test tWVM token using faucet and see trnsactions associated with your address in WeaveVm explorer.
-How to do it, get the most up to date guidelines and how to use weavevm - arweave gateway please
-check WeaveVM resources below: 
+1. Review the configuration parameters table and `.env` file settings for the Holesky network.
+2. Obtain test tWVM tokens through our [faucet](https://wvm.dev/faucet) for testing purposes.
+3. Monitor your transactions using the [WeaveVM explorer](https://explorer.wvm.dev).
+4. For the most up-to-date guidelines and detailed instructions on using the EigenDA-WeaveVM integration, please refer to our [official documentation](https://docs.wvm.dev/da-integrations/weavevm-eigenda-proxy-server)
 
-* [WeaveVM - EigenDA proxy documentation](https://docs.wvm.dev/da-integrations/weavevm-eigenda-proxy-server)
-* [WeaveVM Explorer](https://explorer.wvm.dev)
-* [WeaveVM tWVM faucet](https://wvm.dev/faucet)
+### Example of Booting EigenDA proxy with WeaveVM as a Secondary Storage
 
-## Example of Booting EigenDA proxy with WeaveVM as a secondary storage
-
-We may follow the general path to boot EigenDA proxy server and just provide additional weaveVM related 
-cli config.
-Set weavevm.private-key-hex with your weaveVM private key (you may also use web3signer as a remote signer for weavevm transactions: pls check the configuration params and weaveVM docs)
+You may follow the general path to boot EigenDA proxy server and just provide additional WeaveVM-related CLI config. Set `weavevm.private-key-hex` with your WeaveVM private key (you may also use web3signer as a remote signer for WeaveVM transactions -- please check the configuration params and WeaveVM docs).
 
 ```log
 ./bin/eigenda-proxy \
@@ -281,4 +268,14 @@ Set weavevm.private-key-hex with your weaveVM private key (you may also use web3
 --storage.fallback-targets weavevm \
 --storage.concurrent-write-routines 2
 ```
+
+## Resources
+
+* [op-stack](https://github.com/ethereum-optimism/optimism)
+* [Alt-DA spec](https://specs.optimism.io/experimental/alt-da.html)
+* [eigen da](https://github.com/Layr-Labs/eigenda)
+
+## License
+
+This repository is licensed under the [MIT License](./LICENSE)
 
