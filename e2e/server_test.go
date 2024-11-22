@@ -181,7 +181,7 @@ func TestProxyReadFallbackOnWvm(t *testing.T) {
 
 	t.Parallel()
 
-	// setup server with S3 as a fallback option
+	// setup server with WeaveVM as a fallback option
 	testCfg := e2e.TestConfig(useMemory())
 	testCfg.UseWeaveVMFallback = true
 	// ensure that blob memstore eviction times result in near immediate activation
