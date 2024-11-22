@@ -126,7 +126,7 @@ func (weaveVM *Store) getWvmTxHashByCommitment(key []byte) (string, error) {
 	return weaveVMTxHash.(string), nil
 }
 
-const weaveVMGatewayURL = "https://gateway.wvm.dev/calldata/%s"
+const weaveVMGatewayURL = "https://gateway.wvm.dev/v1/calldata/%s"
 
 // Modified get function with improved error handling
 func (weaveVM *Store) getFromGateway(ctx context.Context, weaveVMTxHash string) ([]byte, error) {
