@@ -19,11 +19,12 @@ Features:
 * Performs DA certificate verification during retrieval to ensure that data represented by bad DA certificates do not become part of the canonical chain.
 * Compatibility with Optimism's alt-da commitment type with eigenda backend.
 * Compatibility with Optimism's keccak-256 commitment type with S3 storage.
-* Blobs permanent backup storage option via WeaveVM. 
+* Blobs permanent backup storage option via WeaveVM.
 
 In order to disperse to the EigenDA network in production, or at high throughput on testnet, please register your authentication ethereum address through [this form](https://forms.gle/3QRNTYhSMacVFNcU8). Your EigenDA authentication keypair address should not be associated with any funds anywhere.
 
 ## Configuration Options
+
 | Option | Default Value | Environment Variable | Description |
 |--------|---------------|----------------------|-------------|
 | `--addr` | `"127.0.0.1"` | `$EIGENDA_PROXY_ADDR` | Server listening address |
@@ -33,9 +34,9 @@ In order to disperse to the EigenDA network in production, or at high throughput
 | `--eigenda.disable-tls` | `false` | `$EIGENDA_PROXY_EIGENDA_GRPC_DISABLE_TLS` | Disable TLS for gRPC communication with the EigenDA disperser. Default is false. |
 | --eigenda.cert-verification-disabled | `false` | `$EIGENDA_PROXY_EIGENDA_CERT_VERIFICATION_DISABLED` | Whether to verify certificates received from EigenDA disperser. |
 | `--eigenda.disperser-rpc` |  | `$EIGENDA_PROXY_EIGENDA_DISPERSER_RPC` | RPC endpoint of the EigenDA disperser. |
-| `--eigenda.svc-manager-addr` |  | `$EIGENDA_PROXY_EIGENDA_SERVICE_MANAGER_ADDR` | The deployed EigenDA service manager address. The list can be found here: https://github.com/Layr-Labs/eigenlayer-middleware/?tab=readme-ov-file#current-mainnet-deployment |
+| `--eigenda.svc-manager-addr` |  | `$EIGENDA_PROXY_EIGENDA_SERVICE_MANAGER_ADDR` | The deployed EigenDA service manager address. The list can be found here: <https://github.com/Layr-Labs/eigenlayer-middleware/?tab=readme-ov-file#current-mainnet-deployment> |
 | `--eigenda.eth-confirmation-depth` | `-1` | `$EIGENDA_PROXY_EIGENDA_ETH_CONFIRMATION_DEPTH` | The number of Ethereum blocks of confirmation that the DA bridging transaction must have before it is assumed by the proxy to be final. If set negative the proxy will always wait for blob finalization. |
-| `--eigenda.eth-rpc` |  | `$EIGENDA_PROXY_EIGENDA_ETH_RPC` | JSON RPC node endpoint for the Ethereum network used for finalizing DA blobs. See available list here: https://docs.eigenlayer.xyz/eigenda/networks/ |
+| `--eigenda.eth-rpc` |  | `$EIGENDA_PROXY_EIGENDA_ETH_RPC` | JSON RPC node endpoint for the Ethereum network used for finalizing DA blobs. See available list here: <https://docs.eigenlayer.xyz/eigenda/networks/> |
 | `--eigenda.g1-path` | `"resources/g1.point"` | `$EIGENDA_PROXY_EIGENDA_TARGET_KZG_G1_PATH` | Directory path to g1.point file. |
 | `--eigenda.g2-power-of-2-path` | `"resources/g2.point.powerOf2"` | `$EIGENDA_PROXY_EIGENDA_TARGET_KZG_G2_POWER_OF_2_PATH` | Directory path to g2.point.powerOf2 file. |
 | `--eigenda.max-blob-length` | `"16MiB"` | `$EIGENDA_PROXY_EIGENDA_MAX_BLOB_LENGTH` | Maximum blob length to be written or read from EigenDA. Determines the number of SRS points loaded into memory for KZG commitments. Example units: '30MiB', '4Kb', '30MB'. Maximum size slightly exceeds 1GB. |
@@ -75,7 +76,6 @@ In order to disperse to the EigenDA network in production, or at high throughput
 | `--help, -h` | `false` |  | Show help. |
 | `--version, -v` | `false` |  | Print the version. |
 
-
 ### Certificate verification
 
 In order for the EigenDA Proxy to avoid a trust assumption on the EigenDA disperser, the proxy offers a DA cert verification feature which ensures that:
@@ -86,7 +86,6 @@ In order for the EigenDA Proxy to avoid a trust assumption on the EigenDA disper
 4. The DA cert's quorum ids map to valid quorums
 
 To target this feature, use the CLI flags `--eigenda-svc-manager-addr`, `--eigenda-eth-rpc`.
-
 
 #### Soft Confirmations
 
@@ -100,14 +99,16 @@ An optional `--eigenda-eth-confirmation-depth` flag can be provided to specify a
 An ephemeral memory store backend can be used for faster feedback testing when testing rollup integrations. To target this feature, use the CLI flags `--memstore.enabled`, `--memstore.expiration`.
 
 ### Asynchronous Secondary Insertions
+
 An optional `--routing.concurrent-write-routines` flag can be provided to enable asynchronous processing for secondary writes - allowing for more efficient dispersals in the presence of a hefty secondary routing layer. This flag specifies the number of write routines spun-up with supported thread counts in range `[1, 100)`.
 
 ### Storage Fallback
-An optional storage fallback CLI flag `--routing.fallback-targets` can be leveraged to ensure resiliency when **reading**. When enabled, a blob is persisted to a fallback target after being successfully dispersed. Fallback targets use the keccak256 hash of the existing EigenDA commitment as their key, for succinctness. In the event that blobs cannot be read from EigenDA, they will then be retrieved in linear order from the provided fallback targets. 
+
+An optional storage fallback CLI flag `--routing.fallback-targets` can be leveraged to ensure resiliency when **reading**. When enabled, a blob is persisted to a fallback target after being successfully dispersed. Fallback targets use the keccak256 hash of the existing EigenDA commitment as their key, for succinctness. In the event that blobs cannot be read from EigenDA, they will then be retrieved in linear order from the provided fallback targets.
 
 ### Storage Caching
-An optional storage caching CLI flag `--routing.cache-targets` can be leveraged to ensure less redundancy and more optimal reading. When enabled, a blob is persisted to each cache target after being successfully dispersed using the keccak256 hash of the existing EigenDA commitment for the fallback target key. This ensure second order keys are succinct. Upon a blob retrieval request, the cached targets are first referenced to read the blob data before referring to EigenDA. 
 
+An optional storage caching CLI flag `--routing.cache-targets` can be leveraged to ensure less redundancy and more optimal reading. When enabled, a blob is persisted to each cache target after being successfully dispersed using the keccak256 hash of the existing EigenDA commitment for the fallback target key. This ensure second order keys are succinct. Upon a blob retrieval request, the cached targets are first referenced to read the blob data before referring to EigenDA.
 
 ## Metrics
 
@@ -178,10 +179,13 @@ We also provide network-specific example env configuration files in `.env.exampl
 Container can be built via running `make docker-build`.
 
 ## Commitment Schemas
+
 Currently, there are two commitment modes supported with unique encoding schemas for each. The `version byte` is shared for all modes and denotes which version of the EigenDA certificate is being used/requested. The following versions are currently supported:
+
 * `0x0`: V0 certificate type (i.e, dispersal blob info struct with verification against service manager)
 
 ### Optimism Commitment Mode
+
 For `alt-da` clients running on Optimism, the following commitment schema is supported:
 
 ```
@@ -196,6 +200,7 @@ Both `keccak256` (i.e, S3 storage using hash of pre-image for commitment value) 
 OP Stack itself only has a conception of the first byte (`commit type`) and does no semantical interpretation of any subsequent bytes within the encoding. The `da layer type` byte for EigenDA is always `0x00`. However it is currently unused by OP Stack with name space values still being actively [discussed](https://github.com/ethereum-optimism/specs/discussions/135#discussioncomment-9271282).
 
 ### Simple Commitment Mode
+
 For simple clients communicating with proxy (e.g, arbitrum nitro), the following commitment schema is supported:
 
 ```
@@ -216,6 +221,7 @@ The `raw commitment` is an RLP-encoded [EigenDA certificate](https://github.com/
 Unit tests can be ran via invoking `make test`.
 
 ### Integration
+
 End-to-end (E2E) tests can be ran via `make e2e-test`.
 
 ### Holesky
@@ -234,20 +240,32 @@ An E2E test exists which spins up a local OP sequencer instance using the [op-e2
 
 ## WeaveVM Secondary Backend
 
-*text description and main reason and benefits*
+Using weaveVm should remove a trust assumption on needing an archival node to sync from using a confirmed/finalized rollup head since the data is also permanently persisted to weaveVM.
+WeaveVM provides a gateway for permanent storage of Arweave into EigenDA.
 
-WeaveVM is in public testnet.
-Extensive description, docs, limits and params can be seen on a site (link).
-Max encoded blob size allowed in tx is 8mb (8388608 bytes).
+### Key details
 
-### Prerequisites
+WeaveVM provides a gateway for permanent storage of Arweave into EigenDA.
 
-Check the table with configuration params above and `.env` related to Holesky network
-Get the tWVM token which will be used to pay fees.
+Current maximum encoded blob size is 8MB (8388608 bytes).
+WeaveVM currently operating in public testnet - not recommend to use it in production environment.
 
-## Setup Guide: Booting EigenDA proxy with WeaveVM as a secondary storage
+### Prerequisites and Resources
 
-### Option 1: with weave vm private key
+Check the table with configuration params above and `.env` related to Holesky network.
+You may obtain test tWVM token using faucet and see trnsactions associated with your address in WeaveVm explorer.
+How to do it, get the most up to date guidelines and how to use weavevm - arweave gateway please
+check WeaveVM resources below: 
+
+* [WeaveVM - EigenDA proxy documentation](https://docs.wvm.dev/da-integrations/weavevm-eigenda-proxy-server)
+* [WeaveVM Explorer](https://explorer.wvm.dev)
+* [WeaveVM tWVM faucet](https://wvm.dev/faucet)
+
+## Example of Booting EigenDA proxy with WeaveVM as a secondary storage
+
+We may follow the general path to boot EigenDA proxy server and just provide additional weaveVM related 
+cli config.
+Set weavevm.private-key-hex with your weaveVM private key (you may also use web3signer as a remote signer for weavevm transactions: pls check the configuration params and weaveVM docs)
 
 ```log
 ./bin/eigenda-proxy \
@@ -264,36 +282,3 @@ Get the tWVM token which will be used to pay fees.
 --storage.concurrent-write-routines 2
 ```
 
-### Option 2: with web3signer
-
-***Disclaimer: Using a remote signer comes with risks, please read the following warnings before proceeding:***
-
-> Remote signing is complex and risky. Remote signing is generally only desirable for enterprise users or users with unique security requirements.
-
-> Web3Signer is not maintained by WeaveVM team. The Web3Signer tool is maintained by Consensys, the same team that maintains Teku. The WeaveVM team does not maintain Web3Signer or make any guarantees about its safety or effectiveness.
-
-- For a simple test deployment of a local Web3Signer setup, refer to: <https://github.com/allnil/web3signer_test_deploy>
-- For complete documentation, consult: <https://docs.web3signer.consensys.io/>
-
-To run EigenDA Sidecar Service Proxy with WeaveVM as secondary storage and Web3Signer:
-
-```log
-./bin/eigenda-proxy \
-    --addr 127.0.0.1 \
-    --port 3100 \
-    --eigenda.disperser-rpc disperser-holesky.eigenda.xyz:443 \
-    --eigenda.signer-private-key-hex $PRIVATE_KEY \
-    --eigenda.eth-rpc https://ethereum-holesky-rpc.publicnode.com \
-    --eigenda.svc-manager-addr 0xD4A7E1Bd8015057293f0D0A557088c286942e84b \
---weavevm.endpoint https://testnet-rpc.wvm.dev/ \
---weavevm.chain_id 9496 \
---storage.fallback-targets weavevm \
---storage.concurrent-write-routines 2 \
---weavevm.web3signer_endpoint http://localhost:9000
-```
-
-### Resources
-
-* WeaveVM Explorer: <https://explorer.wvm.dev>
-*  WeaveVM tWeaveVM faucet: <https://wvm.dev/faucet>
-* Discord: <https://dsc.gg/wvm>
