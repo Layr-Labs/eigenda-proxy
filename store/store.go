@@ -7,6 +7,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	weavevm "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weavevm/types"
+	"github.com/Layr-Labs/eigenda-proxy/verify"
 )
 
 type Config struct {
@@ -54,6 +55,11 @@ func (cfg *Config) Check() error {
 		return fmt.Errorf("redis password is set, but endpoint is not")
 	}
 
+	// NOTE: we take the MaxBlobLengthBytes from verify package as it is done in memstore
+	// 8Mb in bytes is 8_388_608
+	if cfg.WeaveVMConfig.Enabled && verify.MaxBlobLengthBytes > 8_388_608 {
+		return fmt.Errorf("current max blob size with weavevm secondary backend enabled is 8Mb")
+	}
 	if cfg.WeaveVMConfig.Enabled && (cfg.WeaveVMConfig.Endpoint == "" || cfg.WeaveVMConfig.ChainID == 0) {
 		return fmt.Errorf("weaveVM secondary backend enabled but endpoint or chain id has not been provided")
 	}
