@@ -75,6 +75,15 @@ In order to disperse to the EigenDA network in production, or at high throughput
 | `--redis.eviction` | `24h0m0s`  | `$EIGENDA_PROXY_REDIS_EVICTION` | entry eviction/expiration time |
 | `--help, -h` | `false` |  | Show help. |
 | `--version, -v` | `false` |  | Print the version. |
+| `--weavevm.enabled` |  | `$EIGENDA_PROXY_WEAVE_VM_ENABLED` | Set to true to enable WeaveVM chain as a secondary storage. |
+| `--weavevm.endpoint` |  | `$EIGENDA_PROXY_WEAVE_VM_ENDPOINT` | Ednpoint of WeaveVM rpc node. |
+| `--weavevm.chain_id` |  | `$EIGENDA_PROXY_WEAVE_VM_CHAIN_ID` | Chain id of weaveVM network. Right now there is only Alphanet 9496 but in future can vary. |
+| `--weavevm.timeout` |  | `$EIGENDA_PROXY_WEAVE_VM_TIMEOUT` | WeaveVM HTTP requests operations timeout. |
+| `--weavevm.private_key_hex` |  | `$EIGENDA_PROXY_WEAVE_VM_PRIV_KEY_HEX` | WeaveVM signer private key. |
+| `--weavevm.web3_signer_endpoint` |  | `$EIGENDA_PROXY_WEAVE_VM_WEB3_SIGNER_ENDPOINT` | WeaveVM web3signer endpoint. |
+| `--weavevm.web3_signer_tls_cert_file` |  | `$EIGENDA_PROXY_WEAVE_VM_WEB3_SIGNER_TLS_CERT_FILE` | WeaveVM web3 signer path to TLS cert. |
+| `--weavevm.web3_signer_tls_key_file` |  | `$EIGENDA_PROXY_WEAVE_VM_WEB3_SIGNER_TLS_KEY_FILE` |  WeaveVM web3 signer path to TLS key. |
+| `--weavevm.web3_signer_tls_ca_cert_file` |  | `$EIGENDA_PROXY_WEAVE_VM_WEB3_SIGNER_TLS_CA_CERT_FILE` | WeaveVM web3 signer path to CA cert.endpoint. |
 
 ### Certificate verification
 
