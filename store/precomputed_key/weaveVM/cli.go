@@ -14,10 +14,10 @@ var (
 	TimeoutFlagName  = withFlagPrefix("timeout")
 
 	PrivateKeyHexFlagName           = withFlagPrefix("private_key_hex")
-	Web3SignerEndpointFlagName      = withFlagPrefix("web3signer_endpoint")
-	Web3SignerTLSCertFileFlagName   = withFlagPrefix("web3signer_tls_cert_file")
-	Web3SignerTLSKeyFileFlagName    = withFlagPrefix("web3signer_tls_key_file")
-	Web3SignerTLSCACertFileFlagName = withFlagPrefix("web3signer_tls_ca_cert_file")
+	Web3SignerEndpointFlagName      = withFlagPrefix("web3_signer_endpoint")
+	Web3SignerTLSCertFileFlagName   = withFlagPrefix("web3_signer_tls_cert_file")
+	Web3SignerTLSKeyFileFlagName    = withFlagPrefix("web3_signer_tls_key_file")
+	Web3SignerTLSCACertFileFlagName = withFlagPrefix("web3_signer_tls_ca_cert_file")
 )
 
 func withFlagPrefix(s string) string {

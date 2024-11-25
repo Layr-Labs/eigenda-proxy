@@ -259,14 +259,16 @@ You may follow the general path to boot EigenDA proxy server and just provide ad
     --addr 127.0.0.1 \
     --port 3100 \
     --eigenda.disperser-rpc disperser-holesky.eigenda.xyz:443 \
+    --eigenda.max-blob-length 8Mb \
     --eigenda.signer-private-key-hex $PRIVATE_KEY \
     --eigenda.eth-rpc https://ethereum-holesky-rpc.publicnode.com \
     --eigenda.svc-manager-addr 0xD4A7E1Bd8015057293f0D0A557088c286942e84b \
---weavevm.endpoint https://testnet-rpc.wvm.dev/ \
---weavevm.chain_id 9496 \
---weavevm.private-key-hex $WVM_PRIVATE_KEY \
---storage.fallback-targets weavevm \
---storage.concurrent-write-routines 2
+    --weavevm.endpoint https://testnet-rpc.wvm.dev/ \
+    --weavevm.chain_id 9496 \
+    --weavevm.private_key_hex $WVM_PRIV_KEY \
+    --weavevm.enabled true \
+    --storage.fallback-targets weavevm \
+    --storage.concurrent-write-routines 2
 ```
 
 ## Resources
