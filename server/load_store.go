@@ -11,6 +11,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
+	weavevm "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weave_vm"
 	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/ethereum/go-ethereum/log"
@@ -19,7 +20,7 @@ import (
 // TODO - create structured abstraction for dependency injection vs. overloading stateless functions
 
 // populateTargets ... creates a list of storage backends based on the provided target strings
-func populateTargets(targets []string, s3 common.PrecomputedKeyStore, redis *redis.Store) []common.PrecomputedKeyStore {
+func populateTargets(targets []string, s3 common.PrecomputedKeyStore, redis *redis.Store, weaveVM common.PrecomputedKeyStore) []common.PrecomputedKeyStore {
 	stores := make([]common.PrecomputedKeyStore, len(targets))
 
 	for i, f := range targets {
@@ -37,6 +38,12 @@ func populateTargets(targets []string, s3 common.PrecomputedKeyStore, redis *red
 				panic(fmt.Sprintf("S3 backend is not configured but specified in targets: %s", f))
 			}
 			stores[i] = s3
+
+		case common.WeaveVMBackendType:
+			if weaveVM == nil {
+				panic(fmt.Sprintf("WeaveVM backend is not configured but specified in targets: %s", f))
+			}
+			stores[i] = weaveVM
 
 		case common.EigenDABackendType, common.MemoryBackendType:
 			panic(fmt.Sprintf("Invalid target for fallback: %s", f))
@@ -58,12 +65,23 @@ func LoadStoreManager(ctx context.Context, cfg CLIConfig, log log.Logger, m metr
 	var err error
 	var s3Store *s3.Store
 	var redisStore *redis.Store
+	var weaveVMStore *weavevm.Store
 
 	if cfg.EigenDAConfig.StorageConfig.S3Config.Bucket != "" && cfg.EigenDAConfig.StorageConfig.S3Config.Endpoint != "" {
 		log.Info("Using S3 backend")
 		s3Store, err = s3.NewStore(cfg.EigenDAConfig.StorageConfig.S3Config)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create S3 store: %w", err)
+		}
+	}
+
+	if cfg.EigenDAConfig.StorageConfig.WeaveVMConfig.Enabled {
+		if cfg.EigenDAConfig.StorageConfig.WeaveVMConfig.Endpoint != "" {
+			log.Info("Using WeaveVM backend")
+			weaveVMStore, err = weavevm.NewStore(&cfg.EigenDAConfig.StorageConfig.WeaveVMConfig, log)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create WeaveVM store: %w", err)
+			}
 		}
 	}
 
@@ -122,8 +140,8 @@ func LoadStoreManager(ctx context.Context, cfg CLIConfig, log log.Logger, m metr
 	}
 
 	// create secondary storage router
-	fallbacks := populateTargets(cfg.EigenDAConfig.StorageConfig.FallbackTargets, s3Store, redisStore)
-	caches := populateTargets(cfg.EigenDAConfig.StorageConfig.CacheTargets, s3Store, redisStore)
+	fallbacks := populateTargets(cfg.EigenDAConfig.StorageConfig.FallbackTargets, s3Store, redisStore, weaveVMStore)
+	caches := populateTargets(cfg.EigenDAConfig.StorageConfig.CacheTargets, s3Store, redisStore, weaveVMStore)
 	secondary := store.NewSecondaryManager(log, m, caches, fallbacks)
 
 	if secondary.Enabled() { // only spin-up go routines if secondary storage is enabled
@@ -135,6 +153,6 @@ func LoadStoreManager(ctx context.Context, cfg CLIConfig, log log.Logger, m metr
 		}
 	}
 
-	log.Info("Creating storage router", "eigenda backend type", eigenDA != nil, "s3 backend type", s3Store != nil)
+	log.Info("Creating storage router", "eigenda backend type", eigenDA != nil, "s3 backend type", s3Store != nil, "weaveVM backend type", weaveVMStore != nil)
 	return store.NewManager(eigenDA, s3Store, log, secondary)
 }
