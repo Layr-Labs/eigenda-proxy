@@ -61,10 +61,13 @@ func (cfg *Config) Check() error {
 		return fmt.Errorf("current max blob size with weavevm secondary backend enabled is 8MiB")
 	}
 	if cfg.WeaveVMConfig.Enabled && (cfg.WeaveVMConfig.Endpoint == "" || cfg.WeaveVMConfig.ChainID == 0) {
-		return fmt.Errorf("weaveVM secondary backend enabled but endpoint or chain id has not been provided")
+		return fmt.Errorf("weavevm secondary backend enabled: endpoint or chain id has not been provided")
 	}
 	if cfg.WeaveVMConfig.Enabled && (cfg.WeaveVMConfig.PrivateKeyHex == "" && cfg.WeaveVMConfig.Web3SignerEndpoint == "") {
-		return fmt.Errorf("weaveVM enabled but both private key and web3 signer endpoints are empty")
+		return fmt.Errorf("weavevm secondary backend enabled: both private key and web3 signer endpoints are empty")
+	}
+	if cfg.WeaveVMConfig.Enabled && (cfg.WeaveVMConfig.PrivateKeyHex != "" && cfg.WeaveVMConfig.Web3SignerEndpoint != "") {
+		return fmt.Errorf("weavevm secondary backend is enabled: please provide either a private key or a Web3Signer endpoint as your signing method")
 	}
 
 	err := cfg.checkTargets(cfg.FallbackTargets)
