@@ -27,10 +27,10 @@ type WeaveVM interface {
 
 // Store...wraps weaveVM client, ethclient and concurrent internal cache
 type Store struct {
-	weaveVMClient WeaveVM
-	log           log.Logger
-	txCache       *cache.Cache
-	cfg           *weaveVMtypes.Config
+	client  WeaveVM
+	log     log.Logger
+	txCache *cache.Cache
+	cfg     *weaveVMtypes.Config
 }
 
 func NewStore(cfg *weaveVMtypes.Config, log log.Logger) (*Store, error) {
@@ -41,11 +41,11 @@ func NewStore(cfg *weaveVMtypes.Config, log log.Logger) (*Store, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to initialize web3signer client: %w", err)
 		}
-		weaveVMClient, err := rpc.NewWvmRPCClient(log, cfg, web3signer)
+		client, err := rpc.NewWvmRPCClient(log, cfg, web3signer)
 		if err != nil {
 			return nil, fmt.Errorf("failed to initialize rpc client for weaveVM chain: %w", err)
 		}
-		store.weaveVMClient = weaveVMClient
+		store.client = client
 		return store, nil
 	}
 
@@ -54,12 +54,12 @@ func NewStore(cfg *weaveVMtypes.Config, log log.Logger) (*Store, error) {
 		return nil, fmt.Errorf("weaveVM private key is empty and weaveVM web3 signer is empty")
 	}
 	privateKeySigner := signer.NewPrivateKeySigner(cfg.PrivateKeyHex, log, cfg.ChainID)
-	weaveVMClient, err := rpc.NewWvmRPCClient(log, cfg, privateKeySigner)
+	client, err := rpc.NewWvmRPCClient(log, cfg, privateKeySigner)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize rpc client for weaveVM chain: %w", err)
 	}
 
-	store.weaveVMClient = weaveVMClient
+	store.client = client
 
 	return store, nil
 }
@@ -81,7 +81,7 @@ func (weaveVM *Store) Put(ctx context.Context, key []byte, value []byte) error {
 	ctx, cancel := context.WithTimeout(ctx, weaveVM.cfg.Timeout)
 	defer cancel()
 
-	weaveVMTxHash, err := weaveVM.weaveVMClient.SendTransaction(ctx, weaveVMtypes.ArchivePoolAddress, value)
+	weaveVMTxHash, err := weaveVM.client.SendTransaction(ctx, weaveVMtypes.ArchivePoolAddress, value)
 	if err != nil {
 		return fmt.Errorf("failed to send weaveVM transaction: %w", err)
 	}
