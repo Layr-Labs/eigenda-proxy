@@ -241,7 +241,6 @@ A holesky integration test can be ran using `make holesky-test` to assert proper
 
 An E2E test exists which spins up a local OP sequencer instance using the [op-e2e](https://github.com/ethereum-optimism/optimism/tree/develop/op-e2e) framework for asserting correct interaction behaviors with batch submission and state derivation. These tests can be ran via `make optimism-test`.
 
-
 ## WeaveVM: Secondary Blobs Storage
 
 [WeaveVM](https://wvm.dev) is a sovereign EVM rollup that uses Arweave for permanent ledger archival and data storage. In this scope, WeaveVM provides an EVM gateway/interface for EigenDA blobs on Arweave's Permaweb, removing the need for trust assumptions and relying on centralized third party services to sync historical data and provides a "pay once, save forever" data storage feature for EigenDA blobs.
@@ -268,16 +267,16 @@ You may follow the general path to boot EigenDA proxy server and just provide ad
     --addr 127.0.0.1 \
     --port 3100 \
     --eigenda.disperser-rpc disperser-holesky.eigenda.xyz:443 \
-    --eigenda.max-blob-length 8Mb \
     --eigenda.signer-private-key-hex $PRIVATE_KEY \
+    --eigenda.max-blob-length 8Mb \
     --eigenda.eth-rpc https://ethereum-holesky-rpc.publicnode.com \
     --eigenda.svc-manager-addr 0xD4A7E1Bd8015057293f0D0A557088c286942e84b \
     --weavevm.endpoint https://testnet-rpc.wvm.dev/ \
     --weavevm.chain_id 9496 \
+    --weavevm.enabled \
     --weavevm.private_key_hex $WVM_PRIV_KEY \
-    --weavevm.enabled true \
     --storage.fallback-targets weavevm \
-    --storage.concurrent-write-routines 2
+    --storage.concurrent-write-routines 2 
 ```
 
 ## Resources
@@ -289,4 +288,3 @@ You may follow the general path to boot EigenDA proxy server and just provide ad
 ## License
 
 This repository is licensed under the [MIT License](./LICENSE)
-
