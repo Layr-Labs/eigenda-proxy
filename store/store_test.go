@@ -7,7 +7,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
-	weavevm "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weavevm/types"
+	weavevm "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weave_vm/types"
 
 	"github.com/stretchr/testify/require"
 )

@@ -1,9 +1,9 @@
-package weavevm
+package weave_vm
 
 import (
 	"time"
 
-	weaveVMtypes "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weavevm/types"
+	weaveVMtypes "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weave_vm/types"
 	"github.com/urfave/cli/v2"
 )
 

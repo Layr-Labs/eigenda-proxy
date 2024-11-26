@@ -3,7 +3,7 @@ package store
 import (
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
-	weavevm "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weavevm"
+	weavevm "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weave_vm"
 	"github.com/urfave/cli/v2"
 )
 

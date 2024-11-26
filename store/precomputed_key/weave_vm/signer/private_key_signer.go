@@ -9,7 +9,7 @@ import (
 	"math/big"
 	"strings"
 
-	weaveVMtypes "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weavevm/types"
+	weaveVMtypes "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weave_vm/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"

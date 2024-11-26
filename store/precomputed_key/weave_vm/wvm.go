@@ -1,4 +1,4 @@
-package weavevm
+package weave_vm
 
 import (
 	"bytes"
@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
-	rpc "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weavevm/rpc"
-	signer "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weavevm/signer"
-	weaveVMtypes "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weavevm/types"
+	rpc "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weave_vm/rpc"
+	signer "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weave_vm/signer"
+	weaveVMtypes "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weave_vm/types"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
@@ -88,7 +88,7 @@ func (weaveVM *Store) Put(ctx context.Context, key []byte, value []byte) error {
 
 	weaveVM.txCache.Set(string(key), weaveVMTxHash, cache.DefaultExpiration)
 
-	weaveVM.log.Info("weaveVM backend: save weaveVM tx hash - batch_id:blob_index in internal storage",
+	weaveVM.log.Debug("weaveVM backend: save weaveVM tx hash - batch_id:blob_index in internal storage",
 		"tx hash", weaveVMTxHash, "provided key", string(key))
 
 	return nil
@@ -121,8 +121,6 @@ func (weaveVM *Store) getWvmTxHashByCommitment(key []byte) (string, error) {
 		return "", fmt.Errorf("weaveVM backend: tx hash for provided commitment not found")
 	}
 
-	weaveVM.log.Info("weaveVM backned: tx hash using provided commitment FOUND", "provided key", string(key))
-
 	return weaveVMTxHash.(string), nil
 }
 
@@ -149,7 +147,7 @@ func (weaveVM *Store) getFromGateway(ctx context.Context, weaveVMTxHash string) 
 		Timeout: weaveVM.cfg.Timeout,
 	}
 
-	weaveVM.log.Info("sending request to WeaveVM data retriever",
+	weaveVM.log.Debug("sending request to WeaveVM data retriever",
 		"url", r.URL.String(),
 		"headers", r.Header)
 

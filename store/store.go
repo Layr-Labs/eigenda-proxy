@@ -6,7 +6,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
-	weavevm "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weavevm/types"
+	weavevm "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weave_vm/types"
 	"github.com/Layr-Labs/eigenda-proxy/verify"
 )
 
@@ -57,7 +57,7 @@ func (cfg *Config) Check() error {
 
 	// NOTE: we take the MaxBlobLengthBytes from verify package as it is done in memstore
 	// 8 MiB in bytes is 8_388_608
-	if cfg.WeaveVMConfig.Enabled && verify.MaxBlobLengthBytes > 8_388_608 {
+	if cfg.WeaveVMConfig.Enabled && verify.MaxBlobLengthBytes > weavevm.WeaveVMMaxTransactionSize {
 		return fmt.Errorf("current max blob size with weavevm secondary backend enabled is 8MiB")
 	}
 	if cfg.WeaveVMConfig.Enabled && (cfg.WeaveVMConfig.Endpoint == "" || cfg.WeaveVMConfig.ChainID == 0) {

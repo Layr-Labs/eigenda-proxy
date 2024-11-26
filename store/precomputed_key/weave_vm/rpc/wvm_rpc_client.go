@@ -1,4 +1,4 @@
-package weaveVM
+package rpc
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	weaveVMtypes "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weavevm/types"
+	weaveVMtypes "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weave_vm/types"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -78,7 +78,7 @@ func (rpc *RPCClient) estimateGas(ctx context.Context, to string, data []byte) (
 
 	fromAddress, err := rpc.signer.GetAccount(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("failed to estimate gas, no signer")
+		return 0, fmt.Errorf("failed to estimate gas, no signer: %w", err)
 	}
 
 	var encoded string
@@ -105,7 +105,7 @@ func (rpc *RPCClient) estimateGas(ctx context.Context, to string, data []byte) (
 		return 0, err
 	}
 
-	rpc.log.Info("weaveVM: estimated tx gas price", "price", gas)
+	rpc.log.Debug("weaveVM: estimated tx gas price", "price", gas)
 
 	return gas, nil
 }
@@ -195,7 +195,7 @@ func (rpc *RPCClient) logReceipt(tx *ethtypes.Transaction) error {
 		return err
 	}
 
-	rpc.log.Info("weaveVM: transaction receipt", "tx receipt", string(txJSON))
+	rpc.log.Debug("weaveVM: transaction receipt", "tx receipt", string(txJSON))
 	return nil
 }
 

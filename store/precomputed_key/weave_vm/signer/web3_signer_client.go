@@ -14,7 +14,7 @@ import (
 	"os"
 	"strings"
 
-	weaveVMtypes "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weavevm/types"
+	weaveVMtypes "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weave_vm/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/log"
@@ -178,7 +178,6 @@ func (web3s *Web3SignerClient) getAccounts(ctx context.Context) ([]common.Addres
 
 	addresses := make([]common.Address, len(result))
 	for i, address := range result {
-		web3s.log.Info("addresses", "address", address)
 		if !common.IsHexAddress(address) {
 			return nil, fmt.Errorf("invalid address format received: %s", address)
 		}

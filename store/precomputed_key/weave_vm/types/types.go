@@ -5,7 +5,8 @@ import (
 )
 
 const (
-	ArchivePoolAddress = "0x0000000000000000000000000000000000000000" // the data settling address, a unified standard across WeaveVM archiving services
+	ArchivePoolAddress        = "0x0000000000000000000000000000000000000000" // the data settling address, a unified standard across WeaveVM archiving services
+	WeaveVMMaxTransactionSize = 8_388_608
 )
 
 // Config...WeaveVM client configuration
