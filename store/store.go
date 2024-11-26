@@ -56,9 +56,9 @@ func (cfg *Config) Check() error {
 	}
 
 	// NOTE: we take the MaxBlobLengthBytes from verify package as it is done in memstore
-	// 8Mb in bytes is 8_388_608
+	// 8 MiB in bytes is 8_388_608
 	if cfg.WeaveVMConfig.Enabled && verify.MaxBlobLengthBytes > 8_388_608 {
-		return fmt.Errorf("current max blob size with weavevm secondary backend enabled is 8Mb")
+		return fmt.Errorf("current max blob size with weavevm secondary backend enabled is 8MiB")
 	}
 	if cfg.WeaveVMConfig.Enabled && (cfg.WeaveVMConfig.Endpoint == "" || cfg.WeaveVMConfig.ChainID == 0) {
 		return fmt.Errorf("weaveVM secondary backend enabled but endpoint or chain id has not been provided")
