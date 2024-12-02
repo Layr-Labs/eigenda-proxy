@@ -91,7 +91,7 @@ func NewL2AltDA(t actions.Testing, daHost string, altDA bool) *L2AltDA {
 	enabled := sd.RollupCfg.AltDAEnabled()
 	require.True(t, enabled)
 
-	sequencer := actions.NewL2Sequencer(t, log, l1F, nil, daMgr, engCl, sd.RollupCfg, 0, nil)
+	sequencer := actions.NewL2Sequencer(t, log, l1F, miner.BlobStore(), daMgr, engCl, sd.RollupCfg, 0, nil)
 	miner.ActL1SetFeeRecipient(common.Address{'A'})
 	sequencer.ActL2PipelineFull(t)
 

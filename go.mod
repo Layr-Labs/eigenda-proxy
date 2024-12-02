@@ -8,7 +8,7 @@ require (
 	github.com/Layr-Labs/eigenda v0.8.5-rc.0.0.20241101212705-fa8776ae648c
 	github.com/avast/retry-go/v4 v4.6.0
 	github.com/consensys/gnark-crypto v0.12.1
-	github.com/ethereum-optimism/optimism v1.10.0
+	github.com/ethereum-optimism/optimism v1.9.5
 	github.com/ethereum/go-ethereum v1.14.11
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang/mock v1.2.0
