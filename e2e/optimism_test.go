@@ -48,11 +48,12 @@ func NewL2AltDA(t actions.Testing, daHost string, altDA bool) *L2AltDA {
 		ChannelTimeout:      120,
 		L1BlockTime:         12,
 		UseAltDA:            true,
+		AllocType:           config.AllocTypeAltDA,
 	}
 
 	log := testlog.Logger(t, log.LvlDebug)
 
-	config.DeployConfig.DACommitmentType = altda.GenericCommitmentString
+	// config.DeployConfig.DACommitmentType = altda.GenericCommitmentString
 	dp := e2eutils.MakeDeployParams(t, p)
 	dp.DeployConfig.DAChallengeProxy = common.Address{0x42}
 	sd := e2eutils.Setup(t, dp, defaultAlloc)
@@ -63,7 +64,7 @@ func NewL2AltDA(t actions.Testing, daHost string, altDA bool) *L2AltDA {
 	l1Client := miner.EthClient()
 
 	jwtPath := e2eutils.WriteDefaultJWT(t)
-	engine := actions.NewL2Engine(t, log, sd.L2Cfg, sd.RollupCfg.Genesis.L1, jwtPath)
+	engine := actions.NewL2Engine(t, log, sd.L2Cfg, jwtPath)
 	engCl := engine.EngineClient(t, sd.RollupCfg)
 
 	var storage *altda.DAClient
