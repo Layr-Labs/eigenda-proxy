@@ -28,6 +28,13 @@ type SimpleCommitmentClient struct {
 	httpClient *http.Client
 }
 
+func New(cfg *Config) *SimpleCommitmentClient {
+	return &SimpleCommitmentClient{
+		cfg,
+		http.DefaultClient,
+	}
+}
+
 // Health indicates if the server is operational; useful for event based awaits
 // when integration testing
 func (c *SimpleCommitmentClient) Health() error {
