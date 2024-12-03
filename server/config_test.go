@@ -89,6 +89,32 @@ func TestConfigVerification(t *testing.T) {
 			err := cfg.Check()
 			require.Error(t, err)
 		})
+
+		t.Run("EigenDAClientFieldsAreDefaultSetWhenCertVerifierDisabled", func(t *testing.T) {
+			// 1 - memstore
+			cfg := validCfg()
+			cfg.MemstoreEnabled = true
+			cfg.VerifierConfig.VerifyCerts = false
+			cfg.VerifierConfig.RPCURL = ""
+			cfg.VerifierConfig.SvcManagerAddr = ""
+
+			err := cfg.Check()
+			require.NoError(t, err)
+			require.True(t, len(cfg.EdaClientConfig.EthRpcUrl) > 1)
+			require.True(t, len(cfg.EdaClientConfig.SvcManagerAddr) > 1)
+
+			// 2 - cert verification disabled
+			cfg = validCfg()
+			cfg.MemstoreEnabled = false
+			cfg.VerifierConfig.VerifyCerts = false
+			cfg.VerifierConfig.RPCURL = ""
+			cfg.VerifierConfig.SvcManagerAddr = ""
+
+			err = cfg.Check()
+			require.NoError(t, err)
+			require.True(t, len(cfg.EdaClientConfig.EthRpcUrl) > 1)
+			require.True(t, len(cfg.EdaClientConfig.SvcManagerAddr) > 1)
+		})
 	})
 
 }

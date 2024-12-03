@@ -47,7 +47,7 @@ func (cfg *Config) Check() error {
 
 	// provide dummy values to eigenda client config. Since the client won't be called in this
 	// mode it doesn't matter.
-	if cfg.MemstoreEnabled {
+	if cfg.MemstoreEnabled || !cfg.VerifierConfig.VerifyCerts {
 		cfg.EdaClientConfig.SvcManagerAddr = "0x0000000000000000000000000000000000000000"
 		cfg.EdaClientConfig.EthRpcUrl = "http://0.0.0.0:666"
 	}
