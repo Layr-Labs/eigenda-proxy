@@ -39,7 +39,7 @@ func New(cfg *Config) *SimpleCommitmentClient {
 // when integration testing
 func (c *SimpleCommitmentClient) Health() error {
 	url := c.cfg.URL + "/health"
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
 	if err != nil {
 		return err
 	}
@@ -48,6 +48,7 @@ func (c *SimpleCommitmentClient) Health() error {
 	if err != nil {
 		return err
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("received bad status code: %d", resp.StatusCode)
