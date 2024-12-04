@@ -31,19 +31,27 @@ func StringToCommitmentMode(s string) (CommitmentMode, error) {
 	}
 }
 
-func EncodeCommitment(b []byte, c CommitmentMode) ([]byte, error) {
+func EncodeCommitment(b []byte, c CommitmentMode, v CertEncodingCommitment) ([]byte, error) {
 	switch c {
 	case OptimismKeccak:
 		return Keccak256Commitment(b).Encode(), nil
 
 	case OptimismGeneric:
-		certCommit := NewV0CertCommitment(b).Encode()
-		svcCommit := EigenDASvcCommitment(certCommit).Encode()
+		certCommit, err := NewCertCommitment(b, v)
+		if err != nil {
+			return nil, err
+		}
+		svcCommit := EigenDASvcCommitment(certCommit.Encode()).Encode()
 		altDACommit := NewGenericCommitment(svcCommit).Encode()
 		return altDACommit, nil
 
 	case SimpleCommitmentMode:
-		return NewV0CertCommitment(b).Encode(), nil
+		certCommit, err := NewCertCommitment(b, v)
+		if err != nil {
+			return nil, err
+		}
+
+		return certCommit.Encode(), nil
 	}
 
 	return nil, fmt.Errorf("unknown commitment mode")
