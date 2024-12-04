@@ -14,7 +14,7 @@ var (
 )
 
 type Config struct {
-	URL string // EigenDA proxy RPC URL
+	URL string // EigenDA proxy REST API URL
 }
 
 type HTTPClient interface {
