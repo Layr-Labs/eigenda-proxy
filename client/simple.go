@@ -99,7 +99,7 @@ func (c *SimpleCommitmentClient) GetData(ctx context.Context, comm []byte) ([]by
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("received error response when reading from eigenda, code=%d, msg = %s", resp.StatusCode, string(b))
+		return nil, fmt.Errorf("received error response when reading from eigenda-proxy, code=%d, msg = %s", resp.StatusCode, string(b))
 	}
 
 	return b, nil
@@ -131,7 +131,7 @@ func (c *SimpleCommitmentClient) SetData(ctx context.Context, b []byte) ([]byte,
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("received error response when dispersing to eigenda, code=%d, err = %s", resp.StatusCode, string(b))
+		return nil, fmt.Errorf("received error response when dispersing to eigenda-proxy, code=%d, err = %s", resp.StatusCode, string(b))
 	}
 
 	if len(b) == 0 {
