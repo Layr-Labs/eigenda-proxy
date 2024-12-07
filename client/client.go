@@ -18,8 +18,8 @@ type Config struct {
 	URL string
 }
 
-// Client implements a simple client for the eigenda-proxy
-// that can put/get simple commitment data and query the health endpoint.
+// Client implements a standard client for the eigenda-proxy
+// that can put/get standard commitment data and query the health endpoint.
 // Currently it is meant to be used by Arbitrum nitro integrations but can be extended to others in the future.
 // Optimism has its own client: https://github.com/ethereum-optimism/optimism/blob/develop/op-alt-da/daclient.go
 // so clients wanting to send op commitment mode data should use that client.
@@ -59,7 +59,7 @@ func (c *Client) Health() error {
 
 // GetData fetches blob data associated with a DA certificate
 func (c *Client) GetData(ctx context.Context, comm []byte) ([]byte, error) {
-	url := fmt.Sprintf("%s/get/0x%x?commitment_mode=simple", c.cfg.URL, comm)
+	url := fmt.Sprintf("%s/get/0x%x?commitment_mode=standard", c.cfg.URL, comm)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *Client) GetData(ctx context.Context, comm []byte) ([]byte, error) {
 // SetData writes raw byte data to DA and returns the associated certificate
 // which should be verified within the proxy
 func (c *Client) SetData(ctx context.Context, b []byte) ([]byte, error) {
-	url := fmt.Sprintf("%s/put?commitment_mode=simple", c.cfg.URL)
+	url := fmt.Sprintf("%s/put?commitment_mode=standard", c.cfg.URL)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(b))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
