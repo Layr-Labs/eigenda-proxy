@@ -7,7 +7,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
+  binary:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
@@ -19,3 +19,29 @@ jobs:
 
     - name: Build App
       run: make eigenda-proxy
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build container
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: false
+          tag: eigenda-proxy
+
+      - name: Run container as background process
+        shell: bash
+        run: |
+          docker run -d \
+          -p 4242:6666 \
+          -e EIGENDA_PROXY_ADDR=0.0.0.0 \
+          -e EIGENDA_PROXY_PORT=6666 \
+          -e EIGENDA_PROXY_MEMSTORE_ENABLED=true \
+          -e EIGENDA_PROXY_EIGENDA_CERT_VERIFICATION_DISABLED=true \
+          eigenda-proxy
+
+      - name: Wait for rpc to come up
+        shell: bash
+        run: |
+          ${{ github.workspace }}/scripts/wait-for.sh
