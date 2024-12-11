@@ -190,7 +190,7 @@ For `alt-da` clients running on Optimism, the following commitment schema is sup
 
 Both `keccak256` (i.e, S3 storage using hash of pre-image for commitment value) and `generic` (i.e, EigenDA) are supported to ensure cross-compatibility with alt-da storage backends if desired by a rollup operator.
 
-OP Stack itself only has a conception of the first byte (`commit type`) and does no semantical interpretation of any subsequent bytes within the encoding. The `da layer type` byte for EigenDA is always `0x00`. However it is currently unused by OP Stack with name space values still being actively [discussed](https://github.com/ethereum-optimism/specs/discussions/135#discussioncomment-9271282).
+OP Stack itself only has a conception of the first byte (`commit type`) and does no semantic interpretation of any subsequent bytes within the encoding. The `da layer type` byte for EigenDA is always `0x00`. However it is currently unused by OP Stack with name space values still being actively [discussed](https://github.com/ethereum-optimism/specs/discussions/135#discussioncomment-9271282).
 
 ### Standard Commitment Mode
 For standard clients (i.e, `client/client.go`) communicating with proxy (e.g, arbitrum nitro), the following commitment schema is supported:
@@ -204,7 +204,7 @@ For standard clients (i.e, `client/client.go`) communicating with proxy (e.g, ar
 
 The `raw commitment` is an RLP-encoded [EigenDA certificate](https://github.com/Layr-Labs/eigenda/blob/eb422ff58ac6dcd4e7b30373033507414d33dba1/api/proto/disperser/disperser.proto#L168).
 
-**NOTE:** Commitments are cryptographically verified against the data fetched from EigenDA for all `/get` calls. The server will respond with status `500` in the event where EigenDA were to lie and provide falsified data thats irrespective of the client provided commitment. This feature cannot be disabled and is part of standard operation.
+**NOTE:** Commitments are cryptographically verified against the data fetched from EigenDA for all `/get` calls. The server will respond with status `500` in the event where EigenDA were to lie and provide falsified data that is irrespective of the client provided commitment. This feature cannot be disabled and is part of standard operation.
 
 ## Testing
 
