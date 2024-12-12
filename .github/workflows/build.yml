@@ -31,7 +31,7 @@ jobs:
         with:
           push: false
           context: .
-          tags: localhost:6666/eigenda-proxy:latest
+          tags: eigenda-proxy
 
       - name: Run container as background process
         shell: bash
