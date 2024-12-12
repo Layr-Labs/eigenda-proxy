@@ -26,15 +26,15 @@ jobs:
       - name: Build container
         uses: docker/build-push-action@v4
         with:
+          push: true
           context: .
-          push: false
-          tag: eigenda-proxy
+          tags: localhost:6666/nitro-node:latest
 
       - name: Run container as background process
         shell: bash
         run: |
           docker run -d \
-          -p 4242:6666 \
+          -p 6666:6666 \
           -e EIGENDA_PROXY_ADDR=0.0.0.0 \
           -e EIGENDA_PROXY_PORT=6666 \
           -e EIGENDA_PROXY_MEMSTORE_ENABLED=true \

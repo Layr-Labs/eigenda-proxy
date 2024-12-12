@@ -3,7 +3,7 @@
 timeout_time=$(($(date +%s) + 300))
 
 while (( $(date +%s) <= timeout_time )); do
-  if curl -X GET 'http://localhost:6969/health'; then
+  if curl -X GET 'http://localhost:6666/health'; then
     exit 0
   else
     sleep 20
