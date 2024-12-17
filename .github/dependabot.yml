@@ -22,6 +22,8 @@ updates:
     allow:
       - dependency-type: "direct"
     groups:
+      # Creates one consolidated PR for all minor/patch updates to reduce PR noise
+      # Major version updates (e.g., 1.x.x -> 2.x.x) are excluded since they might contain breaking changes and should be reviewed separately.
       golang-version-updates:
         applies-to: version-updates
         patterns:
