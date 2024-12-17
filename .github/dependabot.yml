@@ -1,7 +1,6 @@
 version: 2
 updates:
 
-  # Group Critical Security Updates
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
@@ -14,7 +13,7 @@ updates:
       include: "scope"
     pull-request-branch-name:
       separator: "-"
-    open-pull-requests-limit: 0
+    open-pull-requests-limit: 8
     reviewers:
       - "Layr-Labs/eigenda-intg"
     labels:
