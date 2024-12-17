@@ -15,7 +15,7 @@ updates:
       separator: "-"
     open-pull-requests-limit: 8
     reviewers:
-      - "Layr-Labs/eigenda-intg"
+      - "Layr-Labs/eigenda-intg" # https://github.com/orgs/Layr-Labs/teams/eigenda-intg
     labels:
       - "version"
       - "golang"
