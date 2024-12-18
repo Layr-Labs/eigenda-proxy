@@ -6,6 +6,8 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
+	weavevm "github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/weave_vm/types"
+	"github.com/Layr-Labs/eigenda-proxy/verify"
 )
 
 type Config struct {
@@ -14,8 +16,9 @@ type Config struct {
 	CacheTargets    []string
 
 	// secondary storage cfgs
-	RedisConfig redis.Config
-	S3Config    s3.Config
+	RedisConfig   redis.Config
+	S3Config      s3.Config
+	WeaveVMConfig weavevm.Config
 }
 
 // checkTargets ... verifies that a backend target slice is constructed correctly
@@ -50,6 +53,21 @@ func (cfg *Config) Check() error {
 
 	if cfg.RedisConfig.Endpoint == "" && cfg.RedisConfig.Password != "" {
 		return fmt.Errorf("redis password is set, but endpoint is not")
+	}
+
+	// NOTE: we take the MaxBlobLengthBytes from verify package as it is done in memstore
+	// 8 MiB in bytes is 8_388_608
+	if cfg.WeaveVMConfig.Enabled && verify.MaxBlobLengthBytes > weavevm.WeaveVMMaxTransactionSize {
+		return fmt.Errorf("current max blob size with weavevm secondary backend enabled is 8MiB")
+	}
+	if cfg.WeaveVMConfig.Enabled && (cfg.WeaveVMConfig.Endpoint == "" || cfg.WeaveVMConfig.ChainID == 0) {
+		return fmt.Errorf("weavevm secondary backend enabled: endpoint or chain id has not been provided")
+	}
+	if cfg.WeaveVMConfig.Enabled && (cfg.WeaveVMConfig.PrivateKeyHex == "" && cfg.WeaveVMConfig.Web3SignerEndpoint == "") {
+		return fmt.Errorf("weavevm secondary backend enabled: both private key and web3 signer endpoints are empty")
+	}
+	if cfg.WeaveVMConfig.Enabled && (cfg.WeaveVMConfig.PrivateKeyHex != "" && cfg.WeaveVMConfig.Web3SignerEndpoint != "") {
+		return fmt.Errorf("weavevm secondary backend is enabled: please provide either a private key or a Web3Signer endpoint as your signing method")
 	}
 
 	err := cfg.checkTargets(cfg.FallbackTargets)

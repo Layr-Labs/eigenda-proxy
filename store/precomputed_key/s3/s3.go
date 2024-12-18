@@ -37,16 +37,18 @@ func StringToCredentialType(s string) CredentialType {
 
 var _ common.PrecomputedKeyStore = (*Store)(nil)
 
-type CredentialType string
-type Config struct {
-	CredentialType  CredentialType
-	Endpoint        string
-	EnableTLS       bool
-	AccessKeyID     string
-	AccessKeySecret string
-	Bucket          string
-	Path            string
-}
+type (
+	CredentialType string
+	Config         struct {
+		CredentialType  CredentialType
+		Endpoint        string
+		EnableTLS       bool
+		AccessKeyID     string
+		AccessKeySecret string
+		Bucket          string
+		Path            string
+	}
+)
 
 // Custom MarshalJSON function to control what gets included in the JSON output
 // TODO: Probably best would be to separate config from secrets everywhere.
