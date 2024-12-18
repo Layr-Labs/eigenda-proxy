@@ -1,7 +1,6 @@
 package verify
 
 import (
-	"encoding/hex"
 	"testing"
 
 	"github.com/wealdtech/go-merkletree/v2"
@@ -46,7 +45,7 @@ func TestProcessInclusionProofFail(t *testing.T) {
 
 // TestProcessInclusionProofSingleNode confirms that a merkle tree containing a single node is successfully confirmed
 func TestProcessInclusionProofSingleNode(t *testing.T) {
-	leaf, err := hex.DecodeString("616C6C206861696C20746865206772656174207361746F736869")
+	leaf, err := hexutil.Decode("0x616C6C206861696C20746865206772656174207361746F736869")
 	require.NotNil(t, leaf)
 	require.NoError(t, err)
 
@@ -72,7 +71,7 @@ func TestProcessInclusionProofSingleNode(t *testing.T) {
 	require.Equal(t, computedRoot.Bytes(), tree.Root())
 
 	// create an alternate leaf, and make sure that the inclusion proof fails the comparison check
-	badLeaf, err := hex.DecodeString("ab")
+	badLeaf, err := hexutil.Decode("0xab")
 	require.NotNil(t, badLeaf)
 	require.NoError(t, err)
 
