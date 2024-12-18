@@ -7,9 +7,14 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-// ProcessInclusionProof processes the Merkle root proof
+// ProcessInclusionProof computes the merkle root hash based on the provided leaf and proof, returning the result.
+// An error is returned if the proof param is malformed.
+//
+// NOTE: this method returning a nil error does NOT indicate that the proof is valid. Rather, it merely indicates that
+// the proof was well-formed. The hash returned by this method must be compared to the claimed root hash, to
+// determine if the proof is valid.
 func ProcessInclusionProof(proof []byte, leaf common.Hash, index uint64) (common.Hash, error) {
-	if len(proof) == 0 || len(proof)%32 != 0 {
+	if len(proof)%32 != 0 {
 		return common.Hash{}, errors.New("proof length should be a multiple of 32 bytes or 256 bits")
 	}
 
