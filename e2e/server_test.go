@@ -206,7 +206,7 @@ func TestProxyReadFallbackOnWvm(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, expectedBlob, actualBlob)
 
-	requireSimpleClientSetGet(t, ts, e2e.RandBytes(1_000_000))
+	requireStandardClientSetGet(t, ts, e2e.RandBytes(1_000_000))
 	requireWriteReadSecondary(t, ts.Metrics.SecondaryRequestsTotal, common.WeaveVMBackendType)
-	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.SimpleCommitmentMode)
+	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
 }
