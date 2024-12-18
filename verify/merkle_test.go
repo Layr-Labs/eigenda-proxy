@@ -1,7 +1,12 @@
 package verify
 
 import (
+	"encoding/hex"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/wealdtech/go-merkletree/v2"
+	"github.com/wealdtech/go-merkletree/v2/keccak256"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -38,4 +43,45 @@ func TestProcessInclusionProofFail(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NotEqual(t, expectedRoot, actualRoot.Bytes())
+}
+
+// TestProcessInclusionProofSingleNode confirms that a merkle tree containing a single node is successfully confirmed
+func TestProcessInclusionProofSingleNode(t *testing.T) {
+	leaf, err := hex.DecodeString("616C6C206861696C20746865206772656174207361746F736869")
+	assert.NotNil(t, leaf)
+	assert.NoError(t, err)
+
+	tree, err := merkletree.NewTree(merkletree.WithData([][]byte{leaf}), merkletree.WithHashType(keccak256.New()))
+	assert.NotNil(t, tree)
+	require.NoError(t, err)
+
+	merkleProof, err := tree.GenerateProofWithIndex(0, 0)
+	assert.NotNil(t, merkleProof)
+	require.NoError(t, err)
+
+	// sanity check: there shouldn't be any sibling hashes for this tree
+	assert.Equal(t, 0, len(merkleProof.Hashes))
+
+	emptyProof := make([]byte, 0)
+
+	computedRoot, err := ProcessInclusionProof(
+		emptyProof,
+		common.BytesToHash(keccak256.New().Hash(leaf)),
+		0)
+	assert.NotNil(t, computedRoot)
+	require.NoError(t, err)
+	assert.Equal(t, computedRoot.Bytes(), tree.Root())
+
+	// create an alternate leaf, and make sure that the inclusion proof fails the comparison check
+	badLeaf, err := hex.DecodeString("ab")
+	assert.NotNil(t, badLeaf)
+	assert.NoError(t, err)
+
+	computedRoot, err = ProcessInclusionProof(
+		emptyProof,
+		common.BytesToHash(keccak256.New().Hash(badLeaf)),
+		0)
+	assert.NotNil(t, computedRoot)
+	assert.NoError(t, err)
+	assert.NotEqual(t, computedRoot.Bytes(), tree.Root())
 }
