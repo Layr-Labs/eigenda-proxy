@@ -33,7 +33,7 @@ func validCfg() *store.Config {
 			Endpoint:           "https://testnet-rpc.wvm.dev/",
 			ChainID:            9496,
 			Web3SignerEndpoint: "http://localhost:9000",
-			PrivateKeyHex:      "private-key",
+			PrivateKeyHex:      "",
 		},
 	}
 }
