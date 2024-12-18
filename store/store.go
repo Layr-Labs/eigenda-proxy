@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"

@@ -73,6 +73,7 @@ func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("EigenDA client failed to re-encode blob: %w", err)
 	}
+	// WVM: check that the data is lower than 100kb - Set it in configs via proxy config
 	// TODO: We should move this length check inside PutBlob
 	if uint64(len(encodedBlob)) > e.cfg.MaxBlobSizeBytes {
 		return nil, fmt.Errorf("%w: blob length %d, max blob size %d", common.ErrProxyOversizedBlob, len(value), e.cfg.MaxBlobSizeBytes)
@@ -166,3 +167,51 @@ func (e Store) Verify(ctx context.Context, key []byte, value []byte) error {
 	// verify DA certificate against EigenDA's batch metadata that's bridged to Ethereum
 	return e.verifier.VerifyCert(ctx, &cert)
 }
+
+// GetWvmTxHashByCommitment uses commitment to get wvm tx hash from the internal map(temprorary hack)
+// and returns it to the caller
+
+/* TODO: make it nice
+func (e EigenDAStore) GetWvmTxHashByCommitment(ctx context.Context, key []byte) (string, error) {
+	e.log.Info("try get wvm tx hash using provided commitment")
+	var cert verify.Certificate
+	err := rlp.DecodeBytes(key, &cert)
+	if err != nil {
+		return "", fmt.Errorf("failed to decode DA cert to RLP format: %w", err)
+	}
+
+	wvmTxHash, err := e.wvmClient.GetWvmTxHashByCommitment(ctx, &cert)
+	if err != nil {
+		return "", err
+	}
+
+	return wvmTxHash, nil
+}
+
+func (e EigenDAStore) GetBlobFromWvm(ctx context.Context, key []byte) ([]byte, error) {
+	var cert verify.Certificate
+	err := rlp.DecodeBytes(key, &cert)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode DA cert to RLP format: %w", err)
+	}
+
+	wvmTxHash, err := e.wvmClient.GetWvmTxHashByCommitment(ctx, &cert)
+	if err != nil {
+		return nil, err
+	}
+
+	e.log.Info("found wvm tx hash using provided commitment", "provided key", commitmentKey(cert.BlobVerificationProof.BatchId, cert.BlobVerificationProof.BlobIndex))
+
+	wvmDecodedBlob, err := e.wvmClient.GetBlobFromWvm(ctx, wvmTxHash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get eigenda blob from wvm: %w", err)
+	}
+
+	decodedData, err := e.client.Codec.DecodeBlob(wvmDecodedBlob)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding eigen blob: %w", err)
+	}
+
+	return decodedData, nil
+}
+*/
