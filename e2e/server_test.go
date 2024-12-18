@@ -62,8 +62,8 @@ func TestProxyClientWriteRead(t *testing.T) {
 	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 
-	requireSimpleClientSetGet(t, ts, e2e.RandBytes(100))
-	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.SimpleCommitmentMode)
+	requireStandardClientSetGet(t, ts, e2e.RandBytes(100))
+	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
 }
 
 func TestProxyWithMaximumSizedBlob(t *testing.T) {
@@ -77,8 +77,8 @@ func TestProxyWithMaximumSizedBlob(t *testing.T) {
 	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 
-	requireSimpleClientSetGet(t, ts, e2e.RandBytes(16_000_000))
-	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.SimpleCommitmentMode)
+	requireStandardClientSetGet(t, ts, e2e.RandBytes(16_000_000))
+	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
 }
 
 /*
@@ -98,9 +98,9 @@ func TestProxyCaching(t *testing.T) {
 	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 
-	requireSimpleClientSetGet(t, ts, e2e.RandBytes(1_000_000))
+	requireStandardClientSetGet(t, ts, e2e.RandBytes(1_000_000))
 	requireWriteReadSecondary(t, ts.Metrics.SecondaryRequestsTotal, common.S3BackendType)
-	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.SimpleCommitmentMode)
+	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
 }
 
 func TestProxyCachingWithRedis(t *testing.T) {
@@ -117,9 +117,9 @@ func TestProxyCachingWithRedis(t *testing.T) {
 	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 
-	requireSimpleClientSetGet(t, ts, e2e.RandBytes(1_000_000))
+	requireStandardClientSetGet(t, ts, e2e.RandBytes(1_000_000))
 	requireWriteReadSecondary(t, ts.Metrics.SecondaryRequestsTotal, common.RedisBackendType)
-	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.SimpleCommitmentMode)
+	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
 }
 
 /*
@@ -160,9 +160,9 @@ func TestProxyReadFallback(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, expectedBlob, actualBlob)
 
-	requireSimpleClientSetGet(t, ts, e2e.RandBytes(1_000_000))
+	requireStandardClientSetGet(t, ts, e2e.RandBytes(1_000_000))
 	requireWriteReadSecondary(t, ts.Metrics.SecondaryRequestsTotal, common.S3BackendType)
-	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.SimpleCommitmentMode)
+	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
 }
 
 /*

@@ -117,13 +117,10 @@ An optional storage fallback CLI flag `--routing.fallback-targets` can be levera
 
 ### Storage Caching
 
-An optional storage caching CLI flag `--routing.cache-targets` can be leveraged to ensure less redundancy and more optimal reading. When enabled, a blob is persisted to each cache target after being successfully dispersed using the keccak256 hash of the existing EigenDA commitment for the fallback target key. This ensure second order keys are succinct. Upon a blob retrieval request, the cached targets are first referenced to read the blob data before referring to EigenDA.
+### Failover Signals
+In the event that the EigenDA disperser or network is down, the proxy will return a 503 (Service Unavailable) status code as a response to POST requests, which rollup batchers can use to failover and start submitting blobs to the L1 chain instead. For more info, see our failover designs for [op-stack](https://github.com/ethereum-optimism/specs/issues/434) and for [arbitrum](https://hackmd.io/@epociask/SJUyIZlZkx).
 
-## Metrics
-
-To the see list of available metrics, run `./bin/eigenda-proxy doc metrics`
-
-To quickly set up monitoring dashboard, add eigenda-proxy metrics endpoint to a reachable prometheus server config as a scrape target, add prometheus datasource to Grafana to, and import the existing [Grafana dashboard JSON file](./grafana_dashboard.json)
+This behavior is turned on by default, but configurable via the `--eigenda.confirmation-timeout` flag (set to 15 mins by default currently). If a blob is not confirmed within this time, the proxy will return a 503 status code. This should be set long enough to accomodate for the disperser's batching interval (typically 10 minutes), signature gathering, and onchain submission.
 
 ## Deployment Guide
 
@@ -208,9 +205,8 @@ Both `keccak256` (i.e, S3 storage using hash of pre-image for commitment value) 
 
 OP Stack itself only has a conception of the first byte (`commit type`) and does no semantical interpretation of any subsequent bytes within the encoding. The `da layer type` byte for EigenDA is always `0x00`. However it is currently unused by OP Stack with name space values still being actively [discussed](https://github.com/ethereum-optimism/specs/discussions/135#discussioncomment-9271282).
 
-### Simple Commitment Mode
-
-For simple clients communicating with proxy (e.g, arbitrum nitro), the following commitment schema is supported:
+### Standard Commitment Mode
+For standard clients (i.e, `client/client.go`) communicating with proxy (e.g, arbitrum nitro), the following commitment schema is supported:
 
 ```
  0         1                 N
