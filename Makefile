@@ -11,7 +11,7 @@ LDFLAGSSTRING +=-X main.Date=$(BUILD_TIME)
 LDFLAGSSTRING +=-X main.Version=$(GIT_TAG)
 LDFLAGS := -ldflags "$(LDFLAGSSTRING)"
 
-E2EFUZZTEST = FUZZ=true go test ./e2e -fuzz -deploy-config ../.devnet/devnetL1.json -v -fuzztime=30m
+E2EFUZZTEST = FUZZ=true go test ./e2e -fuzz -v -fuzztime=30m
 
 .PHONY: eigenda-proxy
 eigenda-proxy:
@@ -37,10 +37,8 @@ test:
 e2e-test:
 	INTEGRATION=true go test -timeout 1m ./e2e -parallel 4
 
-e2e-fuzz-test: stop-minio stop-redis run-minio run-redis
-	$(E2EFUZZTEST) && \
-	make stop-minio && \
-	make stop-redis
+e2e-fuzz-test:
+	$(E2EFUZZTEST)
 
 holesky-test:
 	TESTNET=true go test -timeout 50m ./e2e  -parallel 4
