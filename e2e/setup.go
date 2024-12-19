@@ -23,8 +23,6 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"golang.org/x/exp/rand"
 
-	"github.com/stretchr/testify/require"
-
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 
@@ -160,7 +158,6 @@ func createS3Config(eigendaCfg server.Config) server.CLIConfig {
 	}
 }
 
-
 func TestSuiteConfig(testCfg *Cfg) server.CLIConfig {
 
 	// load signer key from environment
@@ -260,7 +257,6 @@ type TestSuite struct {
 	Server  *server.Server
 	Metrics *metrics.EmulatedMetricer
 }
-
 
 func CreateTestSuite(testSuiteCfg server.CLIConfig) (TestSuite, func()) {
 	log := oplog.NewLogger(os.Stdout, oplog.CLIConfig{

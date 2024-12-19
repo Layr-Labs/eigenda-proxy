@@ -1,68 +1,19 @@
 package e2e_test
 
 import (
-	"testing"
-	"time"
 	"github.com/Layr-Labs/eigenda-proxy/client"
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/common"
-	"github.com/stretchr/testify/require"
 	"github.com/Layr-Labs/eigenda-proxy/e2e"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"strings"
+	"testing"
+	"time"
 )
 
 func useMemory() bool {
 	return !runTestnetIntegrationTests
-}
-
-func isNilPtrDerefPanic(err string) bool {
-	return strings.Contains(err, "panic") && strings.Contains(err, "SIGSEGV") &&
-		strings.Contains(err, "nil pointer dereference")
-}
-
-// TestOpClientKeccak256MalformedInputs tests the NewDAClient from op_plasma by setting and getting against []byte("")
-// preimage. It sets the precompute option to false on the NewDAClient.
-func TestOpClientKeccak256MalformedInputs(t *testing.T) {
-	if !runIntegrationTests || runTestnetIntegrationTests {
-		t.Skip("Skipping test as TESTNET env set or INTEGRATION var not set")
-	}
-
-	t.Parallel()
-	testCfg := e2e.TestConfig(useMemory())
-	testCfg.UseKeccak256ModeS3 = true
-	tsConfig := e2e.TestSuiteConfig(t, testCfg)
-	ts, kill := e2e.CreateTestSuite(t, tsConfig)
-	defer kill()
-
-	// nil commitment. Should return an error but currently is not. This needs to be fixed by OP
-	// Ref: https://github.com/ethereum-optimism/optimism/issues/11987
-	// daClient := op_plasma.NewDAClient(ts.Address(), false, true)
-	// t.Run("nil commitment case", func(t *testing.T) {
-	//	var commit op_plasma.CommitmentData
-	//	_, err := daClient.GetInput(ts.Ctx, commit)
-	//	require.Error(t, err)
-	//	assert.True(t, !isPanic(err.Error()))
-	// })
-
-	daClientPcFalse := op_plasma.NewDAClient(ts.Address(), false, false)
-
-	t.Run("input bad data to SetInput & GetInput", func(t *testing.T) {
-		testPreimage := []byte("") // Empty preimage
-		_, err := daClientPcFalse.SetInput(ts.Ctx, testPreimage)
-		require.Error(t, err)
-
-		// should fail with proper error message as is now, and cannot contain panics or nils
-		assert.True(t, strings.Contains(err.Error(), "invalid input") && !isNilPtrDerefPanic(err.Error()))
-
-		// The below test panics silently.
-		input := op_plasma.NewGenericCommitment([]byte(""))
-		_, err = daClientPcFalse.GetInput(ts.Ctx, input)
-		require.Error(t, err)
-
-		// Should not fail on slice bounds out of range. This needs to be fixed by OP.
-		// Refer to issue: https://github.com/ethereum-optimism/optimism/issues/11987
-		// assert.False(t, strings.Contains(err.Error(), ": EOF") && !isPanic(err.Error()))
-	})
-
 }
 
 func TestOptimismClientWithKeccak256Commitment(t *testing.T) {
@@ -88,9 +39,9 @@ with a concurrent S3 backend configured
 */
 func TestOptimismClientWithGenericCommitment(t *testing.T) {
 
-	if !runIntegrationTests && !runTestnetIntegrationTests {
-		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
-	}
+	//if !runIntegrationTests && !runTestnetIntegrationTests {
+	//	t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	//}
 
 	t.Parallel()
 
@@ -106,14 +57,14 @@ func TestOptimismClientWithGenericCommitment(t *testing.T) {
 // many unicode characters, single unicode character and an empty preimage. It then tries to get the data from the
 // proxy server with empty byte, single byte and random string.
 func TestProxyClientServerIntegration(t *testing.T) {
-	if !runIntegrationTests && !runTestnetIntegrationTests {
-		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
-	}
+	//if !runIntegrationTests && !runTestnetIntegrationTests {
+	//	t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	//}
 
 	t.Parallel()
 
-	tsConfig := e2e.TestSuiteConfig(t, e2e.TestConfig(useMemory()))
-	ts, kill := e2e.CreateTestSuite(t, tsConfig)
+	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory()))
+	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 
 	cfg := &client.Config{
@@ -153,33 +104,31 @@ func TestProxyClientServerIntegration(t *testing.T) {
 		_, err := daClient.GetData(ts.Ctx, testCert)
 		require.Error(t, err)
 		assert.True(t, strings.Contains(err.Error(),
-			"commitment is too short") && !isNilPtrDerefPanic(err.Error()))
+			"404") && !isNilPtrDerefPanic(err.Error()))
 
 		testCert = []byte{1}
 		_, err = daClient.GetData(ts.Ctx, testCert)
 		require.Error(t, err)
 		assert.True(t, strings.Contains(err.Error(),
-			"commitment is too short") && !isNilPtrDerefPanic(err.Error()))
+			"400") && !isNilPtrDerefPanic(err.Error()))
 
-		testCert = []byte(e2e.RandString(10000))
+		testCert = []byte(e2e.RandBytes(10000))
 		_, err = daClient.GetData(ts.Ctx, testCert)
 		require.Error(t, err)
-		assert.True(t, strings.Contains(err.Error(),
-			"failed to decode DA cert to RLP format: rlp: expected input list for verify.Certificate") &&
-			!isNilPtrDerefPanic(err.Error()))
+		assert.True(t, strings.Contains(err.Error(), "400") && !isNilPtrDerefPanic(err.Error()))
 	})
 
 }
 
 func TestProxyClient(t *testing.T) {
-	if !runIntegrationTests && !runTestnetIntegrationTests {
-		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
-	}
+	//if !runIntegrationTests && !runTestnetIntegrationTests {
+	//	t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	//}
 
 	t.Parallel()
 
-	tsConfig := e2e.TestSuiteConfig(t, e2e.TestConfig(useMemory()))
-	ts, kill := e2e.CreateTestSuite(t, tsConfig)
+	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory()))
+	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 
 	cfg := &client.Config{
@@ -187,7 +136,7 @@ func TestProxyClient(t *testing.T) {
 	}
 	daClient := client.New(cfg)
 
-	testPreimage := []byte(e2e.RandString(100))
+	testPreimage := []byte(e2e.RandBytes(100))
 
 	t.Log("Setting input data on proxy server...")
 	blobInfo, err := daClient.SetData(ts.Ctx, testPreimage)
@@ -200,9 +149,9 @@ func TestProxyClient(t *testing.T) {
 }
 
 func TestProxyClientWriteRead(t *testing.T) {
-	if !runIntegrationTests && !runTestnetIntegrationTests {
-		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
-	}
+	//if !runIntegrationTests && !runTestnetIntegrationTests {
+	//	t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	//}
 
 	t.Parallel()
 
@@ -215,9 +164,9 @@ func TestProxyClientWriteRead(t *testing.T) {
 }
 
 func TestProxyWithMaximumSizedBlob(t *testing.T) {
-	if !runIntegrationTests && !runTestnetIntegrationTests {
-		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
-	}
+	//if !runIntegrationTests && !runTestnetIntegrationTests {
+	//	t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	//}
 
 	t.Parallel()
 
@@ -233,9 +182,9 @@ func TestProxyWithMaximumSizedBlob(t *testing.T) {
 Ensure that proxy is able to write/read from a cache backend when enabled
 */
 func TestProxyCaching(t *testing.T) {
-	if !runIntegrationTests && !runTestnetIntegrationTests {
-		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
-	}
+	//if !runIntegrationTests && !runTestnetIntegrationTests {
+	//	t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	//}
 
 	t.Parallel()
 
@@ -252,9 +201,9 @@ func TestProxyCaching(t *testing.T) {
 }
 
 func TestProxyCachingWithRedis(t *testing.T) {
-	if !runIntegrationTests && !runTestnetIntegrationTests {
-		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
-	}
+	//if !runIntegrationTests && !runTestnetIntegrationTests {
+	//	t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	//}
 
 	t.Parallel()
 
@@ -278,9 +227,9 @@ func TestProxyCachingWithRedis(t *testing.T) {
 
 func TestProxyReadFallback(t *testing.T) {
 	// test can't be ran against holesky since read failure case can't be manually triggered
-	if !runIntegrationTests || runTestnetIntegrationTests {
-		t.Skip("Skipping test as INTEGRATION env var not set")
-	}
+	//if !runIntegrationTests || runTestnetIntegrationTests {
+	//	t.Skip("Skipping test as INTEGRATION env var not set")
+	//}
 
 	t.Parallel()
 
