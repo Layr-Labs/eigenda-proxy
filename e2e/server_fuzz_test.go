@@ -3,10 +3,11 @@ package e2e_test
 import (
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Layr-Labs/eigenda-proxy/client"
-	"github.com/Layr-Labs/eigenda-proxy/e2e"
 	"testing"
 	"unicode"
+
+	"github.com/Layr-Labs/eigenda-proxy/client"
+	"github.com/Layr-Labs/eigenda-proxy/e2e"
 )
 
 // FuzzProxyClientServerIntegrationAndOpClientKeccak256MalformedInputs will fuzz the proxy client server integration

@@ -58,11 +58,11 @@ func TestOptimismClientWithGenericCommitment(t *testing.T) {
 // many unicode characters, single unicode character and an empty preimage. It then tries to get the data from the
 // proxy server with empty byte, single byte and random string.
 func TestProxyClientServerIntegration(t *testing.T) {
+	t.Parallel()
+
 	if !runIntegrationTests && !runTestnetIntegrationTests {
 		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
 	}
-
-	t.Parallel()
 
 	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory()))
 	ts, kill := e2e.CreateTestSuite(tsConfig)
