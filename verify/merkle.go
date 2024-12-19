@@ -10,6 +10,10 @@ import (
 // ProcessInclusionProof computes the merkle root hash based on the provided leaf and proof, returning the result.
 // An error is returned if the proof param is malformed.
 //
+// index is the index of the leaf in the tree, starting from the bottom left of the tree at 0.
+//
+// If the proof length is 0, then the leaf hash is returned.
+//
 // NOTE: this method returning a nil error does NOT indicate that the proof is valid. Rather, it merely indicates that
 // the proof was well-formed. The hash returned by this method must be compared to the claimed root hash, to
 // determine if the proof is valid.
