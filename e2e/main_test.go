@@ -24,13 +24,11 @@ import (
 var (
 	runTestnetIntegrationTests bool // holesky tests
 	runIntegrationTests        bool // memstore tests
-	runFuzzTests               bool
 )
 
 // ParseEnv ... reads testing cfg fields. Go test flags don't work for this library due to the dependency on Optimism's E2E framework
 // which initializes test flags per init function which is called before an init in this package.
 func ParseEnv() {
-	runFuzzTests = os.Getenv("FUZZ") == "true" || os.Getenv("FUZZ") == "1"
 	if runIntegrationTests && runTestnetIntegrationTests {
 		panic("only one of INTEGRATION=true or TESTNET=true env var can be set")
 	}

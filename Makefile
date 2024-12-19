@@ -11,7 +11,7 @@ LDFLAGSSTRING +=-X main.Date=$(BUILD_TIME)
 LDFLAGSSTRING +=-X main.Version=$(GIT_TAG)
 LDFLAGS := -ldflags "$(LDFLAGSSTRING)"
 
-E2EFUZZTEST = FUZZ=true go test ./e2e -fuzz -v -fuzztime=30m
+E2EFUZZTEST = go test ./e2e -fuzz -v -fuzztime=30m
 
 .PHONY: eigenda-proxy
 eigenda-proxy:
