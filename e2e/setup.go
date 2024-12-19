@@ -159,7 +159,6 @@ func createS3Config(eigendaCfg server.Config) server.CLIConfig {
 }
 
 func TestSuiteConfig(testCfg *Cfg) server.CLIConfig {
-
 	// load signer key from environment
 	pk := os.Getenv(privateKey)
 	if pk == "" && !testCfg.UseMemory {

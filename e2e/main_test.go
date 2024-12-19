@@ -24,7 +24,7 @@ import (
 var (
 	runTestnetIntegrationTests bool // holesky tests
 	runIntegrationTests        bool // memstore tests
-  runFuzzTests               bool
+	runFuzzTests               bool
 )
 
 // ParseEnv ... reads testing cfg fields. Go test flags don't work for this library due to the dependency on Optimism's E2E framework

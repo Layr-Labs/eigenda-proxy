@@ -1,15 +1,16 @@
 package e2e_test
 
 import (
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/Layr-Labs/eigenda-proxy/client"
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/e2e"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"strings"
-	"testing"
-	"time"
 )
 
 func useMemory() bool {
@@ -39,9 +40,9 @@ with a concurrent S3 backend configured
 */
 func TestOptimismClientWithGenericCommitment(t *testing.T) {
 
-	//if !runIntegrationTests && !runTestnetIntegrationTests {
-	//	t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
-	//}
+	if !runIntegrationTests && !runTestnetIntegrationTests {
+		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	}
 
 	t.Parallel()
 
@@ -57,15 +58,15 @@ func TestOptimismClientWithGenericCommitment(t *testing.T) {
 // many unicode characters, single unicode character and an empty preimage. It then tries to get the data from the
 // proxy server with empty byte, single byte and random string.
 func TestProxyClientServerIntegration(t *testing.T) {
-	//if !runIntegrationTests && !runTestnetIntegrationTests {
-	//	t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
-	//}
+	if !runIntegrationTests && !runTestnetIntegrationTests {
+		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	}
 
 	t.Parallel()
 
 	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory()))
 	ts, kill := e2e.CreateTestSuite(tsConfig)
-	defer kill()
+	t.Cleanup(kill)
 
 	cfg := &client.Config{
 		URL: ts.Address(),
@@ -73,6 +74,7 @@ func TestProxyClientServerIntegration(t *testing.T) {
 	daClient := client.New(cfg)
 
 	t.Run("single byte preimage set data case", func(t *testing.T) {
+		t.Parallel()
 		testPreimage := []byte{1} // single byte preimage
 		t.Log("Setting input data on proxy server...")
 		_, err := daClient.SetData(ts.Ctx, testPreimage)
@@ -80,6 +82,7 @@ func TestProxyClientServerIntegration(t *testing.T) {
 	})
 
 	t.Run("unicode preimage set data case", func(t *testing.T) {
+		t.Parallel()
 		testPreimage := []byte("§§©ˆªªˆ˙√ç®∂§∞¶§ƒ¥√¨¥√¨¥ƒƒ©˙˜ø˜˜˜∫˙∫¥∫√†®®√ç¨ˆ¨˙ï") // many unicode characters
 		t.Log("Setting input data on proxy server...")
 		_, err := daClient.SetData(ts.Ctx, testPreimage)
@@ -93,6 +96,7 @@ func TestProxyClientServerIntegration(t *testing.T) {
 	})
 
 	t.Run("empty preimage set data case", func(t *testing.T) {
+		t.Parallel()
 		testPreimage := []byte("") // Empty preimage
 		t.Log("Setting input data on proxy server...")
 		_, err := daClient.SetData(ts.Ctx, testPreimage)
@@ -100,6 +104,7 @@ func TestProxyClientServerIntegration(t *testing.T) {
 	})
 
 	t.Run("get data edge cases", func(t *testing.T) {
+		t.Parallel()
 		testCert := []byte("")
 		_, err := daClient.GetData(ts.Ctx, testCert)
 		require.Error(t, err)
@@ -112,7 +117,7 @@ func TestProxyClientServerIntegration(t *testing.T) {
 		assert.True(t, strings.Contains(err.Error(),
 			"400") && !isNilPtrDerefPanic(err.Error()))
 
-		testCert = []byte(e2e.RandBytes(10000))
+		testCert = e2e.RandBytes(10000)
 		_, err = daClient.GetData(ts.Ctx, testCert)
 		require.Error(t, err)
 		assert.True(t, strings.Contains(err.Error(), "400") && !isNilPtrDerefPanic(err.Error()))
@@ -121,9 +126,9 @@ func TestProxyClientServerIntegration(t *testing.T) {
 }
 
 func TestProxyClient(t *testing.T) {
-	//if !runIntegrationTests && !runTestnetIntegrationTests {
-	//	t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
-	//}
+	if !runIntegrationTests && !runTestnetIntegrationTests {
+		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	}
 
 	t.Parallel()
 
@@ -136,7 +141,7 @@ func TestProxyClient(t *testing.T) {
 	}
 	daClient := client.New(cfg)
 
-	testPreimage := []byte(e2e.RandBytes(100))
+	testPreimage := e2e.RandBytes(100)
 
 	t.Log("Setting input data on proxy server...")
 	blobInfo, err := daClient.SetData(ts.Ctx, testPreimage)
@@ -149,9 +154,9 @@ func TestProxyClient(t *testing.T) {
 }
 
 func TestProxyClientWriteRead(t *testing.T) {
-	//if !runIntegrationTests && !runTestnetIntegrationTests {
-	//	t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
-	//}
+	if !runIntegrationTests && !runTestnetIntegrationTests {
+		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	}
 
 	t.Parallel()
 
@@ -164,9 +169,9 @@ func TestProxyClientWriteRead(t *testing.T) {
 }
 
 func TestProxyWithMaximumSizedBlob(t *testing.T) {
-	//if !runIntegrationTests && !runTestnetIntegrationTests {
-	//	t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
-	//}
+	if !runIntegrationTests && !runTestnetIntegrationTests {
+		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	}
 
 	t.Parallel()
 
@@ -182,7 +187,7 @@ func TestProxyWithMaximumSizedBlob(t *testing.T) {
 Ensure that proxy is able to write/read from a cache backend when enabled
 */
 func TestProxyCaching(t *testing.T) {
-	//if !runIntegrationTests && !runTestnetIntegrationTests {
+	// if !runIntegrationTests && !runTestnetIntegrationTests {
 	//	t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
 	//}
 
@@ -201,7 +206,7 @@ func TestProxyCaching(t *testing.T) {
 }
 
 func TestProxyCachingWithRedis(t *testing.T) {
-	//if !runIntegrationTests && !runTestnetIntegrationTests {
+	// if !runIntegrationTests && !runTestnetIntegrationTests {
 	//	t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
 	//}
 
@@ -227,7 +232,7 @@ func TestProxyCachingWithRedis(t *testing.T) {
 
 func TestProxyReadFallback(t *testing.T) {
 	// test can't be ran against holesky since read failure case can't be manually triggered
-	//if !runIntegrationTests || runTestnetIntegrationTests {
+	// if !runIntegrationTests || runTestnetIntegrationTests {
 	//	t.Skip("Skipping test as INTEGRATION env var not set")
 	//}
 
