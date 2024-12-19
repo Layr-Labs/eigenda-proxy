@@ -206,9 +206,9 @@ func TestProxyCaching(t *testing.T) {
 }
 
 func TestProxyCachingWithRedis(t *testing.T) {
-	// if !runIntegrationTests && !runTestnetIntegrationTests {
-	//	t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
-	//}
+	if !runIntegrationTests && !runTestnetIntegrationTests {
+		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	}
 
 	t.Parallel()
 
@@ -232,9 +232,9 @@ func TestProxyCachingWithRedis(t *testing.T) {
 
 func TestProxyReadFallback(t *testing.T) {
 	// test can't be ran against holesky since read failure case can't be manually triggered
-	// if !runIntegrationTests || runTestnetIntegrationTests {
-	//	t.Skip("Skipping test as INTEGRATION env var not set")
-	//}
+	if !runIntegrationTests || runTestnetIntegrationTests {
+		t.Skip("Skipping test as INTEGRATION env var not set")
+	}
 
 	t.Parallel()
 
