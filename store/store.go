@@ -1,84 +1,78 @@
 package store
 
 import (
-	"context"
-	"strings"
+	"fmt"
+
+	"github.com/Layr-Labs/eigenda-proxy/common"
+	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
+	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 )
 
-type BackendType uint8
+type Config struct {
+	AsyncPutWorkers int
+	FallbackTargets []string
+	CacheTargets    []string
 
-const (
-	EigenDA BackendType = iota
-	Memory
-	S3
-	Redis
+	// secondary storage cfgs
+	RedisConfig redis.Config
+	S3Config    s3.Config
+}
 
-	Unknown
-)
-
-func (b BackendType) String() string {
-	switch b {
-	case EigenDA:
-		return "EigenDA"
-	case Memory:
-		return "Memory"
-	case S3:
-		return "S3"
-	case Redis:
-		return "Redis"
-	case Unknown:
-		fallthrough
-	default:
-		return "Unknown"
+// checkTargets ... verifies that a backend target slice is constructed correctly
+func (cfg *Config) checkTargets(targets []string) error {
+	if len(targets) == 0 {
+		return nil
 	}
-}
 
-func StringToBackendType(s string) BackendType {
-	lower := strings.ToLower(s)
-
-	switch lower {
-	case "eigenda":
-		return EigenDA
-	case "memory":
-		return Memory
-	case "s3":
-		return S3
-	case "redis":
-		return Redis
-	case "unknown":
-		fallthrough
-	default:
-		return Unknown
+	if common.ContainsDuplicates(targets) {
+		return fmt.Errorf("duplicate targets provided: %+v", targets)
 	}
+
+	for _, t := range targets {
+		if common.StringToBackendType(t) == common.UnknownBackendType {
+			return fmt.Errorf("unknown fallback target provided: %s", t)
+		}
+	}
+
+	return nil
 }
 
-// Used for E2E tests
-type Stats struct {
-	Entries int
-	Reads   int
-}
+// Check ... verifies that configuration values are adequately set
+func (cfg *Config) Check() error {
+	if cfg.S3Config.CredentialType == s3.CredentialTypeUnknown && cfg.S3Config.Endpoint != "" {
+		return fmt.Errorf("s3 credential type must be set")
+	}
+	if cfg.S3Config.CredentialType == s3.CredentialTypeStatic {
+		if cfg.S3Config.Endpoint != "" && (cfg.S3Config.AccessKeyID == "" || cfg.S3Config.AccessKeySecret == "") {
+			return fmt.Errorf("s3 endpoint is set, but access key id or access key secret is not set")
+		}
+	}
 
-type Store interface {
-	// Stats returns the current usage metrics of the key-value data store.
-	Stats() *Stats
-	// Backend returns the backend type provider of the store.
-	BackendType() BackendType
-	// Verify verifies the given key-value pair.
-	Verify(key []byte, value []byte) error
-}
+	if cfg.RedisConfig.Endpoint == "" && cfg.RedisConfig.Password != "" {
+		return fmt.Errorf("redis password is set, but endpoint is not")
+	}
 
-type KeyGeneratedStore interface {
-	Store
-	// Get retrieves the given key if it's present in the key-value data store.
-	Get(ctx context.Context, key []byte) ([]byte, error)
-	// Put inserts the given value into the key-value data store.
-	Put(ctx context.Context, value []byte) (key []byte, err error)
-}
+	err := cfg.checkTargets(cfg.FallbackTargets)
+	if err != nil {
+		return err
+	}
 
-type PrecomputedKeyStore interface {
-	Store
-	// Get retrieves the given key if it's present in the key-value data store.
-	Get(ctx context.Context, key []byte) ([]byte, error)
-	// Put inserts the given value into the key-value data store.
-	Put(ctx context.Context, key []byte, value []byte) error
+	err = cfg.checkTargets(cfg.CacheTargets)
+	if err != nil {
+		return err
+	}
+
+	// verify that same target is not in both fallback and cache targets
+	for _, t := range cfg.FallbackTargets {
+		if common.Contains(cfg.CacheTargets, t) {
+			return fmt.Errorf("target %s is in both fallback and cache targets", t)
+		}
+	}
+
+	// verify that thread counts are sufficiently set
+	if cfg.AsyncPutWorkers >= 100 {
+		return fmt.Errorf("number of secondary write workers can't be greater than 100")
+	}
+
+	return nil
 }

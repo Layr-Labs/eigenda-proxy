@@ -4,30 +4,44 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Layr-Labs/eigenda-proxy/common"
+	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/store"
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/eigenda"
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
+	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
+	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/ethereum/go-ethereum/log"
 )
 
+// TODO - create structured abstraction for dependency injection vs. overloading stateless functions
+
 // populateTargets ... creates a list of storage backends based on the provided target strings
-func populateTargets(targets []string, s3 store.PrecomputedKeyStore, redis *store.RedStore) []store.PrecomputedKeyStore {
-	stores := make([]store.PrecomputedKeyStore, len(targets))
+func populateTargets(targets []string, s3 common.PrecomputedKeyStore, redis *redis.Store) []common.PrecomputedKeyStore {
+	stores := make([]common.PrecomputedKeyStore, len(targets))
 
 	for i, f := range targets {
-		b := store.StringToBackendType(f)
+		b := common.StringToBackendType(f)
 
 		switch b {
-		case store.Redis:
+		case common.RedisBackendType:
+			if redis == nil {
+				panic(fmt.Sprintf("Redis backend is not configured but specified in targets: %s", f))
+			}
 			stores[i] = redis
 
-		case store.S3:
+		case common.S3BackendType:
+			if s3 == nil {
+				panic(fmt.Sprintf("S3 backend is not configured but specified in targets: %s", f))
+			}
 			stores[i] = s3
 
-		case store.EigenDA, store.Memory:
+		case common.EigenDABackendType, common.MemoryBackendType:
 			panic(fmt.Sprintf("Invalid target for fallback: %s", f))
 
-		case store.Unknown:
+		case common.UnknownBackendType:
 			fallthrough
 
 		default:
@@ -38,76 +52,67 @@ func populateTargets(targets []string, s3 store.PrecomputedKeyStore, redis *stor
 	return stores
 }
 
-// LoadStoreRouter ... creates storage backend clients and instruments them into a storage routing abstraction
-func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (store.IRouter, error) {
+// LoadStoreManager ... creates storage backend clients and instruments them into a storage routing abstraction
+func LoadStoreManager(ctx context.Context, cfg CLIConfig, log log.Logger, m metrics.Metricer) (store.IManager, error) {
 	// create S3 backend store (if enabled)
 	var err error
-	var s3 store.PrecomputedKeyStore
-	var redis *store.RedStore
+	var s3Store *s3.Store
+	var redisStore *redis.Store
 
-	if cfg.S3Config.Bucket != "" && cfg.S3Config.Endpoint != "" {
+	if cfg.EigenDAConfig.StorageConfig.S3Config.Bucket != "" && cfg.EigenDAConfig.StorageConfig.S3Config.Endpoint != "" {
 		log.Info("Using S3 backend")
-		s3, err = store.NewS3(cfg.S3Config)
+		s3Store, err = s3.NewStore(cfg.EigenDAConfig.StorageConfig.S3Config)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to create S3 store: %w", err)
 		}
 	}
 
-	if cfg.RedisCfg.Endpoint != "" {
+	if cfg.EigenDAConfig.StorageConfig.RedisConfig.Endpoint != "" {
 		log.Info("Using Redis backend")
 		// create Redis backend store
-		redis, err = store.NewRedisStore(&cfg.RedisCfg)
+		redisStore, err = redis.NewStore(&cfg.EigenDAConfig.StorageConfig.RedisConfig)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to create Redis store: %w", err)
 		}
 	}
 
 	// create cert/data verification type
 	daCfg := cfg.EigenDAConfig
-	vCfg := daCfg.VerificationCfg()
+	vCfg := daCfg.VerifierConfig
 
-	verifier, err := verify.NewVerifier(vCfg, log)
+	verifier, err := verify.NewVerifier(&vCfg, log)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create verifier: %w", err)
 	}
 
-	if vCfg.Verify {
+	if vCfg.VerifyCerts {
 		log.Info("Certificate verification with Ethereum enabled")
 	} else {
 		log.Warn("Verification disabled")
 	}
 
-	maxBlobLength, err := daCfg.GetMaxBlobLength()
-	if err != nil {
-		return nil, err
-	}
-
 	// create EigenDA backend store
-	var eigenda store.KeyGeneratedStore
+	var eigenDA common.GeneratedKeyStore
 	if cfg.EigenDAConfig.MemstoreEnabled {
-		log.Info("Using mem-store backend for EigenDA")
-		eigenda, err = store.NewMemStore(ctx, verifier, log, store.MemStoreConfig{
-			MaxBlobSizeBytes: maxBlobLength,
-			BlobExpiration:   cfg.EigenDAConfig.MemstoreBlobExpiration,
-			PutLatency:       cfg.EigenDAConfig.MemstorePutLatency,
-			GetLatency:       cfg.EigenDAConfig.MemstoreGetLatency,
-		})
+		log.Info("Using memstore backend for EigenDA")
+		eigenDA, err = memstore.New(ctx, verifier, log, cfg.EigenDAConfig.MemstoreConfig)
 	} else {
 		var client *clients.EigenDAClient
 		log.Info("Using EigenDA backend")
-		client, err = clients.NewEigenDAClient(log, daCfg.ClientConfig)
+		client, err = clients.NewEigenDAClient(log.With("subsystem", "eigenda-client"), daCfg.EdaClientConfig)
 		if err != nil {
 			return nil, err
 		}
 
-		eigenda, err = store.NewEigenDAStore(
+		eigenDA, err = eigenda.NewStore(
 			client,
 			verifier,
 			log,
-			&store.EigenDAStoreConfig{
-				MaxBlobSizeBytes:     maxBlobLength,
-				EthConfirmationDepth: uint64(cfg.EigenDAConfig.EthConfirmationDepth), // #nosec G115
-				StatusQueryTimeout:   cfg.EigenDAConfig.ClientConfig.StatusQueryTimeout,
+			&eigenda.StoreConfig{
+				MaxBlobSizeBytes:     cfg.EigenDAConfig.MemstoreConfig.MaxBlobSizeBytes,
+				EthConfirmationDepth: cfg.EigenDAConfig.VerifierConfig.EthConfirmationDepth,
+				StatusQueryTimeout:   cfg.EigenDAConfig.EdaClientConfig.StatusQueryTimeout,
+				PutRetries:           cfg.EigenDAConfig.PutRetries,
 			},
 		)
 	}
@@ -116,10 +121,20 @@ func LoadStoreRouter(ctx context.Context, cfg CLIConfig, log log.Logger) (store.
 		return nil, err
 	}
 
-	// determine read fallbacks
-	fallbacks := populateTargets(cfg.EigenDAConfig.FallbackTargets, s3, redis)
-	caches := populateTargets(cfg.EigenDAConfig.CacheTargets, s3, redis)
+	// create secondary storage router
+	fallbacks := populateTargets(cfg.EigenDAConfig.StorageConfig.FallbackTargets, s3Store, redisStore)
+	caches := populateTargets(cfg.EigenDAConfig.StorageConfig.CacheTargets, s3Store, redisStore)
+	secondary := store.NewSecondaryManager(log, m, caches, fallbacks)
 
-	log.Info("Creating storage router", "eigenda backend type", eigenda != nil, "s3 backend type", s3 != nil)
-	return store.NewRouter(eigenda, s3, log, caches, fallbacks)
+	if secondary.Enabled() { // only spin-up go routines if secondary storage is enabled
+		// NOTE: in the future the number of threads could be made configurable via env
+		log.Debug("Starting secondary write loop(s)", "count", cfg.EigenDAConfig.StorageConfig.AsyncPutWorkers)
+
+		for i := 0; i < cfg.EigenDAConfig.StorageConfig.AsyncPutWorkers; i++ {
+			go secondary.WriteSubscriptionLoop(ctx)
+		}
+	}
+
+	log.Info("Creating storage router", "eigenda backend type", eigenDA != nil, "s3 backend type", s3Store != nil)
+	return store.NewManager(eigenDA, s3Store, log, secondary)
 }

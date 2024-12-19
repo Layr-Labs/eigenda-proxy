@@ -2,14 +2,17 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
+	"github.com/Layr-Labs/eigenda-proxy/flags"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/server"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/urfave/cli/v2"
 
+	"github.com/ethereum-optimism/optimism/op-service/ctxinterrupt"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
-	"github.com/ethereum-optimism/optimism/op-service/opio"
 )
 
 func StartProxySvr(cliCtx *cli.Context) error {
@@ -21,18 +24,21 @@ func StartProxySvr(cliCtx *cli.Context) error {
 	if err := cfg.Check(); err != nil {
 		return err
 	}
-	ctx, ctxCancel := context.WithCancel(cliCtx.Context)
-	defer ctxCancel()
+	err := prettyPrintConfig(cliCtx, log)
+	if err != nil {
+		return fmt.Errorf("failed to pretty print config: %w", err)
+	}
 
 	m := metrics.NewMetrics("default")
 
-	log.Info("Initializing EigenDA proxy server...")
+	ctx, ctxCancel := context.WithCancel(cliCtx.Context)
+	defer ctxCancel()
 
-	daRouter, err := server.LoadStoreRouter(ctx, cfg, log)
+	sm, err := server.LoadStoreManager(ctx, cfg, log, m)
 	if err != nil {
 		return fmt.Errorf("failed to create store: %w", err)
 	}
-	server := server.NewServer(cliCtx.String(server.ListenAddrFlagName), cliCtx.Int(server.PortFlagName), daRouter, log, m)
+	server := server.NewServer(cliCtx.String(flags.ListenAddrFlagName), cliCtx.Int(flags.PortFlagName), sm, log, m)
 
 	if err := server.Start(); err != nil {
 		return fmt.Errorf("failed to start the DA server: %w", err)
@@ -63,7 +69,24 @@ func StartProxySvr(cliCtx *cli.Context) error {
 		m.RecordUp()
 	}
 
-	opio.BlockOnInterrupts()
+	return ctxinterrupt.Wait(cliCtx.Context)
+}
 
+// TODO: we should probably just change EdaClientConfig struct definition in eigenda-client
+func prettyPrintConfig(cliCtx *cli.Context, log log.Logger) error {
+	// we read a new config which we modify to hide private info in order to log the rest
+	cfg := server.ReadCLIConfig(cliCtx)
+	if cfg.EigenDAConfig.EdaClientConfig.SignerPrivateKeyHex != "" {
+		cfg.EigenDAConfig.EdaClientConfig.SignerPrivateKeyHex = "*****" // marshaling defined in client config
+	}
+	if cfg.EigenDAConfig.EdaClientConfig.EthRpcUrl != "" {
+		cfg.EigenDAConfig.EdaClientConfig.EthRpcUrl = "*****" // hiding as RPC providers typically use sensitive API keys within
+	}
+
+	configJSON, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+	log.Info(fmt.Sprintf("Initializing EigenDA proxy server with config (\"*****\" fields are hidden): %v", string(configJSON)))
 	return nil
 }
