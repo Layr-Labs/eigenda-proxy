@@ -17,6 +17,9 @@ import (
 // NOTE: this method returning a nil error does NOT indicate that the proof is valid. Rather, it merely indicates that
 // the proof was well-formed. The hash returned by this method must be compared to the claimed root hash, to
 // determine if the proof is valid.
+//
+// This method is a reimplementation of the on-chain verification method [processInclusionProofKeccak]
+// (https://github.com/Layr-Labs/eigenlayer-contracts/blob/dev/src/contracts/libraries/Merkle.sol#L49-L76)
 func ProcessInclusionProof(proof []byte, leaf common.Hash, index uint64) (common.Hash, error) {
 	if len(proof)%32 != 0 {
 		return common.Hash{}, errors.New("proof length should be a multiple of 32 bytes or 256 bits")
