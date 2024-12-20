@@ -5,24 +5,24 @@ go 1.22.0
 toolchain go1.22.7
 
 require (
-	github.com/Layr-Labs/eigenda v0.8.5-rc.0.0.20241101212705-fa8776ae648c
+	github.com/Layr-Labs/eigenda v0.8.6
 	github.com/Layr-Labs/eigenda-proxy/client v0.0.0-00010101000000-000000000000
 	github.com/avast/retry-go/v4 v4.6.0
-	github.com/consensys/gnark-crypto v0.12.1
-	github.com/ethereum-optimism/optimism v1.9.5
+	github.com/consensys/gnark-crypto v0.14.0
+	github.com/ethereum-optimism/optimism v1.10.0
 	github.com/ethereum/go-ethereum v1.14.11
 	github.com/go-redis/redis/v8 v8.11.5
-	github.com/golang/mock v1.2.0
-	github.com/gorilla/mux v1.8.0
+	github.com/golang/mock v1.6.0
+	github.com/gorilla/mux v1.8.1
 	github.com/joho/godotenv v1.5.1
-	github.com/minio/minio-go/v7 v7.0.80
+	github.com/minio/minio-go/v7 v7.0.82
 	github.com/prometheus/client_golang v1.20.5
-	github.com/stretchr/testify v1.9.0
-	github.com/testcontainers/testcontainers-go/modules/minio v0.33.0
-	github.com/testcontainers/testcontainers-go/modules/redis v0.33.0
+	github.com/stretchr/testify v1.10.0
+	github.com/testcontainers/testcontainers-go/modules/minio v0.34.0
+	github.com/testcontainers/testcontainers-go/modules/redis v0.34.0
 	github.com/urfave/cli/v2 v2.27.5
 	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c
-	google.golang.org/grpc v1.64.1
+	google.golang.org/grpc v1.69.2
 )
 
 // TODO: Remove this after we have published v0.1.0 of the new client module.
@@ -41,12 +41,16 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.26.1 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.27.11 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.11 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.13.12 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression v1.7.12 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.1 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.5 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.5 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.31.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.20.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.11.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.9.5 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.7 // indirect
 	github.com/aws/aws-sdk-go-v2/service/kms v1.31.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.28.6 // indirect
@@ -56,7 +60,7 @@ require (
 	github.com/aws/smithy-go v1.20.2 // indirect
 	github.com/benbjohnson/clock v1.3.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/bits-and-blooms/bitset v1.13.0 // indirect
+	github.com/bits-and-blooms/bitset v1.14.2 // indirect
 	github.com/boltdb/bolt v1.3.1 // indirect
 	github.com/btcsuite/btcd v0.24.2 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.3.4 // indirect
@@ -77,7 +81,7 @@ require (
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
-	github.com/cpuguy83/dockercfg v0.3.1 // indirect
+	github.com/cpuguy83/dockercfg v0.3.2 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
 	github.com/crate-crypto/go-ipa v0.0.0-20240223125850-b1e8a79f509c // indirect
 	github.com/crate-crypto/go-kzg-4844 v1.0.0 // indirect
@@ -154,6 +158,7 @@ require (
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/jbenet/go-temp-err-catcher v0.1.0 // indirect
 	github.com/jbenet/goprocess v0.1.4 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
 	github.com/koron/go-ssdp v0.0.4 // indirect
@@ -249,14 +254,13 @@ require (
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/shirou/gopsutil/v3 v3.23.12 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
-	github.com/shurcooL/graphql v0.0.0-20230722043721-ed46e5a46466 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/status-im/keycard-go v0.2.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/supranational/blst v0.3.13 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a // indirect
-	github.com/testcontainers/testcontainers-go v0.33.0 // indirect
+	github.com/testcontainers/testcontainers-go v0.34.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
@@ -268,9 +272,9 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
 	go.etcd.io/bbolt v1.3.7 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.49.0 // indirect
-	go.opentelemetry.io/otel v1.24.0 // indirect
-	go.opentelemetry.io/otel/metric v1.24.0 // indirect
-	go.opentelemetry.io/otel/trace v1.24.0 // indirect
+	go.opentelemetry.io/otel v1.31.0 // indirect
+	go.opentelemetry.io/otel/metric v1.31.0 // indirect
+	go.opentelemetry.io/otel/trace v1.31.0 // indirect
 	go.uber.org/dig v1.18.0 // indirect
 	go.uber.org/fx v1.22.2 // indirect
 	go.uber.org/mock v0.4.0 // indirect
@@ -285,8 +289,8 @@ require (
 	golang.org/x/text v0.19.0 // indirect
 	golang.org/x/time v0.7.0 // indirect
 	golang.org/x/tools v0.26.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240318140521-94a12d6c2237 // indirect
-	google.golang.org/protobuf v1.34.2 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20241015192408-796eee8c2d53 // indirect
+	google.golang.org/protobuf v1.35.1 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
