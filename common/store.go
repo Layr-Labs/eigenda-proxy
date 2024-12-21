@@ -69,6 +69,8 @@ type GeneratedKeyStore interface {
 	Store
 	// Get retrieves the given key if it's present in the key-value data store.
 	Get(ctx context.Context, key []byte) ([]byte, error)
+	// Get retrieves the given key if it's present in the key-value data store as the raw blob
+	GetRaw(ctx context.Context, key []byte) ([]byte, error)
 	// Put inserts the given value into the key-value data store.
 	Put(ctx context.Context, value []byte) (key []byte, err error)
 }
@@ -77,6 +79,8 @@ type PrecomputedKeyStore interface {
 	Store
 	// Get retrieves the given key if it's present in the key-value data store.
 	Get(ctx context.Context, key []byte) ([]byte, error)
+	// Get retrieves the given key if it's present in the key-value data store.
+	GetRaw(ctx context.Context, key []byte) ([]byte, error)
 	// Put inserts the given value into the key-value data store.
 	Put(ctx context.Context, key []byte, value []byte) error
 }

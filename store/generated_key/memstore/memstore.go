@@ -131,6 +131,51 @@ func (e *MemStore) Get(_ context.Context, commit []byte) ([]byte, error) {
 	return e.codec.DecodeBlob(encodedBlob)
 }
 
+// Get fetches a value from the store.
+func (e *MemStore) GetRaw(_ context.Context, commit []byte) ([]byte, error) {
+	fmt.Println("enter")
+	time.Sleep(e.config.GetLatency)
+	e.reads++
+	e.RLock()
+	defer e.RUnlock()
+
+	var cert verify.Certificate
+	err := rlp.DecodeBytes(commit, &cert)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode DA cert to RLP format: %w", err)
+	}
+
+	var encodedBlob []byte
+	var exists bool
+	if encodedBlob, exists = e.store[string(cert.BlobVerificationProof.InclusionProof)]; !exists {
+		return nil, fmt.Errorf("commitment key not found")
+	}
+
+	fmt.Println("encodedBlob", encodedBlob)
+
+	// Don't need to do this really since it's a mock store
+	err = e.verifier.VerifyCommitment(cert.BlobHeader.Commitment, encodedBlob)
+	if err != nil {
+		return nil, err
+	}
+
+	decoded, err := e.codec.DecodeBlob(encodedBlob)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println("decoded", decoded)
+
+	tmpCodec := codecs.NewNoIFFTCodec(codecs.NewDefaultBlobCodec())
+	codeced, err := tmpCodec.EncodeBlob(decoded)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println("GetRaw", codeced)
+	return codeced, nil
+}
+
 // Put inserts a value into the store.
 func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
 	time.Sleep(e.config.PutLatency)

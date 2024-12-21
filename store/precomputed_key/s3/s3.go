@@ -112,6 +112,10 @@ func (s *Store) Get(ctx context.Context, key []byte) ([]byte, error) {
 	return data, nil
 }
 
+func (s *Store) GetRaw(ctx context.Context, key []byte) ([]byte, error) {
+	return s.Get(ctx, key)
+}
+
 func (s *Store) Put(ctx context.Context, key []byte, value []byte) error {
 	_, err := s.client.PutObject(ctx, s.cfg.Bucket, path.Join(s.cfg.Path, hex.EncodeToString(key)), bytes.NewReader(value), int64(len(value)), s.putObjectOptions)
 	if err != nil {

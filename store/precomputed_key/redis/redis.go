@@ -79,6 +79,10 @@ func (r *Store) Get(ctx context.Context, key []byte) ([]byte, error) {
 	return []byte(value), nil
 }
 
+func (r *Store) GetRaw(ctx context.Context, key []byte) ([]byte, error) {
+	return r.Get(ctx, key)
+}
+
 // Put ... inserts a value into the Redis store
 func (r *Store) Put(ctx context.Context, key []byte, value []byte) error {
 	return r.client.Set(ctx, string(key), string(value), r.eviction).Err()

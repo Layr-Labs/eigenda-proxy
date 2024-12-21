@@ -15,6 +15,7 @@ import (
 // IManager ... read/write interface
 type IManager interface {
 	Get(ctx context.Context, key []byte, cm commitments.CommitmentMode) ([]byte, error)
+	GetRaw(ctx context.Context, key []byte, cm commitments.CommitmentMode) ([]byte, error)
 	Put(ctx context.Context, cm commitments.CommitmentMode, key, value []byte) ([]byte, error)
 }
 
@@ -102,6 +103,74 @@ func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.Commitment
 		}
 
 		return data, err
+
+	default:
+		return nil, errors.New("could not determine which storage backend to route to based on unknown commitment mode")
+	}
+}
+
+func (m *Manager) GetRaw(ctx context.Context, key []byte, cm commitments.CommitmentMode) ([]byte, error) {
+	switch cm {
+	case commitments.OptimismKeccak:
+
+		if m.s3 == nil {
+			return nil, errors.New("expected S3 backend for OP keccak256 commitment type, but none configured")
+		}
+
+		// 1 - read blob from S3 backend
+		m.log.Debug("Retrieving data from S3 backend")
+		value, err := m.s3.GetRaw(ctx, key)
+		if err != nil {
+			return nil, err
+		}
+
+		// 2 - verify blob hash against commitment key digest
+		err = m.s3.Verify(ctx, key, value)
+		if err != nil {
+			return nil, err
+		}
+		return value, nil
+
+	case commitments.Standard, commitments.OptimismGeneric:
+		if m.eigenda == nil {
+			return nil, errors.New("expected EigenDA backend for DA commitment type, but none configured")
+		}
+
+		// 1 - read blob from cache if enabled
+		if m.secondary.CachingEnabled() {
+			m.log.Debug("Retrieving data from cached backends")
+			data, err := m.secondary.MultiSourceRead(ctx, key, false, m.eigenda.Verify)
+			if err == nil {
+				return data, nil
+			}
+
+			m.log.Warn("Failed to read from cache targets", "err", err)
+		}
+
+		// 2 - read blob from EigenDA
+		rawData, err := m.eigenda.GetRaw(ctx, key)
+		data, err := m.eigenda.GetRaw(ctx, key)
+		if err == nil {
+			// verify
+			err = m.eigenda.Verify(ctx, key, data)
+			if err != nil {
+				return nil, err
+			}
+			return rawData, nil
+		}
+
+		// 3 - read blob from fallbacks if enabled and data is non-retrievable from EigenDA
+		if m.secondary.FallbackEnabled() {
+			data, err = m.secondary.MultiSourceRead(ctx, key, true, m.eigenda.Verify)
+			if err != nil {
+				m.log.Error("Failed to read from fallback targets", "err", err)
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+
+		return rawData, err
 
 	default:
 		return nil, errors.New("could not determine which storage backend to route to based on unknown commitment mode")

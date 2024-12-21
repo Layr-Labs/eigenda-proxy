@@ -90,13 +90,39 @@ func (svr *Server) handleGetOPGenericCommitment(w http.ResponseWriter, r *http.R
 		return fmt.Errorf("failed to decode commitment %s: %w", rawCommitmentHex, err)
 	}
 
-	return svr.handleGetShared(r.Context(), w, commitment, commitmentMeta)
+	if r.Header.Get("raw") != "" {
+		fmt.Println("get raw", r.Header.Get("raw"))
+		return svr.handleGetRawShared(r.Context(), w, commitment, commitmentMeta)
+	} else {
+		return svr.handleGetShared(r.Context(), w, commitment, commitmentMeta)
+	}
 }
 
 func (svr *Server) handleGetShared(ctx context.Context, w http.ResponseWriter, comm []byte, meta commitments.CommitmentMeta) error {
 	commitmentHex := hex.EncodeToString(comm)
 	svr.log.Info("Processing GET request", "commitment", commitmentHex, "commitmentMeta", meta)
 	input, err := svr.sm.Get(ctx, comm, meta.Mode)
+	if err != nil {
+		err = MetaError{
+			Err:  fmt.Errorf("get request failed with commitment %v: %w", commitmentHex, err),
+			Meta: meta,
+		}
+		if errors.Is(err, ErrNotFound) {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return err
+	}
+
+	svr.writeResponse(w, input)
+	return nil
+}
+
+func (svr *Server) handleGetRawShared(ctx context.Context, w http.ResponseWriter, comm []byte, meta commitments.CommitmentMeta) error {
+	commitmentHex := hex.EncodeToString(comm)
+	svr.log.Info("Processing GetRaw request", "commitment", commitmentHex, "commitmentMeta", meta)
+	input, err := svr.sm.GetRaw(ctx, comm, meta.Mode)
 	if err != nil {
 		err = MetaError{
 			Err:  fmt.Errorf("get request failed with commitment %v: %w", commitmentHex, err),

@@ -67,6 +67,22 @@ func (e Store) Get(ctx context.Context, key []byte) ([]byte, error) {
 	return decodedBlob, nil
 }
 
+// ToDo still not correct impl
+func (e Store) GetRaw(ctx context.Context, key []byte) ([]byte, error) {
+	var cert verify.Certificate
+	err := rlp.DecodeBytes(key, &cert)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode DA cert to RLP format: %w", err)
+	}
+
+	decodedBlob, err := e.client.GetBlob(ctx, cert.BlobVerificationProof.BatchMetadata.BatchHeaderHash, cert.BlobVerificationProof.BlobIndex)
+	if err != nil {
+		return nil, fmt.Errorf("EigenDA client failed to retrieve decoded blob: %w", err)
+	}
+
+	return decodedBlob, nil
+}
+
 // Put disperses a blob for some pre-image and returns the associated RLP encoded certificate commit.
 func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 	encodedBlob, err := e.client.GetCodec().EncodeBlob(value)
