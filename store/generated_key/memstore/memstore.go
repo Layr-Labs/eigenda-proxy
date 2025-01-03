@@ -169,7 +169,7 @@ func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
 				X: commitment.X.Marshal(),
 				Y: commitment.Y.Marshal(),
 			},
-			DataLength: uint32( ( len(encodedVal) + BytesPerFieldElement - 1) / BytesPerFieldElement), // #nosec G115
+			DataLength: uint32((len(encodedVal) + BytesPerFieldElement - 1) / BytesPerFieldElement), // #nosec G115
 			BlobQuorumParams: []*disperser.BlobQuorumParam{
 				{
 					QuorumNumber:                    1,
