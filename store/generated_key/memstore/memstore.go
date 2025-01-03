@@ -21,6 +21,7 @@ import (
 
 const (
 	DefaultPruneInterval = 500 * time.Millisecond
+	BYTSE_PER_FIELD_ELEMENT = 32
 )
 
 type Config struct {
@@ -168,7 +169,7 @@ func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
 				X: commitment.X.Marshal(),
 				Y: commitment.Y.Marshal(),
 			},
-			DataLength: uint32(len(encodedVal)), // #nosec G115
+			DataLength: uint32( ( len(encodedVal) + BYTSE_PER_FIELD_ELEMENT - 1) / BYTSE_PER_FIELD_ELEMENT), // #nosec G115
 			BlobQuorumParams: []*disperser.BlobQuorumParam{
 				{
 					QuorumNumber:                    1,
