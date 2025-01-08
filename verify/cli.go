@@ -2,6 +2,7 @@ package verify
 
 import (
 	"fmt"
+	"math"
 	"runtime"
 
 	"github.com/urfave/cli/v2"
@@ -136,9 +137,13 @@ func ReadConfig(ctx *cli.Context, edaClientConfig clients.EigenDAClientConfig) C
 		NumWorker:       uint64(runtime.GOMAXPROCS(0)), // #nosec G115
 	}
 
+	rollupBlobInclusionWindowUint := ctx.Uint(RollupBlobInclusionWindowFlagName)
+	if rollupBlobInclusionWindowUint > math.MaxUint32 {
+		panic(fmt.Sprintf("RollupBlobInclusionWindow value (%d) too large for uint32", ctx.Uint(RollupBlobInclusionWindowFlagName)))
+	}
 	return Config{
 		KzgConfig:                 kzgCfg,
-		RollupBlobInclusionWindow: uint32(ctx.Uint(RollupBlobInclusionWindowFlagName)),
+		RollupBlobInclusionWindow: uint32(rollupBlobInclusionWindowUint),
 		VerifyCerts:               !ctx.Bool(CertVerificationDisabledFlagName),
 		// reuse some configs from the eigenda client
 		RPCURL:               edaClientConfig.EthRpcUrl,

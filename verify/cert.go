@@ -54,7 +54,7 @@ func NewCertVerifier(cfg *Config, l log.Logger) (*CertVerifier, error) {
 // verifyBatchConfirmedOnChain verifies that batchMetadata (typically part of a received cert)
 // matches the batch metadata hash stored on-chain
 func (cv *CertVerifier) verifyBatchConfirmedOnChain(
-	ctx context.Context, batchID uint32, batchMetadata *disperser.BatchMetadata, l1InclusionBlockNumber int64,
+	ctx context.Context, batchID uint32, batchMetadata *disperser.BatchMetadata,
 ) error {
 	// 1. Verify batch is actually onchain at the batchMetadata's state confirmedBlockNumber.
 	// This is super unlikely if the disperser is honest, but it could technically happen that a confirmed batch's block gets reorged out,

@@ -99,7 +99,7 @@ func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate, opts commo
 	}
 
 	// 1 - verify batch in the cert is confirmed onchain
-	err := v.cv.verifyBatchConfirmedOnChain(ctx, cert.Proof().GetBatchId(), cert.Proof().GetBatchMetadata(), opts.RollupL1InclusionBlockNum)
+	err := v.cv.verifyBatchConfirmedOnChain(ctx, cert.Proof().GetBatchId(), cert.Proof().GetBatchMetadata())
 	if err != nil {
 		return fmt.Errorf("failed to verify batch: %w", err)
 	}
