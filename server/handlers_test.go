@@ -17,9 +17,9 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/mocks"
 	"github.com/Layr-Labs/eigenda/api"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -49,7 +49,7 @@ func TestHandlerGet(t *testing.T) {
 			name: "Failure - OP Keccak256 Internal Server Error",
 			url:  fmt.Sprintf("/get/0x00%s", testCommitStr),
 			mockBehavior: func() {
-				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("internal error"))
+				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("internal error"))
 			},
 			expectedCode: http.StatusInternalServerError,
 			expectedBody: "",
@@ -58,7 +58,7 @@ func TestHandlerGet(t *testing.T) {
 			name: "Success - OP Keccak256",
 			url:  fmt.Sprintf("/get/0x00%s", testCommitStr),
 			mockBehavior: func() {
-				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte(testCommitStr), nil)
+				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte(testCommitStr), nil)
 			},
 			expectedCode: http.StatusOK,
 			expectedBody: testCommitStr,
@@ -67,7 +67,7 @@ func TestHandlerGet(t *testing.T) {
 			name: "Failure - OP Alt-DA Internal Server Error",
 			url:  fmt.Sprintf("/get/0x010000%s", testCommitStr),
 			mockBehavior: func() {
-				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("internal error"))
+				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("internal error"))
 			},
 			expectedCode: http.StatusInternalServerError,
 			expectedBody: "",
@@ -76,7 +76,7 @@ func TestHandlerGet(t *testing.T) {
 			name: "Success - OP Alt-DA",
 			url:  fmt.Sprintf("/get/0x010000%s", testCommitStr),
 			mockBehavior: func() {
-				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte(testCommitStr), nil)
+				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte(testCommitStr), nil)
 			},
 			expectedCode: http.StatusOK,
 			expectedBody: testCommitStr,

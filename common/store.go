@@ -61,8 +61,17 @@ func StringToBackendType(s string) BackendType {
 type Store interface {
 	// Backend returns the backend type provider of the store.
 	BackendType() BackendType
-	// Verify verifies the given key-value pair.
-	Verify(ctx context.Context, key []byte, value []byte) error
+}
+
+type VerifyOptions struct {
+	// L1 block number at which the rollup batch was submitted to the batcher inbox.
+	// This is optional, and should be set to -1 to mean to not verify the reference block number distance check.
+	//
+	// Used to determine the validity of the eigenDA batch.
+	// The eigenDA batch header contains a reference block number (RBN) which is used to pin the stake of the eigenda operators at that specific blocks.
+	// The rollup batch containing the eigenDA cert is only valid if it was included within a certain number of blocks after the RBN.
+	// validity condition is: RBN < l1_inclusion_block_number < RBN + some_delta
+	RollupL1InclusionBlockNum int64
 }
 
 type GeneratedKeyStore interface {
@@ -71,6 +80,8 @@ type GeneratedKeyStore interface {
 	Get(ctx context.Context, key []byte) ([]byte, error)
 	// Put inserts the given value into the key-value data store.
 	Put(ctx context.Context, value []byte) (key []byte, err error)
+	// Verify verifies the given key-value pair.
+	Verify(ctx context.Context, key []byte, value []byte, opts VerifyOptions) error
 }
 
 type PrecomputedKeyStore interface {
@@ -79,4 +90,6 @@ type PrecomputedKeyStore interface {
 	Get(ctx context.Context, key []byte) ([]byte, error)
 	// Put inserts the given value into the key-value data store.
 	Put(ctx context.Context, key []byte, value []byte) error
+	// Verify verifies the given key-value pair.
+	Verify(ctx context.Context, key []byte, value []byte) error
 }

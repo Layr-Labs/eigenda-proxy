@@ -12,7 +12,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/log"
 
-	"github.com/Layr-Labs/eigenda/api/grpc/common"
+	"github.com/Layr-Labs/eigenda-proxy/common"
+	grpccommon "github.com/Layr-Labs/eigenda/api/grpc/common"
 	"github.com/Layr-Labs/eigenda/api/grpc/disperser"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	kzgverifier "github.com/Layr-Labs/eigenda/encoding/kzg/verifier"
@@ -20,9 +21,14 @@ import (
 )
 
 type Config struct {
-	KzgConfig   *kzg.KzgConfig
-	VerifyCerts bool
-	// below 3 fields are only required if VerifyCerts is true
+	KzgConfig *kzg.KzgConfig
+	// Allowed distance (in L1 blocks) between the eigenDA reference block number (RBN) of the batch the blob is included in,
+	// and the L1 block number at which the blob cert was included in the batcher's inbox.
+	// If batch.RBN + RollupBlobInclusionWindow < cert.L1InclusionBlock, the batch is considered stale and verification will fail.
+	// This check is optional and will be skipped when RollupBlobInclusionWindow is set to 0.
+	RollupBlobInclusionWindow uint32
+	VerifyCerts               bool
+	// below fields are only required if VerifyCerts is true
 	RPCURL               string
 	SvcManagerAddr       string
 	EthConfirmationDepth uint64
@@ -40,13 +46,26 @@ func (c Config) MarshalJSON() ([]byte, error) {
 	return json.Marshal(aux)
 }
 
+// Verifier verifies the integrity of a blob and its certificate. There are 3 main categories of verification:
+//  1. Blob: properties localized to a single blob, most specifically its commitment
+//  2. Batch: properties wrt the EigenDA network: signatures, quorum thresholds, onchain inclusion, etc.
+//  3. Rollup: properties wrt the rollup chain: block at which the cert was included in the batcher's inbox (make sure its not too stale trying to game fraud proof windows)
+//
 // TODO: right now verification and confirmation depth are tightly coupled. we should decouple them
 type Verifier struct {
 	// kzgVerifier is needed to commit blobs to the memstore
 	kzgVerifier *kzgverifier.Verifier
-	// cert verification is optional, and verifies certs retrieved from eigenDA when turned on
+	// Cert verification is optional, and verifies certs retrieved from eigenDA when turned on.
+	// It is optional because it requires making calls to the blockchain, which is not necessarily always possible.
+	// For eg, some rollups are running on sepolia testnet which doesn't have an eigenlayer/eigenda contracts deployment.
 	verifyCerts bool
 	cv          *CertVerifier
+	// Allowed distance (in L1 blocks) between the eigenDA reference block number (RBN) of the batch the blob is included in,
+	// and the L1 block number at which the blob cert was included in the batcher's inbox.
+	// If batch.RBN + rollupBlobInclusionWindow < cert.L1InclusionBlock, the batch is considered stale and verification will fail.
+	// This check is optional and will be skipped when rollupBlobInclusionWindow is set to 0.
+	// Note: if there are more rollup related properties that we need to check in the future, then maybe create a RollupVerifier struct
+	rollupBlobInclusionWindow uint32
 }
 
 func NewVerifier(cfg *Config, l log.Logger) (*Verifier, error) {
@@ -66,31 +85,42 @@ func NewVerifier(cfg *Config, l log.Logger) (*Verifier, error) {
 	}
 
 	return &Verifier{
-		kzgVerifier: kzgVerifier,
-		verifyCerts: cfg.VerifyCerts,
-		cv:          cv,
+		kzgVerifier:               kzgVerifier,
+		verifyCerts:               cfg.VerifyCerts,
+		cv:                        cv,
+		rollupBlobInclusionWindow: cfg.RollupBlobInclusionWindow,
 	}, nil
 }
 
 // verifies V0 eigenda certificate type
-func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate) error {
+func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate, opts common.VerifyOptions) error {
 	if !v.verifyCerts {
 		return nil
 	}
 
 	// 1 - verify batch in the cert is confirmed onchain
-	err := v.cv.verifyBatchConfirmedOnChain(ctx, cert.Proof().GetBatchId(), cert.Proof().GetBatchMetadata())
+	err := v.cv.verifyBatchConfirmedOnChain(ctx, cert.Proof().GetBatchId(), cert.Proof().GetBatchMetadata(), opts.RollupL1InclusionBlockNum)
 	if err != nil {
 		return fmt.Errorf("failed to verify batch: %w", err)
 	}
 
-	// 2 - verify merkle inclusion proof
+	// 2 - verify that the blob cert was submitted to the rollup's batch inbox within the allowed RollupBlobInclusionWindow window.
+	// This is to prevent timing attacks where a rollup batcher could try to game the fraud proof window by including an old DA blob that is about to expire on the DA layer
+	// and is hence not retrievable.
+	if opts.RollupL1InclusionBlockNum >= 0 && v.rollupBlobInclusionWindow > 0 {
+		if opts.RollupL1InclusionBlockNum-int64(cert.BlobVerificationProof.BatchMetadata.ConfirmationBlockNumber) > int64(v.rollupBlobInclusionWindow) {
+			return fmt.Errorf("l1 inclusion block number (%d) > eigenda batch confirmation block number (%d) + blobCertInclusionWindow (%d)",
+				opts.RollupL1InclusionBlockNum, cert.BlobVerificationProof.BatchMetadata.ConfirmationBlockNumber, int64(v.rollupBlobInclusionWindow))
+		}
+	}
+
+	// 3 - verify merkle inclusion proof
 	err = v.cv.verifyMerkleProof(cert.Proof().GetInclusionProof(), cert.BatchHeaderRoot(), cert.Proof().GetBlobIndex(), cert.ReadBlobHeader())
 	if err != nil {
 		return fmt.Errorf("failed to verify merkle proof: %w", err)
 	}
 
-	// 3 - verify security parameters
+	// 4 - verify security parameters
 	batchHeader := cert.Proof().GetBatchMetadata().GetBatchHeader()
 	err = v.verifySecurityParams(cert.ReadBlobHeader(), batchHeader)
 	if err != nil {
@@ -124,7 +154,7 @@ func (v *Verifier) Commit(blob []byte) (*bn254.G1Affine, error) {
 // Verify regenerates a commitment from the blob and asserts equivalence
 // to the commitment in the certificate
 // TODO: Optimize implementation by opening a point on the commitment instead
-func (v *Verifier) VerifyCommitment(certCommitment *common.G1Commitment, blob []byte) error {
+func (v *Verifier) VerifyCommitment(certCommitment *grpccommon.G1Commitment, blob []byte) error {
 	actualCommit, err := v.Commit(blob)
 	if err != nil {
 		return err

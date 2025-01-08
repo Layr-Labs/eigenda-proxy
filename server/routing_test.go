@@ -9,8 +9,8 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/mocks"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 // TestRouting tests that the routes were properly encoded.

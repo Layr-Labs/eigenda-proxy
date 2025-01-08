@@ -134,7 +134,9 @@ func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to verify commitment: %w", err)
 	}
 
-	err = e.verifier.VerifyCert(ctx, cert)
+	// we set RollupL1InclusionBlockNum to -1 to skip the check, as the cert will only be included
+	// in the batcher's inbox after the proxy returns the verified cert to the batcher.
+	err = e.verifier.VerifyCert(ctx, cert, common.VerifyOptions{RollupL1InclusionBlockNum: -1})
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify DA cert: %w", err)
 	}
@@ -154,7 +156,8 @@ func (e Store) BackendType() common.BackendType {
 
 // Key is used to recover certificate fields and that verifies blob
 // against commitment to ensure data is valid and non-tampered.
-func (e Store) Verify(ctx context.Context, key []byte, value []byte) error {
+// l1InclusionBlockNum is optional and used to validate the certificate: negative number means don't verify this check
+func (e Store) Verify(ctx context.Context, key []byte, value []byte, opts common.VerifyOptions) error {
 	var cert verify.Certificate
 	err := rlp.DecodeBytes(key, &cert)
 	if err != nil {
@@ -174,5 +177,5 @@ func (e Store) Verify(ctx context.Context, key []byte, value []byte) error {
 	}
 
 	// verify DA certificate against EigenDA's batch metadata that's bridged to Ethereum
-	return e.verifier.VerifyCert(ctx, &cert)
+	return e.verifier.VerifyCert(ctx, &cert, opts)
 }

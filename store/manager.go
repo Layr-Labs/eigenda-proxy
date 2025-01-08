@@ -14,7 +14,9 @@ import (
 
 // IManager ... read/write interface
 type IManager interface {
-	Get(ctx context.Context, key []byte, cm commitments.CommitmentMode) ([]byte, error)
+	// Get fetches a value from a storage backend based on the (commitment mode, type).
+	// It also validates the value retrieved and returns an error if the value is invalid.
+	Get(ctx context.Context, key []byte, cm commitments.CommitmentMode, verifyOpts common.VerifyOptions) ([]byte, error)
 	Put(ctx context.Context, cm commitments.CommitmentMode, key, value []byte) ([]byte, error)
 }
 
@@ -41,7 +43,7 @@ func NewManager(eigenda common.GeneratedKeyStore, s3 common.PrecomputedKeyStore,
 }
 
 // Get ... fetches a value from a storage backend based on the (commitment mode, type)
-func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.CommitmentMode) ([]byte, error) {
+func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.CommitmentMode, verifyOpts common.VerifyOptions) ([]byte, error) {
 	switch cm {
 	case commitments.OptimismKeccak:
 
@@ -71,7 +73,7 @@ func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.Commitment
 		// 1 - read blob from cache if enabled
 		if m.secondary.CachingEnabled() {
 			m.log.Debug("Retrieving data from cached backends")
-			data, err := m.secondary.MultiSourceRead(ctx, key, false, m.eigenda.Verify)
+			data, err := m.secondary.MultiSourceRead(ctx, key, false, m.eigenda.Verify, verifyOpts)
 			if err == nil {
 				return data, nil
 			}
@@ -83,7 +85,7 @@ func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.Commitment
 		data, err := m.eigenda.Get(ctx, key)
 		if err == nil {
 			// verify
-			err = m.eigenda.Verify(ctx, key, data)
+			err = m.eigenda.Verify(ctx, key, data, verifyOpts)
 			if err != nil {
 				return nil, err
 			}
@@ -92,7 +94,7 @@ func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.Commitment
 
 		// 3 - read blob from fallbacks if enabled and data is non-retrievable from EigenDA
 		if m.secondary.FallbackEnabled() {
-			data, err = m.secondary.MultiSourceRead(ctx, key, true, m.eigenda.Verify)
+			data, err = m.secondary.MultiSourceRead(ctx, key, true, m.eigenda.Verify, verifyOpts)
 			if err != nil {
 				m.log.Error("Failed to read from fallback targets", "err", err)
 				return nil, err

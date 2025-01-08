@@ -27,6 +27,9 @@ var (
 	G2PowerOf2PathFlagName = withFlagPrefix("g2-power-of-2-path")
 	CachePathFlagName      = withFlagPrefix("cache-path")
 	MaxBlobLengthFlagName  = withFlagPrefix("max-blob-length")
+
+	// rollup related flags
+	RollupBlobInclusionWindowFlagName = withFlagPrefix("rollup-blob-inclusion-window")
 )
 
 // we keep the eigenda prefix like eigenda client flags, because we
@@ -106,6 +109,13 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			// should we duplicate the flag? Or is there a better way to handle this?
 			Category: category,
 		},
+		&cli.Uint64Flag{
+			Name:     RollupBlobInclusionWindowFlagName,
+			Usage:    "The number of blocks after an EigenDA batch's reference block number (RBN) that the rollup batch containing an EigenDA blob contained in that batch must be included in (0 means disabled).",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "ROLLUP_BLOB_INCLUSION_WINDOW")},
+			Value:    0,
+			Category: category,
+		},
 	}
 }
 
@@ -127,8 +137,9 @@ func ReadConfig(ctx *cli.Context, edaClientConfig clients.EigenDAClientConfig) C
 	}
 
 	return Config{
-		KzgConfig:   kzgCfg,
-		VerifyCerts: !ctx.Bool(CertVerificationDisabledFlagName),
+		KzgConfig:                 kzgCfg,
+		RollupBlobInclusionWindow: uint32(ctx.Uint(RollupBlobInclusionWindowFlagName)),
+		VerifyCerts:               !ctx.Bool(CertVerificationDisabledFlagName),
 		// reuse some configs from the eigenda client
 		RPCURL:               edaClientConfig.EthRpcUrl,
 		SvcManagerAddr:       edaClientConfig.SvcManagerAddr,

@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
+	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/gorilla/mux"
 )
 
@@ -46,7 +48,7 @@ func (svr *Server) handleGetStdCommitment(w http.ResponseWriter, r *http.Request
 		return fmt.Errorf("failed to decode commitment %s: %w", rawCommitmentHex, err)
 	}
 
-	return svr.handleGetShared(r.Context(), w, commitment, commitmentMeta)
+	return svr.handleGetShared(r.Context(), w, r, commitment, commitmentMeta)
 }
 
 // handleGetOPKeccakCommitment handles the GET request for optimism keccak commitments.
@@ -72,7 +74,7 @@ func (svr *Server) handleGetOPKeccakCommitment(w http.ResponseWriter, r *http.Re
 		return fmt.Errorf("failed to decode commitment %s: %w", rawCommitmentHex, err)
 	}
 
-	return svr.handleGetShared(r.Context(), w, commitment, commitmentMeta)
+	return svr.handleGetShared(r.Context(), w, r, commitment, commitmentMeta)
 }
 
 // handleGetOPGenericCommitment handles the GET request for optimism generic commitments.
@@ -95,13 +97,24 @@ func (svr *Server) handleGetOPGenericCommitment(w http.ResponseWriter, r *http.R
 		return fmt.Errorf("failed to decode commitment %s: %w", rawCommitmentHex, err)
 	}
 
-	return svr.handleGetShared(r.Context(), w, commitment, commitmentMeta)
+	return svr.handleGetShared(r.Context(), w, r, commitment, commitmentMeta)
 }
 
-func (svr *Server) handleGetShared(ctx context.Context, w http.ResponseWriter, comm []byte, meta commitments.CommitmentMeta) error {
+func (svr *Server) handleGetShared(ctx context.Context, w http.ResponseWriter, r *http.Request, comm []byte, meta commitments.CommitmentMeta) error {
 	commitmentHex := hex.EncodeToString(comm)
 	svr.log.Info("Processing GET request", "commitment", commitmentHex, "commitmentMeta", meta)
-	input, err := svr.sm.Get(ctx, comm, meta.Mode)
+	l1InclusionBlockNum, err := parseBatchInclusionL1BlockNumQueryParam(r)
+	if err != nil {
+		err = MetaError{
+			Err:  fmt.Errorf("invalid l1_block_number: %w", err),
+			Meta: meta,
+		}
+		// the inclusion block query param is optional, but if it is provided and invalid, we return a 400 error
+		// to let the client know that they probably have a bug.
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return err
+	}
+	input, err := svr.sm.Get(ctx, comm, meta.Mode, common.VerifyOptions{RollupL1InclusionBlockNum: l1InclusionBlockNum})
 	if err != nil {
 		err = MetaError{
 			Err:  fmt.Errorf("get request failed with commitment %v: %w", commitmentHex, err),
@@ -117,6 +130,25 @@ func (svr *Server) handleGetShared(ctx context.Context, w http.ResponseWriter, c
 
 	svr.writeResponse(w, input)
 	return nil
+}
+
+// Parses the l1_inclusion_block_number query param from the request.
+// Happy path:
+//   - if the l1_inclusion_block_number is provided, it returns the parsed value.
+//
+// Unhappy paths:
+//   - if the l1_inclusion_block_number is not provided, it returns -1.
+//   - if the l1_inclusion_block_number is provided but isn't a valid integer, it returns an error and -1.
+func parseBatchInclusionL1BlockNumQueryParam(r *http.Request) (int64, error) {
+	l1BlockNumStr := r.URL.Query().Get("l1_inclusion_block_number")
+	if l1BlockNumStr != "" {
+		l1BlockNum, err := strconv.ParseInt(l1BlockNumStr, 10, 64)
+		if err != nil {
+			return -1, fmt.Errorf("invalid l1_inclusion_block_number: %w", err)
+		}
+		return l1BlockNum, nil
+	}
+	return -1, nil
 }
 
 // =================================================================================================
