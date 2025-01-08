@@ -93,6 +93,7 @@ func TestRouting(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Log(tt.name)
 			req := httptest.NewRequest(tt.method, tt.url, nil)
 			rec := httptest.NewRecorder()
 			server.httpServer.Handler.ServeHTTP(rec, req)

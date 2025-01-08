@@ -81,10 +81,21 @@ func TestHandlerGet(t *testing.T) {
 			expectedCode: http.StatusOK,
 			expectedBody: testCommitStr,
 		},
+		{
+			// make sure that the l1_inclusion_block_number query param is parsed correctly and passed to the storage's GET call.
+			name: "Success - OP Alt-DA with l1_inclusion_block_number query param",
+			url:  fmt.Sprintf("/get/0x010000%s?l1_inclusion_block_number=100", testCommitStr),
+			mockBehavior: func() {
+				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(common.VerifyOptions{RollupL1InclusionBlockNum: 100})).Return([]byte(testCommitStr), nil)
+			},
+			expectedCode: http.StatusOK,
+			expectedBody: testCommitStr,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Log(tt.name)
 			tt.mockBehavior()
 
 			req := httptest.NewRequest(http.MethodGet, tt.url, nil)
@@ -158,6 +169,7 @@ func TestHandlerPutSuccess(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Log(tt.name)
 			tt.mockBehavior()
 
 			req := httptest.NewRequest(http.MethodPost, tt.url, bytes.NewReader(tt.body))
@@ -245,6 +257,7 @@ func TestHandlerPutErrors(t *testing.T) {
 	for _, tt := range tests {
 		for _, mode := range modes {
 			t.Run(tt.name+" / "+mode.name, func(t *testing.T) {
+				t.Log(tt.name + " / " + mode.name)
 				mockStorageMgr.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, tt.mockStorageMgrPutReturnedErr)
 
 				req := httptest.NewRequest(http.MethodPost, mode.url, strings.NewReader("optional body to be sent to eigenda"))
