@@ -216,6 +216,8 @@ Unit tests can be ran via invoking `make test`.
 
 End-to-end (E2E) tests can be ran via `make e2e-test`. These tests use the [op-e2e](https://github.com/ethereum-optimism/optimism/tree/develop/op-e2e) framework for asserting correct interaction behaviors with batch submission and state derivation.
 
+These tests also assert E2E client <-> server interactions using simple/op clients.
+
 ### E2E Fuzz
 
 This E2E test will fuzz the proxy client server integration and op client keccak256 with malformed inputs. This is never meant to be fuzzed with EigenDA. Run with `make e2e-fuzz-test`.
