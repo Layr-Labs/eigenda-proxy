@@ -189,15 +189,15 @@ type NoopCertVerifier struct{}
 
 var _ CertVerifier = (*NoopCertVerifier)(nil)
 
-func (*NoopCertVerifier) verifyBatchConfirmedOnChain(ctx context.Context, batchID uint32, batchMetadata *disperser.BatchMetadata) error {
+func (*NoopCertVerifier) verifyBatchConfirmedOnChain(_ context.Context, _ uint32, _ *disperser.BatchMetadata) error {
 	return nil
 }
-func (*NoopCertVerifier) verifyMerkleProof(inclusionProof []byte, root []byte, blobIndex uint32, blobHeader BlobHeader) error {
+func (*NoopCertVerifier) verifyMerkleProof(_ []byte, _ []byte, _ uint32, _ BlobHeader) error {
 	return nil
 }
-func (*NoopCertVerifier) quorumNumbersRequired(opts *bind.CallOpts) ([]byte, error) {
+func (*NoopCertVerifier) quorumNumbersRequired(_ *bind.CallOpts) ([]byte, error) {
 	return nil, nil
 }
-func (*NoopCertVerifier) quorumAdversaryThresholdPercentages(opts *bind.CallOpts) ([]byte, error) {
+func (*NoopCertVerifier) quorumAdversaryThresholdPercentages(_ *bind.CallOpts) ([]byte, error) {
 	return nil, nil
 }

@@ -81,7 +81,6 @@ func NewVerifier(cfg *Config, log log.Logger) (*Verifier, error) {
 	} else {
 		log.Warn("Certificate verification is disabled")
 		cv = &NoopCertVerifier{}
-
 	}
 
 	kzgVerifier, err := kzgverifier.NewVerifier(cfg.KzgConfig, false)
@@ -99,7 +98,6 @@ func NewVerifier(cfg *Config, log log.Logger) (*Verifier, error) {
 
 // verifies V0 eigenda certificate type
 func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate, args common.VerifyArgs) error {
-
 	// 1 - verify batch in the cert is confirmed onchain
 	err := v.cv.verifyBatchConfirmedOnChain(ctx, cert.Proof().GetBatchId(), cert.Proof().GetBatchMetadata())
 	if err != nil {
