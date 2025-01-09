@@ -124,27 +124,27 @@ func (v *Verifier) Commit(blob []byte) (*bn254.G1Affine, error) {
 // Verify regenerates a commitment from the blob and asserts equivalence
 // to the commitment in the certificate
 // TODO: Optimize implementation by opening a point on the commitment instead
-func (v *Verifier) VerifyCommitment(expectedCommit *common.G1Commitment, blob []byte) error {
+func (v *Verifier) VerifyCommitment(certCommitment *common.G1Commitment, blob []byte) error {
 	actualCommit, err := v.Commit(blob)
 	if err != nil {
 		return err
 	}
 
 	expectedX := &fp.Element{}
-	expectedX.Unmarshal(expectedCommit.X)
+	expectedX.Unmarshal(certCommitment.X)
 
 	// map coordinates to G1 and ensure they are on the curve
 	xAffine := bn254.MapToG1(*expectedX)
 	if !xAffine.IsOnCurve() {
-		return fmt.Errorf("expected x is not on the curve: %x", expectedX.Marshal())
+		return fmt.Errorf("commitment x field element is not on the curve: %x", expectedX.Marshal())
 	}
 
 	expectedY := &fp.Element{}
-	expectedY.Unmarshal(expectedCommit.Y)
+	expectedY.Unmarshal(certCommitment.Y)
 
 	yAffine := bn254.MapToG1(*expectedY)
 	if !yAffine.IsOnCurve() {
-		return fmt.Errorf("expected y is not on the curve: %x", expectedY.Marshal())
+		return fmt.Errorf("commitment y field element is not on the curve: %x", expectedY.Marshal())
 	}
 
 	errMsg := ""
