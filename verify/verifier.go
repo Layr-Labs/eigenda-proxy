@@ -133,13 +133,8 @@ func (v *Verifier) VerifyCommitment(expectedCommit *common.G1Commitment, blob []
 	expectedX := &fp.Element{}
 	expectedX.Unmarshal(expectedCommit.X)
 
-	// map field elements to G1 point and ensure it exists within G1 subgroup &
-	// exists on the curve
+	// map coordinates to G1 and ensure they are on the curve
 	xAffine := bn254.MapToG1(*expectedX)
-	if !xAffine.IsInSubGroup() {
-		return fmt.Errorf("expected x is not in the subgroup: %x", expectedX.Marshal())
-	}
-
 	if !xAffine.IsOnCurve() {
 		return fmt.Errorf("expected x is not on the curve: %x", expectedX.Marshal())
 	}
@@ -148,10 +143,6 @@ func (v *Verifier) VerifyCommitment(expectedCommit *common.G1Commitment, blob []
 	expectedY.Unmarshal(expectedCommit.Y)
 
 	yAffine := bn254.MapToG1(*expectedY)
-	if !yAffine.IsInSubGroup() {
-		return fmt.Errorf("expected y is not in the subgroup: %x", expectedY.Marshal())
-	}
-
 	if !yAffine.IsOnCurve() {
 		return fmt.Errorf("expected y is not on the curve: %x", expectedY.Marshal())
 	}
