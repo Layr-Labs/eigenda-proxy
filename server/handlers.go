@@ -14,7 +14,7 @@ import (
 
 const (
 	// limit requests to only 32 mib to mitigate potential DoS attacks
-	maxRequestBodySize int64 = 1048576 * 32
+	maxRequestBodySize int64 = 1024 * 1024 * 32
 )
 
 func (svr *Server) handleHealth(w http.ResponseWriter, _ *http.Request) error {
