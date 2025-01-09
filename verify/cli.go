@@ -20,7 +20,7 @@ var (
 
 // TODO: should this live in the resources pkg?
 // So that if we ever change the SRS files there we can change this value
-const srsOrder = 268435456 // 2 ^ 32
+const srsOrder = 268435456 // 2 ^ 28
 
 var (
 	// cert verification flags
