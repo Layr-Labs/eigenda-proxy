@@ -30,14 +30,27 @@ type BlobHeader struct {
 
 type Certificate disperser.BlobInfo
 
-// NoNilFields ... check if struct pointer fields are nil
+// NoNilFields ... checks if any referenced fields in the certificate
+// are nil and returns an error if so
 func (c *Certificate) NoNilFields() error {
 	if c.BlobVerificationProof == nil {
 		return fmt.Errorf("BlobVerificationProof is nil")
 	}
 
+	if c.BlobVerificationProof.BatchMetadata == nil {
+		return fmt.Errorf("BlobVerificationProof.BatchMetadata is nil")
+	}
+
+	if c.BlobVerificationProof.BatchMetadata.BatchHeader == nil {
+		return fmt.Errorf("BlobVerificationProof.BatchMetadata.BatchHeader is nil")
+	}
+
 	if c.BlobHeader == nil {
 		return fmt.Errorf("BlobHeader is nil")
+	}
+
+	if c.BlobHeader.Commitment == nil {
+		return fmt.Errorf("BlobHeader.Commitment is nil")
 	}
 
 	return nil
