@@ -1,6 +1,7 @@
 package verify
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/Layr-Labs/eigenda/api/grpc/disperser"
@@ -28,6 +29,19 @@ type BlobHeader struct {
 }
 
 type Certificate disperser.BlobInfo
+
+// NoNilFields ... check if struct pointer fields are nil
+func (c *Certificate) NoNilFields() error {
+	if c.BlobVerificationProof == nil {
+		return fmt.Errorf("BlobVerificationProof is nil")
+	}
+
+	if c.BlobHeader == nil {
+		return fmt.Errorf("BlobHeader is nil")
+	}
+
+	return nil
+}
 
 func (c *Certificate) BlobIndex() uint32 {
 	return c.BlobVerificationProof.BlobIndex

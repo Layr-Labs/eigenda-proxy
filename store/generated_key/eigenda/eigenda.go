@@ -59,6 +59,11 @@ func (e Store) Get(ctx context.Context, key []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to decode DA cert to RLP format: %w", err)
 	}
 
+	err = cert.NoNilFields()
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify DA cert: %w", err)
+	}
+
 	decodedBlob, err := e.client.GetBlob(ctx, cert.BlobVerificationProof.BatchMetadata.BatchHeaderHash, cert.BlobVerificationProof.BlobIndex)
 	if err != nil {
 		return nil, fmt.Errorf("EigenDA client failed to retrieve decoded blob: %w", err)
@@ -118,6 +123,11 @@ func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 		return nil, err
 	}
 	cert := (*verify.Certificate)(blobInfo)
+
+	err = cert.NoNilFields()
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify DA cert: %w", err)
+	}
 
 	err = e.verifier.VerifyCommitment(cert.BlobHeader.Commitment, encodedBlob)
 	if err != nil {
