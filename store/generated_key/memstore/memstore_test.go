@@ -43,7 +43,7 @@ func TestGetSet(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	verifier, err := verify.NewVerifier(getDefaultVerifierTestConfig(), nil)
+	verifier, err := verify.NewVerifier(getDefaultVerifierTestConfig(), log.New())
 	require.NoError(t, err)
 
 	ms, err := New(
@@ -70,7 +70,7 @@ func TestExpiration(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	verifier, err := verify.NewVerifier(getDefaultVerifierTestConfig(), nil)
+	verifier, err := verify.NewVerifier(getDefaultVerifierTestConfig(), log.New())
 	require.NoError(t, err)
 
 	memstoreConfig := getDefaultMemStoreTestConfig()
@@ -105,7 +105,7 @@ func TestLatency(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	verifier, err := verify.NewVerifier(getDefaultVerifierTestConfig(), nil)
+	verifier, err := verify.NewVerifier(getDefaultVerifierTestConfig(), log.New())
 	require.NoError(t, err)
 
 	config := getDefaultMemStoreTestConfig()
