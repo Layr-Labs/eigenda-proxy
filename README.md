@@ -204,7 +204,7 @@ For standard clients (i.e, `client/client.go`) communicating with proxy (e.g, ar
 
 The `raw commitment` is an RLP-encoded [EigenDA certificate](https://github.com/Layr-Labs/eigenda/blob/eb422ff58ac6dcd4e7b30373033507414d33dba1/api/proto/disperser/disperser.proto#L168).
 
-**NOTE:** Commitments are cryptographically verified against the data fetched from EigenDA for all `/get` calls. The server will respond with status `500` in the event where EigenDA were to lie and provide falsified data thats irrespective of the client provided commitment. This feature cannot be disabled and is part of standard operation.
+**NOTE:** Commitments are cryptographically verified against the data fetched from EigenDA for all `/get` calls. The server will respond with status `500` in the event where EigenDA were to lie and provide falsified data that's irrespective of the client provided commitment. This feature cannot be disabled and is part of standard operation.
 
 ## Testing
 
