@@ -219,7 +219,7 @@ func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
 	return certBytes, nil
 }
 
-func (e *MemStore) Verify(_ context.Context, _, _ []byte, _ common.VerifyOptions) error {
+func (e *MemStore) Verify(_ context.Context, _, _ []byte, _ common.VerifyArgs) error {
 	return nil
 }
 

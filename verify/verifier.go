@@ -27,7 +27,10 @@ type Config struct {
 	// If batch.RBN + RollupBlobInclusionWindow < cert.L1InclusionBlock, the batch is considered stale and verification will fail.
 	// This check is optional and will be skipped when RollupBlobInclusionWindow is set to 0.
 	RollupBlobInclusionWindow uint32
-	VerifyCerts               bool
+	// Cert verification is optional, and verifies certs retrieved from eigenDA when turned on.
+	// It is optional because it requires making calls to the blockchain, which is not necessarily always possible.
+	// For eg, some rollups are running on sepolia testnet which doesn't have an eigenlayer/eigenda contracts deployment.
+	VerifyCerts bool
 	// below fields are only required if VerifyCerts is true
 	RPCURL               string
 	SvcManagerAddr       string
@@ -53,13 +56,11 @@ func (c Config) MarshalJSON() ([]byte, error) {
 //
 // TODO: right now verification and confirmation depth are tightly coupled. we should decouple them
 type Verifier struct {
+	log log.Logger
 	// kzgVerifier is needed to commit blobs to the memstore
 	kzgVerifier *kzgverifier.Verifier
-	// Cert verification is optional, and verifies certs retrieved from eigenDA when turned on.
-	// It is optional because it requires making calls to the blockchain, which is not necessarily always possible.
-	// For eg, some rollups are running on sepolia testnet which doesn't have an eigenlayer/eigenda contracts deployment.
-	verifyCerts bool
-	cv          *CertVerifier
+	// When config.VerifyCerts is false, we use a noop verifier that does nothing
+	cv CertVerifier
 	// Allowed distance (in L1 blocks) between the eigenDA reference block number (RBN) of the batch the blob is included in,
 	// and the L1 block number at which the blob cert was included in the batcher's inbox.
 	// If batch.RBN + rollupBlobInclusionWindow < cert.L1InclusionBlock, the batch is considered stale and verification will fail.
@@ -68,15 +69,19 @@ type Verifier struct {
 	rollupBlobInclusionWindow uint32
 }
 
-func NewVerifier(cfg *Config, l log.Logger) (*Verifier, error) {
-	var cv *CertVerifier
+func NewVerifier(cfg *Config, log log.Logger) (*Verifier, error) {
+	var cv CertVerifier
 	var err error
 
 	if cfg.VerifyCerts {
-		cv, err = NewCertVerifier(cfg, l)
+		cv, err = NewCertVerifier(cfg, log)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create cert verifier: %w", err)
 		}
+	} else {
+		log.Warn("Certificate verification is disabled")
+		cv = &NoopCertVerifier{}
+
 	}
 
 	kzgVerifier, err := kzgverifier.NewVerifier(cfg.KzgConfig, false)
@@ -85,18 +90,15 @@ func NewVerifier(cfg *Config, l log.Logger) (*Verifier, error) {
 	}
 
 	return &Verifier{
+		log:                       log,
 		kzgVerifier:               kzgVerifier,
-		verifyCerts:               cfg.VerifyCerts,
 		cv:                        cv,
 		rollupBlobInclusionWindow: cfg.RollupBlobInclusionWindow,
 	}, nil
 }
 
 // verifies V0 eigenda certificate type
-func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate, opts common.VerifyOptions) error {
-	if !v.verifyCerts {
-		return nil
-	}
+func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate, args common.VerifyArgs) error {
 
 	// 1 - verify batch in the cert is confirmed onchain
 	err := v.cv.verifyBatchConfirmedOnChain(ctx, cert.Proof().GetBatchId(), cert.Proof().GetBatchMetadata())
@@ -107,10 +109,16 @@ func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate, opts commo
 	// 2 - verify that the blob cert was submitted to the rollup's batch inbox within the allowed RollupBlobInclusionWindow window.
 	// This is to prevent timing attacks where a rollup batcher could try to game the fraud proof window by including an old DA blob that is about to expire on the DA layer
 	// and is hence not retrievable.
-	if opts.RollupL1InclusionBlockNum >= 0 && v.rollupBlobInclusionWindow > 0 {
-		if opts.RollupL1InclusionBlockNum-int64(cert.BlobVerificationProof.BatchMetadata.ConfirmationBlockNumber) > int64(v.rollupBlobInclusionWindow) {
-			return fmt.Errorf("l1 inclusion block number (%d) > eigenda batch confirmation block number (%d) + blobCertInclusionWindow (%d)",
-				opts.RollupL1InclusionBlockNum, cert.BlobVerificationProof.BatchMetadata.ConfirmationBlockNumber, int64(v.rollupBlobInclusionWindow))
+	if args.RollupL1InclusionBlockNum >= 0 && v.rollupBlobInclusionWindow > 0 {
+		blockNumEigenDA := int64(cert.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber)
+		blockNumRollup := args.RollupL1InclusionBlockNum
+		// We need blockNumEigenDA < blockNumRollup < blockNumEigenDA + rollupBlobInclusionWindow
+		if !(blockNumEigenDA < blockNumRollup) {
+			return fmt.Errorf("eigenda batch reference block number (%d) needs to be < rollup inclusion block number (%d)", blockNumEigenDA, blockNumRollup)
+		}
+		if !(blockNumRollup < blockNumEigenDA+int64(v.rollupBlobInclusionWindow)) {
+			return fmt.Errorf("rollup inclusion block number (%d) needs to be < eigenda batch reference block number (%d) + rollupBlobInclusionWindow (%d)",
+				blockNumRollup, blockNumEigenDA, v.rollupBlobInclusionWindow)
 		}
 	}
 
@@ -205,7 +213,7 @@ func (v *Verifier) verifySecurityParams(blobHeader BlobHeader, batchHeader *disp
 		// but it is good practice in case the contract changes in the future
 		quorumAdversaryThreshold, err := v.getQuorumAdversaryThreshold(blobHeader.QuorumBlobParams[i].QuorumNumber, int64(batchHeader.ReferenceBlockNumber))
 		if err != nil {
-			log.Warn("failed to get quorum adversary threshold", "err", err)
+			v.log.Warn("failed to get quorum adversary threshold", "err", err)
 		}
 
 		if quorumAdversaryThreshold > 0 && blobHeader.QuorumBlobParams[i].AdversaryThresholdPercentage < quorumAdversaryThreshold {
@@ -219,9 +227,9 @@ func (v *Verifier) verifySecurityParams(blobHeader BlobHeader, batchHeader *disp
 		confirmedQuorums[blobHeader.QuorumBlobParams[i].QuorumNumber] = true
 	}
 
-	requiredQuorums, err := v.cv.manager.QuorumNumbersRequired(&bind.CallOpts{BlockNumber: big.NewInt(int64(batchHeader.ReferenceBlockNumber))})
+	requiredQuorums, err := v.cv.quorumNumbersRequired(&bind.CallOpts{BlockNumber: big.NewInt(int64(batchHeader.ReferenceBlockNumber))})
 	if err != nil {
-		log.Warn("failed to get required quorum numbers at block number", "err", err, "referenceBlockNumber", batchHeader.ReferenceBlockNumber)
+		v.log.Warn("failed to get required quorum numbers at block number", "err", err, "referenceBlockNumber", batchHeader.ReferenceBlockNumber)
 	}
 
 	// ensure that required quorums are present in the confirmed ones
@@ -237,7 +245,7 @@ func (v *Verifier) verifySecurityParams(blobHeader BlobHeader, batchHeader *disp
 // getQuorumAdversaryThreshold reads the adversarial threshold percentage for a given quorum number,
 // at a given block number. If the quorum number does not exist, it returns 0.
 func (v *Verifier) getQuorumAdversaryThreshold(quorumNum uint8, blockNumber int64) (uint8, error) {
-	percentages, err := v.cv.manager.QuorumAdversaryThresholdPercentages(&bind.CallOpts{BlockNumber: big.NewInt(blockNumber)})
+	percentages, err := v.cv.quorumAdversaryThresholdPercentages(&bind.CallOpts{BlockNumber: big.NewInt(blockNumber)})
 	if err != nil {
 		return 0, err
 	}

@@ -114,7 +114,7 @@ func (svr *Server) handleGetShared(ctx context.Context, w http.ResponseWriter, r
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return err
 	}
-	input, err := svr.sm.Get(ctx, comm, meta.Mode, common.VerifyOptions{RollupL1InclusionBlockNum: l1InclusionBlockNum})
+	input, err := svr.sm.Get(ctx, comm, meta.Mode, common.VerifyArgs{RollupL1InclusionBlockNum: l1InclusionBlockNum})
 	if err != nil {
 		err = MetaError{
 			Err:  fmt.Errorf("get request failed with commitment %v: %w", commitmentHex, err),

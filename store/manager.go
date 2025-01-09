@@ -16,7 +16,7 @@ import (
 type IManager interface {
 	// Get fetches a value from a storage backend based on the (commitment mode, type).
 	// It also validates the value retrieved and returns an error if the value is invalid.
-	Get(ctx context.Context, key []byte, cm commitments.CommitmentMode, verifyOpts common.VerifyOptions) ([]byte, error)
+	Get(ctx context.Context, key []byte, cm commitments.CommitmentMode, verifyOpts common.VerifyArgs) ([]byte, error)
 	Put(ctx context.Context, cm commitments.CommitmentMode, key, value []byte) ([]byte, error)
 }
 
@@ -43,7 +43,7 @@ func NewManager(eigenda common.GeneratedKeyStore, s3 common.PrecomputedKeyStore,
 }
 
 // Get ... fetches a value from a storage backend based on the (commitment mode, type)
-func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.CommitmentMode, verifyOpts common.VerifyOptions) ([]byte, error) {
+func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.CommitmentMode, verifyOpts common.VerifyArgs) ([]byte, error) {
 	switch cm {
 	case commitments.OptimismKeccak:
 

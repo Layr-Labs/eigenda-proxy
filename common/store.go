@@ -63,7 +63,7 @@ type Store interface {
 	BackendType() BackendType
 }
 
-type VerifyOptions struct {
+type VerifyArgs struct {
 	// L1 block number at which the rollup batch was submitted to the batcher inbox.
 	// This is optional, and should be set to -1 to mean to not verify the reference block number distance check.
 	//
@@ -81,7 +81,7 @@ type GeneratedKeyStore interface {
 	// Put inserts the given value into the key-value data store.
 	Put(ctx context.Context, value []byte) (key []byte, err error)
 	// Verify verifies the given key-value pair.
-	Verify(ctx context.Context, key []byte, value []byte, opts VerifyOptions) error
+	Verify(ctx context.Context, key []byte, value []byte, opts VerifyArgs) error
 }
 
 type PrecomputedKeyStore interface {

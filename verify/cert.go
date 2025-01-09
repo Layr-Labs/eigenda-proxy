@@ -19,9 +19,16 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-// CertVerifier verifies the DA certificate against on-chain EigenDA contracts
+type CertVerifier interface {
+	verifyBatchConfirmedOnChain(ctx context.Context, batchID uint32, batchMetadata *disperser.BatchMetadata) error
+	verifyMerkleProof(inclusionProof []byte, root []byte, index uint32, blobHeader BlobHeader) error
+	quorumNumbersRequired(opts *bind.CallOpts) ([]byte, error)
+	quorumAdversaryThresholdPercentages(opts *bind.CallOpts) ([]byte, error)
+}
+
+// CertVerification verifies the DA certificate against on-chain EigenDA contracts
 // to ensure disperser returned fields haven't been tampered with
-type CertVerifier struct {
+type CertVerification struct {
 	l                    log.Logger
 	ethConfirmationDepth uint64
 	waitForFinalization  bool
@@ -29,7 +36,9 @@ type CertVerifier struct {
 	ethClient            *ethclient.Client
 }
 
-func NewCertVerifier(cfg *Config, l log.Logger) (*CertVerifier, error) {
+var _ CertVerifier = (*CertVerification)(nil)
+
+func NewCertVerifier(cfg *Config, l log.Logger) (*CertVerification, error) {
 	log.Info("Enabling certificate verification", "confirmation_depth", cfg.EthConfirmationDepth)
 
 	client, err := ethclient.Dial(cfg.RPCURL)
@@ -43,7 +52,7 @@ func NewCertVerifier(cfg *Config, l log.Logger) (*CertVerifier, error) {
 		return nil, err
 	}
 
-	return &CertVerifier{
+	return &CertVerification{
 		l:                    l,
 		manager:              m,
 		ethConfirmationDepth: cfg.EthConfirmationDepth,
@@ -53,7 +62,7 @@ func NewCertVerifier(cfg *Config, l log.Logger) (*CertVerifier, error) {
 
 // verifyBatchConfirmedOnChain verifies that batchMetadata (typically part of a received cert)
 // matches the batch metadata hash stored on-chain
-func (cv *CertVerifier) verifyBatchConfirmedOnChain(
+func (cv *CertVerification) verifyBatchConfirmedOnChain(
 	ctx context.Context, batchID uint32, batchMetadata *disperser.BatchMetadata,
 ) error {
 	// 1. Verify batch is actually onchain at the batchMetadata's state confirmedBlockNumber.
@@ -111,7 +120,7 @@ func (cv *CertVerifier) verifyBatchConfirmedOnChain(
 }
 
 // verifies the blob batch inclusion proof against the blob root hash
-func (cv *CertVerifier) verifyMerkleProof(inclusionProof []byte, root []byte,
+func (cv *CertVerification) verifyMerkleProof(inclusionProof []byte, root []byte,
 	blobIndex uint32, blobHeader BlobHeader) error {
 	leafHash, err := HashEncodeBlobHeader(blobHeader)
 	if err != nil {
@@ -132,7 +141,7 @@ func (cv *CertVerifier) verifyMerkleProof(inclusionProof []byte, root []byte,
 }
 
 // fetches a block number provided a subtraction of a user defined conf depth from latest block
-func (cv *CertVerifier) getConfDeepBlockNumber(ctx context.Context) (*big.Int, error) {
+func (cv *CertVerification) getConfDeepBlockNumber(ctx context.Context) (*big.Int, error) {
 	if cv.waitForFinalization {
 		var header = types.Header{}
 		// We ask for the latest finalized block. The second parameter "hydrated txs" is set to false because we don't need full txs.
@@ -156,7 +165,7 @@ func (cv *CertVerifier) getConfDeepBlockNumber(ctx context.Context) (*big.Int, e
 
 // retrieveBatchMetadataHash retrieves the batch metadata hash stored on-chain at a specific blockNumber for a given batchID
 // returns an error if some problem calling the contract happens, or the hash is not found
-func (cv *CertVerifier) retrieveBatchMetadataHash(ctx context.Context, batchID uint32, blockNumber *big.Int) ([32]byte, error) {
+func (cv *CertVerification) retrieveBatchMetadataHash(ctx context.Context, batchID uint32, blockNumber *big.Int) ([32]byte, error) {
 	onchainHash, err := cv.manager.BatchIdToBatchMetadataHash(&bind.CallOpts{Context: ctx, BlockNumber: blockNumber}, batchID)
 	if err != nil {
 		return [32]byte{}, fmt.Errorf("calling EigenDAServiceManager.BatchIdToBatchMetadataHash: %w", err)
@@ -165,4 +174,30 @@ func (cv *CertVerifier) retrieveBatchMetadataHash(ctx context.Context, batchID u
 		return [32]byte{}, fmt.Errorf("BatchMetadataHash not found for BatchId %d at block %d", batchID, blockNumber.Uint64())
 	}
 	return onchainHash, nil
+}
+
+func (cv *CertVerification) quorumNumbersRequired(opts *bind.CallOpts) ([]byte, error) {
+	return cv.manager.QuorumNumbersRequired(opts)
+}
+
+func (cv *CertVerification) quorumAdversaryThresholdPercentages(opts *bind.CallOpts) ([]byte, error) {
+	return cv.manager.QuorumAdversaryThresholdPercentages(opts)
+}
+
+// NoopCertVerifier is used in place of CertVerification when certificate verification is disabled
+type NoopCertVerifier struct{}
+
+var _ CertVerifier = (*NoopCertVerifier)(nil)
+
+func (*NoopCertVerifier) verifyBatchConfirmedOnChain(ctx context.Context, batchID uint32, batchMetadata *disperser.BatchMetadata) error {
+	return nil
+}
+func (*NoopCertVerifier) verifyMerkleProof(inclusionProof []byte, root []byte, blobIndex uint32, blobHeader BlobHeader) error {
+	return nil
+}
+func (*NoopCertVerifier) quorumNumbersRequired(opts *bind.CallOpts) ([]byte, error) {
+	return nil, nil
+}
+func (*NoopCertVerifier) quorumAdversaryThresholdPercentages(opts *bind.CallOpts) ([]byte, error) {
+	return nil, nil
 }

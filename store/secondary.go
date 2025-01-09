@@ -32,7 +32,7 @@ type ISecondary interface {
 	// verify fn signature has to match that of common/store.go's GeneratedKeyStore.Verify fn.
 	MultiSourceRead(
 		ctx context.Context, commitment []byte, fallback bool,
-		verify func(context.Context, []byte, []byte, common.VerifyOptions) error, verifyOpts common.VerifyOptions,
+		verify func(context.Context, []byte, []byte, common.VerifyArgs) error, verifyOpts common.VerifyArgs,
 	) ([]byte, error)
 	WriteSubscriptionLoop(ctx context.Context)
 }
@@ -149,7 +149,7 @@ func (sm *SecondaryManager) WriteSubscriptionLoop(ctx context.Context) {
 func (sm *SecondaryManager) MultiSourceRead(
 	ctx context.Context, commitment []byte, fallback bool,
 	// verifyOpts are passed to the verification function
-	verify func(context.Context, []byte, []byte, common.VerifyOptions) error, verifyOpts common.VerifyOptions,
+	verify func(context.Context, []byte, []byte, common.VerifyArgs) error, verifyOpts common.VerifyArgs,
 ) ([]byte, error) {
 	var sources []common.PrecomputedKeyStore
 	if fallback {
