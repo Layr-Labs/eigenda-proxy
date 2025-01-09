@@ -130,27 +130,27 @@ func (v *Verifier) VerifyCommitment(certCommitment *common.G1Commitment, blob []
 		return err
 	}
 
-	expectedX := &fp.Element{}
-	expectedX.Unmarshal(certCommitment.X)
+	certCommitmentX := &fp.Element{}
+	certCommitmentX.Unmarshal(certCommitment.X)
 
 	// map coordinates to G1 and ensure they are on the curve
-	xAffine := bn254.MapToG1(*expectedX)
+	xAffine := bn254.MapToG1(*certCommitmentX)
 	if !xAffine.IsOnCurve() {
-		return fmt.Errorf("commitment x field element is not on the curve: %x", expectedX.Marshal())
+		return fmt.Errorf("commitment x field element is not on the curve: %x", certCommitmentX.Marshal())
 	}
 
-	expectedY := &fp.Element{}
-	expectedY.Unmarshal(certCommitment.Y)
+	certCommitmentY := &fp.Element{}
+	certCommitmentY.Unmarshal(certCommitment.Y)
 
-	yAffine := bn254.MapToG1(*expectedY)
+	yAffine := bn254.MapToG1(*certCommitmentY)
 	if !yAffine.IsOnCurve() {
-		return fmt.Errorf("commitment y field element is not on the curve: %x", expectedY.Marshal())
+		return fmt.Errorf("commitment y field element is not on the curve: %x", certCommitmentY.Marshal())
 	}
 
 	errMsg := ""
-	if !actualCommit.X.Equal(expectedX) || !actualCommit.Y.Equal(expectedY) {
-		errMsg += fmt.Sprintf("field elements do not match, x actual commit: %x, x expected commit: %x, ", actualCommit.X.Marshal(), expectedX.Marshal())
-		errMsg += fmt.Sprintf("y actual commit: %x, y expected commit: %x", actualCommit.Y.Marshal(), expectedY.Marshal())
+	if !actualCommit.X.Equal(certCommitmentX) || !actualCommit.Y.Equal(certCommitmentY) {
+		errMsg += fmt.Sprintf("field elements do not match, x actual commit: %x, x expected commit: %x, ", actualCommit.X.Marshal(), certCommitmentX.Marshal())
+		errMsg += fmt.Sprintf("y actual commit: %x, y expected commit: %x", actualCommit.Y.Marshal(), certCommitmentY.Marshal())
 		return fmt.Errorf("%s", errMsg)
 	}
 
