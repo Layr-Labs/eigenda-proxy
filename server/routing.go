@@ -73,9 +73,6 @@ func (svr *Server) registerRoutes(r *mux.Router) {
 	subrouterPOST.HandleFunc("", // commitment is calculated by the server using the body data
 		withLogging(withMetrics(svr.handlePostOPGenericCommitment, svr.m, commitments.OptimismGeneric), svr.log),
 	)
-	subrouterPOST.HandleFunc("/", // commitment is calculated by the server using the body data
-		withLogging(withMetrics(svr.handlePostOPGenericCommitment, svr.m, commitments.OptimismGeneric), svr.log),
-	)
 
 	r.HandleFunc("/health", withLogging(svr.handleHealth, svr.log)).Methods("GET")
 }
