@@ -60,7 +60,7 @@ type Verifier struct {
 	// kzgVerifier is needed to commit blobs to the memstore
 	kzgVerifier *kzgverifier.Verifier
 	// When config.VerifyCerts is false, we use a noop verifier that does nothing
-	cv CertVerifier
+	cv certVerifier
 	// Allowed distance (in L1 blocks) between the eigenDA reference block number (RBN) of the batch the blob is included in,
 	// and the L1 block number at which the blob cert was included in the batcher's inbox.
 	// If batch.RBN + rollupBlobInclusionWindow < cert.L1InclusionBlock, the batch is considered stale and verification will fail.
@@ -70,11 +70,11 @@ type Verifier struct {
 }
 
 func NewVerifier(cfg *Config, log log.Logger) (*Verifier, error) {
-	var cv CertVerifier
+	var cv certVerifier
 	var err error
 
 	if cfg.VerifyCerts {
-		cv, err = NewCertVerifier(cfg, log)
+		cv, err = newCertVerifier(cfg, log)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create cert verifier: %w", err)
 		}
