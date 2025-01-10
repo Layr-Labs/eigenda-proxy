@@ -151,15 +151,21 @@ func TestVerifyCertRollupBlobInclusionWindow(t *testing.T) {
 	err = verifier.VerifyCert(ctx, &cert, common.VerifyArgs{RollupL1InclusionBlockNum: -1})
 	require.NoError(t, err)
 
-	// 50 is within the window, so we expect no error to be caught
+	// 50 < RollupBlobInclusionWindow, so we expect no error to be caught
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	err = verifier.VerifyCert(ctx, &cert, common.VerifyArgs{RollupL1InclusionBlockNum: int64(blobInfo.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber) + 50})
 	require.NoError(t, err)
 
-	// 200 is outside the window, so we expect an error to be caught
+	// 200 > RollupBlobInclusionWindow, so we expect an error to be caught
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	err = verifier.VerifyCert(ctx, &cert, common.VerifyArgs{RollupL1InclusionBlockNum: int64(blobInfo.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber) + 200})
 	require.EqualError(t, err, "rollup inclusion block number (3106502) needs to be < eigenda batch reference block number (3106302) + rollupBlobInclusionWindow (100)")
+
+	// RBN-50 < RBN, so we expect an error to be caught
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err = verifier.VerifyCert(ctx, &cert, common.VerifyArgs{RollupL1InclusionBlockNum: int64(blobInfo.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber) - 50})
+	require.EqualError(t, err, "eigenda batch reference block number (3106302) needs to be < rollup inclusion block number (3106252)")
 }
