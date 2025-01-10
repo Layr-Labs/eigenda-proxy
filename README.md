@@ -22,58 +22,72 @@ Features:
 
 In order to disperse to the EigenDA network in production, or at high throughput on testnet, please register your authentication ethereum address through [this form](https://forms.gle/3QRNTYhSMacVFNcU8). Your EigenDA authentication keypair address should not be associated with any funds anywhere.
 
-## Configuration Options
-| Option                                      | Default Value                   | Environment Variable                                     | Description                                                                                                                                                                                                   |
-| ------------------------------------------- | ------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--addr`                                    | `"127.0.0.1"`                   | `$EIGENDA_PROXY_ADDR`                                    | Server listening address                                                                                                                                                                                      |
-| `--eigenda.cache-path`                      | `"resources/SRSTables/"`        | `$EIGENDA_PROXY_EIGENDA_TARGET_CACHE_PATH`               | Directory path to SRS tables for caching.                                                                                                                                                                     |
-| `--eigenda.custom-quorum-ids`               |                                 | `$EIGENDA_PROXY_EIGENDA_CUSTOM_QUORUM_IDS`               | Custom quorum IDs for writing blobs. Should not include default quorums 0 or 1.                                                                                                                               |
-| `--eigenda.disable-point-verification-mode` | `false`                         | `$EIGENDA_PROXY_EIGENDA_DISABLE_POINT_VERIFICATION_MODE` | Disable point verification mode. This mode performs IFFT on data before writing and FFT on data after reading. Disabling requires supplying the entire blob for verification against the KZG commitment.      |
-| `--eigenda.disable-tls`                     | `false`                         | `$EIGENDA_PROXY_EIGENDA_GRPC_DISABLE_TLS`                | Disable TLS for gRPC communication with the EigenDA disperser. Default is false.                                                                                                                              |
-| `--eigenda.cert-verification-disabled`      | `false`                         | `$EIGENDA_PROXY_EIGENDA_CERT_VERIFICATION_DISABLED`      | Whether to verify certificates received from EigenDA disperser.                                                                                                                                               |
-| `--eigenda.disperser-rpc`                   |                                 | `$EIGENDA_PROXY_EIGENDA_DISPERSER_RPC`                   | RPC endpoint of the EigenDA disperser.                                                                                                                                                                        |
-| `--eigenda.svc-manager-addr`                |                                 | `$EIGENDA_PROXY_EIGENDA_SERVICE_MANAGER_ADDR`            | The deployed EigenDA service manager address. The list can be found here: https://github.com/Layr-Labs/eigenlayer-middleware/?tab=readme-ov-file#current-mainnet-deployment                                   |
-| `--eigenda.eth-confirmation-depth`          | `-1`                            | `$EIGENDA_PROXY_EIGENDA_ETH_CONFIRMATION_DEPTH`          | The number of Ethereum blocks of confirmation that the DA bridging transaction must have before it is assumed by the proxy to be final. If set negative the proxy will always wait for blob finalization.     |
-| `--eigenda.eth-rpc`                         |                                 | `$EIGENDA_PROXY_EIGENDA_ETH_RPC`                         | JSON RPC node endpoint for the Ethereum network used for finalizing DA blobs. See available list here: https://docs.eigenlayer.xyz/eigenda/networks/                                                          |
-| `--eigenda.g1-path`                         | `"resources/g1.point"`          | `$EIGENDA_PROXY_EIGENDA_TARGET_KZG_G1_PATH`              | Directory path to g1.point file.                                                                                                                                                                              |
-| `--eigenda.g2-power-of-2-path`              | `"resources/g2.point.powerOf2"` | `$EIGENDA_PROXY_EIGENDA_TARGET_KZG_G2_POWER_OF_2_PATH`   | Directory path to g2.point.powerOf2 file.                                                                                                                                                                     |
-| `--eigenda.max-blob-length`                 | `"16MiB"`                       | `$EIGENDA_PROXY_EIGENDA_MAX_BLOB_LENGTH`                 | Maximum blob length to be written or read from EigenDA. Determines the number of SRS points loaded into memory for KZG commitments. Example units: '30MiB', '4Kb', '30MB'. Maximum size slightly exceeds 1GB. |
-| `--eigenda.put-blob-encoding-version`       | `0`                             | `$EIGENDA_PROXY_EIGENDA_PUT_BLOB_ENCODING_VERSION`       | Blob encoding version to use when writing blobs from the high-level interface.                                                                                                                                |
-| `--eigenda.response-timeout`                | `60s`                           | `$EIGENDA_PROXY_EIGENDA_RESPONSE_TIMEOUT`                | Total time to wait for a response from the EigenDA disperser. Default is 60 seconds.                                                                                                                          |
-| `--eigenda.signer-private-key-hex`          |                                 | `$EIGENDA_PROXY_EIGENDA_SIGNER_PRIVATE_KEY_HEX`          | Hex-encoded signer private key. This key should not be associated with an Ethereum address holding any funds.                                                                                                 |
-| `--eigenda.status-query-retry-interval`     | `5s`                            | `$EIGENDA_PROXY_EIGENDA_STATUS_QUERY_INTERVAL`           | Interval between retries when awaiting network blob finalization. Default is 5 seconds.                                                                                                                       |
-| `--eigenda.status-query-timeout`            | `30m0s`                         | `$EIGENDA_PROXY_EIGENDA_STATUS_QUERY_TIMEOUT`            | Duration to wait for a blob to finalize after being sent for dispersal. Default is 30 minutes.                                                                                                                |
-| `--log.color`                               | `false`                         | `$EIGENDA_PROXY_LOG_COLOR`                               | Color the log output if in terminal mode.                                                                                                                                                                     |
-| `--log.format`                              | `text`                          | `$EIGENDA_PROXY_LOG_FORMAT`                              | Format the log output. Supported formats: 'text', 'terminal', 'logfmt', 'json', 'json-pretty'.                                                                                                                |
-| `--log.level`                               | `INFO`                          | `$EIGENDA_PROXY_LOG_LEVEL`                               | The lowest log level that will be output.                                                                                                                                                                     |
-| `--log.pid`                                 | `false`                         | `$EIGENDA_PROXY_LOG_PID`                                 | Show pid in the log.                                                                                                                                                                                          |
-| `--memstore.enabled`                        | `false`                         | `$EIGENDA_PROXY_MEMSTORE_ENABLED`                        | Whether to use mem-store for DA logic.                                                                                                                                                                        |
-| `--memstore.expiration`                     | `25m0s`                         | `$EIGENDA_PROXY_MEMSTORE_EXPIRATION`                     | Duration that a mem-store blob/commitment pair are allowed to live.                                                                                                                                           |
-| `--memstore.put-latency`                    | `0`                             | `$EIGENDA_PROXY_MEMSTORE_PUT_LATENCY`                    | Artificial latency added for memstore backend to mimic EigenDA's dispersal latency.                                                                                                                           |
-| `--memstore.get-latency`                    | `0`                             | `$EIGENDA_PROXY_MEMSTORE_GET_LATENCY`                    | Artificial latency added for memstore backend to mimic EigenDA's retrieval latency.                                                                                                                           |
-| `--metrics.addr`                            | `"0.0.0.0"`                     | `$EIGENDA_PROXY_METRICS_ADDR`                            | Metrics listening address.                                                                                                                                                                                    |
-| `--metrics.enabled`                         | `false`                         | `$EIGENDA_PROXY_METRICS_ENABLED`                         | Enable the metrics server.                                                                                                                                                                                    |
-| `--metrics.port`                            | `7300`                          | `$EIGENDA_PROXY_METRICS_PORT`                            | Metrics listening port.                                                                                                                                                                                       |
-| `--port`                                    | `3100`                          | `$EIGENDA_PROXY_PORT`                                    | Server listening port.                                                                                                                                                                                        |
-| `--s3.credential-type`                      |                                 | `$EIGENDA_PROXY_S3_CREDENTIAL_TYPE`                      | Static or iam.                                                                                                                                                                                                |
-| `--s3.access-key-id`                        |                                 | `$EIGENDA_PROXY_S3_ACCESS_KEY_ID`                        | Access key id for S3 storage.                                                                                                                                                                                 |
-| `--s3.access-key-id`                        |                                 | `$EIGENDA_PROXY_S3_ACCESS_KEY_ID`                        | Access key id for S3 storage.                                                                                                                                                                                 |
-| `--s3.access-key-secret`                    |                                 | `$EIGENDA_PROXY_S3_ACCESS_KEY_SECRET`                    | Access key secret for S3 storage.                                                                                                                                                                             |
-| `--s3.bucket`                               |                                 | `$EIGENDA_PROXY_S3_BUCKET`                               | Bucket name for S3 storage.                                                                                                                                                                                   |
-| `--s3.path`                                 |                                 | `$EIGENDA_PROXY_S3_PATH`                                 | Bucket path for S3 storage.                                                                                                                                                                                   |
-| `--s3.endpoint`                             |                                 | `$EIGENDA_PROXY_S3_ENDPOINT`                             | Endpoint for S3 storage.                                                                                                                                                                                      |
-| `--s3.enable-tls`                           |                                 | `$EIGENDA_PROXY_S3_ENABLE_TLS`                           | Enable TLS connection to S3 endpoint.                                                                                                                                                                         |
-| `--storage.fallback-targets`                | `[]`                            | `$EIGENDA_PROXY_STORAGE_FALLBACK_TARGETS`                | Fall back backend targets. Supports S3.                                                                                                                                                                       | Backup storage locations to read from in the event of eigenda retrieval failure.                       |
-| `--storage.cache-targets`                   | `[]`                            | `$EIGENDA_PROXY_STORAGE_CACHE_TARGETS`                   | Caching targets. Supports S3.                                                                                                                                                                                 | Caches data to backend targets after dispersing to DA, retrieved from before trying read from EigenDA. |
-| `--storage.concurrent-write-threads`        | `0`                             | `$EIGENDA_PROXY_STORAGE_CONCURRENT_WRITE_THREADS`        | Number of threads spun-up for async secondary storage insertions. (<=0) denotes single threaded insertions where (>0) indicates decoupled writes.                                                             |
-| `--s3.timeout`                              | `5s`                            | `$EIGENDA_PROXY_S3_TIMEOUT`                              | timeout for S3 storage operations (e.g. get, put)                                                                                                                                                             |
-| `--redis.db`                                | `0`                             | `$EIGENDA_PROXY_REDIS_DB`                                | redis database to use after connecting to server                                                                                                                                                              |
-| `--redis.endpoint`                          | `""`                            | `$EIGENDA_PROXY_REDIS_ENDPOINT`                          | redis endpoint url                                                                                                                                                                                            |
-| `--redis.password`                          | `""`                            | `$EIGENDA_PROXY_REDIS_PASSWORD`                          | redis password                                                                                                                                                                                                |
-| `--redis.eviction`                          | `24h0m0s`                       | `$EIGENDA_PROXY_REDIS_EVICTION`                          | entry eviction/expiration time                                                                                                                                                                                |
-| `--help, -h`                                | `false`                         |                                                          | Show help.                                                                                                                                                                                                    |
-| `--version, -v`                             | `false`                         |                                                          | Print the version.                                                                                                                                                                                            |
+## Deployment Guide
 
+### Hardware Requirements
+
+The following specs are recommended for running on a single production server:
+
+* 4 GB RAM
+* 1-2 cores CPU
+
+### Deployment Steps
+
+```bash
+## Build EigenDA Proxy
+$ make
+# env GO111MODULE=on GOOS= GOARCH= go build -v -ldflags "-X main.GitCommit=4b7b35bc3770ed5ca809b7ddb8a825c470a00fb4 -X main.GitDate=1719407123 -X main.Version=v0.0.0" -o ./bin/eigenda-proxy ./cmd/server
+# github.com/Layr-Labs/eigenda-proxy/server
+# github.com/Layr-Labs/eigenda-proxy/cmd/server
+
+## Setup new keypair for EigenDA authentication
+$ cast wallet new -j > keypair.json
+
+## Extract keypair ETH address
+$ jq -r '.[0].address' keypair.json
+# 0x859F0F6D095E18B732FAdc8CD16Ae144F24e2F0D
+
+## If running against mainnet, register the keypair ETH address and wait for approval: https://forms.gle/niMzQqj1JEzqHEny9
+
+## Extract keypair private key and remove 0x prefix
+PRIVATE_KEY=$(jq -r '.[0].private_key' keypair.json | tail -c +3)
+
+## Run EigenDA Proxy
+$ ./bin/eigenda-proxy \
+    --addr 127.0.0.1 \
+    --port 3100 \
+    --eigenda.disperser-rpc disperser-holesky.eigenda.xyz:443 \
+    --eigenda.signer-private-key-hex $PRIVATE_KEY \
+    --eigenda.eth-rpc https://ethereum-holesky-rpc.publicnode.com \
+    --eigenda.svc-manager-addr 0xD4A7E1Bd8015057293f0D0A557088c286942e84b
+# 2024/06/26 09:41:04 maxprocs: Leaving GOMAXPROCS=10: CPU quota undefined
+# INFO [06-26|09:41:04.881] Initializing EigenDA proxy server...     role=eigenda_proxy
+# INFO [06-26|09:41:04.884]     Reading G1 points (2164832 bytes) takes 2.169417ms role=eigenda_proxy
+# INFO [06-26|09:41:04.961]     Parsing takes 76.634042ms            role=eigenda_proxy
+# numthread 10
+# WARN [06-26|09:41:04.961] Verification disabled                    role=eigenda_proxy
+# INFO [06-26|09:41:04.961] Using eigenda backend                    role=eigenda_proxy
+# INFO [06-26|09:41:04.962] Starting DA server                       role=eigenda_proxy endpoint=127.0.0.1:5050
+# INFO [06-26|09:41:04.973] Started DA Server                        role=eigenda_proxy
+...
+```
+
+### Env File
+
+We also provide network-specific example env configuration files in `.env.example.holesky` and `.env.example.mainnet` as a place to get started:
+
+1. Copy example env file: `cp .env.example.holesky .env`
+2. Update env file, setting `EIGENDA_PROXY_SIGNER_PRIVATE_KEY_HEX`. On mainnet you will also need to set `EIGENDA_PROXY_ETH_RPC`.
+3. Pass into binary: `ENV_PATH=.env ./bin/eigenda-proxy --addr 127.0.0.1 --port 3100`
+
+### Running via Docker
+
+Container can be built via running `make docker-build`. We also build and publish containers on every release to [ghcr.io/layr-labs/eigenda-proxy](https://github.com/Layr-Labs/eigenda-proxy/pkgs/container/eigenda-proxy).
+
+
+## Features and Configuration Options
+
+Below is a list of different features offered by the eigenda-proxy, some of which are behind feature flags. For a full extensive list of available flags, see the [Flags](#flags) section.
 
 ### Certificate verification
 
@@ -111,66 +125,6 @@ An optional storage caching CLI flag `--routing.cache-targets` can be leveraged 
 In the event that the EigenDA disperser or network is down, the proxy will return a 503 (Service Unavailable) status code as a response to POST requests, which rollup batchers can use to failover and start submitting blobs to the L1 chain instead. For more info, see our failover designs for [op-stack](https://github.com/ethereum-optimism/specs/issues/434) and for [arbitrum](https://hackmd.io/@epociask/SJUyIZlZkx).
 
 This behavior is turned on by default, but configurable via the `--eigenda.confirmation-timeout` flag (set to 15 mins by default currently). If a blob is not confirmed within this time, the proxy will return a 503 status code. This should be set long enough to accomodate for the disperser's batching interval (typically 10 minutes), signature gathering, and onchain submission.
-
-## Deployment Guide
-
-### Hardware Requirements
-
-The following specs are recommended for running on a single production server:
-
-* 4 GB RAM
-* 1-2 cores CPU
-
-### Deployment Steps
-
-```bash
-## Build EigenDA Proxy
-$ make
-# env GO111MODULE=on GOOS= GOARCH= go build -v -ldflags "-X main.GitCommit=4b7b35bc3770ed5ca809b7ddb8a825c470a00fb4 -X main.GitDate=1719407123 -X main.Version=v0.0.0" -o ./bin/eigenda-proxy ./cmd/server
-# github.com/Layr-Labs/eigenda-proxy/server
-# github.com/Layr-Labs/eigenda-proxy/cmd/server
-
-## Setup new keypair for EigenDA authentication
-$ cast wallet new -j > keypair.json
-
-## Extract keypair ETH address
-$ jq -r '.[0].address' keypair.json
-# 0x859F0F6D095E18B732FAdc8CD16Ae144F24e2F0D
-
-## If running against mainnet, register the keypair ETH address and wait for approval: https://forms.gle/niMzQqj1JEzqHEny9
-
-## Extract keypair private key and remove 0x prefix
-PRIVATE_KEY=$(jq -r '.[0].private_key' keypair.json | tail -c +3)
-
-## Run EigenDA Proxy
-$ ./bin/eigenda-proxy \
-    --addr 127.0.0.1 \
-    --port 3100 \
-    --eigenda-disperser-rpc disperser-holesky.eigenda.xyz:443 \
-    --eigenda-signer-private-key-hex $PRIVATE_KEY \
-    --eigenda-eth-rpc https://ethereum-holesky-rpc.publicnode.com \
-    --eigenda-svc-manager-addr 0xD4A7E1Bd8015057293f0D0A557088c286942e84b
-# 2024/06/26 09:41:04 maxprocs: Leaving GOMAXPROCS=10: CPU quota undefined
-# INFO [06-26|09:41:04.881] Initializing EigenDA proxy server...     role=eigenda_proxy
-# INFO [06-26|09:41:04.884]     Reading G1 points (2164832 bytes) takes 2.169417ms role=eigenda_proxy
-# INFO [06-26|09:41:04.961]     Parsing takes 76.634042ms            role=eigenda_proxy
-# numthread 10
-# WARN [06-26|09:41:04.961] Verification disabled                    role=eigenda_proxy
-# INFO [06-26|09:41:04.961] Using eigenda backend                    role=eigenda_proxy
-# INFO [06-26|09:41:04.962] Starting DA server                       role=eigenda_proxy endpoint=127.0.0.1:5050
-# INFO [06-26|09:41:04.973] Started DA Server                        role=eigenda_proxy
-...
-```
-
-### Env File
-
-We also provide network-specific example env configuration files in `.env.example.holesky` and `.env.example.mainnet` as a place to get started:
-
-1. Copy example env file: `cp .env.example.holesky .env`
-2. Update env file, setting `EIGENDA_PROXY_SIGNER_PRIVATE_KEY_HEX`. On mainnet you will also need to set `EIGENDA_PROXY_ETH_RPC`.
-3. Pass into binary: `ENV_PATH=.env ./bin/eigenda-proxy --addr 127.0.0.1 --port 3100`
-
-## Running via Docker
 
 Container can be built via running `make docker-build`.
 
@@ -232,6 +186,62 @@ To the see list of available metrics, run `./bin/eigenda-proxy doc metrics`
 
 To quickly set up monitoring dashboard, add eigenda-proxy metrics endpoint to a reachable prometheus server config as a scrape target, add prometheus datasource to Grafana to, and import the existing [Grafana dashboard JSON file](./grafana_dashboard.json)
 
+## Flags
+
+> Note: this list is hand-crafted and is very likely to be out of date. 
+> 
+> To get a list of exact flags available with a given version, run `eigenda-proxy --help`
+
+| Flag                                        | Default Value                   | Environment Variable                                     | Description                                                                                                                                                                                                   |
+| ------------------------------------------- | ------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--addr`                                    | `"127.0.0.1"`                   | `$EIGENDA_PROXY_ADDR`                                    | Server listening address                                                                                                                                                                                      |
+| `--eigenda.cache-path`                      | `"resources/SRSTables/"`        | `$EIGENDA_PROXY_EIGENDA_TARGET_CACHE_PATH`               | Directory path to SRS tables for caching.                                                                                                                                                                     |
+| `--eigenda.custom-quorum-ids`               |                                 | `$EIGENDA_PROXY_EIGENDA_CUSTOM_QUORUM_IDS`               | Custom quorum IDs for writing blobs. Should not include default quorums 0 or 1.                                                                                                                               |
+| `--eigenda.disable-point-verification-mode` | `false`                         | `$EIGENDA_PROXY_EIGENDA_DISABLE_POINT_VERIFICATION_MODE` | Disable point verification mode. This mode performs IFFT on data before writing and FFT on data after reading. Disabling requires supplying the entire blob for verification against the KZG commitment.      |
+| `--eigenda.disable-tls`                     | `false`                         | `$EIGENDA_PROXY_EIGENDA_GRPC_DISABLE_TLS`                | Disable TLS for gRPC communication with the EigenDA disperser. Default is false.                                                                                                                              |
+| `--eigenda.cert-verification-disabled`      | `false`                         | `$EIGENDA_PROXY_EIGENDA_CERT_VERIFICATION_DISABLED`      | Whether to verify certificates received from EigenDA disperser.                                                                                                                                               |
+| `--eigenda.disperser-rpc`                   |                                 | `$EIGENDA_PROXY_EIGENDA_DISPERSER_RPC`                   | RPC endpoint of the EigenDA disperser.                                                                                                                                                                        |
+| `--eigenda.svc-manager-addr`                |                                 | `$EIGENDA_PROXY_EIGENDA_SERVICE_MANAGER_ADDR`            | The deployed EigenDA service manager address. The list can be found here: https://github.com/Layr-Labs/eigenlayer-middleware/?tab=readme-ov-file#current-mainnet-deployment                                   |
+| `--eigenda.eth-confirmation-depth`          | `-1`                            | `$EIGENDA_PROXY_EIGENDA_ETH_CONFIRMATION_DEPTH`          | The number of Ethereum blocks of confirmation that the DA bridging transaction must have before it is assumed by the proxy to be final. If set negative the proxy will always wait for blob finalization.     |
+| `--eigenda.eth-rpc`                         |                                 | `$EIGENDA_PROXY_EIGENDA_ETH_RPC`                         | JSON RPC node endpoint for the Ethereum network used for finalizing DA blobs. See available list here: https://docs.eigenlayer.xyz/eigenda/networks/                                                          |
+| `--eigenda.g1-path`                         | `"resources/g1.point"`          | `$EIGENDA_PROXY_EIGENDA_TARGET_KZG_G1_PATH`              | Directory path to g1.point file.                                                                                                                                                                              |
+| `--eigenda.g2-power-of-2-path`              | `"resources/g2.point.powerOf2"` | `$EIGENDA_PROXY_EIGENDA_TARGET_KZG_G2_POWER_OF_2_PATH`   | Directory path to g2.point.powerOf2 file.                                                                                                                                                                     |
+| `--eigenda.max-blob-length`                 | `"16MiB"`                       | `$EIGENDA_PROXY_EIGENDA_MAX_BLOB_LENGTH`                 | Maximum blob length to be written or read from EigenDA. Determines the number of SRS points loaded into memory for KZG commitments. Example units: '30MiB', '4Kb', '30MB'. Maximum size slightly exceeds 1GB. |
+| `--eigenda.put-blob-encoding-version`       | `0`                             | `$EIGENDA_PROXY_EIGENDA_PUT_BLOB_ENCODING_VERSION`       | Blob encoding version to use when writing blobs from the high-level interface.                                                                                                                                |
+| `--eigenda.response-timeout`                | `60s`                           | `$EIGENDA_PROXY_EIGENDA_RESPONSE_TIMEOUT`                | Total time to wait for a response from the EigenDA disperser. Default is 60 seconds.                                                                                                                          |
+| `--eigenda.signer-private-key-hex`          |                                 | `$EIGENDA_PROXY_EIGENDA_SIGNER_PRIVATE_KEY_HEX`          | Hex-encoded signer private key. This key should not be associated with an Ethereum address holding any funds.                                                                                                 |
+| `--eigenda.status-query-retry-interval`     | `5s`                            | `$EIGENDA_PROXY_EIGENDA_STATUS_QUERY_INTERVAL`           | Interval between retries when awaiting network blob finalization. Default is 5 seconds.                                                                                                                       |
+| `--eigenda.status-query-timeout`            | `30m0s`                         | `$EIGENDA_PROXY_EIGENDA_STATUS_QUERY_TIMEOUT`            | Duration to wait for a blob to finalize after being sent for dispersal. Default is 30 minutes.                                                                                                                |
+| `--log.color`                               | `false`                         | `$EIGENDA_PROXY_LOG_COLOR`                               | Color the log output if in terminal mode.                                                                                                                                                                     |
+| `--log.format`                              | `text`                          | `$EIGENDA_PROXY_LOG_FORMAT`                              | Format the log output. Supported formats: 'text', 'terminal', 'logfmt', 'json', 'json-pretty'.                                                                                                                |
+| `--log.level`                               | `INFO`                          | `$EIGENDA_PROXY_LOG_LEVEL`                               | The lowest log level that will be output.                                                                                                                                                                     |
+| `--log.pid`                                 | `false`                         | `$EIGENDA_PROXY_LOG_PID`                                 | Show pid in the log.                                                                                                                                                                                          |
+| `--memstore.enabled`                        | `false`                         | `$EIGENDA_PROXY_MEMSTORE_ENABLED`                        | Whether to use mem-store for DA logic.                                                                                                                                                                        |
+| `--memstore.expiration`                     | `25m0s`                         | `$EIGENDA_PROXY_MEMSTORE_EXPIRATION`                     | Duration that a mem-store blob/commitment pair are allowed to live.                                                                                                                                           |
+| `--memstore.put-latency`                    | `0`                             | `$EIGENDA_PROXY_MEMSTORE_PUT_LATENCY`                    | Artificial latency added for memstore backend to mimic EigenDA's dispersal latency.                                                                                                                           |
+| `--memstore.get-latency`                    | `0`                             | `$EIGENDA_PROXY_MEMSTORE_GET_LATENCY`                    | Artificial latency added for memstore backend to mimic EigenDA's retrieval latency.                                                                                                                           |
+| `--metrics.addr`                            | `"0.0.0.0"`                     | `$EIGENDA_PROXY_METRICS_ADDR`                            | Metrics listening address.                                                                                                                                                                                    |
+| `--metrics.enabled`                         | `false`                         | `$EIGENDA_PROXY_METRICS_ENABLED`                         | Enable the metrics server.                                                                                                                                                                                    |
+| `--metrics.port`                            | `7300`                          | `$EIGENDA_PROXY_METRICS_PORT`                            | Metrics listening port.                                                                                                                                                                                       |
+| `--port`                                    | `3100`                          | `$EIGENDA_PROXY_PORT`                                    | Server listening port.                                                                                                                                                                                        |
+| `--s3.credential-type`                      |                                 | `$EIGENDA_PROXY_S3_CREDENTIAL_TYPE`                      | Static or iam.                                                                                                                                                                                                |
+| `--s3.access-key-id`                        |                                 | `$EIGENDA_PROXY_S3_ACCESS_KEY_ID`                        | Access key id for S3 storage.                                                                                                                                                                                 |
+| `--s3.access-key-id`                        |                                 | `$EIGENDA_PROXY_S3_ACCESS_KEY_ID`                        | Access key id for S3 storage.                                                                                                                                                                                 |
+| `--s3.access-key-secret`                    |                                 | `$EIGENDA_PROXY_S3_ACCESS_KEY_SECRET`                    | Access key secret for S3 storage.                                                                                                                                                                             |
+| `--s3.bucket`                               |                                 | `$EIGENDA_PROXY_S3_BUCKET`                               | Bucket name for S3 storage.                                                                                                                                                                                   |
+| `--s3.path`                                 |                                 | `$EIGENDA_PROXY_S3_PATH`                                 | Bucket path for S3 storage.                                                                                                                                                                                   |
+| `--s3.endpoint`                             |                                 | `$EIGENDA_PROXY_S3_ENDPOINT`                             | Endpoint for S3 storage.                                                                                                                                                                                      |
+| `--s3.enable-tls`                           |                                 | `$EIGENDA_PROXY_S3_ENABLE_TLS`                           | Enable TLS connection to S3 endpoint.                                                                                                                                                                         |
+| `--storage.fallback-targets`                | `[]`                            | `$EIGENDA_PROXY_STORAGE_FALLBACK_TARGETS`                | Fall back backend targets. Supports S3.                                                                                                                                                                       | Backup storage locations to read from in the event of eigenda retrieval failure.                       |
+| `--storage.cache-targets`                   | `[]`                            | `$EIGENDA_PROXY_STORAGE_CACHE_TARGETS`                   | Caching targets. Supports S3.                                                                                                                                                                                 | Caches data to backend targets after dispersing to DA, retrieved from before trying read from EigenDA. |
+| `--storage.concurrent-write-threads`        | `0`                             | `$EIGENDA_PROXY_STORAGE_CONCURRENT_WRITE_THREADS`        | Number of threads spun-up for async secondary storage insertions. (<=0) denotes single threaded insertions where (>0) indicates decoupled writes.                                                             |
+| `--s3.timeout`                              | `5s`                            | `$EIGENDA_PROXY_S3_TIMEOUT`                              | timeout for S3 storage operations (e.g. get, put)                                                                                                                                                             |
+| `--redis.db`                                | `0`                             | `$EIGENDA_PROXY_REDIS_DB`                                | redis database to use after connecting to server                                                                                                                                                              |
+| `--redis.endpoint`                          | `""`                            | `$EIGENDA_PROXY_REDIS_ENDPOINT`                          | redis endpoint url                                                                                                                                                                                            |
+| `--redis.password`                          | `""`                            | `$EIGENDA_PROXY_REDIS_PASSWORD`                          | redis password                                                                                                                                                                                                |
+| `--redis.eviction`                          | `24h0m0s`                       | `$EIGENDA_PROXY_REDIS_EVICTION`                          | entry eviction/expiration time                                                                                                                                                                                |
+| `--help, -h`                                | `false`                         |                                                          | Show help.                                                                                                                                                                                                    |
+| `--version, -v`                             | `false`                         |                                                          | Print the version.                                                                                                                                                                                            |
 
 ## Resources
 
