@@ -111,6 +111,7 @@ func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate, args commo
 		batchRBN := int64(cert.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber)
 		rollupInclusionBlock := args.RollupL1InclusionBlockNum
 		// We need batchRBN < rollupInclusionBlock <= batch.RBN + rollupBlobInclusionWindow
+		// TODO: should we be using <= <= instead?
 		if !(batchRBN < rollupInclusionBlock) {
 			return fmt.Errorf("eigenda batch reference block number (%d) needs to be < rollup inclusion block number (%d)", batchRBN, rollupInclusionBlock)
 		}
