@@ -126,13 +126,28 @@ In the event that the EigenDA disperser or network is down, the proxy will retur
 
 This behavior is turned on by default, but configurable via the `--eigenda.confirmation-timeout` flag (set to 15 mins by default currently). If a blob is not confirmed within this time, the proxy will return a 503 status code. This should be set long enough to accomodate for the disperser's batching interval (typically 10 minutes), signature gathering, and onchain submission.
 
-Container can be built via running `make docker-build`.
+## Blob Lifecycle
 
-## Commitment Schemas
+TODO: add uml diagram showing rollup (sequencer/validators) -> proxy -> eigenda interactions
+
+### Posting Blobs
+
+![Posting Blobs](./resources/payload-blob-poly-lifecycle.png)
+
+After the blob certificate is obtained from EigenDA, it is encoded using the requested [commitment schema](#commitment-schemas) and sent back to the rollup sequencer. The sequencer then submits the commitment
+
+### Retrieving Blobs
+
+### Commitment Schemas
+
+> Warning: the name `commitment` is unfortunate here, as it is overloaded to mean both KZG commitment and (we follow the op spec here) [the thing that gets submitted to the batcher inbox](https://specs.optimism.io/experimental/alt-da.html#input-commitment-submission). This section describes the latter, which in the case of EigenDA encompasses the KZG commitment, but contains many other things.
+
+TODO: include Austin's diagram here
+
 Currently, there are two commitment modes supported with unique encoding schemas for each. The `version byte` is shared for all modes and denotes which version of the EigenDA certificate is being used/requested. The following versions are currently supported:
 * `0x0`: V0 certificate type (i.e, dispersal blob info struct with verification against service manager)
 
-### Optimism Commitment Mode
+#### Optimism Commitment Mode
 For `alt-da` clients running on Optimism, the following commitment schema is supported:
 
 ```
@@ -146,7 +161,7 @@ Both `keccak256` (i.e, S3 storage using hash of pre-image for commitment value) 
 
 OP Stack itself only has a conception of the first byte (`commit type`) and does no semantical interpretation of any subsequent bytes within the encoding. The `da layer type` byte for EigenDA is always `0x00`. However it is currently unused by OP Stack with name space values still being actively [discussed](https://github.com/ethereum-optimism/specs/discussions/135#discussioncomment-9271282).
 
-### Standard Commitment Mode
+#### Standard Commitment Mode
 For standard clients (i.e, `client/client.go`) communicating with proxy (e.g, arbitrum nitro), the following commitment schema is supported:
 
 ```
