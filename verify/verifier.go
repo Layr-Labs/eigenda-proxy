@@ -63,7 +63,7 @@ type Verifier struct {
 	cv certVerifier
 	// Allowed distance (in L1 blocks) between the eigenDA reference block number (RBN) of the batch the blob is included in,
 	// and the L1 block number at which the blob cert was included in the batcher's inbox.
-	// If batch.RBN + rollupBlobInclusionWindow < cert.L1InclusionBlock, the batch is considered stale and verification will fail.
+	// Invariant to maintain: batch.RBN < rollupBlobInclusionBlock <= batch.RBN + rollupBlobInclusionWindow
 	// This check is optional and will be skipped when rollupBlobInclusionWindow is set to 0.
 	// Note: if there are more rollup related properties that we need to check in the future, then maybe create a RollupVerifier struct
 	rollupBlobInclusionWindow uint32
@@ -108,15 +108,15 @@ func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate, args commo
 	// This is to prevent timing attacks where a rollup batcher could try to game the fraud proof window by including an old DA blob that is about to expire on the DA layer
 	// and is hence not retrievable.
 	if args.RollupL1InclusionBlockNum >= 0 && v.rollupBlobInclusionWindow > 0 {
-		blockNumEigenDA := int64(cert.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber)
-		blockNumRollup := args.RollupL1InclusionBlockNum
-		// We need blockNumEigenDA < blockNumRollup < blockNumEigenDA + rollupBlobInclusionWindow
-		if !(blockNumEigenDA < blockNumRollup) {
-			return fmt.Errorf("eigenda batch reference block number (%d) needs to be < rollup inclusion block number (%d)", blockNumEigenDA, blockNumRollup)
+		batchRBN := int64(cert.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber)
+		rollupInclusionBlock := args.RollupL1InclusionBlockNum
+		// We need batchRBN < rollupInclusionBlock <= batch.RBN + rollupBlobInclusionWindow
+		if !(batchRBN < rollupInclusionBlock) {
+			return fmt.Errorf("eigenda batch reference block number (%d) needs to be < rollup inclusion block number (%d)", batchRBN, rollupInclusionBlock)
 		}
-		if !(blockNumRollup < blockNumEigenDA+int64(v.rollupBlobInclusionWindow)) {
-			return fmt.Errorf("rollup inclusion block number (%d) needs to be < eigenda batch reference block number (%d) + rollupBlobInclusionWindow (%d)",
-				blockNumRollup, blockNumEigenDA, v.rollupBlobInclusionWindow)
+		if !(rollupInclusionBlock <= batchRBN+int64(v.rollupBlobInclusionWindow)) {
+			return fmt.Errorf("rollup inclusion block number (%d) needs to be <= eigenda batch reference block number (%d) + rollupBlobInclusionWindow (%d)",
+				rollupInclusionBlock, batchRBN, v.rollupBlobInclusionWindow)
 		}
 	}
 
