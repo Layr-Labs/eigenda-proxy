@@ -22,7 +22,11 @@ import (
 // CertVerifier verifies the DA certificate against on-chain EigenDA contracts
 // to ensure disperser returned fields haven't been tampered with
 type CertVerifier struct {
-	l                    log.Logger
+	l log.Logger
+	// ethConfirmationDepth is using to verify that a blob's batch has been bridged to the EigenDAServiceManager contract at least
+	// this many blocks in the past. To do so we make an eth_call to the contract at the current block_number - ethConfirmationDepth.
+	// Hence in order to not require an archive node, this value should be kept low. We force it to be < 64.
+	// waitForFinalization should be used instead of ethConfirmationDepth if the user wants to wait for finality (typically 64 blocks in happy case).
 	ethConfirmationDepth uint64
 	waitForFinalization  bool
 	manager              *binding.ContractEigenDAServiceManagerCaller
@@ -30,6 +34,10 @@ type CertVerifier struct {
 }
 
 func NewCertVerifier(cfg *Config, l log.Logger) (*CertVerifier, error) {
+	if cfg.EthConfirmationDepth >= 64 {
+		// We keep this low (<128) to avoid requiring an archive node.
+		return nil, fmt.Errorf("confirmation depth must be less than 64. Consier using cfg.WaitForFinalization=true instead.")
+	}
 	log.Info("Enabling certificate verification", "confirmation_depth", cfg.EthConfirmationDepth)
 
 	client, err := ethclient.Dial(cfg.RPCURL)
@@ -155,7 +163,10 @@ func (cv *CertVerifier) getConfDeepBlockNumber(ctx context.Context) (*big.Int, e
 }
 
 // retrieveBatchMetadataHash retrieves the batch metadata hash stored on-chain at a specific blockNumber for a given batchID
-// returns an error if some problem calling the contract happens, or the hash is not found
+// returns an error if some problem calling the contract happens, or the hash is not found.
+// We make an eth_call to the EigenDAServiceManager at the given blockNumber to retrieve the hash.
+// Therefore, make sure that blockNumber is <128 blocks behind the latest block, to avoid requiring an archive node.
+// This is currently enforced by having EthConfirmationDepth be <64.
 func (cv *CertVerifier) retrieveBatchMetadataHash(ctx context.Context, batchID uint32, blockNumber *big.Int) ([32]byte, error) {
 	onchainHash, err := cv.manager.BatchIdToBatchMetadataHash(&bind.CallOpts{Context: ctx, BlockNumber: blockNumber}, batchID)
 	if err != nil {

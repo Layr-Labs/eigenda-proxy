@@ -2,7 +2,6 @@ package eigendaflags
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 
@@ -118,6 +117,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Category: category,
 		},
 		&cli.BoolFlag{
+			// This flag is DEPRECATED. Use ConfirmationDepthFlagName, which accept "finalization" or a number <64.
 			Name:     WaitForFinalizationFlagName,
 			Usage:    "Wait for blob finalization before returning from PutBlob.",
 			EnvVars:  []string{withEnvPrefix(envPrefix, "WAIT_FOR_FINALIZATION")},
@@ -210,7 +210,12 @@ func validateConfirmationFlag(val string) error {
 	}
 
 	if depth >= 64 {
-		log.Printf("Warning: confirmation depth set to %d, which is > 2 epochs (64). Consider using 'finalized' instead.\n", depth)
+		// We keep this low (<128) to avoid requiring an archive node (see how this is used in CertVerifier).
+		// Note: assuming here that no sane person would ever need to set this to a number to something >64.
+		// But perhaps someone testing crazy reorg scenarios where finalization takes >2 epochs might want to set this to a higher number...?
+		// Let's deal with that case if and when it comes up (ideally never). Do keep in mind if you ever change this
+		// that it might affect a LOT of validators on your rollup who would now need an archival node.
+		panic(fmt.Sprintf("Warning: confirmation depth set to %d, which is > 2 epochs (64). Use 'finalized' instead.\n", depth))
 	}
 
 	return nil

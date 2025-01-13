@@ -22,7 +22,7 @@ import (
 type Config struct {
 	KzgConfig   *kzg.KzgConfig
 	VerifyCerts bool
-	// below 3 fields are only required if VerifyCerts is true
+	// below fields are only required if VerifyCerts is true
 	RPCURL               string
 	SvcManagerAddr       string
 	EthConfirmationDepth uint64
