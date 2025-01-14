@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math"
 	"math/big"
 	"time"
 
@@ -31,6 +32,11 @@ type CertVerifier struct {
 	waitForFinalization  bool
 	manager              *binding.ContractEigenDAServiceManagerCaller
 	ethClient            *ethclient.Client
+	// The two fields below are fetched from the EigenDAServiceManager contract in the constructor.
+	// They are used to verify the quorums in the received certificates.
+	// See getQuorumParametersAtLatestBlock for more details.
+	quorumsRequired           []uint8
+	quorumAdversaryThresholds map[uint8]uint8
 }
 
 func NewCertVerifier(cfg *Config, l log.Logger) (*CertVerifier, error) {
@@ -51,11 +57,18 @@ func NewCertVerifier(cfg *Config, l log.Logger) (*CertVerifier, error) {
 		return nil, err
 	}
 
+	quorumsRequired, quorumAdversaryThresholds, err := getQuorumParametersAtLatestBlock(m)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch quorum parameters from EigenDAServiceManager: %w", err)
+	}
+
 	return &CertVerifier{
-		l:                    l,
-		manager:              m,
-		ethConfirmationDepth: cfg.EthConfirmationDepth,
-		ethClient:            client,
+		l:                         l,
+		manager:                   m,
+		ethConfirmationDepth:      cfg.EthConfirmationDepth,
+		ethClient:                 client,
+		quorumsRequired:           quorumsRequired,
+		quorumAdversaryThresholds: quorumAdversaryThresholds,
 	}, nil
 }
 
@@ -176,4 +189,48 @@ func (cv *CertVerifier) retrieveBatchMetadataHash(ctx context.Context, batchID u
 		return [32]byte{}, fmt.Errorf("BatchMetadataHash not found for BatchId %d at block %d", batchID, blockNumber.Uint64())
 	}
 	return onchainHash, nil
+}
+
+// getQuorumParametersAtLatestBlock fetches the required quorums and quorum adversary thresholds
+// from the EigenDAServiceManager contract at the latest block.
+// We then cache these parameters and use them in the Verifier to verify the certificates.
+//
+// Note: this strategy (fetching once and caching) only works because these parameters are immutable.
+// They might be different in different environments (for eg on a devnet or testnet), but they are fixed on a given network.
+// We used to allow these parameters to change (via a setter function on the contract), but that then forced us here in the proxy
+// to query for these parameters on every request, at the batch's reference block number (RBN).
+// This in turn required rollup validators running this proxy to have an archive node, in case the RBN was >128 blocks in the past,
+// which was not ideal. So we decided to make these parameters immutable, and cache them here.
+func getQuorumParametersAtLatestBlock(
+	manager *binding.ContractEigenDAServiceManagerCaller,
+) ([]uint8, map[uint8]uint8, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	requiredQuorums, err := manager.QuorumNumbersRequired(&bind.CallOpts{Context: ctx})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to fetch QuorumNumbersRequired from EigenDAServiceManager: %w", err)
+	}
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	thresholds, err := manager.QuorumAdversaryThresholdPercentages(&bind.CallOpts{Context: ctx})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to fetch QuorumAdversaryThresholdPercentages from EigenDAServiceManager: %w", err)
+	}
+	var quorumAdversaryThresholds = make(map[uint8]uint8)
+	for quorumNum, threshold := range thresholds {
+		if quorumNum > math.MaxInt8 {
+			return nil, nil, fmt.Errorf("quorum number %d is too large to fit in int8", quorumNum)
+		}
+		if quorumNum < 0 {
+			return nil, nil, fmt.Errorf("quorum number %d cannot be negative", quorumNum)
+		}
+		quorumAdversaryThresholds[uint8(quorumNum)] = threshold
+	}
+	// Sanity check: ensure that the required quorums are a subset of the quorums for which we have adversary thresholds
+	for _, quorum := range requiredQuorums {
+		if _, ok := quorumAdversaryThresholds[quorum]; !ok {
+			return nil, nil, fmt.Errorf("required quorum %d does not have an adversary threshold. Was the EigenDAServiceManager properly deployed?", quorum)
+		}
+	}
+	return requiredQuorums, quorumAdversaryThresholds, nil
 }
