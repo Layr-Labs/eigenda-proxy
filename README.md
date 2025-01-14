@@ -121,6 +121,9 @@ The following specs are recommended for running on a single production server:
 * 4 GB RAM
 * 1-2 cores CPU
 
+### Ethereum Node Requirements
+The cert verification logic inside proxy used to require an archive node to fetch quorum information at reference block numbers in the past. We have removed this requirement by making the quorum parameters immutable in the EigenDAServiceManager contract. This means that a normal Ethereum node can now be used to run the proxy. See https://github.com/Layr-Labs/eigenda-proxy/issues/230 for more details.
+
 ### Deployment Steps
 
 ```bash
