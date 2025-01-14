@@ -42,7 +42,7 @@ type CertVerifier struct {
 func NewCertVerifier(cfg *Config, l log.Logger) (*CertVerifier, error) {
 	if cfg.EthConfirmationDepth >= 64 {
 		// We keep this low (<128) to avoid requiring an archive node.
-		return nil, fmt.Errorf("confirmation depth must be less than 64. Consier using cfg.WaitForFinalization=true instead.")
+		return nil, fmt.Errorf("confirmation depth must be less than 64; consider using cfg.WaitForFinalization=true instead")
 	}
 	log.Info("Enabling certificate verification", "confirmation_depth", cfg.EthConfirmationDepth)
 
