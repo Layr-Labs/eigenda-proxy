@@ -10,7 +10,7 @@ Audit reports are published in the `docs/audits` folder: https://github.com/Layr
 
 | Date | Report Link |
 | ------- | ----------- |
-| 202501 | [pdf](https://github.com/Layr-Labs/eigenda/blob/main/docs/audits/Sigma_Prime_EigenDA_Proxy_Security_Assessment_Report.pdf) |
+| 202501 | [pdf](https://github.com/Layr-Labs/eigenda-proxy/blob/main/docs/audits/Sigma_Prime_EigenDA_Proxy_Security_Assessment_Report.pdf) |
 
 ## Reporting a Vulnerability
 
