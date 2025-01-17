@@ -1,5 +1,5 @@
 [![Compiles](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/build.yml/badge.svg)](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/build.yml)
-![Unit Tests](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/unit-tests.yml/badge.svg)
+[![Unit Tests](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/unit-tests.yml)
 [![Linter](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/lint.yml/badge.svg)](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/lint.yml)
 [![Integration Tests](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/holesky-test.yml/badge.svg)](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/holesky-test.yml)
 
