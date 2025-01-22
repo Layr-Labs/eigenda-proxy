@@ -128,52 +128,50 @@ This behavior is turned on by default, but configurable via the `--eigenda.confi
 
 ## Blob Lifecycle
 
-TODO: add uml diagram showing rollup (sequencer/validators) -> proxy -> eigenda interactions
+> Warning: the below diagrams describe EigenDA V2 interactions. EigenDA V1 is very similar, but has slight discrepancies.
+
+The proxy fundamentally acts as a bridge between the rollup nodes and the EigenDA network. The following sequence diagram illustrates the lifecycle of a rollup payload (compressed batch of txs or state transitions), as it gets transformed to an EigenDA blob and dispersed to the network. The received EigenDA cert is then published to the rollup batcher-inbox, to be retrieved by rollup validators, and used to retrieve and validate the corresponding blob, which can then be decoded into the original payload and used by the rollup's stack.
+
+![Sequence Diagram](./resources/sequence-diagram.png)
 
 ### Posting Blobs
 
 ![Posting Blobs](./resources/payload-blob-poly-lifecycle.png)
 
-After the blob certificate is obtained from EigenDA, it is encoded using the requested [commitment schema](#commitment-schemas) and sent back to the rollup sequencer. The sequencer then submits the commitment
+The rollup payload is submitted via a POST request to the proxy. Proxy encodes the payload into a blob and submits it to the EigenDA disperser. After the DACertificate is available via the GetBlobStatus endpoint, it is encoded using the requested [commitment schema](#commitment-schemas) and sent back to the rollup sequencer. The sequencer then submits the commitment to the rollup's batcher inbox.
 
 ### Retrieving Blobs
 
-### Commitment Schemas
+Validator nodes proceed with the exact reverse process as that used by the sequencer in the [posting blobs](#posting-blobs) section. The rollup validator submits a GET request to the proxy with the DACert in the body. The proxy validates the cert, fetches the corresponding blob from EigenDA, validates it, decodes it back into the rollup payload, and returns it the rollup node.
 
-> Warning: the name `commitment` is unfortunate here, as it is overloaded to mean both KZG commitment and (we follow the op spec here) [the thing that gets submitted to the batcher inbox](https://specs.optimism.io/experimental/alt-da.html#input-commitment-submission). This section describes the latter, which in the case of EigenDA encompasses the KZG commitment, but contains many other things.
+### Rollup Commitment Schemas
 
-TODO: include Austin's diagram here
+> Warning: the name `commitment` here refers to the piece of data sent to the rollup's batcher inbox (see op spec's [description](https://specs.optimism.io/experimental/alt-da.html#input-commitment-submission)), not to blobs' KZG commitment. The Rollup commitment consists of a few-byte header (described below) followed by a `DACertificate`, which contains all the information necessary to retrieve and validate an EigenDA blob. The `DACertificate` itself contains the KZG commitment to the blob.
 
-Currently, there are two commitment modes supported with unique encoding schemas for each. The `version byte` is shared for all modes and denotes which version of the EigenDA certificate is being used/requested. The following versions are currently supported:
-* `0x0`: V0 certificate type (i.e, dispersal blob info struct with verification against service manager)
+Currently, there are two commitment modes supported with unique encoding schemas for each. The `version byte` is shared for all modes and denotes which version of the EigenDA `DACertificate` is being used/requested. The following versions are currently supported:
+* `0x00`: EigenDA V1 certificate type (i.e, dispersal blob info struct with verification against service manager)
+* `0x01`: EigenDA V2 certificate type
 
 #### Optimism Commitment Mode
-For `alt-da` clients running on Optimism, the following commitment schema is supported:
+For `alt-da` Optimism rollups using EigenDA, the following [commitment schemas](https://specs.optimism.io/experimental/alt-da.html#example-commitments) are supported by our proxy:
 
-```
- 0        1        2         3                N
- |--------|--------|---------|----------------|
-  commit   da layer  version   raw commitment
-  type       type     byte
-```
+| commitment_type (byte) | da_layer_byte | version_byte | payload           |
+| ---------------------- | ------------- | ------------ | ----------------- |
+| 0x00                   |               |              | keccak_commitment |
+| 0x01                   | 0x00          | 0x00         | eigenda_cert_v1   |
+| 0x01                   | 0x00          | 0x01         | eigenda_cert_v2   |
 
-Both `keccak256` (i.e, S3 storage using hash of pre-image for commitment value) and `generic` (i.e, EigenDA) are supported to ensure cross-compatibility with alt-da storage backends if desired by a rollup operator.
-
-OP Stack itself only has a conception of the first byte (`commit type`) and does no semantical interpretation of any subsequent bytes within the encoding. The `da layer type` byte for EigenDA is always `0x00`. However it is currently unused by OP Stack with name space values still being actively [discussed](https://github.com/ethereum-optimism/specs/discussions/135#discussioncomment-9271282).
+`keccak256` (commitment_type 0x00) uses an S3 storage backend with where a simple keccak commitment of the `blob` is used as the key. For `generic` commitments, we (obviously) only support da_layer_byte 0x00 which represents EigenDA.
 
 #### Standard Commitment Mode
 For standard clients (i.e, `client/client.go`) communicating with proxy (e.g, arbitrum nitro), the following commitment schema is supported:
 
-```
- 0         1                 N
- |---------|-----------------|
-   version   raw commitment
-    byte
-```
+| version_byte | payload         |
+| ------------ | --------------- |
+| 0x00         | eigenda_cert_v1 |
+| 0x01         | eigenda_cert_v2 |
 
-The `raw commitment` is an RLP-encoded [EigenDA certificate](https://github.com/Layr-Labs/eigenda/blob/eb422ff58ac6dcd4e7b30373033507414d33dba1/api/proto/disperser/disperser.proto#L168).
-
-**NOTE:** Commitments are cryptographically verified against the data fetched from EigenDA for all `/get` calls. The server will respond with status `500` in the event where EigenDA were to lie and provide falsified data thats irrespective of the client provided commitment. This feature cannot be disabled and is part of standard operation.
+`eigenda_cert_v0` is an RLP-encoded [EigenDA V1 certificate](https://github.com/Layr-Labs/eigenda/blob/eb422ff58ac6dcd4e7b30373033507414d33dba1/api/proto/disperser/disperser.proto#L168). `eigenda_cert_v1` works similarly.
 
 ## Testing
 
