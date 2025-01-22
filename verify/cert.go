@@ -24,7 +24,7 @@ import (
 // to ensure disperser returned fields haven't been tampered with
 type CertVerifier struct {
 	l log.Logger
-	// ethConfirmationDepth is using to verify that a blob's batch has been bridged to the EigenDAServiceManager contract at least
+	// ethConfirmationDepth is used to verify that a blob's batch commitment has been bridged to the EigenDAServiceManager contract at least
 	// this many blocks in the past. To do so we make an eth_call to the contract at the current block_number - ethConfirmationDepth.
 	// Hence in order to not require an archive node, this value should be kept low. We force it to be < 64.
 	// waitForFinalization should be used instead of ethConfirmationDepth if the user wants to wait for finality (typically 64 blocks in happy case).
