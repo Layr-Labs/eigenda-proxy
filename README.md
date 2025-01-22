@@ -22,6 +22,37 @@ Features:
 
 In order to disperse to the EigenDA network in production, or at high throughput on testnet, please register your authentication ethereum address through [this form](https://forms.gle/3QRNTYhSMacVFNcU8). Your EigenDA authentication keypair address should not be associated with any funds anywhere.
 
+- [EigenDA Proxy](#eigenda-proxy)
+  - [Introduction](#introduction)
+  - [Deployment Guide](#deployment-guide)
+    - [Hardware Requirements](#hardware-requirements)
+    - [Deployment Steps](#deployment-steps)
+    - [Env File](#env-file)
+    - [Running via Docker](#running-via-docker)
+  - [Features and Configuration Options](#features-and-configuration-options)
+    - [Certificate verification](#certificate-verification)
+      - [Soft Confirmations](#soft-confirmations)
+    - [In-Memory Backend](#in-memory-backend)
+    - [Asynchronous Secondary Insertions](#asynchronous-secondary-insertions)
+    - [Storage Fallback](#storage-fallback)
+    - [Storage Caching](#storage-caching)
+    - [Failover Signals](#failover-signals)
+  - [Blob Lifecycle](#blob-lifecycle)
+    - [Posting Blobs](#posting-blobs)
+    - [Retrieving Blobs](#retrieving-blobs)
+    - [Rollup Commitment Schemas](#rollup-commitment-schemas)
+      - [Optimism Commitment Mode](#optimism-commitment-mode)
+      - [Standard Commitment Mode](#standard-commitment-mode)
+  - [Testing](#testing)
+    - [Unit](#unit)
+    - [Integration](#integration)
+    - [E2E Fuzz](#e2e-fuzz)
+    - [Holesky](#holesky)
+  - [Metrics](#metrics)
+  - [Flags](#flags)
+  - [Resources](#resources)
+
+
 ## Deployment Guide
 
 ### Hardware Requirements
