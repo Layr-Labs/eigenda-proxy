@@ -17,9 +17,9 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/mocks"
 	"github.com/Layr-Labs/eigenda/api"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -49,7 +49,7 @@ func TestHandlerGet(t *testing.T) {
 			name: "Failure - OP Keccak256 Internal Server Error",
 			url:  fmt.Sprintf("/get/0x00%s", testCommitStr),
 			mockBehavior: func() {
-				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("internal error"))
+				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("internal error"))
 			},
 			expectedCode: http.StatusInternalServerError,
 			expectedBody: "",
@@ -58,7 +58,7 @@ func TestHandlerGet(t *testing.T) {
 			name: "Success - OP Keccak256",
 			url:  fmt.Sprintf("/get/0x00%s", testCommitStr),
 			mockBehavior: func() {
-				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte(testCommitStr), nil)
+				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte(testCommitStr), nil)
 			},
 			expectedCode: http.StatusOK,
 			expectedBody: testCommitStr,
@@ -67,7 +67,7 @@ func TestHandlerGet(t *testing.T) {
 			name: "Failure - OP Alt-DA Internal Server Error",
 			url:  fmt.Sprintf("/get/0x010000%s", testCommitStr),
 			mockBehavior: func() {
-				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("internal error"))
+				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("internal error"))
 			},
 			expectedCode: http.StatusInternalServerError,
 			expectedBody: "",
@@ -76,7 +76,17 @@ func TestHandlerGet(t *testing.T) {
 			name: "Success - OP Alt-DA",
 			url:  fmt.Sprintf("/get/0x010000%s", testCommitStr),
 			mockBehavior: func() {
-				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte(testCommitStr), nil)
+				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte(testCommitStr), nil)
+			},
+			expectedCode: http.StatusOK,
+			expectedBody: testCommitStr,
+		},
+		{
+			// make sure that the l1_inclusion_block_number query param is parsed correctly and passed to the storage's GET call.
+			name: "Success - OP Alt-DA with l1_inclusion_block_number query param",
+			url:  fmt.Sprintf("/get/0x010000%s?l1_inclusion_block_number=100", testCommitStr),
+			mockBehavior: func() {
+				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(common.VerifyArgs{RollupL1InclusionBlockNum: 100})).Return([]byte(testCommitStr), nil)
 			},
 			expectedCode: http.StatusOK,
 			expectedBody: testCommitStr,
@@ -85,6 +95,7 @@ func TestHandlerGet(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Log(tt.name)
 			tt.mockBehavior()
 
 			req := httptest.NewRequest(http.MethodGet, tt.url, nil)
@@ -158,6 +169,7 @@ func TestHandlerPutSuccess(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Log(tt.name)
 			tt.mockBehavior()
 
 			req := httptest.NewRequest(http.MethodPost, tt.url, bytes.NewReader(tt.body))
@@ -245,6 +257,7 @@ func TestHandlerPutErrors(t *testing.T) {
 	for _, tt := range tests {
 		for _, mode := range modes {
 			t.Run(tt.name+" / "+mode.name, func(t *testing.T) {
+				t.Log(tt.name + " / " + mode.name)
 				mockStorageMgr.EXPECT().Put(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, tt.mockStorageMgrPutReturnedErr)
 
 				req := httptest.NewRequest(http.MethodPost, mode.url, strings.NewReader("optional body to be sent to eigenda"))
