@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/ecc/bn254"
@@ -25,6 +26,7 @@ type Config struct {
 	SvcManagerAddr       string
 	EthConfirmationDepth uint64
 	WaitForFinalization  bool
+	Holesky              bool
 }
 
 // Custom MarshalJSON function to control what gets included in the JSON output
@@ -45,6 +47,8 @@ type Verifier struct {
 	// cert verification is optional, and verifies certs retrieved from eigenDA when turned on
 	verifyCerts bool
 	cv          *CertVerifier
+	// holesky is a flag to enable/disable holesky specific checks
+	holesky bool
 }
 
 func NewVerifier(cfg *Config, l log.Logger) (*Verifier, error) {
@@ -67,6 +71,7 @@ func NewVerifier(cfg *Config, l log.Logger) (*Verifier, error) {
 		kzgVerifier: kzgVerifier,
 		verifyCerts: cfg.VerifyCerts,
 		cv:          cv,
+		holesky:     isHolesky(cfg.SvcManagerAddr),
 	}, nil
 }
 
@@ -183,11 +188,26 @@ func (v *Verifier) verifySecurityParams(blobHeader BlobHeader, batchHeader *disp
 	}
 
 	// ensure that required quorums are present in the confirmed ones
-	for _, quorum := range v.cv.quorumsRequired {
+	for _, quorum := range requiredQuorum(int64(batchHeader.ReferenceBlockNumber), v) {
 		if !confirmedQuorums[quorum] {
 			return fmt.Errorf("quorum %d is required but not present in confirmed quorums", quorum)
 		}
 	}
 
 	return nil
+}
+
+func requiredQuorum(referenceBlockNumber int64, v *Verifier) []uint8 {
+	// This check is required due to a bug we had when we updated the EigenDAServiceManager in Holesky. For a brief period of time, the quorum 1 was not
+	// required for the commitment to be confirmed, which will not validate archive blobs required for full syncs (archive nodes).
+	// This check is only for testnet and for a specific block range.
+	if v.holesky && referenceBlockNumber >= 2950000 && referenceBlockNumber <= 2960000 {
+		return []uint8{0}
+	} else {
+		return v.cv.quorumsRequired
+	}
+}
+
+func isHolesky(svcAddress string) bool {
+	return strings.ToLower(svcAddress) == "0xd4a7e1bd8015057293f0d0a557088c286942e84b"
 }
