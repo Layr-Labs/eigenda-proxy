@@ -3,7 +3,7 @@
 ![Linter](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/lint.yml/badge.svg)
 ![Integration Tests](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/holesky-test.yml/badge.svg)
 
-# EigenDA Sidecar Proxy
+# EigenDA Proxy
 
 ## Introduction
 
