@@ -38,8 +38,8 @@ In order to disperse to the EigenDA network in production, or at high throughput
     - [Storage Caching](#storage-caching)
     - [Failover Signals](#failover-signals)
   - [Blob Lifecycle](#blob-lifecycle)
-    - [Posting Blobs](#posting-blobs)
-    - [Retrieving Blobs](#retrieving-blobs)
+    - [Posting Payloads](#posting-payloads)
+    - [Retrieving Payloads](#retrieving-payloads)
     - [Rollup Commitment Schemas](#rollup-commitment-schemas)
       - [Optimism Commitment Mode](#optimism-commitment-mode)
       - [Standard Commitment Mode](#standard-commitment-mode)
@@ -165,13 +165,13 @@ The proxy fundamentally acts as a bridge between the rollup nodes and the EigenD
 
 ![Sequence Diagram](./resources/sequence-diagram.png)
 
-### Posting Blobs
+### Posting Payloads
 
 ![Posting Blobs](./resources/payload-blob-poly-lifecycle.png)
 
 The rollup payload is submitted via a POST request to the proxy. Proxy encodes the payload into a blob and submits it to the EigenDA disperser. After the DACertificate is available via the GetBlobStatus endpoint, it is encoded using the requested [commitment schema](#commitment-schemas) and sent back to the rollup sequencer. The sequencer then submits the commitment to the rollup's batcher inbox.
 
-### Retrieving Blobs
+### Retrieving Payloads
 
 Validator nodes proceed with the exact reverse process as that used by the sequencer in the [posting blobs](#posting-blobs) section. The rollup validator submits a GET request to the proxy with the DACert in the body. The proxy validates the cert, fetches the corresponding blob from EigenDA, validates it, decodes it back into the rollup payload, and returns it the rollup node.
 
