@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/Layr-Labs/eigenda-proxy/common/consts"
 	"github.com/Layr-Labs/eigenda/api/grpc/disperser"
 	binding "github.com/Layr-Labs/eigenda/contracts/bindings/EigenDAServiceManager"
 
@@ -26,7 +27,7 @@ type CertVerifier struct {
 	l log.Logger
 	// ethConfirmationDepth is used to verify that a blob's batch commitment has been bridged to the EigenDAServiceManager contract at least
 	// this many blocks in the past. To do so we make an eth_call to the contract at the current block_number - ethConfirmationDepth.
-	// Hence in order to not require an archive node, this value should be kept low. We force it to be < 64.
+	// Hence in order to not require an archive node, this value should be kept low. We force it to be < 64 (consts.EthHappyPathFinalizationDepthBlocks).
 	// waitForFinalization should be used instead of ethConfirmationDepth if the user wants to wait for finality (typically 64 blocks in happy case).
 	ethConfirmationDepth uint64
 	waitForFinalization  bool
@@ -40,7 +41,7 @@ type CertVerifier struct {
 }
 
 func NewCertVerifier(cfg *Config, l log.Logger) (*CertVerifier, error) {
-	if cfg.EthConfirmationDepth >= 64 {
+	if cfg.EthConfirmationDepth >= uint64(consts.EthHappyPathFinalizationDepthBlocks) {
 		// We keep this low (<128) to avoid requiring an archive node.
 		return nil, fmt.Errorf("confirmation depth must be less than 64; consider using cfg.WaitForFinalization=true instead")
 	}

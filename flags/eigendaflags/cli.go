@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Layr-Labs/eigenda-proxy/common/consts"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/Layr-Labs/eigenda/api/clients/codecs"
 	"github.com/urfave/cli/v2"
@@ -209,7 +210,7 @@ func validateConfirmationFlag(val string) error {
 		return fmt.Errorf("confirmation-depth must be either 'finalized' or a number, got: %s", val)
 	}
 
-	if depth >= 64 {
+	if depth >= uint64(consts.EthHappyPathFinalizationDepthBlocks) {
 		// We keep this low (<128) to avoid requiring an archive node (see how this is used in CertVerifier).
 		// Note: assuming here that no sane person would ever need to set this to a number to something >64.
 		// But perhaps someone testing crazy reorg scenarios where finalization takes >2 epochs might want to set this to a higher number...?
