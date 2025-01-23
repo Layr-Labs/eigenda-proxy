@@ -18,8 +18,8 @@ import (
 	"github.com/Layr-Labs/eigenda/encoding/rs"
 )
 
-var (
-	HOLESKY_SVC_MANAGER_V1_ADDRESS = "0xD4A7E1Bd8015057293f0D0A557088c286942e84b"
+const (
+	HoleskySVCManagerV1Address = "0xD4A7E1Bd8015057293f0D0A557088c286942e84b"
 )
 
 type Config struct {
@@ -208,11 +208,10 @@ func requiredQuorum(referenceBlockNumber uint32, v *Verifier) []uint8 {
 	// This check is only for testnet and for a specific block range.
 	if v.holesky && referenceBlockNumber >= 2950000 && referenceBlockNumber < 2960000 {
 		return []uint8{0}
-	} else {
-		return v.cv.quorumsRequired
 	}
+	return v.cv.quorumsRequired
 }
 
 func isHolesky(svcAddress string) bool {
-	return strings.ToLower(strings.TrimPrefix(svcAddress, "0x")) == strings.ToLower(strings.TrimPrefix(HOLESKY_SVC_MANAGER_V1_ADDRESS, "0x"))
+	return strings.EqualFold(strings.TrimPrefix(svcAddress, "0x"), strings.TrimPrefix(HoleskySVCManagerV1Address, "0x"))
 }
