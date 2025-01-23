@@ -1,11 +1,17 @@
+# EigenDA Proxy
+
+A basic REST server for Rollups with the following endpoints:
+- POST routes: used by sequencers to encode their payloads (batches of transactions or state transitions) into EigenDA blobs, submit them to the EigenDA disperser to make them available, and receive a DA certificate to be submitted to the rollup's batcher inbox.
+- GET routes: used by validators to retrieve the blob from the EigenDA network given a DA Certificate, decode the blob back into the original payload, and return it to the validator, to be used in its derivation pipeline.
+
 [![Compiles](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/build.yml/badge.svg)](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/build.yml)
 [![Unit Tests](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/unit-tests.yml)
 [![Linter](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/lint.yml/badge.svg)](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/lint.yml)
 [![Integration Tests](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/holesky-test.yml/badge.svg)](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/holesky-test.yml)
 
-# EigenDA Proxy
+[Integration Guide](https://docs.eigenda.xyz/integrations-guides/dispersal/clients/eigenda-proxy) | [EigenDA Repo](https://github.com/Layr-Labs/eigenda)
 
-## Introduction
+## Overview
 
 This service wraps the [high-level EigenDA client](https://github.com/Layr-Labs/eigenda/blob/master/api/clients/eigenda_client.go), exposing endpoints for interacting with the EigenDA disperser in conformance to the [OP Alt-DA server spec](https://specs.optimism.io/experimental/alt-da.html), and adding disperser verification logic. This simplifies integrating EigenDA into various rollup frameworks by minimizing the footprint of changes needed within their respective services.
 
@@ -23,7 +29,7 @@ Features:
 In order to disperse to the EigenDA network in production, or at high throughput on testnet, please register your authentication ethereum address through [this form](https://forms.gle/3QRNTYhSMacVFNcU8). Your EigenDA authentication keypair address should not be associated with any funds anywhere.
 
 - [EigenDA Proxy](#eigenda-proxy)
-  - [Introduction](#introduction)
+  - [Overview](#overview)
   - [Deployment Guide](#deployment-guide)
     - [Hardware Requirements](#hardware-requirements)
     - [Ethereum Node Requirements](#ethereum-node-requirements)
@@ -296,6 +302,6 @@ To quickly set up monitoring dashboard, add eigenda-proxy metrics endpoint to a 
 
 ## Resources
 
-* [op-stack](https://github.com/ethereum-optimism/optimism)
-* [Alt-DA spec](https://specs.optimism.io/experimental/alt-da.html)
-* [eigen da](https://github.com/Layr-Labs/eigenda)
+* [OP stack](https://github.com/ethereum-optimism/optimism)
+* [OP Alt-DA spec](https://specs.optimism.io/experimental/alt-da.html)
+* [EigenDA repo](https://github.com/Layr-Labs/eigenda)
