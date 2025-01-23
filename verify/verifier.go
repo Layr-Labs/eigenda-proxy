@@ -191,7 +191,7 @@ func (v *Verifier) verifySecurityParams(blobHeader BlobHeader, batchHeader *disp
 	}
 
 	// ensure that required quorums are present in the confirmed ones
-	for _, quorum := range requiredQuorum(int64(batchHeader.ReferenceBlockNumber), v) {
+	for _, quorum := range requiredQuorum(batchHeader.ReferenceBlockNumber, v) {
 		if !confirmedQuorums[quorum] {
 			return fmt.Errorf("quorum %d is required but not present in confirmed quorums", quorum)
 		}
@@ -200,9 +200,9 @@ func (v *Verifier) verifySecurityParams(blobHeader BlobHeader, batchHeader *disp
 	return nil
 }
 
-func requiredQuorum(referenceBlockNumber int64, v *Verifier) []uint8 {
+func requiredQuorum(referenceBlockNumber uint32, v *Verifier) []uint8 {
 	// This check is required due to a bug we had when we updated the EigenDAServiceManager in Holesky. For a brief period of time, the quorum 1 was not
-	// required for the commitment to be confirmed, so the disperser created batches with only quorum 0 signatures. 
+	// required for the commitment to be confirmed, so the disperser created batches with only quorum 0 signatures.
 	// Archive nodes trying to sync from these stored batches would thus fail validation here since
 	// quorumsRequired is read from the latestBlock, where the bug has been fixed and both quorums are required.
 	// This check is only for testnet and for a specific block range.
@@ -214,5 +214,5 @@ func requiredQuorum(referenceBlockNumber int64, v *Verifier) []uint8 {
 }
 
 func isHolesky(svcAddress string) bool {
-	return strings.ToLower(strings.TrimPrefix(svcAddress, "0x")) == strings.ToLower(strings.TrimPrefix(HOLESKY_SVG_V1_ADDRESS, "0x"))
+	return strings.ToLower(strings.TrimPrefix(svcAddress, "0x")) == strings.ToLower(strings.TrimPrefix(HOLESKY_SVM_V1_ADDRESS, "0x"))
 }
