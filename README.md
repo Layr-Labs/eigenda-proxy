@@ -192,7 +192,7 @@ For `alt-da` Optimism rollups using EigenDA, the following [commitment schemas](
 | 0x01                   | 0x00          | 0x00         | eigenda_cert_v1   |
 | 0x01                   | 0x00          | 0x01         | eigenda_cert_v2   |
 
-`keccak256` (commitment_type 0x00) uses an S3 storage backend with where a simple keccak commitment of the `blob` is used as the key. For `generic` commitments, we (obviously) only support da_layer_byte 0x00 which represents EigenDA.
+`keccak256` (commitment_type 0x00) uses an S3 storage backend with where a simple keccak commitment of the `blob` is used as the key. For `generic` commitments, we only support `da_layer_byte` 0x00 which represents EigenDA.
 
 #### Standard Commitment Mode
 For standard clients (i.e, `client/client.go`) communicating with proxy (e.g, arbitrum nitro), the following commitment schema is supported:
