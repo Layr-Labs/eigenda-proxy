@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	HOLESKY_SVM_V1_ADDRESS = "0xD4A7E1Bd8015057293f0D0A557088c286942e84b"
+	HOLESKY_SVC_MANAGER_V1_ADDRESS = "0xD4A7E1Bd8015057293f0D0A557088c286942e84b"
 )
 
 type Config struct {
@@ -214,5 +214,5 @@ func requiredQuorum(referenceBlockNumber uint32, v *Verifier) []uint8 {
 }
 
 func isHolesky(svcAddress string) bool {
-	return strings.ToLower(strings.TrimPrefix(svcAddress, "0x")) == strings.ToLower(strings.TrimPrefix(HOLESKY_SVM_V1_ADDRESS, "0x"))
+	return strings.ToLower(strings.TrimPrefix(svcAddress, "0x")) == strings.ToLower(strings.TrimPrefix(HOLESKY_SVC_MANAGER_V1_ADDRESS, "0x"))
 }
