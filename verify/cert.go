@@ -216,15 +216,12 @@ func getQuorumParametersAtLatestBlock(
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to fetch QuorumAdversaryThresholdPercentages from EigenDAServiceManager: %w", err)
 	}
+	if len(thresholds) > math.MaxUint8 {
+		return nil, nil, fmt.Errorf("thresholds received from ServiceManager contains %d > 256 quorums, which isn't possible", len(thresholds))
+	}
 	var quorumAdversaryThresholds = make(map[uint8]uint8)
 	for quorumNum, threshold := range thresholds {
-		if quorumNum > math.MaxInt8 {
-			return nil, nil, fmt.Errorf("quorum number %d is too large to fit in int8", quorumNum)
-		}
-		if quorumNum < 0 {
-			return nil, nil, fmt.Errorf("quorum number %d cannot be negative", quorumNum)
-		}
-		quorumAdversaryThresholds[uint8(quorumNum)] = threshold
+		quorumAdversaryThresholds[uint8(quorumNum)] = threshold //nolint:gosec // disable G115 // We checked the length of thresholds above
 	}
 	// Sanity check: ensure that the required quorums are a subset of the quorums for which we have adversary thresholds
 	for _, quorum := range requiredQuorums {
