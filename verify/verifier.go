@@ -202,7 +202,9 @@ func (v *Verifier) verifySecurityParams(blobHeader BlobHeader, batchHeader *disp
 
 func requiredQuorum(referenceBlockNumber int64, v *Verifier) []uint8 {
 	// This check is required due to a bug we had when we updated the EigenDAServiceManager in Holesky. For a brief period of time, the quorum 1 was not
-	// required for the commitment to be confirmed, which will not validate archive blobs required for full syncs (archive nodes).
+	// required for the commitment to be confirmed, so the disperser created batches with only quorum 0 signatures. 
+	// Archive nodes trying to sync from these stored batches would thus fail validation here since
+	// quorumsRequired is read from the latestBlock, where the bug has been fixed and both quorums are required.
 	// This check is only for testnet and for a specific block range.
 	if v.holesky && referenceBlockNumber >= 2950000 && referenceBlockNumber < 2960000 {
 		return []uint8{0}
