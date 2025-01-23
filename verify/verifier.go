@@ -18,6 +18,10 @@ import (
 	"github.com/Layr-Labs/eigenda/encoding/rs"
 )
 
+var (
+	HOLESKY_SVG_V1_ADDRESS = "0xD4A7E1Bd8015057293f0D0A557088c286942e84b"
+)
+
 type Config struct {
 	KzgConfig   *kzg.KzgConfig
 	VerifyCerts bool
@@ -26,7 +30,6 @@ type Config struct {
 	SvcManagerAddr       string
 	EthConfirmationDepth uint64
 	WaitForFinalization  bool
-	Holesky              bool
 }
 
 // Custom MarshalJSON function to control what gets included in the JSON output
@@ -201,7 +204,7 @@ func requiredQuorum(referenceBlockNumber int64, v *Verifier) []uint8 {
 	// This check is required due to a bug we had when we updated the EigenDAServiceManager in Holesky. For a brief period of time, the quorum 1 was not
 	// required for the commitment to be confirmed, which will not validate archive blobs required for full syncs (archive nodes).
 	// This check is only for testnet and for a specific block range.
-	if v.holesky && referenceBlockNumber >= 2950000 && referenceBlockNumber <= 2960000 {
+	if v.holesky && referenceBlockNumber >= 2950000 && referenceBlockNumber < 2960000 {
 		return []uint8{0}
 	} else {
 		return v.cv.quorumsRequired
@@ -209,5 +212,5 @@ func requiredQuorum(referenceBlockNumber int64, v *Verifier) []uint8 {
 }
 
 func isHolesky(svcAddress string) bool {
-	return strings.ToLower(svcAddress) == "0xd4a7e1bd8015057293f0d0a557088c286942e84b"
+	return strings.ToLower(strings.TrimPrefix(svcAddress, "0x")) == strings.ToLower(strings.TrimPrefix(HOLESKY_SVG_V1_ADDRESS, "0x"))
 }
