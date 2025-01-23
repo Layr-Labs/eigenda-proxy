@@ -196,7 +196,7 @@ func (cv *CertVerifier) retrieveBatchMetadataHash(ctx context.Context, batchID u
 // We then cache these parameters and use them in the Verifier to verify the certificates.
 //
 // Note: this strategy (fetching once and caching) only works because these parameters are immutable.
-// They might be different in different environments (for eg on a devnet or testnet), but they are fixed on a given network.
+// They might be different in different environments (e.g. on a devnet or testnet), but they are fixed on a given network.
 // We used to allow these parameters to change (via a setter function on the contract), but that then forced us here in the proxy
 // to query for these parameters on every request, at the batch's reference block number (RBN).
 // This in turn required rollup validators running this proxy to have an archive node, in case the RBN was >128 blocks in the past,
