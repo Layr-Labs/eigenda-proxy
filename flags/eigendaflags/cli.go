@@ -216,7 +216,7 @@ func validateConfirmationFlag(val string) error {
 		// But perhaps someone testing crazy reorg scenarios where finalization takes >2 epochs might want to set this to a higher number...?
 		// Let's deal with that case if and when it comes up (ideally never). Do keep in mind if you ever change this
 		// that it might affect a LOT of validators on your rollup who would now need an archival node.
-		panic(fmt.Sprintf("Warning: confirmation depth set to %d, which is > 2 epochs (64). Use 'finalized' instead.\n", depth))
+		return fmt.Errorf("confirmation depth set to %d, which is > 2 epochs (64). Use 'finalized' instead", depth)
 	}
 
 	return nil
