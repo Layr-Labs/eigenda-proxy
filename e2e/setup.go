@@ -15,7 +15,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
-	"github.com/Layr-Labs/eigenda-proxy/verify"
+	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	"github.com/ethereum/go-ethereum/log"
@@ -185,7 +185,7 @@ func TestSuiteConfig(testCfg *Cfg) server.CLIConfig {
 
 	svcManagerAddr := "0xD4A7E1Bd8015057293f0D0A557088c286942e84b" // holesky testnet
 	eigendaCfg := server.Config{
-		EdaClientConfig: clients.EigenDAClientConfig{
+		EdaV1ClientConfig: clients.EigenDAClientConfig{
 			RPC:                      holeskyDA,
 			StatusQueryTimeout:       time.Minute * 45,
 			StatusQueryRetryInterval: pollInterval,
@@ -220,7 +220,7 @@ func TestSuiteConfig(testCfg *Cfg) server.CLIConfig {
 	}
 
 	if testCfg.UseMemory {
-		eigendaCfg.EdaClientConfig.SignerPrivateKeyHex = "0000000000000000000100000000000000000000000000000000000000000000"
+		eigendaCfg.EdaV1ClientConfig.SignerPrivateKeyHex = "0000000000000000000100000000000000000000000000000000000000000000"
 	}
 
 	var cfg server.CLIConfig

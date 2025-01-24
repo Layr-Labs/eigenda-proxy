@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/Layr-Labs/eigenda/api/grpc/disperser"
-	binding "github.com/Layr-Labs/eigenda/contracts/bindings/EigenDAServiceManager"
+	binding "github.com/Layr-Labs/eigenda/contracts/bindings/EigenDABlobVerifier"
+
+	svc_binding "github.com/Layr-Labs/eigenda/contracts/bindings/EigenDAServiceManager"
 
 	"github.com/ethereum-optimism/optimism/op-service/retry"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -25,7 +27,7 @@ type CertVerifier struct {
 	l                    log.Logger
 	ethConfirmationDepth uint64
 	waitForFinalization  bool
-	manager              *binding.ContractEigenDAServiceManagerCaller
+	manager              *svc_binding.ContractEigenDAServiceManagerCaller
 	ethClient            *ethclient.Client
 }
 
@@ -38,7 +40,7 @@ func NewCertVerifier(cfg *Config, l log.Logger) (*CertVerifier, error) {
 	}
 
 	// construct caller binding
-	m, err := binding.NewContractEigenDAServiceManagerCaller(common.HexToAddress(cfg.SvcManagerAddr), client)
+	m, err := svc_binding.NewContractEigenDAServiceManagerCaller(common.HexToAddress(cfg.SvcManagerAddr), client)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +91,7 @@ func (cv *CertVerifier) verifyBatchConfirmedOnChain(
 	}
 
 	// 3. Compute the hash of the batch metadata received as argument.
-	header := &binding.IEigenDAServiceManagerBatchHeader{
+	header := &binding.BatchHeader{
 		BlobHeadersRoot:       [32]byte(batchMetadata.GetBatchHeader().GetBatchRoot()),
 		QuorumNumbers:         batchMetadata.GetBatchHeader().GetQuorumNumbers(),
 		ReferenceBlockNumber:  batchMetadata.GetBatchHeader().GetReferenceBlockNumber(),

@@ -14,6 +14,7 @@ import (
 
 	"github.com/Layr-Labs/eigenda/api/grpc/common"
 	"github.com/Layr-Labs/eigenda/api/grpc/disperser"
+	"github.com/Layr-Labs/eigenda/encoding"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	kzgverifier "github.com/Layr-Labs/eigenda/encoding/kzg/verifier"
 	"github.com/Layr-Labs/eigenda/encoding/rs"
@@ -40,7 +41,6 @@ func (c Config) MarshalJSON() ([]byte, error) {
 	return json.Marshal(aux)
 }
 
-// TODO: right now verification and confirmation depth are tightly coupled. we should decouple them
 type Verifier struct {
 	// kzgVerifier is needed to commit blobs to the memstore
 	kzgVerifier *kzgverifier.Verifier
@@ -60,7 +60,7 @@ func NewVerifier(cfg *Config, l log.Logger) (*Verifier, error) {
 		}
 	}
 
-	kzgVerifier, err := kzgverifier.NewVerifier(cfg.KzgConfig, false)
+	kzgVerifier, err := kzgverifier.NewVerifier(cfg.KzgConfig, &encoding.Config{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create kzg verifier: %w", err)
 	}

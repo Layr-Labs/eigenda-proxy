@@ -8,39 +8,40 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/flags/eigendaflags"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
-	"github.com/Layr-Labs/eigenda-proxy/verify"
+	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
 	"github.com/Layr-Labs/eigenda/api/clients"
 
 	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 )
 
 type Config struct {
-	EdaClientConfig clients.EigenDAClientConfig
-	MemstoreConfig  memstore.Config
-	StorageConfig   store.Config
-	VerifierConfig  verify.Config
-	PutRetries      uint
+	EdaV1ClientConfig clients.EigenDAClientConfig
+	MemstoreConfig    memstore.Config
+	StorageConfig     store.Config
+	VerifierConfig    verify.Config
+	PutRetries        uint
 
-	MemstoreEnabled bool
+	MemstoreEnabled    bool
+	V2DispersalEnabled bool
 }
 
 // ReadConfig ... parses the Config from the provided flags or environment variables.
 func ReadConfig(ctx *cli.Context) Config {
 	edaClientConfig := eigendaflags.ReadConfig(ctx)
 	return Config{
-		EdaClientConfig: edaClientConfig,
-		VerifierConfig:  verify.ReadConfig(ctx, edaClientConfig),
-		PutRetries:      ctx.Uint(eigendaflags.PutRetriesFlagName),
-		MemstoreEnabled: ctx.Bool(memstore.EnabledFlagName),
-		MemstoreConfig:  memstore.ReadConfig(ctx),
-		StorageConfig:   store.ReadConfig(ctx),
+		EdaV1ClientConfig: edaClientConfig,
+		VerifierConfig:    verify.ReadConfig(ctx, edaClientConfig),
+		PutRetries:        ctx.Uint(eigendaflags.PutRetriesFlagName),
+		MemstoreEnabled:   ctx.Bool(memstore.EnabledFlagName),
+		MemstoreConfig:    memstore.ReadConfig(ctx),
+		StorageConfig:     store.ReadConfig(ctx),
 	}
 }
 
 // Check ... verifies that configuration values are adequately set
 func (cfg *Config) Check() error {
 	if !cfg.MemstoreEnabled {
-		if cfg.EdaClientConfig.RPC == "" {
+		if cfg.EdaV1ClientConfig.RPC == "" {
 			return fmt.Errorf("using eigenda backend (memstore.enabled=false) but eigenda disperser rpc url is not set")
 		}
 	}
@@ -48,15 +49,15 @@ func (cfg *Config) Check() error {
 	// provide dummy values to eigenda client config. Since the client won't be called in this
 	// mode it doesn't matter.
 	if cfg.MemstoreEnabled {
-		cfg.EdaClientConfig.SvcManagerAddr = "0x0000000000000000000000000000000000000000"
-		cfg.EdaClientConfig.EthRpcUrl = "http://0.0.0.0:666"
+		cfg.EdaV1ClientConfig.SvcManagerAddr = "0x0000000000000000000000000000000000000000"
+		cfg.EdaV1ClientConfig.EthRpcUrl = "http://0.0.0.0:666"
 	}
 
 	if !cfg.MemstoreEnabled {
-		if cfg.EdaClientConfig.SvcManagerAddr == "" {
+		if cfg.EdaV1ClientConfig.SvcManagerAddr == "" {
 			return fmt.Errorf("service manager address is required for communication with EigenDA")
 		}
-		if cfg.EdaClientConfig.EthRpcUrl == "" {
+		if cfg.EdaV1ClientConfig.EthRpcUrl == "" {
 			return fmt.Errorf("eth prc url is required for communication with EigenDA")
 		}
 	}

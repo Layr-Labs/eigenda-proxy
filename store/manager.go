@@ -14,7 +14,7 @@ import (
 
 // IManager ... read/write interface
 type IManager interface {
-	Get(ctx context.Context, key []byte, cm commitments.CommitmentMode) ([]byte, error)
+	Get(ctx context.Context, key []byte, cm commitments.CommitmentMeta) ([]byte, error)
 	Put(ctx context.Context, cm commitments.CommitmentMode, key, value []byte) ([]byte, error)
 }
 
@@ -22,27 +22,32 @@ type IManager interface {
 type Manager struct {
 	log log.Logger
 	// primary storage backends
-	eigenda common.GeneratedKeyStore   // ALT DA commitment type for OP mode && std commitment mode for standard /client
-	s3      common.PrecomputedKeyStore // OP commitment mode && keccak256 commitment type
+	eigenda   common.GeneratedKeyStore // ALT DA commitment type for OP mode && std commitment mode for standard /client
+	eigendaV2 common.GeneratedKeyStore
+	s3        common.PrecomputedKeyStore // OP commitment mode && keccak256 commitment type
 
 	// secondary storage backends (caching and fallbacks)
 	secondary ISecondary
+
+	// V2 usage
+	v2Dispersal bool
 }
 
 // NewManager ... Init
-func NewManager(eigenda common.GeneratedKeyStore, s3 common.PrecomputedKeyStore, l log.Logger,
+func NewManager(eigenda common.GeneratedKeyStore, eigenDAV2 common.GeneratedKeyStore, s3 common.PrecomputedKeyStore, l log.Logger,
 	secondary ISecondary) (IManager, error) {
 	return &Manager{
 		log:       l,
 		eigenda:   eigenda,
+		eigendaV2: eigenDAV2,
 		s3:        s3,
 		secondary: secondary,
 	}, nil
 }
 
 // Get ... fetches a value from a storage backend based on the (commitment mode, type)
-func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.CommitmentMode) ([]byte, error) {
-	switch cm {
+func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.CommitmentMeta) ([]byte, error) {
+	switch cm.Mode {
 	case commitments.OptimismKeccak:
 
 		if m.s3 == nil {
@@ -80,15 +85,12 @@ func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.Commitment
 		}
 
 		// 2 - read blob from EigenDA
-		data, err := m.eigenda.Get(ctx, key)
+		data, err := m.getEigenDAMode(ctx, key, cm.CertVersion)
 		if err == nil {
-			// verify
-			err = m.eigenda.Verify(ctx, key, data)
-			if err != nil {
-				return nil, err
-			}
 			return data, nil
 		}
+
+		m.log.Warn("Failed to read data from EigenDA", "err", err)
 
 		// 3 - read blob from fallbacks if enabled and data is non-retrievable from EigenDA
 		if m.secondary.FallbackEnabled() {
@@ -141,6 +143,33 @@ func (m *Manager) Put(ctx context.Context, cm commitments.CommitmentMode, key, v
 	}
 
 	return commit, nil
+}
+
+// getEigenDAMode ... looks up blob against respective EigenDA network provided certificate version byte
+func (m *Manager) getEigenDAMode(ctx context.Context, key []byte, version uint8) ([]byte, error) {
+	if version == 0 {
+		data, err := m.eigenda.Get(ctx, key)
+		if err == nil {
+			// verify
+			err = m.eigenda.Verify(ctx, key, data)
+			if err != nil {
+				return nil, err
+			}
+			return data, nil
+		}
+	}
+
+	// >0 indicates V2 network
+	data, err := m.eigendaV2.Get(ctx, key)
+	if err == nil {
+		// verify
+		err = m.eigendaV2.Verify(ctx, key, data)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return data, nil
 }
 
 // putEigenDAMode ... disperses blob to EigenDA backend

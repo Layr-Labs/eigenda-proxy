@@ -14,6 +14,7 @@ import (
 // TODO: we should eventually move all of these flags into the eigenda repo
 
 var (
+	// v1 disperser flags
 	DisperserRPCFlagName                 = withFlagPrefix("disperser-rpc")
 	ResponseTimeoutFlagName              = withFlagPrefix("response-timeout")
 	ConfirmationTimeoutFlagName          = withFlagPrefix("confirmation-timeout")
@@ -24,12 +25,22 @@ var (
 	SignerPrivateKeyHexFlagName          = withFlagPrefix("signer-private-key-hex")
 	PutBlobEncodingVersionFlagName       = withFlagPrefix("put-blob-encoding-version")
 	DisablePointVerificationModeFlagName = withFlagPrefix("disable-point-verification-mode")
-	WaitForFinalizationFlagName          = withFlagPrefix("wait-for-finalization")
-	ConfirmationDepthFlagName            = withFlagPrefix("confirmation-depth")
-	EthRPCURLFlagName                    = withFlagPrefix("eth-rpc")
-	SvcManagerAddrFlagName               = withFlagPrefix("svc-manager-addr")
+
+	// v1 retrieval flags
+	WaitForFinalizationFlagName = withFlagPrefix("wait-for-finalization")
+	ConfirmationDepthFlagName   = withFlagPrefix("confirmation-depth")
+
+	// v1 verification flags
+
+	SvcManagerAddrFlagName = withFlagPrefix("svc-manager-addr")
 	// Flags that are proxy specific, and not used by the eigenda-client
 	PutRetriesFlagName = withFlagPrefix("put-retries")
+
+	// v2 specific flags
+	BlobVerifierAddrFlagName = withFlagPrefix("blob-verifier-addr")
+
+	// shared flags between EigenDA networks
+	EthRPCURLFlagName = withFlagPrefix("eth-rpc")
 )
 
 func withFlagPrefix(s string) string {
@@ -150,6 +161,12 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Name:     SvcManagerAddrFlagName,
 			Usage:    "Address of the EigenDAServiceManager contract. Required to confirm blobs landed onchain. See https://github.com/Layr-Labs/eigenlayer-middleware/?tab=readme-ov-file#current-mainnet-deployment",
 			EnvVars:  []string{withEnvPrefix(envPrefix, "SERVICE_MANAGER_ADDR")},
+			Category: category,
+			Required: false,
+		}, &cli.StringFlag{
+			Name:     BlobVerifierAddrFlagName,
+			Usage:    "Address of the EigenDABlobVerifier contract. Required for performing eth_calls to verify EigenDA certificates.",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "BLOB_VERIFIER_ADDR")},
 			Category: category,
 			Required: false,
 		},

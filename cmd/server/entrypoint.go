@@ -76,11 +76,11 @@ func StartProxySvr(cliCtx *cli.Context) error {
 func prettyPrintConfig(cliCtx *cli.Context, log log.Logger) error {
 	// we read a new config which we modify to hide private info in order to log the rest
 	cfg := server.ReadCLIConfig(cliCtx)
-	if cfg.EigenDAConfig.EdaClientConfig.SignerPrivateKeyHex != "" {
-		cfg.EigenDAConfig.EdaClientConfig.SignerPrivateKeyHex = "*****" // marshaling defined in client config
+	if cfg.EigenDAConfig.EdaV1ClientConfig.SignerPrivateKeyHex != "" {
+		cfg.EigenDAConfig.EdaV1ClientConfig.SignerPrivateKeyHex = "*****" // marshaling defined in client config
 	}
-	if cfg.EigenDAConfig.EdaClientConfig.EthRpcUrl != "" {
-		cfg.EigenDAConfig.EdaClientConfig.EthRpcUrl = "*****" // hiding as RPC providers typically use sensitive API keys within
+	if cfg.EigenDAConfig.EdaV1ClientConfig.EthRpcUrl != "" {
+		cfg.EigenDAConfig.EdaV1ClientConfig.EthRpcUrl = "*****" // hiding as RPC providers typically use sensitive API keys within
 	}
 
 	configJSON, err := json.MarshalIndent(cfg, "", "  ")
