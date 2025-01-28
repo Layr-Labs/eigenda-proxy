@@ -16,6 +16,8 @@ E2EFUZZTEST = FUZZ=true go test ./e2e -fuzz -v -fuzztime=15m
 .PHONY: eigenda-proxy
 eigenda-proxy:
 	env GO111MODULE=on GOOS=$(TARGETOS) GOARCH=$(TARGETARCH) go build -v $(LDFLAGS) -o ./bin/eigenda-proxy ./cmd/server
+	env GO111MODULE=on GOOS=$(TARGETOS) GOARCH=$(TARGETARCH) go build -v $(LDFLAGS) -o ./bin/certGetter ./cmd/certGetter
+
 
 .PHONY: docker-build
 docker-build:

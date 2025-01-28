@@ -65,7 +65,7 @@ func NewVerifier(cfg *Config, l log.Logger) (*Verifier, error) {
 		}
 	}
 
-	kzgVerifier, err := kzgverifier.NewVerifier(cfg.KzgConfig, false)
+	kzgVerifier, err := kzgverifier.NewVerifier(cfg.KzgConfig, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create kzg verifier: %w", err)
 	}

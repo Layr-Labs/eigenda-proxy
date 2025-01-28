@@ -106,7 +106,7 @@ func (cv *CertVerifier) verifyBatchConfirmedOnChain(
 	}
 
 	// 2. Compute the hash of the batch metadata received as argument.
-	header := &binding.IEigenDAServiceManagerBatchHeader{
+	header := &binding.BatchHeader{
 		BlobHeadersRoot:       [32]byte(batchMetadata.GetBatchHeader().GetBatchRoot()),
 		QuorumNumbers:         batchMetadata.GetBatchHeader().GetQuorumNumbers(),
 		ReferenceBlockNumber:  batchMetadata.GetBatchHeader().GetReferenceBlockNumber(),

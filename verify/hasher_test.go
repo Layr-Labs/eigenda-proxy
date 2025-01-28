@@ -46,7 +46,7 @@ func TestHashBatchHashedMetadata(t *testing.T) {
 func TestHashBatchMetadata(t *testing.T) {
 	testHash := crypto.Keccak256Hash([]byte("batchHeader"))
 
-	header := &binding.IEigenDAServiceManagerBatchHeader{
+	header := &binding.BatchHeader{
 		BlobHeadersRoot:       testHash,
 		QuorumNumbers:         testHash.Bytes(),
 		SignedStakeForQuorums: testHash.Bytes(),
