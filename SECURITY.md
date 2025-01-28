@@ -6,7 +6,7 @@ Please see [Releases](https://github.com/Layr-Labs/eigenda-proxy/releases)
 
 ## Audit reports
 
-Audit reports are published in the `docs/audits` folder: https://github.com/Layr-Labs/eigenda-proxy/main/docs/audits 
+Audit reports are published in the [docs/audits](https://github.com/Layr-Labs/eigenda-proxy/tree/main/docs/audits) folder.
 
 | Date | Report Link |
 | ------- | ----------- |
@@ -14,6 +14,6 @@ Audit reports are published in the `docs/audits` folder: https://github.com/Layr
 
 ## Reporting a Vulnerability
 
-**Please do not file a public ticket** mentioning the vulnerability.
+**Please do not file a public ticket** mentioning a vulnerability.
 
-Please report security vulnerabilities to security@eigenlabs.org with the all the relavent details included in the email.
+Please report security vulnerabilities to security@eigenlabs.org with all the relavent details included in the email.
