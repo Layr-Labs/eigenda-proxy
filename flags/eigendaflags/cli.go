@@ -12,21 +12,21 @@ import (
 )
 
 var (
-	// This is a temporary feature flag that will be deprecated once all client 
+	// This is a temporary feature flag that will be deprecated once all client
 	// dependencies migrate to using EigenDA V2 network
 	V2Enabled = withFlagPrefix("v2-enabled")
 
 	// disperser specific flags (interoperable && mutex for (v1 && v2))
-	DisperserRPCFlagName                 = withFlagPrefix("disperser-rpc")
-	ResponseTimeoutFlagName              = withFlagPrefix("response-timeout")
-	ConfirmationTimeoutFlagName          = withFlagPrefix("confirmation-timeout")
-	StatusQueryRetryIntervalFlagName     = withFlagPrefix("status-query-retry-interval")
-	StatusQueryTimeoutFlagName           = withFlagPrefix("status-query-timeout")
-	DisableTLSFlagName                   = withFlagPrefix("disable-tls")
-	CustomQuorumIDsFlagName              = withFlagPrefix("custom-quorum-ids")
+	DisperserRPCFlagName             = withFlagPrefix("disperser-rpc")
+	ResponseTimeoutFlagName          = withFlagPrefix("response-timeout")
+	ConfirmationTimeoutFlagName      = withFlagPrefix("confirmation-timeout")
+	StatusQueryRetryIntervalFlagName = withFlagPrefix("status-query-retry-interval")
+	StatusQueryTimeoutFlagName       = withFlagPrefix("status-query-timeout")
+	DisableTLSFlagName               = withFlagPrefix("disable-tls")
+	CustomQuorumIDsFlagName          = withFlagPrefix("custom-quorum-ids")
 	// TODO: Determine whether we should change this to something like PaymentPrivateKeyHex
-	SignerPrivateKeyHexFlagName          = withFlagPrefix("signer-private-key-hex")
-	PutBlobEncodingVersionFlagName       = withFlagPrefix("put-blob-encoding-version")
+	SignerPrivateKeyHexFlagName    = withFlagPrefix("signer-private-key-hex")
+	PutBlobEncodingVersionFlagName = withFlagPrefix("put-blob-encoding-version")
 	// TODO: Consider renaming this to FFT mode or something pseudo-similar
 	DisablePointVerificationModeFlagName = withFlagPrefix("disable-point-verification-mode")
 
@@ -34,7 +34,7 @@ var (
 	// eigenda --batch-> ETH bridging
 	WaitForFinalizationFlagName = withFlagPrefix("wait-for-finalization")
 	ConfirmationDepthFlagName   = withFlagPrefix("confirmation-depth")
-	
+
 	// Flags that are proxy specific, and not used by the eigenda-client
 	PutRetriesFlagName = withFlagPrefix("put-retries")
 
@@ -42,7 +42,7 @@ var (
 	CertVerifierAddrName = withFlagPrefix("cert-verifier-addr")
 
 	// v1 && v2
-	EthRPCURLFlagName = withFlagPrefix("eth-rpc")
+	EthRPCURLFlagName      = withFlagPrefix("eth-rpc")
 	SvcManagerAddrFlagName = withFlagPrefix("svc-manager-addr")
 )
 
@@ -178,9 +178,9 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		},
 		// EigenDA V2 specific flags //
 		&cli.BoolFlag{
-			Name: V2Enabled,
-			Usage: "Enable blob dispersal and retrieval against EigenDA v2 protocol",
-			EnvVars: []string{withEnvPrefix(envPrefix, "V2_ENABLED")},
+			Name:     V2Enabled,
+			Usage:    "Enable blob dispersal and retrieval against EigenDA v2 protocol",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "V2_ENABLED")},
 			Required: false,
 		},
 		&cli.StringFlag{

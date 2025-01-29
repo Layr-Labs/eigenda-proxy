@@ -29,8 +29,8 @@ type V2StoreConfig struct {
 // EigenDA V2 protocol.
 type Store struct {
 	// TODO: disperserClient, retrieverClient usage
-	cfg      *V2StoreConfig
-	log      log.Logger
+	cfg *V2StoreConfig
+	log log.Logger
 
 	// id --> public endpoint
 	relays map[uint32]string
@@ -51,12 +51,10 @@ func NewStore(log log.Logger, cfg *V2StoreConfig, ethClient eigenda_common.EthCl
 		return nil, err
 	}
 
-	
 	return &Store{
-		log:      log,
-		cfg:      cfg,
+		log:    log,
+		cfg:    cfg,
 		relays: relays,
-
 	}, nil
 }
 
