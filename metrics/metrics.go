@@ -26,6 +26,7 @@ type Config struct {
 	Enabled           bool
 	ReadHeaderTimeout int
 }
+
 // Metricer ... Interface for metrics
 type Metricer interface {
 	RecordInfo(version string)

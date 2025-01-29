@@ -33,21 +33,21 @@ type LoggerConfig struct {
 func LoggerCLIFlags(envPrefix string, flagPrefix string) []cli.Flag {
 	return []cli.Flag{
 		&cli.StringFlag{
-			Name:   common.PrefixFlag(flagPrefix, LevelFlagName),
-			Usage:  `The lowest log level that will be output. Accepted options are "debug", "info", "warn", "error"`,
-			Value:  "info",
+			Name:    common.PrefixFlag(flagPrefix, LevelFlagName),
+			Usage:   `The lowest log level that will be output. Accepted options are "debug", "info", "warn", "error"`,
+			Value:   "info",
 			EnvVars: []string{common.PrefixEnvVar(envPrefix, "LOG_LEVEL")},
 		},
 		&cli.StringFlag{
-			Name:   common.PrefixFlag(flagPrefix, PathFlagName),
-			Usage:  "Path to file where logs will be written",
-			Value:  "",
+			Name:    common.PrefixFlag(flagPrefix, PathFlagName),
+			Usage:   "Path to file where logs will be written",
+			Value:   "",
 			EnvVars: []string{common.PrefixEnvVar(envPrefix, "LOG_PATH")},
 		},
 		&cli.StringFlag{
-			Name:   common.PrefixFlag(flagPrefix, FormatFlagName),
-			Usage:  "The format of the log file. Accepted options are 'json' and 'text'",
-			Value:  "json",
+			Name:    common.PrefixFlag(flagPrefix, FormatFlagName),
+			Usage:   "The format of the log file. Accepted options are 'json' and 'text'",
+			Value:   "json",
 			EnvVars: []string{common.PrefixEnvVar(envPrefix, "LOG_FORMAT")},
 		},
 	}

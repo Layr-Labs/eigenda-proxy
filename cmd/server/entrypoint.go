@@ -18,8 +18,7 @@ import (
 )
 
 func StartProxySvr(cliCtx *cli.Context) error {
-	
-	
+
 	logCfg, err := common.ReadLoggerCLIConfig(cliCtx, "log")
 	if err != nil {
 		return err

@@ -64,7 +64,7 @@ func NewCertVerifier(cfg *Config, log logging.Logger) (*CertVerifier, error) {
 	}
 
 	return &CertVerifier{
-		log:                         log,
+		log:                       log,
 		manager:                   m,
 		ethConfirmationDepth:      cfg.EthConfirmationDepth,
 		ethClient:                 client,

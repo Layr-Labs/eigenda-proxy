@@ -8,7 +8,6 @@ import (
 
 const GlobalPrefix = "EIGENDA_PROXY"
 
-
 func PrefixEnvVar(suffix string) []string {
 	return []string{GlobalPrefix + "_" + suffix}
 }

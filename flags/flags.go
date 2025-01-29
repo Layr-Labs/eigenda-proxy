@@ -31,7 +31,6 @@ const (
 	PortFlagName       = "port"
 )
 
-
 func CLIFlags() []cli.Flag {
 	// TODO: Decompose all flags into constituent parts based on their respective category / usage
 	flags := []cli.Flag{

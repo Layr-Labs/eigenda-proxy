@@ -41,7 +41,7 @@ type MemStore struct {
 	sync.RWMutex
 
 	config    Config
-	log         logging.Logger
+	log       logging.Logger
 	keyStarts map[string]time.Time
 	store     map[string][]byte
 	verifier  *verify.Verifier
@@ -57,7 +57,7 @@ func New(
 	ctx context.Context, verifier *verify.Verifier, log logging.Logger, config Config,
 ) (*MemStore, error) {
 	store := &MemStore{
-		log:         log,
+		log:       log,
 		config:    config,
 		keyStarts: make(map[string]time.Time),
 		store:     make(map[string][]byte),
