@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/Layr-Labs/eigenda/api/grpc/disperser"
-	binding "github.com/Layr-Labs/eigenda/contracts/bindings/EigenDABlobVerifier"
+	verifier_binding "github.com/Layr-Labs/eigenda/contracts/bindings/EigenDACertVerifier"
 
 	svc_binding "github.com/Layr-Labs/eigenda/contracts/bindings/EigenDAServiceManager"
 
@@ -91,7 +91,7 @@ func (cv *CertVerifier) verifyBatchConfirmedOnChain(
 	}
 
 	// 3. Compute the hash of the batch metadata received as argument.
-	header := &binding.BatchHeader{
+	header := &verifier_binding.BatchHeader{
 		BlobHeadersRoot:       [32]byte(batchMetadata.GetBatchHeader().GetBatchRoot()),
 		QuorumNumbers:         batchMetadata.GetBatchHeader().GetQuorumNumbers(),
 		ReferenceBlockNumber:  batchMetadata.GetBatchHeader().GetReferenceBlockNumber(),

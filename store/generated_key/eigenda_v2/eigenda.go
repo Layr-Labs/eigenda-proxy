@@ -6,12 +6,16 @@ import (
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
-	"github.com/Layr-Labs/eigenda-proxy/verify/v2"
 
+	eigenda_common "github.com/Layr-Labs/eigenda/common"
+	eth_utils "github.com/Layr-Labs/eigenda/core/eth"
 	"github.com/ethereum/go-ethereum/log"
 )
 
-type StoreConfig struct {
+type V2StoreConfig struct {
+	// address of service manager - used for loading chain state
+	ServiceManagerAddr string
+
 	MaxBlobSizeBytes uint64
 
 	// total duration time that client waits for blob to confirm
@@ -25,18 +29,34 @@ type StoreConfig struct {
 // EigenDA V2 protocol.
 type Store struct {
 	// TODO: disperserClient, retrieverClient usage
-	verifier *verify.Verifier
-	cfg      *StoreConfig
+	cfg      *V2StoreConfig
 	log      log.Logger
+
+	// id --> public endpoint
+	relays map[uint32]string
 }
 
 var _ common.GeneratedKeyStore = (*Store)(nil)
 
-func NewStore(v *verify.Verifier, log log.Logger, cfg *StoreConfig) (*Store, error) {
+func NewStore(log log.Logger, cfg *V2StoreConfig, ethClient eigenda_common.EthClient) (*Store, error) {
+	// create relay mapping
+	// TODO: remove nil in favor of real logging - this is insecure rn
+	reader, err := eth_utils.NewReader(nil, ethClient, "0x0", cfg.ServiceManagerAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	relays, err := reader.GetRelayURLs(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	
 	return &Store{
-		verifier: v,
 		log:      log,
 		cfg:      cfg,
+		relays: relays,
+
 	}, nil
 }
 

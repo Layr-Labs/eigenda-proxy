@@ -3,7 +3,7 @@ package verify
 import (
 	"encoding/binary"
 
-	binding "github.com/Layr-Labs/eigenda/contracts/bindings/EigenDABlobVerifier"
+	binding "github.com/Layr-Labs/eigenda/contracts/bindings/EigenDACertVerifier"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	geth_common "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"

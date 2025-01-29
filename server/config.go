@@ -27,7 +27,7 @@ type Config struct {
 
 // ReadConfig ... parses the Config from the provided flags or environment variables.
 func ReadConfig(ctx *cli.Context) Config {
-	edaClientConfig := eigendaflags.ReadConfig(ctx)
+	edaClientConfig := eigendaflags.ReadV1ClientConfig(ctx)
 	return Config{
 		EdaV1ClientConfig: edaClientConfig,
 		VerifierConfig:    verify.ReadConfig(ctx, edaClientConfig),
@@ -74,6 +74,11 @@ func (cfg *Config) Check() error {
 		if cfg.VerifierConfig.SvcManagerAddr == "" {
 			return fmt.Errorf("cert verification enabled but svc manager address is not set")
 		}
+	}
+
+	// V2 dispersal/retrieval enabled
+	if cfg.V2DispersalEnabled {
+		// TODO: verify V2 flags are properly set/enabled
 	}
 
 	return cfg.StorageConfig.Check()

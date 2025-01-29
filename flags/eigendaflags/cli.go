@@ -11,10 +11,12 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// TODO: we should eventually move all of these flags into the eigenda repo
-
 var (
-	// v1 disperser flags
+	// This is a temporary feature flag that will be deprecated once all client 
+	// dependencies migrate to using EigenDA V2 network
+	V2Enabled = withFlagPrefix("v2-enabled")
+
+	// disperser specific flags (interoperable && mutex for (v1 && v2))
 	DisperserRPCFlagName                 = withFlagPrefix("disperser-rpc")
 	ResponseTimeoutFlagName              = withFlagPrefix("response-timeout")
 	ConfirmationTimeoutFlagName          = withFlagPrefix("confirmation-timeout")
@@ -22,25 +24,26 @@ var (
 	StatusQueryTimeoutFlagName           = withFlagPrefix("status-query-timeout")
 	DisableTLSFlagName                   = withFlagPrefix("disable-tls")
 	CustomQuorumIDsFlagName              = withFlagPrefix("custom-quorum-ids")
+	// TODO: Determine whether we should change this to something like PaymentPrivateKeyHex
 	SignerPrivateKeyHexFlagName          = withFlagPrefix("signer-private-key-hex")
 	PutBlobEncodingVersionFlagName       = withFlagPrefix("put-blob-encoding-version")
+	// TODO: Consider renaming this to FFT mode or something pseudo-similar
 	DisablePointVerificationModeFlagName = withFlagPrefix("disable-point-verification-mode")
 
-	// v1 retrieval flags
+	// v1 confirmation flag; irrelevant in v2 since we don't care about
+	// eigenda --batch-> ETH bridging
 	WaitForFinalizationFlagName = withFlagPrefix("wait-for-finalization")
 	ConfirmationDepthFlagName   = withFlagPrefix("confirmation-depth")
-
-	// v1 verification flags
-
-	SvcManagerAddrFlagName = withFlagPrefix("svc-manager-addr")
+	
 	// Flags that are proxy specific, and not used by the eigenda-client
 	PutRetriesFlagName = withFlagPrefix("put-retries")
 
-	// v2 specific flags
-	BlobVerifierAddrFlagName = withFlagPrefix("blob-verifier-addr")
+	// v2 specific flag(s)
+	CertVerifierAddrName = withFlagPrefix("cert-verifier-addr")
 
-	// shared flags between EigenDA networks
+	// v1 && v2
 	EthRPCURLFlagName = withFlagPrefix("eth-rpc")
+	SvcManagerAddrFlagName = withFlagPrefix("svc-manager-addr")
 )
 
 func withFlagPrefix(s string) string {
@@ -163,12 +166,6 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			EnvVars:  []string{withEnvPrefix(envPrefix, "SERVICE_MANAGER_ADDR")},
 			Category: category,
 			Required: false,
-		}, &cli.StringFlag{
-			Name:     BlobVerifierAddrFlagName,
-			Usage:    "Address of the EigenDABlobVerifier contract. Required for performing eth_calls to verify EigenDA certificates.",
-			EnvVars:  []string{withEnvPrefix(envPrefix, "BLOB_VERIFIER_ADDR")},
-			Category: category,
-			Required: false,
 		},
 		// Flags that are proxy specific, and not used by the eigenda-client
 		// TODO: should we move this to a more specific category, like EIGENDA_STORE?
@@ -179,10 +176,24 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			EnvVars:  []string{withEnvPrefix(envPrefix, "PUT_RETRIES")},
 			Category: category,
 		},
+		// EigenDA V2 specific flags //
+		&cli.BoolFlag{
+			Name: V2Enabled,
+			Usage: "Enable blob dispersal and retrieval against EigenDA v2 protocol",
+			EnvVars: []string{withEnvPrefix(envPrefix, "V2_ENABLED")},
+			Required: false,
+		},
+		&cli.StringFlag{
+			Name:     CertVerifierAddrName,
+			Usage:    "Address of the EigenDABlobVerifier contract. Required for performing eth_calls to verify EigenDA certificates.",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "BLOB_VERIFIER_ADDR")},
+			Category: category,
+			Required: false,
+		},
 	}
 }
 
-func ReadConfig(ctx *cli.Context) clients.EigenDAClientConfig {
+func ReadV1ClientConfig(ctx *cli.Context) clients.EigenDAClientConfig {
 	waitForFinalization, confirmationDepth := parseConfirmationFlag(ctx.String(ConfirmationDepthFlagName))
 	return clients.EigenDAClientConfig{
 		RPC:                          ctx.String(DisperserRPCFlagName),

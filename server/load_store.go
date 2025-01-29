@@ -13,7 +13,6 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
-	verifier_v2 "github.com/Layr-Labs/eigenda-proxy/verify/v2"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/ethereum/go-ethereum/log"
 )
@@ -123,15 +122,11 @@ func LoadStoreManager(ctx context.Context, cfg CLIConfig, log log.Logger, m metr
 
 		// EigenDAV2 backend dependency injection
 		// TODO: config ingestion from env
-		verifierV2, err := verifier_v2.NewVerifier(&verifier_v2.Config{})
-		if err != nil {
-			return nil, err
-		}
 
-		eigenDAV2Store, err = eigenda_v2.NewStore(verifierV2, log, &eigenda_v2.StoreConfig{})
-		if err != nil {
-			return nil, err
-		}
+		// eigenDAV2Store, err = eigenda_v2.NewStore(verifierV2, log, &eigenda_v2.StoreConfig{})
+		// if err != nil {
+		// 	return nil, err
+		// }
 
 	}
 
