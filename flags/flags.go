@@ -2,16 +2,16 @@ package flags
 
 import (
 	"github.com/Layr-Labs/eigenda-proxy/flags/eigendaflags"
+	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/Layr-Labs/eigenda-proxy/verify"
+
 	"github.com/urfave/cli/v2"
 
-	opservice "github.com/ethereum-optimism/optimism/op-service"
-	oplog "github.com/ethereum-optimism/optimism/op-service/log"
-	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
+	"github.com/Layr-Labs/eigenda-proxy/common"
 )
 
 const (
@@ -31,11 +31,6 @@ const (
 	PortFlagName       = "port"
 )
 
-const EnvVarPrefix = "EIGENDA_PROXY"
-
-func prefixEnvVars(name string) []string {
-	return opservice.PrefixEnvVar(EnvVarPrefix, name)
-}
 
 func CLIFlags() []cli.Flag {
 	// TODO: Decompose all flags into constituent parts based on their respective category / usage
@@ -44,13 +39,13 @@ func CLIFlags() []cli.Flag {
 			Name:    ListenAddrFlagName,
 			Usage:   "Server listening address",
 			Value:   "0.0.0.0",
-			EnvVars: prefixEnvVars("ADDR"),
+			EnvVars: common.PrefixEnvVar("ADDR"),
 		},
 		&cli.IntFlag{
 			Name:    PortFlagName,
 			Usage:   "Server listening port",
 			Value:   3100,
-			EnvVars: prefixEnvVars("PORT"),
+			EnvVars: common.PrefixEnvVar("PORT"),
 		},
 	}
 
@@ -62,15 +57,15 @@ var Flags = []cli.Flag{}
 
 func init() {
 	Flags = CLIFlags()
-	Flags = append(Flags, oplog.CLIFlags(EnvVarPrefix)...)
-	Flags = append(Flags, opmetrics.CLIFlags(EnvVarPrefix)...)
-	Flags = append(Flags, eigendaflags.CLIFlags(EnvVarPrefix, EigenDAClientCategory)...)
-	Flags = append(Flags, eigendaflags.DeprecatedCLIFlags(EnvVarPrefix, EigenDADeprecatedCategory)...)
-	Flags = append(Flags, store.CLIFlags(EnvVarPrefix, StorageFlagsCategory)...)
-	Flags = append(Flags, store.DeprecatedCLIFlags(EnvVarPrefix, StorageDeprecatedCategory)...)
-	Flags = append(Flags, redis.CLIFlags(EnvVarPrefix, RedisCategory)...)
-	Flags = append(Flags, s3.CLIFlags(EnvVarPrefix, S3Category)...)
-	Flags = append(Flags, memstore.CLIFlags(EnvVarPrefix, MemstoreFlagsCategory)...)
-	Flags = append(Flags, verify.CLIFlags(EnvVarPrefix, VerifierCategory)...)
-	Flags = append(Flags, verify.DeprecatedCLIFlags(EnvVarPrefix, VerifierDeprecatedCategory)...)
+	Flags = append(Flags, common.LoggerCLIFlags(common.GlobalPrefix, "log")...)
+	Flags = append(Flags, metrics.CLIFlags(common.GlobalPrefix)...)
+	Flags = append(Flags, eigendaflags.CLIFlags(common.GlobalPrefix, EigenDAClientCategory)...)
+	Flags = append(Flags, eigendaflags.DeprecatedCLIFlags(common.GlobalPrefix, EigenDADeprecatedCategory)...)
+	Flags = append(Flags, store.CLIFlags(common.GlobalPrefix, StorageFlagsCategory)...)
+	Flags = append(Flags, store.DeprecatedCLIFlags(common.GlobalPrefix, StorageDeprecatedCategory)...)
+	Flags = append(Flags, redis.CLIFlags(common.GlobalPrefix, RedisCategory)...)
+	Flags = append(Flags, s3.CLIFlags(common.GlobalPrefix, S3Category)...)
+	Flags = append(Flags, memstore.CLIFlags(common.GlobalPrefix, MemstoreFlagsCategory)...)
+	Flags = append(Flags, verify.CLIFlags(common.GlobalPrefix, VerifierCategory)...)
+	Flags = append(Flags, verify.DeprecatedCLIFlags(common.GlobalPrefix, VerifierDeprecatedCategory)...)
 }

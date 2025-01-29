@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/ecc/bn254"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fp"
@@ -54,7 +55,7 @@ type Verifier struct {
 	holesky bool
 }
 
-func NewVerifier(cfg *Config, l log.Logger) (*Verifier, error) {
+func NewVerifier(cfg *Config, l logging.Logger) (*Verifier, error) {
 	var cv *CertVerifier
 	var err error
 

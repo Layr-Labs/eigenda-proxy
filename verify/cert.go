@@ -11,20 +11,20 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/common/consts"
 	"github.com/Layr-Labs/eigenda/api/grpc/disperser"
 	binding "github.com/Layr-Labs/eigenda/contracts/bindings/EigenDAServiceManager"
+	"github.com/Layr-Labs/eigensdk-go/logging"
 
 	"github.com/ethereum-optimism/optimism/op-service/retry"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/log"
 	"golang.org/x/exp/slices"
 )
 
 // CertVerifier verifies the DA certificate against on-chain EigenDA contracts
 // to ensure disperser returned fields haven't been tampered with
 type CertVerifier struct {
-	l log.Logger
+	log logging.Logger
 	// ethConfirmationDepth is used to verify that a blob's batch commitment has been bridged to the EigenDAServiceManager contract at least
 	// this many blocks in the past. To do so we make an eth_call to the contract at the current block_number - ethConfirmationDepth.
 	// Hence in order to not require an archive node, this value should be kept low. We force it to be < 64 (consts.EthHappyPathFinalizationDepthBlocks).
@@ -40,7 +40,7 @@ type CertVerifier struct {
 	quorumAdversaryThresholds map[uint8]uint8
 }
 
-func NewCertVerifier(cfg *Config, l log.Logger) (*CertVerifier, error) {
+func NewCertVerifier(cfg *Config, log logging.Logger) (*CertVerifier, error) {
 	if cfg.EthConfirmationDepth >= uint64(consts.EthHappyPathFinalizationDepthBlocks) {
 		// We keep this low (<128) to avoid requiring an archive node.
 		return nil, fmt.Errorf("confirmation depth must be less than 64; consider using cfg.WaitForFinalization=true instead")
@@ -64,7 +64,7 @@ func NewCertVerifier(cfg *Config, l log.Logger) (*CertVerifier, error) {
 	}
 
 	return &CertVerifier{
-		l:                         l,
+		log:                         log,
 		manager:                   m,
 		ethConfirmationDepth:      cfg.EthConfirmationDepth,
 		ethClient:                 client,

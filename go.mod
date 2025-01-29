@@ -7,6 +7,7 @@ toolchain go1.22.7
 require (
 	github.com/Layr-Labs/eigenda v0.8.5-rc.0.0.20241101212705-fa8776ae648c
 	github.com/Layr-Labs/eigenda-proxy/client v0.0.0-00010101000000-000000000000
+	github.com/Layr-Labs/eigensdk-go v0.1.7-0.20240507215523-7e4891d5099a
 	github.com/avast/retry-go/v4 v4.6.0
 	github.com/consensys/gnark-crypto v0.12.1
 	github.com/ethereum-optimism/optimism v1.9.5
@@ -20,7 +21,8 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/testcontainers/testcontainers-go/modules/minio v0.33.0
 	github.com/testcontainers/testcontainers-go/modules/redis v0.33.0
-	github.com/urfave/cli/v2 v2.27.5
+	github.com/urfave/cli v1.22.14
+	github.com/wealdtech/go-merkletree/v2 v2.6.0
 	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c
 	google.golang.org/grpc v1.64.1
 )
@@ -33,7 +35,6 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/BurntSushi/toml v1.4.0 // indirect
 	github.com/DataDog/zstd v1.5.6-0.20230824185856-869dae002e5e // indirect
-	github.com/Layr-Labs/eigensdk-go v0.1.7-0.20240507215523-7e4891d5099a // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/VictoriaMetrics/fastcache v1.12.2 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
@@ -260,8 +261,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
-	github.com/urfave/cli v1.22.14 // indirect
-	github.com/wealdtech/go-merkletree/v2 v2.6.0 // indirect
+	github.com/urfave/cli/v2 v2.27.5 // indirect
 	github.com/wlynxg/anet v0.0.4 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect

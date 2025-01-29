@@ -2,14 +2,20 @@ package memstore
 
 import (
 	"context"
+	"os"
 	"runtime"
 	"testing"
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/stretchr/testify/require"
+)
+
+
+var (
+	testLogger = logging.NewTextSLogger(os.Stdout, &logging.SLoggerOptions{})
 )
 
 const (
@@ -49,7 +55,7 @@ func TestGetSet(t *testing.T) {
 	ms, err := New(
 		ctx,
 		verifier,
-		log.New(),
+		testLogger,
 		getDefaultMemStoreTestConfig(),
 	)
 
@@ -78,7 +84,7 @@ func TestExpiration(t *testing.T) {
 	ms, err := New(
 		ctx,
 		verifier,
-		log.New(),
+		testLogger,
 		memstoreConfig,
 	)
 
@@ -111,7 +117,7 @@ func TestLatency(t *testing.T) {
 	config := getDefaultMemStoreTestConfig()
 	config.PutLatency = putLatency
 	config.GetLatency = getLatency
-	ms, err := New(ctx, verifier, log.New(), config)
+	ms, err := New(ctx, verifier, testLogger, config)
 
 	require.NoError(t, err)
 
