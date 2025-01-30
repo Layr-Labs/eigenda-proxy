@@ -25,7 +25,7 @@ func main() {
 	signer := auth.NewLocalBlobRequestSigner(privateKeyHex)
 
 	RPCURLs := make([]string, 1)
-	RPCURLs[0] = string("https://ethereum-holesky.publicnode.com") // public rpc
+	RPCURLs[0] = string("https://eth-holesky.g.alchemy.com/v2/P4tiNCHIHYa0HnACGNUflmqeVZ6At4Ln") // public rpc  https://ethereum-holesky.publicnode.com
 
 	ethConfig := geth.EthClientConfig{
 		RPCURLs:          RPCURLs,
@@ -61,7 +61,7 @@ func main() {
 	timeoutCtx, cancel := context.WithTimeout(ctx, dur)
 	defer cancel()
 
-	blobKeyHex := "f656168a4f7d4201444fc1f2aa567c815e4b91b03e251275a20617a8c69d011f"
+	blobKeyHex := "e286fabf623bbc07cd3e25cf7efa4d148d62838ffca8edae6cb6db5fe86902d1"
 	blobKey1, err := hex.DecodeString(blobKeyHex)
 	if err != nil {
 		fmt.Println("blobKey1 err")
@@ -69,7 +69,7 @@ func main() {
 	}
 
 	// holesky cert verifier address
-	certVerifierAddress := "0xAfd0b614EB381800D6C35933Da8BAfbA1bDd255f"
+	certVerifierAddress := "0x5c33Ce64EE04400fD593F960d63336F1B65bF77B"
 
 	blobKey := core.BlobKey(blobKey1)
 
@@ -78,8 +78,9 @@ func main() {
 		panic("poll blob status until certified")
 	}
 	fmt.Println("Blob status CERTIFIED", "blobKey", blobKey)
+	fmt.Print("Blob status CERTIFIED", "blobStatusReply", blobStatusReply)
 
-	certVerifier, err := verification.NewCertVerifier(ethClient, certVerifierAddress)
+	certVerifier, err := verification.NewCertVerifier(*ethClient, certVerifierAddress)
 	if err != nil {
 		fmt.Println("NewCertVerifier err", err)
 		panic("")
@@ -87,12 +88,16 @@ func main() {
 
 	eigenDACert, err := buildEigenDACert(ctx, blobKey, blobStatusReply, certVerifier)
 	fmt.Println("err", err)
+	fmt.Printf("Cert %+v\n", eigenDACert)
 
 	timeoutCtx, cancel = context.WithTimeout(ctx, dur)
 	defer cancel()
 	err = certVerifier.VerifyCertV2(timeoutCtx, eigenDACert)
+	if err != nil {
+		fmt.Printf("VerifyCertV2 has problem %w", err)
+	}
 
-	fmt.Println("verify cert for blobKey %v: %w", blobKey, err)
+	fmt.Printf("certVerifier.VerifyCertV2 onchain call verify correctly")
 }
 
 // buildEigenDACert makes a call to the getNonSignerStakesAndSignature view function on the EigenDACertVerifier
@@ -112,7 +117,8 @@ func buildEigenDACert(
 	if err != nil {
 		return nil, fmt.Errorf("get non signer stake and signature: %w", err)
 	}
-	fmt.Println("Retrieved NonSignerStakesAndSignature", "blobKey", blobKey)
+	fmt.Println("Retrieved NonSignerStakesAndSignature", "blobKey", hex.EncodeToString(blobKey[:]))
+	//fmt.Println("Retrieved NonSignerStakesAndSignature", "nonSignerStakesAndSignature", nonSignerStakesAndSignature)
 
 	eigenDACert, err := verification.BuildEigenDACert(blobStatusReply, nonSignerStakesAndSignature)
 	if err != nil {
