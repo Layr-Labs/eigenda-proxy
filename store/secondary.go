@@ -33,7 +33,7 @@ type ISecondary interface {
 	WriteSubscriptionLoop(ctx context.Context)
 }
 
-// PutNotify ... notification received by primary router to perform insertion across
+// PutNotify ... notification received by primary manager to perform insertions across
 // secondary storage backends
 type PutNotify struct {
 	Commitment []byte
