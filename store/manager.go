@@ -14,7 +14,7 @@ import (
 
 // IManager ... read/write interface
 type IManager interface {
-	Get(ctx context.Context, key []byte, cm commitments.CommitmentMode, version commitments.EigenDACommit) ([]byte, error) 
+	Get(ctx context.Context, key []byte, cm commitments.CommitmentMode, version commitments.EigenDACommit) ([]byte, error)
 	Put(ctx context.Context, cm commitments.CommitmentMode, key, value []byte) ([]byte, error)
 }
 
@@ -22,14 +22,13 @@ type IManager interface {
 type Manager struct {
 	log log.Logger
 
-	s3      common.PrecomputedKeyStore // OP commitment mode && keccak256 commitment type
+	s3 common.PrecomputedKeyStore // OP commitment mode && keccak256 commitment type
 	// ALT DA commitment types for OP mode && std commitment mode for standard /client
-	eigenda common.GeneratedKeyStore   // v0 da commitment version
+	eigenda   common.GeneratedKeyStore // v0 da commitment version
 	eigendaV2 common.GeneratedKeyStore // v1 da commitment version
-	
 
 	// secondary storage backends (caching and fallbacks)
-	secondary ISecondary
+	secondary    ISecondary
 	useEigenDAV2 bool
 }
 
@@ -163,6 +162,9 @@ func (m *Manager) Put(ctx context.Context, cm commitments.CommitmentMode, key, v
 	return commit, nil
 }
 
+// TODO: Establish a means for sharing EigenDA version with the upstream
+// caller to properly encode before returning commitment to rollup
+// currently is always V0
 // putEigenDAMode ... disperses blob to EigenDA backend
 func (m *Manager) putEigenDAMode(ctx context.Context, value []byte) ([]byte, error) {
 	if m.eigenda != nil && !m.useEigenDAV2 { // disperse v1

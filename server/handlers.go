@@ -33,7 +33,7 @@ func (svr *Server) handleGetStdCommitment(w http.ResponseWriter, r *http.Request
 		return fmt.Errorf("error parsing version byte: %w", err)
 	}
 	commitmentMeta := commitments.CommitmentMeta{
-		Mode:        commitments.Standard,
+		Mode:    commitments.Standard,
 		Version: commitments.EigenDACommit(versionByte),
 	}
 
@@ -59,7 +59,7 @@ func (svr *Server) handleGetOPKeccakCommitment(w http.ResponseWriter, r *http.Re
 	// 	return err
 	// }
 	commitmentMeta := commitments.CommitmentMeta{
-		Mode:        commitments.OptimismKeccak,
+		Mode:    commitments.OptimismKeccak,
 		Version: commitments.CertV0,
 	}
 
@@ -82,7 +82,7 @@ func (svr *Server) handleGetOPGenericCommitment(w http.ResponseWriter, r *http.R
 		return fmt.Errorf("error parsing version byte: %w", err)
 	}
 	commitmentMeta := commitments.CommitmentMeta{
-		Mode:        commitments.OptimismGeneric,
+		Mode:    commitments.OptimismGeneric,
 		Version: commitments.EigenDACommit(versionByte),
 	}
 
@@ -126,7 +126,7 @@ func (svr *Server) handleGetShared(ctx context.Context, w http.ResponseWriter, c
 // handlePostStdCommitment handles the POST request for std commitments.
 func (svr *Server) handlePostStdCommitment(w http.ResponseWriter, r *http.Request) error {
 	commitmentMeta := commitments.CommitmentMeta{
-		Mode:        commitments.Standard,
+		Mode:    commitments.Standard,
 		Version: commitments.CertV0,
 	}
 	return svr.handlePostShared(w, r, nil, commitmentMeta)
@@ -142,7 +142,7 @@ func (svr *Server) handlePostOPKeccakCommitment(w http.ResponseWriter, r *http.R
 	// 	return err
 	// }
 	commitmentMeta := commitments.CommitmentMeta{
-		Mode:        commitments.OptimismKeccak,
+		Mode:    commitments.OptimismKeccak,
 		Version: commitments.CertV0,
 	}
 
@@ -161,7 +161,7 @@ func (svr *Server) handlePostOPKeccakCommitment(w http.ResponseWriter, r *http.R
 // handlePostOPGenericCommitment handles the POST request for optimism generic commitments.
 func (svr *Server) handlePostOPGenericCommitment(w http.ResponseWriter, r *http.Request) error {
 	commitmentMeta := commitments.CommitmentMeta{
-		Mode:        commitments.OptimismGeneric,
+		Mode:    commitments.OptimismGeneric,
 		Version: commitments.CertV0,
 	}
 	return svr.handlePostShared(w, r, nil, commitmentMeta)

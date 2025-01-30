@@ -4,7 +4,7 @@ type EigenDACommit byte
 
 const (
 	// EigenDA V1
-	CertV0 EigenDACommit  = iota
+	CertV0 EigenDACommit = iota
 	CertV1
 )
 
@@ -17,14 +17,14 @@ type CertCommitment interface {
 
 type EigenDACommitment struct {
 	prefix EigenDACommit
-	b []byte	
+	b      []byte
 }
 
 // NewV0CertCommitment creates a new commitment from the given input.
 func NewCertCommitment(input []byte, v EigenDACommit) EigenDACommitment {
 	return EigenDACommitment{
 		prefix: v,
-		b: input,
+		b:      input,
 	}
 }
 
