@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Layr-Labs/eigenda-proxy/verify"
+	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/stretchr/testify/require"

@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/Layr-Labs/eigenda-proxy/verify"
+	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
 	"github.com/urfave/cli/v2"
 )
 

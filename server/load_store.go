@@ -8,10 +8,11 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/eigenda"
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/eigenda_v2"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
-	"github.com/Layr-Labs/eigenda-proxy/verify"
+	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/ethereum/go-ethereum/log"
 )
@@ -58,6 +59,7 @@ func LoadStoreManager(ctx context.Context, cfg CLIConfig, log log.Logger, m metr
 	var err error
 	var s3Store *s3.Store
 	var redisStore *redis.Store
+	var eigenDAV2Store *eigenda_v2.Store
 
 	if cfg.EigenDAConfig.StorageConfig.S3Config.Bucket != "" && cfg.EigenDAConfig.StorageConfig.S3Config.Endpoint != "" {
 		log.Info("Using S3 backend")
@@ -97,9 +99,11 @@ func LoadStoreManager(ctx context.Context, cfg CLIConfig, log log.Logger, m metr
 		log.Info("Using memstore backend for EigenDA")
 		eigenDA, err = memstore.New(ctx, verifier, log, cfg.EigenDAConfig.MemstoreConfig)
 	} else {
+
+		// EigenDAV1 backend dependency injection
 		var client *clients.EigenDAClient
 		log.Info("Using EigenDA backend")
-		client, err = clients.NewEigenDAClient(log.With("subsystem", "eigenda-client"), daCfg.EdaClientConfig)
+		client, err = clients.NewEigenDAClient(log.With("subsystem", "eigenda-client"), daCfg.EdaV1ClientConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -111,10 +115,19 @@ func LoadStoreManager(ctx context.Context, cfg CLIConfig, log log.Logger, m metr
 			&eigenda.StoreConfig{
 				MaxBlobSizeBytes:     cfg.EigenDAConfig.MemstoreConfig.MaxBlobSizeBytes,
 				EthConfirmationDepth: cfg.EigenDAConfig.VerifierConfig.EthConfirmationDepth,
-				StatusQueryTimeout:   cfg.EigenDAConfig.EdaClientConfig.StatusQueryTimeout,
+				StatusQueryTimeout:   cfg.EigenDAConfig.EdaV1ClientConfig.StatusQueryTimeout,
 				PutRetries:           cfg.EigenDAConfig.PutRetries,
 			},
 		)
+
+		// EigenDAV2 backend dependency injection
+		// TODO: config ingestion from env
+
+		// eigenDAV2Store, err = eigenda_v2.NewStore(log, &eigenda_v2.StoreConfig{}, cfg.EigenDAConfig.EthClient)
+		// if err != nil {
+		// 	return nil, err
+		// }
+
 	}
 
 	if err != nil {
@@ -135,5 +148,5 @@ func LoadStoreManager(ctx context.Context, cfg CLIConfig, log log.Logger, m metr
 	}
 
 	log.Info("Creating storage router", "eigenda backend type", eigenDA != nil, "s3 backend type", s3Store != nil)
-	return store.NewManager(eigenDA, s3Store, log, secondary)
+	return store.NewManager(eigenDA, eigenDAV2Store, s3Store, log, secondary)
 }

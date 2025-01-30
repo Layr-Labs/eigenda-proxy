@@ -33,7 +33,7 @@ type Manager struct {
 }
 
 // NewManager ... Init
-func NewManager(eigenda common.GeneratedKeyStore, s3 common.PrecomputedKeyStore, l log.Logger,
+func NewManager(eigenda common.GeneratedKeyStore, eigenDAV2 common.GeneratedKeyStore, s3 common.PrecomputedKeyStore, l log.Logger,
 	secondary ISecondary) (IManager, error) {
 	return &Manager{
 		log:       l,

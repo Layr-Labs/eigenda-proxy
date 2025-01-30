@@ -6,7 +6,7 @@ import (
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
-	"github.com/Layr-Labs/eigenda-proxy/verify"
+	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	"github.com/stretchr/testify/require"
@@ -18,7 +18,7 @@ func validCfg() *Config {
 		panic(err)
 	}
 	return &Config{
-		EdaClientConfig: clients.EigenDAClientConfig{
+		EdaV1ClientConfig: clients.EigenDAClientConfig{
 			RPC:                          "http://localhost:8545",
 			StatusQueryRetryInterval:     5 * time.Second,
 			StatusQueryTimeout:           30 * time.Minute,
@@ -99,8 +99,8 @@ func TestConfigVerification(t *testing.T) {
 
 			err := cfg.Check()
 			require.NoError(t, err)
-			require.True(t, len(cfg.EdaClientConfig.EthRpcUrl) > 1)
-			require.True(t, len(cfg.EdaClientConfig.SvcManagerAddr) > 1)
+			require.True(t, len(cfg.EdaV1ClientConfig.EthRpcUrl) > 1)
+			require.True(t, len(cfg.EdaV1ClientConfig.SvcManagerAddr) > 1)
 		})
 
 		t.Run("FailWhenEigenDAClientFieldsAreUnsetAndMemStoreDisabled", func(t *testing.T) {

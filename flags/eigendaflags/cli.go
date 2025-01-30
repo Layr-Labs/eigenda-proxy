@@ -8,28 +8,47 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/common/consts"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/Layr-Labs/eigenda/api/clients/codecs"
+	v2_clients "github.com/Layr-Labs/eigenda/api/clients/v2"
+	"github.com/Layr-Labs/eigenda/core"
 	"github.com/urfave/cli/v2"
 )
 
-// TODO: we should eventually move all of these flags into the eigenda repo
-
 var (
-	DisperserRPCFlagName                 = withFlagPrefix("disperser-rpc")
-	ResponseTimeoutFlagName              = withFlagPrefix("response-timeout")
-	ConfirmationTimeoutFlagName          = withFlagPrefix("confirmation-timeout")
-	StatusQueryRetryIntervalFlagName     = withFlagPrefix("status-query-retry-interval")
-	StatusQueryTimeoutFlagName           = withFlagPrefix("status-query-timeout")
-	DisableTLSFlagName                   = withFlagPrefix("disable-tls")
-	CustomQuorumIDsFlagName              = withFlagPrefix("custom-quorum-ids")
-	SignerPrivateKeyHexFlagName          = withFlagPrefix("signer-private-key-hex")
-	PutBlobEncodingVersionFlagName       = withFlagPrefix("put-blob-encoding-version")
+	// This is a temporary feature flag that will be deprecated once all client
+	// dependencies migrate to using EigenDA V2 network
+	V2Enabled = withFlagPrefix("v2-enabled")
+
+	// disperser specific flags (interoperable && mutex for (v1 && v2))
+	DisperserRPCFlagName             = withFlagPrefix("disperser-rpc")
+	ResponseTimeoutFlagName          = withFlagPrefix("response-timeout")
+	ConfirmationTimeoutFlagName      = withFlagPrefix("confirmation-timeout")
+	StatusQueryRetryIntervalFlagName = withFlagPrefix("status-query-retry-interval")
+	StatusQueryTimeoutFlagName       = withFlagPrefix("status-query-timeout")
+	DisableTLSFlagName               = withFlagPrefix("disable-tls")
+	CustomQuorumIDsFlagName          = withFlagPrefix("custom-quorum-ids")
+	// TODO: Determine whether we should change this to something like PaymentPrivateKeyHex
+	SignerPrivateKeyHexFlagName    = withFlagPrefix("signer-private-key-hex")
+	PutBlobEncodingVersionFlagName = withFlagPrefix("put-blob-encoding-version")
+	// TODO: Consider renaming this to FFT mode or something pseudo-similar
 	DisablePointVerificationModeFlagName = withFlagPrefix("disable-point-verification-mode")
-	WaitForFinalizationFlagName          = withFlagPrefix("wait-for-finalization")
-	ConfirmationDepthFlagName            = withFlagPrefix("confirmation-depth")
-	EthRPCURLFlagName                    = withFlagPrefix("eth-rpc")
-	SvcManagerAddrFlagName               = withFlagPrefix("svc-manager-addr")
+
+	// v1 confirmation flag; irrelevant in v2 since we don't care about
+	// eigenda --batch-> ETH bridging
+	WaitForFinalizationFlagName = withFlagPrefix("wait-for-finalization")
+	ConfirmationDepthFlagName   = withFlagPrefix("confirmation-depth")
+
 	// Flags that are proxy specific, and not used by the eigenda-client
 	PutRetriesFlagName = withFlagPrefix("put-retries")
+
+	// v2 specific flag(s)
+	CertVerifierAddrName    = withFlagPrefix("cert-verifier-addr")
+	RelayTimeoutName        = withFlagPrefix("relay-timeout")
+	ContractCallTimeoutName = withFlagPrefix("contract-call-timeout")
+	BlobVersionName         = withFlagPrefix("blob-version")
+
+	// v1 && v2
+	EthRPCURLFlagName      = withFlagPrefix("eth-rpc")
+	SvcManagerAddrFlagName = withFlagPrefix("svc-manager-addr")
 )
 
 func withFlagPrefix(s string) string {
@@ -163,10 +182,90 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			EnvVars:  []string{withEnvPrefix(envPrefix, "PUT_RETRIES")},
 			Category: category,
 		},
+		// EigenDA V2 specific flags //
+		&cli.BoolFlag{
+			Name:     V2Enabled,
+			Usage:    "Enable blob dispersal and retrieval against EigenDA v2 protocol",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "V2_ENABLED")},
+			Required: false,
+		},
+		&cli.StringFlag{
+			Name:     CertVerifierAddrName,
+			Usage:    "Address of the EigenDABlobVerifier contract. Required for performing eth_calls to verify EigenDA certificates.",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "CERT_VERIFIER_ADDR")},
+			Category: category,
+			Required: false,
+		},
+		&cli.DurationFlag{
+			Name:     RelayTimeoutName,
+			Usage:    "Timeout used when querying a relay for blob contents.",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "RELAY_TIMEOUT")},
+			Value:    10 * time.Second,
+			Required: false,
+		},
+		&cli.DurationFlag{
+			Name:     ContractCallTimeoutName,
+			Usage:    "Timeout used when performing smart contract eth_calls",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "CONTRACT_CALL_TIMEOUT")},
+			Value:    10 * time.Second,
+			Required: false,
+		},
+		&cli.UintFlag{
+			Name:     BlobVersionName,
+			Usage:    "Blob version used when dispersing. Currently only supports (0)",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "BLOB_VERSION")},
+			Value:    uint(0),
+			Required: false,
+		},
 	}
 }
 
-func ReadConfig(ctx *cli.Context) clients.EigenDAClientConfig {
+func readPayloadClientConfig(ctx *cli.Context) v2_clients.PayloadClientConfig {
+	noPolynomial := ctx.Bool(DisablePointVerificationModeFlagName)
+	polyMode := codecs.PolynomialFormCoeff
+
+	// if point verification mode is disabled then blob is treated as evaluations and
+	// not FFT'd before dispersal
+	if noPolynomial {
+		polyMode = codecs.PolynomialFormEval
+	}
+
+	return v2_clients.PayloadClientConfig{
+		// TODO: Support proper user env injection
+		BlobEncodingVersion:     codecs.DefaultBlobEncoding,
+		EthRpcUrl:               ctx.String(EthRPCURLFlagName),
+		EigenDACertVerifierAddr: ctx.String(CertVerifierAddrName),
+		PayloadPolynomialForm:   polyMode,
+		BlobVersion:             0,
+	}
+}
+
+func ReadV2DispersalConfig(ctx *cli.Context) v2_clients.PayloadDisperserConfig {
+	payCfg := readPayloadClientConfig(ctx)
+
+	return v2_clients.PayloadDisperserConfig{
+		PayloadClientConfig: payCfg,
+		DisperseBlobTimeout: ctx.Duration(ResponseTimeoutFlagName),
+		// TODO: Explore making these user defined
+		BlobCertifiedTimeout:   time.Second * 2,
+		BlobStatusPollInterval: time.Second * 1,
+		Quorums: []core.QuorumID{
+			core.QuorumID(0),
+			core.QuorumID(1),
+		},
+	}
+}
+
+func ReadV2RetrievalConfig(ctx *cli.Context) v2_clients.PayloadRetrieverConfig {
+	payCfg := readPayloadClientConfig(ctx)
+
+	return v2_clients.PayloadRetrieverConfig{
+		PayloadClientConfig: payCfg,
+		RelayTimeout:        ctx.Duration(RelayTimeoutName),
+	}
+}
+
+func ReadV1ClientConfig(ctx *cli.Context) clients.EigenDAClientConfig {
 	waitForFinalization, confirmationDepth := parseConfirmationFlag(ctx.String(ConfirmationDepthFlagName))
 	return clients.EigenDAClientConfig{
 		RPC:                          ctx.String(DisperserRPCFlagName),
