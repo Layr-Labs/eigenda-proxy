@@ -49,7 +49,7 @@ func TestHandlerGet(t *testing.T) {
 			name: "Failure - OP Keccak256 Internal Server Error",
 			url:  fmt.Sprintf("/get/0x00%s", testCommitStr),
 			mockBehavior: func() {
-				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("internal error"))
+				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("internal error"))
 			},
 			expectedCode: http.StatusInternalServerError,
 			expectedBody: "",
@@ -58,7 +58,7 @@ func TestHandlerGet(t *testing.T) {
 			name: "Success - OP Keccak256",
 			url:  fmt.Sprintf("/get/0x00%s", testCommitStr),
 			mockBehavior: func() {
-				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte(testCommitStr), nil)
+				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte(testCommitStr), nil)
 			},
 			expectedCode: http.StatusOK,
 			expectedBody: testCommitStr,
@@ -67,7 +67,7 @@ func TestHandlerGet(t *testing.T) {
 			name: "Failure - OP Alt-DA Internal Server Error",
 			url:  fmt.Sprintf("/get/0x010000%s", testCommitStr),
 			mockBehavior: func() {
-				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("internal error"))
+				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("internal error"))
 			},
 			expectedCode: http.StatusInternalServerError,
 			expectedBody: "",
@@ -76,7 +76,7 @@ func TestHandlerGet(t *testing.T) {
 			name: "Success - OP Alt-DA",
 			url:  fmt.Sprintf("/get/0x010000%s", testCommitStr),
 			mockBehavior: func() {
-				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte(testCommitStr), nil)
+				mockStorageMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte(testCommitStr), nil)
 			},
 			expectedCode: http.StatusOK,
 			expectedBody: testCommitStr,

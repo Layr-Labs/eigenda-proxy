@@ -18,8 +18,8 @@ import (
 
 // TODO - create structured abstraction for dependency injection vs. overloading stateless functions
 
-// populateTargets ... creates a list of storage backends based on the provided target strings
-func populateTargets(targets []string, s3 common.PrecomputedKeyStore, redis *redis.Store) []common.PrecomputedKeyStore {
+// loadBackends ... creates a list of storage backends based on the user provided target strings
+func loadBackends(targets []string, s3 common.PrecomputedKeyStore, redis *redis.Store) []common.PrecomputedKeyStore {
 	stores := make([]common.PrecomputedKeyStore, len(targets))
 
 	for i, f := range targets {
@@ -122,12 +122,11 @@ func LoadStoreManager(ctx context.Context, cfg CLIConfig, log log.Logger, m metr
 	}
 
 	// create secondary storage router
-	fallbacks := populateTargets(cfg.EigenDAConfig.StorageConfig.FallbackTargets, s3Store, redisStore)
-	caches := populateTargets(cfg.EigenDAConfig.StorageConfig.CacheTargets, s3Store, redisStore)
+	fallbacks := loadBackends(cfg.EigenDAConfig.StorageConfig.FallbackTargets, s3Store, redisStore)
+	caches := loadBackends(cfg.EigenDAConfig.StorageConfig.CacheTargets, s3Store, redisStore)
 	secondary := store.NewSecondaryManager(log, m, caches, fallbacks)
 
 	if secondary.Enabled() { // only spin-up go routines if secondary storage is enabled
-		// NOTE: in the future the number of threads could be made configurable via env
 		log.Debug("Starting secondary write loop(s)", "count", cfg.EigenDAConfig.StorageConfig.AsyncPutWorkers)
 
 		for i := 0; i < cfg.EigenDAConfig.StorageConfig.AsyncPutWorkers; i++ {
