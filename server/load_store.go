@@ -99,9 +99,7 @@ func LoadStoreManager(ctx context.Context, cfg CLIConfig, log logging.Logger, m 
 	} else {
 		var client *clients.EigenDAClient
 		log.Info("Using EigenDA backend")
-		// TODO: This will be patched by change to EigenDA core repo
-		// insert log.With("subsystem", "eigenda-client")
-		client, err = clients.NewEigenDAClient(nil, daCfg.EdaClientConfig)
+		client, err = clients.NewEigenDAClient(log.With("subsystem", "eigenda-client"), daCfg.EdaClientConfig)
 		if err != nil {
 			return nil, err
 		}

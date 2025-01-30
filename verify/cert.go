@@ -10,7 +10,8 @@ import (
 
 	"github.com/Layr-Labs/eigenda-proxy/common/consts"
 	"github.com/Layr-Labs/eigenda/api/grpc/disperser"
-	binding "github.com/Layr-Labs/eigenda/contracts/bindings/EigenDAServiceManager"
+	binding "github.com/Layr-Labs/eigenda/contracts/bindings/EigenDACertVerifier"
+	svc_binding "github.com/Layr-Labs/eigenda/contracts/bindings/EigenDAServiceManager"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 
 	"github.com/ethereum-optimism/optimism/op-service/retry"
@@ -31,7 +32,7 @@ type CertVerifier struct {
 	// waitForFinalization should be used instead of ethConfirmationDepth if the user wants to wait for finality (typically 64 blocks in happy case).
 	ethConfirmationDepth uint64
 	waitForFinalization  bool
-	manager              *binding.ContractEigenDAServiceManagerCaller
+	manager              *svc_binding.ContractEigenDAServiceManagerCaller
 	ethClient            *ethclient.Client
 	// The two fields below are fetched from the EigenDAServiceManager contract in the constructor.
 	// They are used to verify the quorums in the received certificates.
@@ -53,7 +54,7 @@ func NewCertVerifier(cfg *Config, log logging.Logger) (*CertVerifier, error) {
 	}
 
 	// construct caller binding
-	m, err := binding.NewContractEigenDAServiceManagerCaller(common.HexToAddress(cfg.SvcManagerAddr), client)
+	m, err := svc_binding.NewContractEigenDAServiceManagerCaller(common.HexToAddress(cfg.SvcManagerAddr), client)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +107,7 @@ func (cv *CertVerifier) verifyBatchConfirmedOnChain(
 	}
 
 	// 2. Compute the hash of the batch metadata received as argument.
-	header := &binding.IEigenDAServiceManagerBatchHeader{
+	header := &binding.BatchHeader{
 		BlobHeadersRoot:       [32]byte(batchMetadata.GetBatchHeader().GetBatchRoot()),
 		QuorumNumbers:         batchMetadata.GetBatchHeader().GetQuorumNumbers(),
 		ReferenceBlockNumber:  batchMetadata.GetBatchHeader().GetReferenceBlockNumber(),
@@ -198,7 +199,7 @@ func (cv *CertVerifier) retrieveBatchMetadataHash(ctx context.Context, batchID u
 // This in turn required rollup validators running this proxy to have an archive node, in case the RBN was >128 blocks in the past,
 // which was not ideal. So we decided to make these parameters immutable, and cache them here.
 func getQuorumParametersAtLatestBlock(
-	manager *binding.ContractEigenDAServiceManagerCaller,
+	manager *svc_binding.ContractEigenDAServiceManagerCaller,
 ) ([]uint8, map[uint8]uint8, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

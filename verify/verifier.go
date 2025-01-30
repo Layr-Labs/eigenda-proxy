@@ -14,6 +14,7 @@ import (
 
 	"github.com/Layr-Labs/eigenda/api/grpc/common"
 	"github.com/Layr-Labs/eigenda/api/grpc/disperser"
+	"github.com/Layr-Labs/eigenda/encoding"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	kzgverifier "github.com/Layr-Labs/eigenda/encoding/kzg/verifier"
 	"github.com/Layr-Labs/eigenda/encoding/rs"
@@ -66,7 +67,7 @@ func NewVerifier(cfg *Config, l logging.Logger) (*Verifier, error) {
 		}
 	}
 
-	kzgVerifier, err := kzgverifier.NewVerifier(cfg.KzgConfig, false)
+	kzgVerifier, err := kzgverifier.NewVerifier(cfg.KzgConfig, encoding.DefaultConfig())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create kzg verifier: %w", err)
 	}
