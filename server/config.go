@@ -5,37 +5,59 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/Layr-Labs/eigenda-proxy/flags"
 	"github.com/Layr-Labs/eigenda-proxy/flags/eigendaflags"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
 	"github.com/Layr-Labs/eigenda/api/clients"
 
+	clients_v2 "github.com/Layr-Labs/eigenda/api/clients/v2"
+
 	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 )
 
 type Config struct {
+	Host string
+	Port int
+
 	EdaV1ClientConfig clients.EigenDAClientConfig
 	MemstoreConfig    memstore.Config
 	StorageConfig     store.Config
 	VerifierConfig    verify.Config
 	PutRetries        uint
 
-	MemstoreEnabled    bool
-	V2DispersalEnabled bool
+	MemstoreEnabled bool
+
+	EigenDAV2Enabled  bool
+	V2DispersalConfig clients_v2.PayloadDisperserConfig
+	V2RetrievalConfig clients_v2.PayloadRetrieverConfig
 }
 
 // ReadConfig ... parses the Config from the provided flags or environment variables.
 func ReadConfig(ctx *cli.Context) Config {
 	edaClientConfig := eigendaflags.ReadV1ClientConfig(ctx)
-	return Config{
+
+	v2Enabled := ctx.Bool(eigendaflags.V2Enabled)
+
+	cfg := Config{
+		Host:              ctx.String(flags.ListenAddrFlagName),
+		Port:              ctx.Int(flags.PortFlagName),
 		EdaV1ClientConfig: edaClientConfig,
 		VerifierConfig:    verify.ReadConfig(ctx, edaClientConfig),
 		PutRetries:        ctx.Uint(eigendaflags.PutRetriesFlagName),
 		MemstoreEnabled:   ctx.Bool(memstore.EnabledFlagName),
 		MemstoreConfig:    memstore.ReadConfig(ctx),
 		StorageConfig:     store.ReadConfig(ctx),
+		EigenDAV2Enabled:  ctx.Bool(eigendaflags.V2Enabled),
 	}
+
+	if v2Enabled {
+		cfg.V2DispersalConfig = eigendaflags.ReadV2DispersalConfig(ctx)
+		cfg.V2RetrievalConfig = eigendaflags.ReadV2RetrievalConfig(ctx)
+	}
+
+	return cfg
 }
 
 // Check ... verifies that configuration values are adequately set
@@ -77,8 +99,17 @@ func (cfg *Config) Check() error {
 	}
 
 	// V2 dispersal/retrieval enabled
-	if cfg.V2DispersalEnabled {
-		// TODO: verify V2 flags are properly set/enabled
+	if cfg.EigenDAV2Enabled {
+		dc := cfg.V2DispersalConfig
+
+		if dc.EthRpcUrl == "" {
+			return fmt.Errorf("eth rpc is required for interacting with EigenDA V2")
+		}
+
+		if dc.EigenDACertVerifierAddr == "" {
+			return fmt.Errorf("cert verifier contract address is required for interacting with EigenDA V2")
+		}
+
 	}
 
 	return cfg.StorageConfig.Check()

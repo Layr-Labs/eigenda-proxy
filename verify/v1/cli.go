@@ -24,6 +24,7 @@ var (
 
 	// kzg flags
 	G1PathFlagName         = withFlagPrefix("g1-path")
+	G2PathFlagName         = withFlagPrefix("g2-path")
 	G2PowerOf2PathFlagName = withFlagPrefix("g2-power-of-2-path")
 	CachePathFlagName      = withFlagPrefix("cache-path")
 	MaxBlobLengthFlagName  = withFlagPrefix("max-blob-length")
@@ -51,30 +52,33 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Category: category,
 		},
 		// kzg flags
+		// we use a relative path for these so that the path works for both the binary and the docker container
+		// aka we assume the binary is run from root dir, and that the resources/ dir is copied into the working dir of the container
 		&cli.StringFlag{
-			Name:    G1PathFlagName,
-			Usage:   "Directory path to g1.point file.",
-			EnvVars: []string{withEnvPrefix(envPrefix, "TARGET_KZG_G1_PATH")},
-			// we use a relative path so that the path works for both the binary and the docker container
-			// aka we assume the binary is run from root dir, and that the resources/ dir is copied into the working dir of the container
+			Name:     G1PathFlagName,
+			Usage:    "Directory path to g1.point file.",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "TARGET_KZG_G1_PATH")},
 			Value:    "resources/g1.point",
 			Category: category,
 		},
 		&cli.StringFlag{
-			Name:    G2PowerOf2PathFlagName,
-			Usage:   "Directory path to g2.point.powerOf2 file. This resource is not currently used, but needed because of the shared eigenda KZG library that we use. We will eventually fix this.",
-			EnvVars: []string{withEnvPrefix(envPrefix, "TARGET_KZG_G2_POWER_OF_2_PATH")},
-			// we use a relative path so that the path works for both the binary and the docker container
-			// aka we assume the binary is run from root dir, and that the resources/ dir is copied into the working dir of the container
+			Name:     G2PathFlagName,
+			Usage:    "Directory path to g2.point file.",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "TARGET_KZG_G2_PATH")},
+			Value:    "resources/g2.point",
+			Category: category,
+		},
+		&cli.StringFlag{
+			Name:     G2PowerOf2PathFlagName,
+			Usage:    "Directory path to g2.point.powerOf2 file. This resource is not currently used, but needed because of the shared eigenda KZG library that we use. We will eventually fix this.",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "TARGET_KZG_G2_POWER_OF_2_PATH")},
 			Value:    "resources/g2.point.powerOf2",
 			Category: category,
 		},
 		&cli.StringFlag{
-			Name:    CachePathFlagName,
-			Usage:   "Directory path to SRS tables for caching. This resource is not currently used, but needed because of the shared eigenda KZG library that we use. We will eventually fix this.",
-			EnvVars: []string{withEnvPrefix(envPrefix, "TARGET_CACHE_PATH")},
-			// we use a relative path so that the path works for both the binary and the docker container
-			// aka we assume the binary is run from root dir, and that the resources/ dir is copied into the working dir of the container
+			Name:     CachePathFlagName,
+			Usage:    "Directory path to SRS tables for caching. This resource is not currently used, but needed because of the shared eigenda KZG library that we use. We will eventually fix this.",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "TARGET_CACHE_PATH")},
 			Value:    "resources/SRSTables/",
 			Category: category,
 		},
@@ -119,11 +123,13 @@ var MaxBlobLengthBytes uint64
 func ReadConfig(ctx *cli.Context, edaClientConfig clients.EigenDAClientConfig) Config {
 	kzgCfg := &kzg.KzgConfig{
 		G1Path:          ctx.String(G1PathFlagName),
+		G2Path:          ctx.String(G2PathFlagName),
 		G2PowerOf2Path:  ctx.String(G2PowerOf2PathFlagName),
 		CacheDir:        ctx.String(CachePathFlagName),
 		SRSOrder:        SrsOrder,
 		SRSNumberToLoad: MaxBlobLengthBytes / 32,       // # of fr.Elements
 		NumWorker:       uint64(runtime.GOMAXPROCS(0)), // #nosec G115
+		LoadG2Points:    true,
 	}
 
 	return Config{

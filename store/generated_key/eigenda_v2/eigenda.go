@@ -13,7 +13,6 @@ import (
 	"github.com/Layr-Labs/eigenda/api/clients/v2"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
 	eigenda_common "github.com/Layr-Labs/eigenda/common"
-	eth_utils "github.com/Layr-Labs/eigenda/core/eth"
 	v2 "github.com/Layr-Labs/eigenda/core/v2"
 	"github.com/Layr-Labs/eigenda/encoding"
 	"github.com/ethereum/go-ethereum/log"
@@ -39,36 +38,53 @@ type Store struct {
 	cfg *Config
 	log log.Logger
 
-	// id --> public endpoint
-	relays map[uint32]string
-
 	disperser *clients.PayloadDisperser
 	retriever *clients.PayloadRetriever
+	verifier  verification.ICertVerifier
 }
 
 var _ common.GeneratedKeyStore = (*Store)(nil)
 
 func NewStore(log log.Logger, cfg *Config, ethClient eigenda_common.EthClient,
-	disperser *clients.PayloadDisperser, retriever *clients.PayloadRetriever) (*Store, error) {
-	// create relay mapping
-	// TODO: remove nil in favor of real logging - this is insecure rn
-	reader, err := eth_utils.NewReader(nil, ethClient, "0x0", cfg.ServiceManagerAddr)
-	if err != nil {
-		return nil, err
-	}
-
-	relays, err := reader.GetRelayURLs(context.Background())
-	if err != nil {
-		return nil, err
-	}
+	disperser *clients.PayloadDisperser, retriever *clients.PayloadRetriever, verifier verification.ICertVerifier) (*Store, error) {
 
 	return &Store{
 		log:       log,
 		cfg:       cfg,
-		relays:    relays,
 		disperser: disperser,
 		retriever: retriever,
+		verifier:  verifier,
 	}, nil
+}
+
+// ComputeBlobKey computes the BlobKey of the blob that belongs to the EigenDACert
+// Temporarily stolen from https://github.com/Layr-Labs/eigenda/pull/1187
+func computeBlobKey(c *verification.EigenDACert) (*v2.BlobKey, error) {
+	blobHeader := c.BlobInclusionInfo.BlobCertificate.BlobHeader
+
+	blobCommitmentsProto := verification.BlobCommitmentBindingToProto(&blobHeader.Commitment)
+	blobCommitments, err := encoding.BlobCommitmentsFromProtobuf(blobCommitmentsProto)
+	if err != nil {
+		return nil, fmt.Errorf("blob commitments from protobuf: %w", err)
+	}
+
+	blobKeyBytes, err := v2.ComputeBlobKey(
+		blobHeader.Version,
+		*blobCommitments,
+		blobHeader.QuorumNumbers,
+		blobHeader.PaymentHeaderHash,
+		blobHeader.Salt)
+
+	if err != nil {
+		return nil, fmt.Errorf("compute blob key: %w", err)
+	}
+
+	blobKey, err := v2.BytesToBlobKey(blobKeyBytes[:])
+	if err != nil {
+		return nil, fmt.Errorf("bytes to blob key: %w", err)
+	}
+
+	return &blobKey, nil
 }
 
 // Get fetches a blob from DA using certificate fields and verifies blob
@@ -80,34 +96,14 @@ func (e Store) Get(ctx context.Context, key []byte) ([]byte, error) {
 		return nil, fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
 	}
 
-	// certCommit :=  cert.BlobInclusionInfo.BlobCertificate.BlobHeader.Commitment
-
-	// asBlobCommit := pbcommon.BlobCommitment{
-	// 	Commitment: certCommit.Commitment,
-	// }
-
-	// encoding.BlobCommitmentsFromProtobuf(certCommit)
-
-	// blobCommitment := encoding.BlobCommitments{
-	// 	Commitment: certCommit.Commitment,
-	// 	LengthCommitment: certCommit.LengthCommitment,
-	// 	Length: uint(certCommit.Length),
-	// }
-
-	// TODO: Figure out a way to derive encoding.BlobCommitments from
-	// verification.EigenDACert
-	blobKey, err := v2.ComputeBlobKey(
-		cert.BlobInclusionInfo.BlobCertificate.BlobHeader.Version,
-		encoding.BlobCommitments{},
-		cert.BlobInclusionInfo.BlobCertificate.BlobHeader.QuorumNumbers,
-		cert.BlobInclusionInfo.BlobCertificate.BlobHeader.PaymentHeaderHash,
-		cert.BlobInclusionInfo.BlobCertificate.BlobHeader.Salt,
-	)
+	// TODO: Update this to use changes from
+	// https://github.com/Layr-Labs/eigenda/pull/1187 once merged
+	blobKey, err := computeBlobKey(&cert)
 	if err != nil {
 		return nil, fmt.Errorf("computing blob key from cert: %w", err)
 	}
 
-	payload, err := e.retriever.GetPayload(ctx, blobKey, &cert)
+	payload, err := e.retriever.GetPayload(ctx, *blobKey, &cert)
 	if err != nil {
 		return nil, fmt.Errorf("getting payload: %w", err)
 	}
@@ -121,6 +117,7 @@ func (e Store) Get(ctx context.Context, key []byte) ([]byte, error) {
 //	Mapping status codes to 503 failover
 func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 	// salt := 0
+	log.Info("Put EigenDA V2 backend")
 
 	// TODO: Verify this retry or failover code for correctness against V2
 	// protocol
@@ -176,8 +173,12 @@ func (e Store) BackendType() common.BackendType {
 
 // Key is used to recover certificate fields and that verifies blob
 // against commitment to ensure data is valid and non-tampered.
-// TODO: develop segmented routes for read/write;
-// commitment generation should only happen again when reading and not writing
 func (e Store) Verify(ctx context.Context, key []byte, value []byte) error {
-	return fmt.Errorf("unimplemented")
+	var cert verification.EigenDACert
+	err := rlp.DecodeBytes(key, cert)
+	if err != nil {
+		return fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
+	}
+
+	return e.verifier.VerifyCertV2(ctx, &cert)
 }

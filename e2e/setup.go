@@ -31,12 +31,12 @@ import (
 )
 
 const (
-	privateKey = "SIGNER_PRIVATE_KEY"
-	ethRPC     = "ETHEREUM_RPC"
-	transport  = "http"
-	svcName    = "eigenda_proxy"
-	host       = "127.0.0.1"
-	holeskyDA  = "disperser-holesky.eigenda.xyz:443"
+	privateKey         = "SIGNER_PRIVATE_KEY"
+	ethRPC             = "ETHEREUM_RPC"
+	transport          = "http"
+	svcName            = "eigenda_proxy"
+	host               = "127.0.0.1"
+	v1DisperserHolesky = "disperser-holesky.eigenda.xyz:443"
 )
 
 var (
@@ -186,7 +186,7 @@ func TestSuiteConfig(testCfg *Cfg) server.CLIConfig {
 	svcManagerAddr := "0xD4A7E1Bd8015057293f0D0A557088c286942e84b" // holesky testnet
 	eigendaCfg := server.Config{
 		EdaV1ClientConfig: clients.EigenDAClientConfig{
-			RPC:                      holeskyDA,
+			RPC:                      v1DisperserHolesky,
 			StatusQueryTimeout:       time.Minute * 45,
 			StatusQueryRetryInterval: pollInterval,
 			DisableTLS:               false,
@@ -277,7 +277,7 @@ func CreateTestSuite(testSuiteCfg server.CLIConfig) (TestSuite, func()) {
 		panic(err)
 	}
 
-	proxySvr := server.NewServer(host, 0, sm, log, m)
+	proxySvr := server.NewServer(&testSuiteCfg.EigenDAConfig, sm, log, m)
 
 	log.Info("Starting proxy server...")
 	err = proxySvr.Start()

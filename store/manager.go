@@ -34,13 +34,14 @@ type Manager struct {
 
 // NewManager ... Init
 func NewManager(eigenda common.GeneratedKeyStore, eigenDAV2 common.GeneratedKeyStore, s3 common.PrecomputedKeyStore, l log.Logger,
-	secondary ISecondary) (IManager, error) {
+	secondary ISecondary, useV2 bool) (IManager, error) {
 	return &Manager{
-		log:       l,
-		eigenda:   eigenda,
-		eigendaV2: eigenda,
-		s3:        s3,
-		secondary: secondary,
+		log:          l,
+		eigenda:      eigenda,
+		eigendaV2:    eigenDAV2,
+		s3:           s3,
+		secondary:    secondary,
+		useEigenDAV2: useV2,
 	}, nil
 }
 
@@ -168,12 +169,12 @@ func (m *Manager) Put(ctx context.Context, cm commitments.CommitmentMode, key, v
 // putEigenDAMode ... disperses blob to EigenDA backend
 func (m *Manager) putEigenDAMode(ctx context.Context, value []byte) ([]byte, error) {
 	if m.eigenda != nil && !m.useEigenDAV2 { // disperse v1
-		m.log.Debug("Storing data to EigenDA backend")
+		m.log.Info("Storing data to EigenDA backend")
 		return m.eigenda.Put(ctx, value)
 	}
 
 	if m.eigendaV2 != nil && m.useEigenDAV2 { // disperse v2
-		m.log.Debug("Storing data to EigenDA v2 backend")
+		m.log.Info("Storing data to EigenDA v2 backend")
 		return m.eigendaV2.Put(ctx, value)
 	}
 

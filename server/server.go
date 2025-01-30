@@ -28,6 +28,7 @@ const (
 )
 
 type Server struct {
+	cfg        *Config
 	log        log.Logger
 	endpoint   string
 	sm         store.IManager
@@ -36,10 +37,11 @@ type Server struct {
 	listener   net.Listener
 }
 
-func NewServer(host string, port int, sm store.IManager, log log.Logger,
+func NewServer(cfg *Config, sm store.IManager, log log.Logger,
 	m metrics.Metricer) *Server {
-	endpoint := net.JoinHostPort(host, strconv.Itoa(port))
+	endpoint := net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))
 	return &Server{
+		cfg:      cfg,
 		m:        m,
 		log:      log,
 		endpoint: endpoint,
@@ -122,8 +124,6 @@ func parseVersionByte(w http.ResponseWriter, r *http.Request) (byte, error) {
 	// and then just reconstruct the full commitment in the handlers?
 	versionByteHex, isGETRoute := vars[routingVarNameVersionByteHex]
 	if !isGETRoute {
-		// v0 is hardcoded in POST routes for now (see handlers.go that also have this hardcoded)
-		// TODO: change this once we introduce v1/v2 certs
 		return byte(commitments.CertV0), nil
 	}
 	versionByte, err := hex.DecodeString(versionByteHex)

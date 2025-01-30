@@ -129,6 +129,11 @@ func (svr *Server) handlePostStdCommitment(w http.ResponseWriter, r *http.Reques
 		Mode:    commitments.Standard,
 		Version: commitments.CertV0,
 	}
+
+	if svr.cfg.EigenDAV2Enabled {
+		commitmentMeta.Version = commitments.CertV1
+	}
+
 	return svr.handlePostShared(w, r, nil, commitmentMeta)
 }
 
@@ -164,6 +169,11 @@ func (svr *Server) handlePostOPGenericCommitment(w http.ResponseWriter, r *http.
 		Mode:    commitments.OptimismGeneric,
 		Version: commitments.CertV0,
 	}
+
+	if svr.cfg.EigenDAV2Enabled {
+		commitmentMeta.Version = commitments.CertV1
+	}
+
 	return svr.handlePostShared(w, r, nil, commitmentMeta)
 }
 
