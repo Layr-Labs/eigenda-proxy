@@ -8,6 +8,8 @@ import (
 
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/Layr-Labs/eigenda/api/clients/codecs"
+	v2_clients "github.com/Layr-Labs/eigenda/api/clients/v2"
+	"github.com/Layr-Labs/eigenda/core"
 	"github.com/urfave/cli/v2"
 )
 
@@ -39,7 +41,10 @@ var (
 	PutRetriesFlagName = withFlagPrefix("put-retries")
 
 	// v2 specific flag(s)
-	CertVerifierAddrName = withFlagPrefix("cert-verifier-addr")
+	CertVerifierAddrName    = withFlagPrefix("cert-verifier-addr")
+	RelayTimeoutName        = withFlagPrefix("relay-timeout")
+	ContractCallTimeoutName = withFlagPrefix("contract-call-timeout")
+	BlobVersionName         = withFlagPrefix("blob-version")
 
 	// v1 && v2
 	EthRPCURLFlagName      = withFlagPrefix("eth-rpc")
@@ -186,10 +191,76 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.StringFlag{
 			Name:     CertVerifierAddrName,
 			Usage:    "Address of the EigenDABlobVerifier contract. Required for performing eth_calls to verify EigenDA certificates.",
-			EnvVars:  []string{withEnvPrefix(envPrefix, "BLOB_VERIFIER_ADDR")},
+			EnvVars:  []string{withEnvPrefix(envPrefix, "CERT_VERIFIER_ADDR")},
 			Category: category,
 			Required: false,
 		},
+		&cli.DurationFlag{
+			Name:     RelayTimeoutName,
+			Usage:    "Timeout used when querying a relay for blob contents.",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "RELAY_TIMEOUT")},
+			Value:    10 * time.Second,
+			Required: false,
+		},
+		&cli.DurationFlag{
+			Name:     ContractCallTimeoutName,
+			Usage:    "Timeout used when performing smart contract eth_calls",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "CONTRACT_CALL_TIMEOUT")},
+			Value:    10 * time.Second,
+			Required: false,
+		},
+		&cli.UintFlag{
+			Name:     BlobVersionName,
+			Usage:    "Blob version used when dispersing. Currently only supports (0)",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "BLOB_VERSION")},
+			Value:    uint(0),
+			Required: false,
+		},
+	}
+}
+
+func readPayloadClientConfig(ctx *cli.Context) v2_clients.PayloadClientConfig {
+	noPolynomial := ctx.Bool(DisablePointVerificationModeFlagName)
+	polyMode := codecs.PolynomialFormCoeff
+
+	// if point verification mode is disabled then blob is treated as evaluations and
+	// not FFT'd before dispersal
+	if noPolynomial {
+		polyMode = codecs.PolynomialFormEval
+	}
+
+	return v2_clients.PayloadClientConfig{
+		// TODO: Support proper user env injection
+		BlobEncodingVersion:     codecs.DefaultBlobEncoding,
+		EthRpcUrl:               ctx.String(EthRPCURLFlagName),
+		EigenDACertVerifierAddr: ctx.String(CertVerifierAddrName),
+		PayloadPolynomialForm:   polyMode,
+		BlobVersion:             0,
+	}
+}
+
+func ReadV2DispersalConfig(ctx *cli.Context) v2_clients.PayloadDisperserConfig {
+	payCfg := readPayloadClientConfig(ctx)
+
+	return v2_clients.PayloadDisperserConfig{
+		PayloadClientConfig: payCfg,
+		DisperseBlobTimeout: ctx.Duration(ResponseTimeoutFlagName),
+		// TODO: Explore making these user defined
+		BlobCertifiedTimeout:   time.Second * 2,
+		BlobStatusPollInterval: time.Second * 1,
+		Quorums: []core.QuorumID{
+			core.QuorumID(0),
+			core.QuorumID(1),
+		},
+	}
+}
+
+func ReadV2RetrievalConfig(ctx *cli.Context) v2_clients.PayloadRetrieverConfig {
+	payCfg := readPayloadClientConfig(ctx)
+
+	return v2_clients.PayloadRetrieverConfig{
+		PayloadClientConfig: payCfg,
+		RelayTimeout:        ctx.Duration(RelayTimeoutName),
 	}
 }
 

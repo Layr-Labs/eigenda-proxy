@@ -123,7 +123,7 @@ func LoadStoreManager(ctx context.Context, cfg CLIConfig, log log.Logger, m metr
 		// EigenDAV2 backend dependency injection
 		// TODO: config ingestion from env
 
-		// eigenDAV2Store, err = eigenda_v2.NewStore(verifierV2, log, &eigenda_v2.StoreConfig{})
+		// eigenDAV2Store, err = eigenda_v2.NewStore(log, &eigenda_v2.StoreConfig{}, cfg.EigenDAConfig.EthClient)
 		// if err != nil {
 		// 	return nil, err
 		// }

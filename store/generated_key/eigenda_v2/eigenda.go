@@ -6,13 +6,21 @@ import (
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
+	"github.com/avast/retry-go/v4"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
+	"github.com/Layr-Labs/eigenda/api/clients/v2"
+	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
 	eigenda_common "github.com/Layr-Labs/eigenda/common"
 	eth_utils "github.com/Layr-Labs/eigenda/core/eth"
+	v2 "github.com/Layr-Labs/eigenda/core/v2"
+	"github.com/Layr-Labs/eigenda/encoding"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
-type V2StoreConfig struct {
+type Config struct {
 	// address of service manager - used for loading chain state
 	ServiceManagerAddr string
 
@@ -28,17 +36,20 @@ type V2StoreConfig struct {
 // Store does storage interactions and verifications for blobs with the
 // EigenDA V2 protocol.
 type Store struct {
-	// TODO: disperserClient, retrieverClient usage
-	cfg *V2StoreConfig
+	cfg *Config
 	log log.Logger
 
 	// id --> public endpoint
 	relays map[uint32]string
+
+	disperser *clients.PayloadDisperser
+	retriever *clients.PayloadRetriever
 }
 
 var _ common.GeneratedKeyStore = (*Store)(nil)
 
-func NewStore(log log.Logger, cfg *V2StoreConfig, ethClient eigenda_common.EthClient) (*Store, error) {
+func NewStore(log log.Logger, cfg *Config, ethClient eigenda_common.EthClient,
+	disperser *clients.PayloadDisperser, retriever *clients.PayloadRetriever) (*Store, error) {
 	// create relay mapping
 	// TODO: remove nil in favor of real logging - this is insecure rn
 	reader, err := eth_utils.NewReader(nil, ethClient, "0x0", cfg.ServiceManagerAddr)
@@ -52,16 +63,56 @@ func NewStore(log log.Logger, cfg *V2StoreConfig, ethClient eigenda_common.EthCl
 	}
 
 	return &Store{
-		log:    log,
-		cfg:    cfg,
-		relays: relays,
+		log:       log,
+		cfg:       cfg,
+		relays:    relays,
+		disperser: disperser,
+		retriever: retriever,
 	}, nil
 }
 
 // Get fetches a blob from DA using certificate fields and verifies blob
 // against commitment to ensure data is valid and non-tampered.
 func (e Store) Get(ctx context.Context, key []byte) ([]byte, error) {
-	return nil, fmt.Errorf("unimplemented")
+	var cert verification.EigenDACert
+	err := rlp.DecodeBytes(key, cert)
+	if err != nil {
+		return nil, fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
+	}
+
+	// certCommit :=  cert.BlobInclusionInfo.BlobCertificate.BlobHeader.Commitment
+
+	// asBlobCommit := pbcommon.BlobCommitment{
+	// 	Commitment: certCommit.Commitment,
+	// }
+
+	// encoding.BlobCommitmentsFromProtobuf(certCommit)
+
+	// blobCommitment := encoding.BlobCommitments{
+	// 	Commitment: certCommit.Commitment,
+	// 	LengthCommitment: certCommit.LengthCommitment,
+	// 	Length: uint(certCommit.Length),
+	// }
+
+	// TODO: Figure out a way to derive encoding.BlobCommitments from
+	// verification.EigenDACert
+	blobKey, err := v2.ComputeBlobKey(
+		cert.BlobInclusionInfo.BlobCertificate.BlobHeader.Version,
+		encoding.BlobCommitments{},
+		cert.BlobInclusionInfo.BlobCertificate.BlobHeader.QuorumNumbers,
+		cert.BlobInclusionInfo.BlobCertificate.BlobHeader.PaymentHeaderHash,
+		cert.BlobInclusionInfo.BlobCertificate.BlobHeader.Salt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("computing blob key from cert: %w", err)
+	}
+
+	payload, err := e.retriever.GetPayload(ctx, blobKey, &cert)
+	if err != nil {
+		return nil, fmt.Errorf("getting payload: %w", err)
+	}
+
+	return payload, nil
 }
 
 // Put disperses a blob for some pre-image and returns the associated RLP encoded certificate commit.
@@ -69,7 +120,53 @@ func (e Store) Get(ctx context.Context, key []byte) ([]byte, error) {
 //
 //	Mapping status codes to 503 failover
 func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
-	return nil, fmt.Errorf("unimplemented")
+	// salt := 0
+
+	// TODO: Verify this retry or failover code for correctness against V2
+	// protocol
+
+	// We attempt to disperse the blob to EigenDA up to 3 times, unless we get a 400 error on any attempt.
+	cert, err := retry.DoWithData(
+		func() (*verification.EigenDACert, error) {
+			// TODO: Figure out salt mgmt
+			return e.disperser.SendPayload(ctx, value, 0)
+		},
+		retry.RetryIf(func(err error) bool {
+			st, isGRPCError := status.FromError(err)
+			if !isGRPCError {
+				// api.ErrorFailover is returned, so we should retry
+				return true
+			}
+			//nolint:exhaustive // we only care about a few grpc error codes
+			switch st.Code() {
+			case codes.InvalidArgument:
+				// we don't retry 400 errors because there is no point,
+				// we are passing invalid data
+				return false
+			case codes.ResourceExhausted:
+				// we retry on 429s because *can* mean we are being rate limited
+				// we sleep 1 second... very arbitrarily, because we don't have more info.
+				// grpc error itself should return a backoff time,
+				// see https://github.com/Layr-Labs/eigenda/issues/845 for more details
+				time.Sleep(1 * time.Second)
+				return true
+			default:
+				return true
+			}
+		}),
+		// only return the last error. If it is an api.ErrorFailover, then the handler will convert
+		// it to an http 503 to signify to the client (batcher) to failover to ethda
+		// b/c eigenda is temporarily down.
+		retry.LastErrorOnly(true),
+		retry.Attempts(e.cfg.PutRetries),
+	)
+	if err != nil {
+		// TODO: we will want to filter for errors here and return a 503 when needed
+		// ie when dispersal itself failed, or that we timed out waiting for batch to land onchain
+		return nil, err
+	}
+
+	return rlp.EncodeToBytes(cert)
 }
 
 // Backend returns the backend type for EigenDA Store
