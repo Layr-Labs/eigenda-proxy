@@ -9,7 +9,6 @@ import (
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/Layr-Labs/eigenda/api/clients/codecs"
 	v2_clients "github.com/Layr-Labs/eigenda/api/clients/v2"
-	"github.com/Layr-Labs/eigenda/core"
 	"github.com/urfave/cli/v2"
 )
 
@@ -249,10 +248,7 @@ func ReadV2DispersalConfig(ctx *cli.Context) v2_clients.PayloadDisperserConfig {
 		// TODO: Explore making these user defined
 		BlobCertifiedTimeout:   time.Second * 2,
 		BlobStatusPollInterval: time.Second * 1,
-		Quorums: []core.QuorumID{
-			core.QuorumID(0),
-			core.QuorumID(1),
-		},
+		Quorums: []uint8{0,1},
 	}
 }
 

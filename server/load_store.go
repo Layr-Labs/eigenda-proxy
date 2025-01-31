@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
@@ -25,7 +26,6 @@ import (
 
 	"github.com/Layr-Labs/eigenda/common/geth"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
-	"github.com/Layr-Labs/eigenda/encoding/kzg/prover"
 
 	"github.com/Layr-Labs/eigensdk-go/logging"
 
@@ -51,16 +51,16 @@ func BuildPayloadDisperser(log logging.Logger, payloadDispCfg clients_v2.Payload
 	}
 
 	// 2 - create prover
-	println(fmt.Sprintf("%+v", kzgConfig))
-	kzgProver, err := prover.NewProver(kzgConfig, encoderCfg)
-	if err != nil {
-		return nil, fmt.Errorf("new kzg prover: %w", err)
-	}
+	// println(fmt.Sprintf("%+v", kzgConfig))
+	// kzgProver, err := prover.NewProver(kzgConfig, encoderCfg)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("new kzg prover: %w", err)
+	// }
 
 	// 3 - create disperser client & set accountant to nil
 	// to then populate using signer field via in-place method
 	// which queries disperser directly for payment states
-	disperserClient, err := clients_v2.NewDisperserClient(dispClientCfg, signer, kzgProver, nil)
+	disperserClient, err := clients_v2.NewDisperserClient(dispClientCfg, signer, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("new disperser client: %w", err)
 	}
@@ -186,6 +186,8 @@ func loadEigenDAV2Store(ctx context.Context, cfg CLIConfig) (*eigenda_v2.Store, 
 	splits := strings.Split(cfg.EigenDAConfig.EdaV1ClientConfig.RPC, ":")
 	println(fmt.Sprintf("%v", splits))
 
+	cfg.EigenDAConfig.V2DispersalConfig.BlobCertifiedTimeout = time.Second * 100
+
 	log.Info("Building payload disperser")
 	disperser, err := BuildPayloadDisperser(
 		tempLogger,
@@ -267,10 +269,14 @@ func LoadStoreManager(ctx context.Context, cfg CLIConfig, log log.Logger, m metr
 		eigenDA, err = memstore.New(ctx, verifier, log, cfg.EigenDAConfig.MemstoreConfig)
 	} else {
 
+		l, err := logging.NewZapLogger(logging.Development)
+		if err != nil {
+			return nil, err
+		}
 		// EigenDAV1 backend dependency injection
 		var client *clients.EigenDAClient
 		log.Warn("Using EigenDA backend.. This backend type will be deprecated soon. Please migrate to V2.")
-		client, err = clients.NewEigenDAClient(log.With("subsystem", "eigenda-client"), daCfg.EdaV1ClientConfig)
+		client, err = clients.NewEigenDAClient(l, daCfg.EdaV1ClientConfig)
 		if err != nil {
 			return nil, err
 		}

@@ -61,13 +61,13 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Value:    "resources/g1.point",
 			Category: category,
 		},
-		&cli.StringFlag{
-			Name:     G2PathFlagName,
-			Usage:    "Directory path to g2.point file.",
-			EnvVars:  []string{withEnvPrefix(envPrefix, "TARGET_KZG_G2_PATH")},
-			Value:    "resources/g2.point",
-			Category: category,
-		},
+		// &cli.StringFlag{
+		// 	Name:     G2PathFlagName,
+		// 	Usage:    "Directory path to g2.point file.",
+		// 	EnvVars:  []string{withEnvPrefix(envPrefix, "TARGET_KZG_G2_PATH")},
+		// 	Value:    "resources/g2.point",
+		// 	Category: category,
+		// },
 		&cli.StringFlag{
 			Name:     G2PowerOf2PathFlagName,
 			Usage:    "Directory path to g2.point.powerOf2 file. This resource is not currently used, but needed because of the shared eigenda KZG library that we use. We will eventually fix this.",
@@ -129,7 +129,7 @@ func ReadConfig(ctx *cli.Context, edaClientConfig clients.EigenDAClientConfig) C
 		SRSOrder:        SrsOrder,
 		SRSNumberToLoad: MaxBlobLengthBytes / 32,       // # of fr.Elements
 		NumWorker:       uint64(runtime.GOMAXPROCS(0)), // #nosec G115
-		LoadG2Points:    true,
+		LoadG2Points:    false,
 	}
 
 	return Config{
