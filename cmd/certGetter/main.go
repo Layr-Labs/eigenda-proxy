@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	gethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 func main() {
@@ -25,7 +27,7 @@ func main() {
 	signer := auth.NewLocalBlobRequestSigner(privateKeyHex)
 
 	RPCURLs := make([]string, 1)
-	RPCURLs[0] = string("https://eth-holesky.g.alchemy.com/v2/P4tiNCHIHYa0HnACGNUflmqeVZ6At4Ln") // public rpc  https://ethereum-holesky.publicnode.com
+	RPCURLs[0] = string("https://ethereum-holesky.publicnode.com") // public rpc  https://ethereum-holesky.publicnode.com
 
 	ethConfig := geth.EthClientConfig{
 		RPCURLs:          RPCURLs,
@@ -78,7 +80,7 @@ func main() {
 		panic("poll blob status until certified")
 	}
 	fmt.Println("Blob status CERTIFIED", "blobKey", blobKey)
-	fmt.Print("Blob status CERTIFIED", "blobStatusReply", blobStatusReply)
+	fmt.Println("Blob status CERTIFIED", "blobStatusReply", blobStatusReply)
 
 	certVerifier, err := verification.NewCertVerifier(*ethClient, certVerifierAddress)
 	if err != nil {
@@ -87,8 +89,91 @@ func main() {
 	}
 
 	eigenDACert, err := buildEigenDACert(ctx, blobKey, blobStatusReply, certVerifier)
-	fmt.Println("err", err)
-	fmt.Printf("Cert %+v\n", eigenDACert)
+	if err != nil {
+		fmt.Errorf("failed to build eigenDACert: %w", err)
+		panic("")
+	}
+
+	// write batch header
+	jsonBytes, err := rlp.EncodeToBytes(eigenDACert.BatchHeader)
+	if err != nil {
+		fmt.Errorf("failed to encode DA cert to RLP format: %w", err)
+		panic("")
+	}
+	fmt.Println("BatchHeader")
+	data, err := json.MarshalIndent(eigenDACert.BatchHeader, "", "  ")
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	fmt.Println(string(data))
+
+	f, err := os.Create("batch_header.rlp")
+	if err != nil {
+		fmt.Println("Create err", err)
+		panic("")
+	}
+	defer f.Close()
+	_, err = f.Write(jsonBytes)
+	if err != nil {
+		fmt.Println("Write err", err)
+		panic("")
+	}
+
+	// write nonsign
+	fmt.Println("NonSignerStakesAndSignature")
+	data, err = json.MarshalIndent(eigenDACert.NonSignerStakesAndSignature, "", "  ")
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	fmt.Println(string(data))
+
+	jsonBytes, err = rlp.EncodeToBytes(eigenDACert.NonSignerStakesAndSignature)
+	if err != nil {
+		fmt.Errorf("failed to encode DA cert to RLP format: %w", err)
+		panic("")
+	}
+
+	f, err = os.Create("non_signer.rlp")
+	if err != nil {
+		fmt.Println("Create err", err)
+		panic("")
+	}
+	defer f.Close()
+	_, err = f.Write(jsonBytes)
+	if err != nil {
+		fmt.Println("Write err", err)
+		panic("")
+	}
+
+	// write
+	fmt.Println("BlobInclusionInfo")
+	jsonBytes, err = rlp.EncodeToBytes(eigenDACert.BlobInclusionInfo)
+	if err != nil {
+		fmt.Errorf("failed to encode DA cert to RLP format: %w", err)
+		panic("")
+	}
+
+	data, err = json.MarshalIndent(eigenDACert.BlobInclusionInfo, "", "  ")
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	fmt.Println(string(data))
+
+	f, err = os.Create("blob_inclusion.rlp")
+	if err != nil {
+		fmt.Println("Create err", err)
+		panic("")
+	}
+	defer f.Close()
+	_, err = f.Write(jsonBytes)
+	if err != nil {
+		fmt.Println("Write err", err)
+		panic("")
+	}
+	return
 
 	timeoutCtx, cancel = context.WithTimeout(ctx, dur)
 	defer cancel()
