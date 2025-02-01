@@ -28,6 +28,8 @@ github.com/Layr-Labs/eigenda v0.8.6-rc.0.0.20250129221107-aed77359f08e h1:OVGnKM
 github.com/Layr-Labs/eigenda v0.8.6-rc.0.0.20250129221107-aed77359f08e/go.mod h1:hdvXBB3dggZnM0xDOnfh9FIUXlmHekPu1Kf7IwdtuUU=
 github.com/Layr-Labs/eigenda v0.8.6-rc.0.0.20250130173836-0d293cc03198 h1:mZ6bEyJmE21cBUR6EA+PD3X8kx4ZMIrRauTN9OzVnho=
 github.com/Layr-Labs/eigenda v0.8.6-rc.0.0.20250130173836-0d293cc03198/go.mod h1:hdvXBB3dggZnM0xDOnfh9FIUXlmHekPu1Kf7IwdtuUU=
+github.com/Layr-Labs/eigenda v0.8.6-rc.0.0.20250201021742-a13af0245831 h1:hfH2DruVKRVEksM0cX6bHwvuNncB6iLXqTjUH3A4CcM=
+github.com/Layr-Labs/eigenda v0.8.6-rc.0.0.20250201021742-a13af0245831/go.mod h1:MO3EyBXCmhzttrmmgqmIkzDg4gtqWjU+0fxSN0Q1EmM=
 github.com/Layr-Labs/eigensdk-go v0.2.0-beta.1.0.20250118004418-2a25f31b3b28 h1:Wig5FBBizIB5Z/ZcXJlm7KdOLnrXc6E3DjO63uWRzQM=
 github.com/Layr-Labs/eigensdk-go v0.2.0-beta.1.0.20250118004418-2a25f31b3b28/go.mod h1:YNzORpoebdDNv0sJLm/H9LTx72M85zA54eBSXI5DULw=
 github.com/Layr-Labs/eigensdk-go/signer v0.0.0-20250118004418-2a25f31b3b28 h1:rhIC2XpFpCcRkv4QYczIUe/fXvE4T+0B1mF9f6NJCuo=
