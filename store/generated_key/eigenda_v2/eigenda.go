@@ -36,14 +36,14 @@ type Store struct {
 	log log.Logger
 
 	disperser *clients.PayloadDisperser
-	retriever *clients.PayloadRetriever
+	retriever clients.PayloadRetriever
 	verifier  verification.ICertVerifier
 }
 
 var _ common.GeneratedKeyStore = (*Store)(nil)
 
 func NewStore(log log.Logger, cfg *Config, ethClient eigenda_common.EthClient,
-	disperser *clients.PayloadDisperser, retriever *clients.PayloadRetriever, verifier verification.ICertVerifier) (*Store, error) {
+	disperser *clients.PayloadDisperser, retriever clients.PayloadRetriever, verifier verification.ICertVerifier) (*Store, error) {
 
 	return &Store{
 		log:       log,
@@ -92,15 +92,8 @@ func (e Store) Get(ctx context.Context, key []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
 	}
-
-	// TODO: Update this to use changes from
-	// https://github.com/Layr-Labs/eigenda/pull/1187 once merged
-	blobKey, err := computeBlobKey(&cert)
-	if err != nil {
-		return nil, fmt.Errorf("computing blob key from cert: %w", err)
-	}
-
-	payload, err := e.retriever.GetPayload(ctx, *blobKey, &cert)
+	
+	payload, err := e.retriever.GetPayload(ctx, &cert)
 	if err != nil {
 		return nil, fmt.Errorf("getting payload: %w", err)
 	}

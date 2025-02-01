@@ -19,7 +19,7 @@ import (
 	"github.com/Layr-Labs/eigenda/api/clients/codecs"
 	clients_v2 "github.com/Layr-Labs/eigenda/api/clients/v2"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
-
+	authv2 "github.com/Layr-Labs/eigenda/core/auth/v2"
 	corev2 "github.com/Layr-Labs/eigenda/core/v2"
 
 	"github.com/Layr-Labs/eigenda/encoding"
@@ -31,7 +31,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/log"
 
-	authv2 "github.com/Layr-Labs/eigenda/core/auth/v2"
 	eigenda_eth "github.com/Layr-Labs/eigenda/core/eth"
 	geth_common "github.com/ethereum/go-ethereum/common"
 )
@@ -44,8 +43,12 @@ func BuildPayloadDisperser(log logging.Logger, payloadDispCfg clients_v2.Payload
 
 	// 1 - verify key semantics and create signer
 	var signer corev2.BlobRequestSigner
+	var err error
 	if len(privKey) == 64 {
-		signer = authv2.NewLocalBlobRequestSigner(privKey)
+		signer, err = authv2.NewLocalBlobRequestSigner(privKey)
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		return nil, fmt.Errorf("invalid length for signer private key")
 	}
@@ -172,7 +175,7 @@ func loadEigenDAV2Store(ctx context.Context, cfg CLIConfig) (*eigenda_v2.Store, 
 		Sockets:            relayURLs,
 	}
 
-	retriever, err := clients_v2.BuildPayloadRetriever(tempLogger,
+	retriever, err := clients_v2.BuildRelayPayloadRetriever(tempLogger,
 		cfg.EigenDAConfig.V2RetrievalConfig,
 		gethCfg,
 		&relayCfg,
@@ -185,6 +188,8 @@ func loadEigenDAV2Store(ctx context.Context, cfg CLIConfig) (*eigenda_v2.Store, 
 
 	splits := strings.Split(cfg.EigenDAConfig.EdaV1ClientConfig.RPC, ":")
 	println(fmt.Sprintf("%v", splits))
+
+	cfg.EigenDAConfig.V2DispersalConfig.SignerPaymentKey = cfg.EigenDAConfig.EdaV1ClientConfig.SignerPrivateKeyHex
 
 	cfg.EigenDAConfig.V2DispersalConfig.BlobCertifiedTimeout = time.Second * 100
 

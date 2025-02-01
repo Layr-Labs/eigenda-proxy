@@ -252,10 +252,10 @@ func ReadV2DispersalConfig(ctx *cli.Context) v2_clients.PayloadDisperserConfig {
 	}
 }
 
-func ReadV2RetrievalConfig(ctx *cli.Context) v2_clients.PayloadRetrieverConfig {
+func ReadV2RetrievalConfig(ctx *cli.Context) v2_clients.RelayPayloadRetrieverConfig {
 	payCfg := readPayloadClientConfig(ctx)
 
-	return v2_clients.PayloadRetrieverConfig{
+	return v2_clients.RelayPayloadRetrieverConfig{
 		PayloadClientConfig: payCfg,
 		RelayTimeout:        ctx.Duration(RelayTimeoutName),
 	}

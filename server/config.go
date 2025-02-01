@@ -31,7 +31,7 @@ type Config struct {
 
 	EigenDAV2Enabled  bool
 	V2DispersalConfig clients_v2.PayloadDisperserConfig
-	V2RetrievalConfig clients_v2.PayloadRetrieverConfig
+	V2RetrievalConfig clients_v2.RelayPayloadRetrieverConfig
 }
 
 // ReadConfig ... parses the Config from the provided flags or environment variables.
