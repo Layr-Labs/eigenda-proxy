@@ -46,6 +46,7 @@ services:
       - EIGENDA_PROXY_LOG_LEVEL=debug
       - EIGENDA_PROXY_ADDR=0.0.0.0
       - EIGENDA_PROXY_PORT=4242
+      ## Turn this off to talk to actual eigenda network
       - EIGENDA_PROXY_MEMSTORE_ENABLED=true
       - EIGENDA_PROXY_MEMSTORE_EXPIRATION=45m
       - EIGENDA_PROXY_EIGENDA_CERT_VERIFICATION_DISABLED=true
