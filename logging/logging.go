@@ -1,4 +1,4 @@
-package common
+package logging
 
 import (
 	"fmt"
@@ -29,6 +29,9 @@ const (
 	// deprecated
 	PidFlagName   = "pid"
 	ColorFlagName = "color"
+
+	// Flag
+	FlagPrefix = "log"
 )
 
 type LogFormat string
@@ -66,7 +69,7 @@ func LoggerCLIFlags(envPrefix string, flagPrefix string) []cli.Flag {
 			Name:     common.PrefixFlag(flagPrefix, FormatFlagName),
 			Category: category,
 			Usage:    "The format of the log file. Accepted options are 'json' and 'text'",
-			Value:    "json",
+			Value:    "text",
 			EnvVars:  []string{common.PrefixEnvVar(envPrefix, "LOG_FORMAT")},
 		},
 
@@ -96,18 +99,61 @@ func LoggerCLIFlags(envPrefix string, flagPrefix string) []cli.Flag {
 	}
 }
 
-func ReadLoggerCLIConfig(ctx *cli.Context, flagPrefix string) (*common.LoggerConfig, error) {
-	cfg := common.DefaultLoggerConfig()
-	format := ctx.String(common.PrefixFlag(flagPrefix, FormatFlagName))
+// DefaultLoggerConfig returns a LoggerConfig with the default settings for a JSON logger.
+// In general, this should be the baseline config for most services running in production.
+func DefaultLoggerConfig() LoggerConfig {
+	return LoggerConfig{
+		Format:       JSONLogFormat,
+		OutputWriter: os.Stdout,
+		HandlerOpts: logging.SLoggerOptions{
+			AddSource: true,
+			Level:     slog.LevelDebug,
+			NoColor:   true,
+		},
+	}
+}
+
+// DefaultTextLoggerConfig returns a LoggerConfig with the default settings for a text logger.
+// For use in tests or other scenarios where the logs are consumed by humans.
+func DefaultTextLoggerConfig() LoggerConfig {
+	return LoggerConfig{
+		Format:       TextLogFormat,
+		OutputWriter: os.Stdout,
+		HandlerOpts: logging.SLoggerOptions{
+			AddSource: true,
+			Level:     slog.LevelDebug,
+			NoColor:   true, // color is nice in the console, but not nice when written to a file
+		},
+	}
+}
+
+// DefaultConsoleLoggerConfig returns a LoggerConfig with the default settings
+// for logging to a console (i.e. with human eyeballs). Adds color, and so should
+// not be used when logs are captured in a file.
+func DefaultConsoleLoggerConfig() LoggerConfig {
+	return LoggerConfig{
+		Format:       TextLogFormat,
+		OutputWriter: os.Stdout,
+		HandlerOpts: logging.SLoggerOptions{
+			AddSource: true,
+			Level:     slog.LevelDebug,
+			NoColor:   false,
+		},
+	}
+}
+
+func ReadLoggerCLIConfig(ctx *cli.Context) (*LoggerConfig, error) {
+	cfg := DefaultLoggerConfig()
+	format := ctx.String(common.PrefixFlag(FlagPrefix, FormatFlagName))
 	if format == "json" {
-		cfg.Format = common.JSONLogFormat
+		cfg.Format = JSONLogFormat
 	} else if format == "text" {
-		cfg.Format = common.TextLogFormat
+		cfg.Format = TextLogFormat
 	} else {
 		return nil, fmt.Errorf("invalid log file format %s", format)
 	}
 
-	path := ctx.String(common.PrefixFlag(flagPrefix, PathFlagName))
+	path := ctx.String(common.PrefixFlag(FlagPrefix, PathFlagName))
 	if path != "" {
 		f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 		if err != nil {
@@ -115,7 +161,7 @@ func ReadLoggerCLIConfig(ctx *cli.Context, flagPrefix string) (*common.LoggerCon
 		}
 		cfg.OutputWriter = io.MultiWriter(os.Stdout, f)
 	}
-	logLevel := ctx.String(common.PrefixFlag(flagPrefix, LevelFlagName))
+	logLevel := ctx.String(common.PrefixFlag(FlagPrefix, LevelFlagName))
 	var level slog.Level
 	err := level.UnmarshalText([]byte(logLevel))
 	if err != nil {
@@ -124,4 +170,14 @@ func ReadLoggerCLIConfig(ctx *cli.Context, flagPrefix string) (*common.LoggerCon
 	cfg.HandlerOpts.Level = level
 
 	return &cfg, nil
+}
+
+func NewLogger(cfg LoggerConfig) (logging.Logger, error) {
+	if cfg.Format == JSONLogFormat {
+		return logging.NewJsonSLogger(cfg.OutputWriter, &cfg.HandlerOpts), nil
+	}
+	if cfg.Format == TextLogFormat {
+		return logging.NewTextSLogger(cfg.OutputWriter, &cfg.HandlerOpts), nil
+	}
+	return nil, fmt.Errorf("unknown log format: %s", cfg.Format)
 }

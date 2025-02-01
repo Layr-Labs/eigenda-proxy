@@ -2,6 +2,7 @@ package flags
 
 import (
 	"github.com/Layr-Labs/eigenda-proxy/flags/eigendaflags"
+	"github.com/Layr-Labs/eigenda-proxy/logging"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
@@ -56,7 +57,7 @@ var Flags = []cli.Flag{}
 
 func init() {
 	Flags = CLIFlags()
-	Flags = append(Flags, common.LoggerCLIFlags(common.GlobalPrefix, "log")...)
+	Flags = append(Flags, logging.LoggerCLIFlags(common.GlobalPrefix, "log")...)
 	Flags = append(Flags, metrics.CLIFlags(common.GlobalPrefix)...)
 	Flags = append(Flags, eigendaflags.CLIFlags(common.GlobalPrefix, EigenDAClientCategory)...)
 	Flags = append(Flags, eigendaflags.DeprecatedCLIFlags(common.GlobalPrefix, EigenDADeprecatedCategory)...)

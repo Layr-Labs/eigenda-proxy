@@ -5,13 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 
+	proxy_logging "github.com/Layr-Labs/eigenda-proxy/logging"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 
-	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/flags"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/server"
-	eigenda_common "github.com/Layr-Labs/eigenda/common"
 	"github.com/urfave/cli/v2"
 
 	"github.com/ethereum-optimism/optimism/op-service/ctxinterrupt"
@@ -19,12 +18,12 @@ import (
 
 func StartProxySvr(cliCtx *cli.Context) error {
 
-	logCfg, err := common.ReadLoggerCLIConfig(cliCtx, "log")
+	logCfg, err := proxy_logging.ReadLoggerCLIConfig(cliCtx)
 	if err != nil {
 		return err
 	}
 
-	log, err := eigenda_common.NewLogger(*logCfg)
+	log, err := proxy_logging.NewLogger(*logCfg)
 	if err != nil {
 		return err
 	}
