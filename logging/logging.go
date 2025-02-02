@@ -47,6 +47,9 @@ type LoggerConfig struct {
 	HandlerOpts  logging.SLoggerOptions
 }
 
+func withEnvPrefix(envPrefix, s string) []string {
+	return []string{envPrefix + "_LOG_" + s}
+}
 func CLIFlags(envPrefix string, category string) []cli.Flag {
 
 	return []cli.Flag{
@@ -55,21 +58,21 @@ func CLIFlags(envPrefix string, category string) []cli.Flag {
 			Category: category,
 			Usage:    `The lowest log level that will be output. Accepted options are "debug", "info", "warn", "error"`,
 			Value:    "info",
-			EnvVars:  []string{common.PrefixEnvVar(envPrefix, "LOG_LEVEL")},
+			EnvVars:  withEnvPrefix(envPrefix, "LEVEL"),
 		},
 		&cli.StringFlag{
 			Name:     common.PrefixFlag(FlagPrefix, PathFlagName),
 			Category: category,
 			Usage:    "Path to file where logs will be written",
 			Value:    "",
-			EnvVars:  []string{common.PrefixEnvVar(envPrefix, "LOG_PATH")},
+			EnvVars:  withEnvPrefix(envPrefix, "PATH"),
 		},
 		&cli.StringFlag{
 			Name:     common.PrefixFlag(FlagPrefix, FormatFlagName),
 			Category: category,
 			Usage:    "The format of the log file. Accepted options are 'json' and 'text'",
 			Value:    "text",
-			EnvVars:  []string{common.PrefixEnvVar(envPrefix, "LOG_FORMAT")},
+			EnvVars:  withEnvPrefix(envPrefix, "FORMAT"),
 		},
 
 		// Deprecated since used by op-service logging which has been replaced
@@ -78,7 +81,7 @@ func CLIFlags(envPrefix string, category string) []cli.Flag {
 			Name:     common.PrefixFlag(FlagPrefix, PidFlagName),
 			Category: category,
 			Usage:    "Show pid in the log",
-			EnvVars:  []string{common.PrefixEnvVar(envPrefix, "LOG_PID")},
+			EnvVars:  withEnvPrefix(envPrefix, "PID"),
 			Hidden:   true,
 			Action: func(_ *cli.Context, _ bool) error {
 				return fmt.Errorf("flag --%s is deprecated", PidFlagName)

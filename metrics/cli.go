@@ -4,7 +4,6 @@ import (
 	"errors"
 	"math"
 
-	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/urfave/cli/v2"
 )
 
@@ -20,6 +19,11 @@ const (
 
 var ErrInvalidPort = errors.New("invalid metrics port")
 
+
+func withEnvPrefix(envPrefix, s string) []string {
+	return []string{envPrefix + "_METRICS_" + s}
+}
+
 func DefaultCLIConfig() CLIConfig {
 	return CLIConfig{
 		Enabled:    false,
@@ -34,21 +38,21 @@ func CLIFlags(envPrefix string, category string) []cli.Flag {
 			Name:     EnabledFlagName,
 			Usage:    "Enable the metrics server",
 			Category: category,
-			EnvVars:  common.PrefixEnvVar("METRICS_ENABLED"),
+			EnvVars:  withEnvPrefix(envPrefix, "METRICS_ENABLED"),
 		},
 		&cli.StringFlag{
 			Name:     ListenAddrFlagName,
 			Usage:    "Metrics listening address",
 			Category: category,
 			Value:    defaultListenAddr,
-			EnvVars:  common.PrefixEnvVar("METRICS_ADDR"),
+			EnvVars:  withEnvPrefix(envPrefix, "METRICS_ADDR"),
 		},
 		&cli.IntFlag{
 			Name:     PortFlagName,
 			Usage:    "Metrics listening port",
 			Category: category,
 			Value:    defaultListenPort,
-			EnvVars:  common.PrefixEnvVar("METRICS_PORT"),
+			EnvVars:  withEnvPrefix(envPrefix, "METRICS_PORT"),
 		},
 	}
 }

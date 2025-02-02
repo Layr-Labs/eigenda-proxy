@@ -8,8 +8,8 @@ import (
 
 const GlobalPrefix = "EIGENDA_PROXY"
 
-func PrefixEnvVar(suffix string) []string {
-	return []string{GlobalPrefix + "_" + suffix}
+func PrefixEnvVar(prefix, suffix string) []string {
+	return []string{prefix + "_" + suffix}
 }
 
 // Helper utility functions //

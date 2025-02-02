@@ -41,13 +41,13 @@ func CLIFlags() []cli.Flag {
 			Name:    ListenAddrFlagName,
 			Usage:   "Server listening address",
 			Value:   "0.0.0.0",
-			EnvVars: common.PrefixEnvVar("ADDR"),
+			EnvVars: common.PrefixEnvVar(common.GlobalPrefix, "ADDR"),
 		},
 		&cli.IntFlag{
 			Name:    PortFlagName,
 			Usage:   "Server listening port",
 			Value:   3100,
-			EnvVars: common.PrefixEnvVar("PORT"),
+			EnvVars: common.PrefixEnvVar(common.GlobalPrefix, "PORT"),
 		},
 	}
 
