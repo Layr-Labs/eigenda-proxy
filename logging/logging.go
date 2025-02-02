@@ -74,7 +74,6 @@ func CLIFlags(envPrefix string, category string) []cli.Flag {
 			Value:    "text",
 			EnvVars:  withEnvPrefix(envPrefix, "FORMAT"),
 		},
-
 		// Deprecated since used by op-service logging which has been replaced
 		// by eigengo-sdk logger
 		&cli.BoolFlag{
@@ -87,7 +86,6 @@ func CLIFlags(envPrefix string, category string) []cli.Flag {
 				return fmt.Errorf("flag --%s is deprecated", PidFlagName)
 			},
 		},
-
 		&cli.BoolFlag{
 			Name:     common.PrefixFlag(FlagPrefix, ColorFlagName),
 			Category: category,
