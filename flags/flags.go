@@ -17,6 +17,8 @@ import (
 
 const (
 	EigenDAClientCategory      = "EigenDA Client"
+	LoggingFlagsCategory       = "Logging"
+	MetricsFlagCategory        = "Metrics"
 	EigenDADeprecatedCategory  = "DEPRECATED EIGENDA CLIENT FLAGS -- THESE WILL BE REMOVED IN V2.0.0"
 	MemstoreFlagsCategory      = "Memstore (for testing purposes - replaces EigenDA backend)"
 	StorageFlagsCategory       = "Storage"
@@ -57,8 +59,8 @@ var Flags = []cli.Flag{}
 
 func init() {
 	Flags = CLIFlags()
-	Flags = append(Flags, logging.LoggerCLIFlags(common.GlobalPrefix, "log")...)
-	Flags = append(Flags, metrics.CLIFlags(common.GlobalPrefix)...)
+	Flags = append(Flags, logging.CLIFlags(common.GlobalPrefix, LoggingFlagsCategory)...)
+	Flags = append(Flags, metrics.CLIFlags(common.GlobalPrefix, MetricsFlagCategory)...)
 	Flags = append(Flags, eigendaflags.CLIFlags(common.GlobalPrefix, EigenDAClientCategory)...)
 	Flags = append(Flags, eigendaflags.DeprecatedCLIFlags(common.GlobalPrefix, EigenDADeprecatedCategory)...)
 	Flags = append(Flags, store.CLIFlags(common.GlobalPrefix, StorageFlagsCategory)...)

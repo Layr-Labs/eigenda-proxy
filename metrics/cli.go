@@ -28,24 +28,27 @@ func DefaultCLIConfig() CLIConfig {
 	}
 }
 
-func CLIFlags() []cli.Flag {
+func CLIFlags(envPrefix string, category string) []cli.Flag {
 	return []cli.Flag{
 		&cli.BoolFlag{
-			Name:    EnabledFlagName,
-			Usage:   "Enable the metrics server",
-			EnvVars: common.PrefixEnvVar("METRICS_ENABLED"),
+			Name:     EnabledFlagName,
+			Usage:    "Enable the metrics server",
+			Category: category,
+			EnvVars:  common.PrefixEnvVar("METRICS_ENABLED"),
 		},
 		&cli.StringFlag{
-			Name:    ListenAddrFlagName,
-			Usage:   "Metrics listening address",
-			Value:   defaultListenAddr,
-			EnvVars: common.PrefixEnvVar("METRICS_ADDR"),
+			Name:     ListenAddrFlagName,
+			Usage:    "Metrics listening address",
+			Category: category,
+			Value:    defaultListenAddr,
+			EnvVars:  common.PrefixEnvVar("METRICS_ADDR"),
 		},
 		&cli.IntFlag{
-			Name:    PortFlagName,
-			Usage:   "Metrics listening port",
-			Value:   defaultListenPort,
-			EnvVars: common.PrefixEnvVar("METRICS_PORT"),
+			Name:     PortFlagName,
+			Usage:    "Metrics listening port",
+			Category: category,
+			Value:    defaultListenPort,
+			EnvVars:  common.PrefixEnvVar("METRICS_PORT"),
 		},
 	}
 }

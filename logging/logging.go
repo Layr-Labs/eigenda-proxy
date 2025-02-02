@@ -47,26 +47,25 @@ type LoggerConfig struct {
 	HandlerOpts  logging.SLoggerOptions
 }
 
-func LoggerCLIFlags(envPrefix string, flagPrefix string) []cli.Flag {
-	category := "logging"
+func CLIFlags(envPrefix string, category string) []cli.Flag {
 
 	return []cli.Flag{
 		&cli.StringFlag{
-			Name:     common.PrefixFlag(flagPrefix, LevelFlagName),
+			Name:     common.PrefixFlag(FlagPrefix, LevelFlagName),
 			Category: category,
 			Usage:    `The lowest log level that will be output. Accepted options are "debug", "info", "warn", "error"`,
 			Value:    "info",
 			EnvVars:  []string{common.PrefixEnvVar(envPrefix, "LOG_LEVEL")},
 		},
 		&cli.StringFlag{
-			Name:     common.PrefixFlag(flagPrefix, PathFlagName),
+			Name:     common.PrefixFlag(FlagPrefix, PathFlagName),
 			Category: category,
 			Usage:    "Path to file where logs will be written",
 			Value:    "",
 			EnvVars:  []string{common.PrefixEnvVar(envPrefix, "LOG_PATH")},
 		},
 		&cli.StringFlag{
-			Name:     common.PrefixFlag(flagPrefix, FormatFlagName),
+			Name:     common.PrefixFlag(FlagPrefix, FormatFlagName),
 			Category: category,
 			Usage:    "The format of the log file. Accepted options are 'json' and 'text'",
 			Value:    "text",
@@ -76,7 +75,7 @@ func LoggerCLIFlags(envPrefix string, flagPrefix string) []cli.Flag {
 		// Deprecated since used by op-service logging which has been replaced
 		// by eigengo-sdk logger
 		&cli.BoolFlag{
-			Name:     common.PrefixFlag(flagPrefix, PidFlagName),
+			Name:     common.PrefixFlag(FlagPrefix, PidFlagName),
 			Category: category,
 			Usage:    "Show pid in the log",
 			EnvVars:  []string{common.PrefixEnvVar(envPrefix, "LOG_PID")},
@@ -87,7 +86,7 @@ func LoggerCLIFlags(envPrefix string, flagPrefix string) []cli.Flag {
 		},
 
 		&cli.BoolFlag{
-			Name:     common.PrefixFlag(flagPrefix, ColorFlagName),
+			Name:     common.PrefixFlag(FlagPrefix, ColorFlagName),
 			Category: category,
 			Usage:    "Color the log output if in terminal mode",
 			EnvVars:  []string{common.PrefixEnvVar(envPrefix, "LOG_COLOR")},
