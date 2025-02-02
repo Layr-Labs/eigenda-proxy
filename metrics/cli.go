@@ -19,7 +19,6 @@ const (
 
 var ErrInvalidPort = errors.New("invalid metrics port")
 
-
 func withEnvPrefix(envPrefix, s string) []string {
 	return []string{envPrefix + "_METRICS_" + s}
 }
