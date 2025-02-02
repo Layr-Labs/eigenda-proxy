@@ -145,12 +145,16 @@ func DefaultConsoleLoggerConfig() LoggerConfig {
 func ReadLoggerCLIConfig(ctx *cli.Context) (*LoggerConfig, error) {
 	cfg := DefaultLoggerConfig()
 	format := ctx.String(common.PrefixFlag(FlagPrefix, FormatFlagName))
-	if format == "json" {
+	switch format {
+	case "json":
 		cfg.Format = JSONLogFormat
-	} else if format == "text" {
+
+	case "text":
 		cfg.Format = TextLogFormat
-	} else {
+
+	default:
 		return nil, fmt.Errorf("invalid log file format %s", format)
+
 	}
 
 	path := ctx.String(common.PrefixFlag(FlagPrefix, PathFlagName))
