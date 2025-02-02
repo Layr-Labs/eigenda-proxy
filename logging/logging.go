@@ -51,7 +51,6 @@ func withEnvPrefix(envPrefix, s string) []string {
 }
 
 func CLIFlags(envPrefix string, category string) []cli.Flag {
-
 	return []cli.Flag{
 		&cli.StringFlag{
 			Name:     common.PrefixFlag(FlagPrefix, LevelFlagName),
