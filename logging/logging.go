@@ -16,7 +16,6 @@ import (
 
 	This CLI logic is already defined in the eigenda monorepo:
 	 https://github.com/Layr-Labs/eigenda/blob/0d293cc031987c43f653535732c6e1f1fa65a0b2/common/logger_config.go
-
 	This regression is due to the fact the proxy leverage urfave/cli/v2 whereas
 	core eigenda predominantly uses urfave/cli (i.e, v1).
 
@@ -50,6 +49,7 @@ type LoggerConfig struct {
 func withEnvPrefix(envPrefix, s string) []string {
 	return []string{envPrefix + "_LOG_" + s}
 }
+
 func CLIFlags(envPrefix string, category string) []cli.Flag {
 
 	return []cli.Flag{
@@ -156,7 +156,6 @@ func ReadLoggerCLIConfig(ctx *cli.Context) (*LoggerConfig, error) {
 
 	default:
 		return nil, fmt.Errorf("invalid log file format %s", format)
-
 	}
 
 	path := ctx.String(common.PrefixFlag(FlagPrefix, PathFlagName))
