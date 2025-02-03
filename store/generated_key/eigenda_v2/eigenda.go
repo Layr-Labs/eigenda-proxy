@@ -10,8 +10,6 @@ import (
 	"github.com/Layr-Labs/eigenda/api/clients/v2"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
 	eigenda_common "github.com/Layr-Labs/eigenda/common"
-	v2 "github.com/Layr-Labs/eigenda/core/v2"
-	"github.com/Layr-Labs/eigenda/encoding"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -52,36 +50,6 @@ func NewStore(log log.Logger, cfg *Config, ethClient eigenda_common.EthClient,
 		retriever: retriever,
 		verifier:  verifier,
 	}, nil
-}
-
-// ComputeBlobKey computes the BlobKey of the blob that belongs to the EigenDACert
-// Temporarily stolen from https://github.com/Layr-Labs/eigenda/pull/1187
-func computeBlobKey(c *verification.EigenDACert) (*v2.BlobKey, error) {
-	blobHeader := c.BlobInclusionInfo.BlobCertificate.BlobHeader
-
-	blobCommitmentsProto := verification.BlobCommitmentBindingToProto(&blobHeader.Commitment)
-	blobCommitments, err := encoding.BlobCommitmentsFromProtobuf(blobCommitmentsProto)
-	if err != nil {
-		return nil, fmt.Errorf("blob commitments from protobuf: %w", err)
-	}
-
-	blobKeyBytes, err := v2.ComputeBlobKey(
-		blobHeader.Version,
-		*blobCommitments,
-		blobHeader.QuorumNumbers,
-		blobHeader.PaymentHeaderHash,
-		blobHeader.Salt)
-
-	if err != nil {
-		return nil, fmt.Errorf("compute blob key: %w", err)
-	}
-
-	blobKey, err := v2.BytesToBlobKey(blobKeyBytes[:])
-	if err != nil {
-		return nil, fmt.Errorf("bytes to blob key: %w", err)
-	}
-
-	return &blobKey, nil
 }
 
 // Get fetches a blob from DA using certificate fields and verifies blob

@@ -192,6 +192,7 @@ func loadEigenDAV2Store(ctx context.Context, cfg CLIConfig) (*eigenda_v2.Store, 
 	cfg.EigenDAConfig.V2DispersalConfig.SignerPaymentKey = cfg.EigenDAConfig.EdaV1ClientConfig.SignerPrivateKeyHex
 
 	cfg.EigenDAConfig.V2DispersalConfig.BlobCertifiedTimeout = time.Second * 100
+	cfg.EigenDAConfig.V2DispersalConfig.Quorums = []uint8{0, 1, 2}
 
 	log.Info("Building payload disperser")
 	disperser, err := BuildPayloadDisperser(
