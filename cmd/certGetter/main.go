@@ -63,7 +63,7 @@ func main() {
 	timeoutCtx, cancel := context.WithTimeout(ctx, dur)
 	defer cancel()
 
-	blobKeyHex := "e286fabf623bbc07cd3e25cf7efa4d148d62838ffca8edae6cb6db5fe86902d1"
+	blobKeyHex := "b88da6e2acf247b88e4d67cf8ce042e3a07225f54e6c37e80775ed66067b7e44"
 	blobKey1, err := hex.DecodeString(blobKeyHex)
 	if err != nil {
 		fmt.Println("blobKey1 err")
@@ -71,12 +71,13 @@ func main() {
 	}
 
 	// holesky cert verifier address
-	certVerifierAddress := "0x5c33Ce64EE04400fD593F960d63336F1B65bF77B"
+	certVerifierAddress := "0xA6be9E1425CD1A49c1b5288903C54E807604d8DC"
 
 	blobKey := core.BlobKey(blobKey1)
 
 	blobStatusReply, err := disperserClient.GetBlobStatus(timeoutCtx, blobKey)
 	if err != nil {
+		fmt.Println("err", err)
 		panic("poll blob status until certified")
 	}
 	fmt.Println("Blob status CERTIFIED", "blobKey", blobKey)
@@ -173,13 +174,13 @@ func main() {
 		fmt.Println("Write err", err)
 		panic("")
 	}
-	return
 
 	timeoutCtx, cancel = context.WithTimeout(ctx, dur)
 	defer cancel()
 	err = certVerifier.VerifyCertV2(timeoutCtx, eigenDACert)
 	if err != nil {
 		fmt.Printf("VerifyCertV2 has problem %w", err)
+		panic("")
 	}
 
 	fmt.Printf("certVerifier.VerifyCertV2 onchain call verify correctly")
