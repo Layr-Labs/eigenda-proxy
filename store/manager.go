@@ -9,7 +9,7 @@ import (
 
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/common"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/Layr-Labs/eigensdk-go/logging"
 )
 
 // IManager ... read/write interface
@@ -20,7 +20,7 @@ type IManager interface {
 
 // Manager ... storage backend routing layer
 type Manager struct {
-	log log.Logger
+	log logging.Logger
 
 	s3 common.PrecomputedKeyStore // OP commitment mode && keccak256 commitment type
 	// ALT DA commitment types for OP mode && std commitment mode for standard /client
@@ -33,8 +33,8 @@ type Manager struct {
 }
 
 // NewManager ... Init
-func NewManager(eigenda common.GeneratedKeyStore, eigenDAV2 common.GeneratedKeyStore, s3 common.PrecomputedKeyStore, l log.Logger,
-	secondary ISecondary, useV2 bool) (IManager, error) {
+func NewManager(eigenda common.GeneratedKeyStore, eigenDAV2 common.GeneratedKeyStore, s3 common.PrecomputedKeyStore,
+	l logging.Logger, secondary ISecondary, useV2 bool) (IManager, error) {
 	return &Manager{
 		log:          l,
 		eigenda:      eigenda,
@@ -74,6 +74,10 @@ func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.Commitment
 			return nil, errors.New("expected EigenDA backend for DA commitment type, but none configured")
 		}
 
+
+		var err error
+		var data []byte
+
 		// 1 - read blob from cache if enabled
 		if m.secondary.CachingEnabled() {
 			m.log.Debug("Retrieving data from cached backends")
@@ -86,6 +90,7 @@ func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.Commitment
 		}
 
 		if version == commitments.CertV0 {
+			m.log.Debug("Reading blob from EigenDA")
 			// 2 - read blob from EigenDA v1
 			data, err := m.eigenda.Get(ctx, key)
 			if err == nil {
@@ -97,6 +102,7 @@ func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.Commitment
 				return data, nil
 			}
 		} else if version == commitments.CertV1 {
+			m.log.Debug("Reading blob from EigenDAV2")
 			data, err := m.eigendaV2.Get(ctx, key)
 			if err == nil {
 				// verify v2 (payload, cert)
@@ -104,12 +110,11 @@ func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.Commitment
 				if err != nil {
 					return nil, err
 				}
+				m.log.Debug(fmt.Sprintf("%s", data))
 				return data, nil
 			}
 		}
 
-		var err error
-		var data []byte
 		// 3 - read blob from fallbacks if enabled and data is non-retrievable from EigenDA
 		if m.secondary.FallbackEnabled() {
 			data, err = m.secondary.MultiSourceRead(ctx, key, true, m.eigenda.Verify)
@@ -120,7 +125,6 @@ func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.Commitment
 		} else {
 			return nil, err
 		}
-
 		return data, err
 
 	default:
@@ -149,11 +153,13 @@ func (m *Manager) Put(ctx context.Context, cm commitments.CommitmentMode, key, v
 
 	// 2 - Put blob into secondary storage backends
 	if m.secondary.Enabled() && m.secondary.AsyncWriteEntry() { // publish put notification to secondary's subscription on PutNotify topic
+		m.log.Debug("Publishing data to async secondary stores")
 		m.secondary.Topic() <- PutNotify{
 			Commitment: commit,
 			Value:      value,
 		}
 	} else if m.secondary.Enabled() && !m.secondary.AsyncWriteEntry() { // secondary is available only for synchronous writes
+		m.log.Debug("Publishing data to single threaded secondary stores")
 		err := m.secondary.HandleRedundantWrites(ctx, commit, value)
 		if err != nil {
 			m.log.Error("Secondary insertions failed", "error", err.Error())

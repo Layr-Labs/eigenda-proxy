@@ -16,86 +16,17 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
 	"github.com/Layr-Labs/eigenda/api/clients"
-	"github.com/Layr-Labs/eigenda/api/clients/codecs"
 	clients_v2 "github.com/Layr-Labs/eigenda/api/clients/v2"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
-	authv2 "github.com/Layr-Labs/eigenda/core/auth/v2"
-	corev2 "github.com/Layr-Labs/eigenda/core/v2"
-
-	"github.com/Layr-Labs/eigenda/encoding"
 
 	"github.com/Layr-Labs/eigenda/common/geth"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
+	geth_common "github.com/ethereum/go-ethereum/common"
 
 	"github.com/Layr-Labs/eigensdk-go/logging"
 
-	"github.com/ethereum/go-ethereum/log"
-
 	eigenda_eth "github.com/Layr-Labs/eigenda/core/eth"
-	geth_common "github.com/ethereum/go-ethereum/common"
 )
-
-// BuildPayloadDisperser builds a PayloadDisperser from config structs.
-func BuildPayloadDisperser(log logging.Logger, payloadDispCfg clients_v2.PayloadDisperserConfig,
-	dispClientCfg *clients_v2.DisperserClientConfig,
-	ethCfg *geth.EthClientConfig,
-	kzgConfig *kzg.KzgConfig, encoderCfg *encoding.Config, privKey string) (*clients_v2.PayloadDisperser, error) {
-
-	// 1 - verify key semantics and create signer
-	var signer corev2.BlobRequestSigner
-	var err error
-	if len(privKey) == 64 {
-		signer, err = authv2.NewLocalBlobRequestSigner(privKey)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		return nil, fmt.Errorf("invalid length for signer private key")
-	}
-
-	// 2 - create prover
-	// println(fmt.Sprintf("%+v", kzgConfig))
-	// kzgProver, err := prover.NewProver(kzgConfig, encoderCfg)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("new kzg prover: %w", err)
-	// }
-
-	// 3 - create disperser client & set accountant to nil
-	// to then populate using signer field via in-place method
-	// which queries disperser directly for payment states
-	disperserClient, err := clients_v2.NewDisperserClient(dispClientCfg, signer, nil, nil)
-	if err != nil {
-		return nil, fmt.Errorf("new disperser client: %w", err)
-	}
-
-	err = disperserClient.PopulateAccountant(context.Background())
-	if err != nil {
-		return nil, fmt.Errorf("populating accountant in disperser client: %w", err)
-	}
-
-	// 4 - construct eth client to wire up cert verifier
-	ethClient, err := geth.NewClient(*ethCfg, geth_common.Address{}, 0, log)
-	if err != nil {
-		return nil, fmt.Errorf("new eth client: %w", err)
-	}
-
-	certVerifier, err := verification.NewCertVerifier(
-		*ethClient,
-		payloadDispCfg.EigenDACertVerifierAddr,
-	)
-
-	if err != nil {
-		return nil, fmt.Errorf("new cert verifier: %w", err)
-	}
-
-	// 5 - create codec
-	codec, err := codecs.CreateCodec(payloadDispCfg.PayloadPolynomialForm, payloadDispCfg.BlobEncodingVersion)
-	if err != nil {
-		return nil, err
-	}
-
-	return clients_v2.NewPayloadDisperser(log, payloadDispCfg, codec, disperserClient, certVerifier)
-}
 
 // TODO - create structured abstraction for dependency injection vs. overloading stateless functions
 
@@ -133,18 +64,14 @@ func loadBackends(targets []string, s3 common.PrecomputedKeyStore, redis *redis.
 	return stores
 }
 
-func loadEigenDAV2Store(ctx context.Context, cfg CLIConfig) (*eigenda_v2.Store, error) {
+func loadEigenDAV2Store(ctx context.Context, cfg CLIConfig, log logging.Logger) (*eigenda_v2.Store, error) {
 	// TODO: Replace with real logger once dependency PRs are merged
-	tempLogger, err := logging.NewZapLogger(logging.Development)
-	if err != nil {
-		return nil, err
-	}
 
 	gethCfg := geth.EthClientConfig{
 		RPCURLs: []string{cfg.EigenDAConfig.EdaV1ClientConfig.EthRpcUrl},
 	}
 
-	ethClient, err := geth.NewClient(gethCfg, geth_common.Address{0x0}, 0, tempLogger)
+	ethClient, err := geth.NewClient(gethCfg, geth_common.Address{0x0}, 0, log)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +81,7 @@ func loadEigenDAV2Store(ctx context.Context, cfg CLIConfig) (*eigenda_v2.Store, 
 		return nil, err
 	}
 
-	reader, err := eigenda_eth.NewReader(tempLogger, ethClient,
+	reader, err := eigenda_eth.NewReader(log, ethClient,
 		"0x0", cfg.EigenDAConfig.EdaV1ClientConfig.SvcManagerAddr)
 
 	if err != nil {
@@ -175,7 +102,7 @@ func loadEigenDAV2Store(ctx context.Context, cfg CLIConfig) (*eigenda_v2.Store, 
 		Sockets:            relayURLs,
 	}
 
-	retriever, err := clients_v2.BuildRelayPayloadRetriever(tempLogger,
+	retriever, err := clients_v2.BuildRelayPayloadRetriever(log,
 		cfg.EigenDAConfig.V2RetrievalConfig,
 		gethCfg,
 		&relayCfg,
@@ -195,8 +122,8 @@ func loadEigenDAV2Store(ctx context.Context, cfg CLIConfig) (*eigenda_v2.Store, 
 	cfg.EigenDAConfig.V2DispersalConfig.Quorums = []uint8{0, 1, 2}
 
 	log.Info("Building payload disperser")
-	disperser, err := BuildPayloadDisperser(
-		tempLogger,
+	disperser, err := clients_v2.BuildPayloadDisperser(
+		log,
 		cfg.EigenDAConfig.V2DispersalConfig,
 		&clients_v2.DisperserClientConfig{
 			Hostname:          splits[0],
@@ -204,16 +131,15 @@ func loadEigenDAV2Store(ctx context.Context, cfg CLIConfig) (*eigenda_v2.Store, 
 			UseSecureGrpcFlag: !cfg.EigenDAConfig.EdaV1ClientConfig.DisableTLS,
 		},
 		&gethCfg,
-		cfg.EigenDAConfig.VerifierConfig.KzgConfig,
-		encoding.DefaultConfig(),
-		cfg.EigenDAConfig.EdaV1ClientConfig.SignerPrivateKeyHex,
+		nil,
+		nil,
 	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	verifier, err := verification.NewCertVerifier(*ethClient, cfg.EigenDAConfig.V2DispersalConfig.EigenDACertVerifierAddr)
+	verifier, err := verification.NewCertVerifier(log, ethClient, cfg.EigenDAConfig.V2DispersalConfig.EigenDACertVerifierAddr, time.Second * 1)
 	if err != nil {
 		return nil, err
 	}
@@ -227,7 +153,7 @@ func loadEigenDAV2Store(ctx context.Context, cfg CLIConfig) (*eigenda_v2.Store, 
 }
 
 // LoadStoreManager ... creates storage backend clients and instruments them into a storage routing abstraction
-func LoadStoreManager(ctx context.Context, cfg CLIConfig, log log.Logger, m metrics.Metricer) (store.IManager, error) {
+func LoadStoreManager(ctx context.Context, cfg CLIConfig, log logging.Logger, m metrics.Metricer) (store.IManager, error) {
 	// create S3 backend store (if enabled)
 	var err error
 	var s3Store *s3.Store
@@ -274,15 +200,10 @@ func LoadStoreManager(ctx context.Context, cfg CLIConfig, log log.Logger, m metr
 		log.Info("Using memstore backend for EigenDA")
 		eigenDA, err = memstore.New(ctx, verifier, log, cfg.EigenDAConfig.MemstoreConfig)
 	} else {
-
-		l, err := logging.NewZapLogger(logging.Development)
-		if err != nil {
-			return nil, err
-		}
 		// EigenDAV1 backend dependency injection
 		var client *clients.EigenDAClient
 		log.Warn("Using EigenDA backend.. This backend type will be deprecated soon. Please migrate to V2.")
-		client, err = clients.NewEigenDAClient(l, daCfg.EdaV1ClientConfig)
+		client, err = clients.NewEigenDAClient(log, daCfg.EdaV1ClientConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -298,10 +219,6 @@ func LoadStoreManager(ctx context.Context, cfg CLIConfig, log log.Logger, m metr
 				PutRetries:           cfg.EigenDAConfig.PutRetries,
 			},
 		)
-
-		// EigenDAV2 backend dependency injection
-		// TODO: config ingestion from env
-
 	}
 
 	if err != nil {
@@ -310,7 +227,7 @@ func LoadStoreManager(ctx context.Context, cfg CLIConfig, log log.Logger, m metr
 
 	if cfg.EigenDAConfig.EigenDAV2Enabled {
 		log.Info("Using EigenDA V2 backend")
-		eigenDAV2Store, err = loadEigenDAV2Store(ctx, cfg)
+		eigenDAV2Store, err = loadEigenDAV2Store(ctx, cfg, log)
 		if err != nil {
 			return nil, err
 		}
@@ -329,8 +246,11 @@ func LoadStoreManager(ctx context.Context, cfg CLIConfig, log log.Logger, m metr
 		}
 	}
 
-	log.Info("Creating storage router", "eigenda_v1 backend type", eigenDA != nil,
-		"eigenda_v2 backend type", eigenDAV2Store != nil,
-		"s3 backend type", s3Store != nil)
+	log.Info("Created storage backends",
+		"eigenda", eigenDA != nil,
+		"eigenda_v2", eigenDAV2Store != nil,
+		"s3", s3Store != nil,
+		"redis", redisStore != nil,
+	)
 	return store.NewManager(eigenDA, eigenDAV2Store, s3Store, log, secondary, cfg.EigenDAConfig.EigenDAV2Enabled)
 }

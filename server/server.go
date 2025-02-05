@@ -13,7 +13,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/store"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/gorilla/mux"
 )
 
@@ -29,7 +29,7 @@ const (
 
 type Server struct {
 	cfg        *Config
-	log        log.Logger
+	log        logging.Logger
 	endpoint   string
 	sm         store.IManager
 	m          metrics.Metricer
@@ -37,7 +37,7 @@ type Server struct {
 	listener   net.Listener
 }
 
-func NewServer(cfg *Config, sm store.IManager, log log.Logger,
+func NewServer(cfg *Config, sm store.IManager, log logging.Logger,
 	m metrics.Metricer) *Server {
 	endpoint := net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))
 	return &Server{
@@ -136,6 +136,10 @@ func parseVersionByte(w http.ResponseWriter, r *http.Request) (byte, error) {
 	switch versionByte[0] {
 	case byte(commitments.CertV0):
 		return versionByte[0], nil
+
+	case byte(commitments.CertV1):
+		return versionByte[0], nil
+		
 	default:
 		http.Error(w, fmt.Sprintf("unsupported version byte %x", versionByte), http.StatusBadRequest)
 		return 0, fmt.Errorf("unsupported version byte %x", versionByte)

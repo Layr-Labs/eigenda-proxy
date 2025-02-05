@@ -7,14 +7,13 @@ import (
 
 	"github.com/Layr-Labs/eigenda-proxy/flags"
 	"github.com/Layr-Labs/eigenda-proxy/flags/eigendaflags"
+	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
 	"github.com/Layr-Labs/eigenda/api/clients"
 
 	clients_v2 "github.com/Layr-Labs/eigenda/api/clients/v2"
-
-	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 )
 
 type Config struct {
@@ -117,14 +116,13 @@ func (cfg *Config) Check() error {
 
 type CLIConfig struct {
 	EigenDAConfig Config
-	MetricsCfg    opmetrics.CLIConfig
+	MetricsCfg    metrics.CLIConfig
 }
 
 func ReadCLIConfig(ctx *cli.Context) CLIConfig {
-	config := ReadConfig(ctx)
 	return CLIConfig{
-		EigenDAConfig: config,
-		MetricsCfg:    opmetrics.ReadCLIConfig(ctx),
+		EigenDAConfig: ReadConfig(ctx),
+		MetricsCfg:    metrics.ReadCLIConfig(ctx),
 	}
 }
 
