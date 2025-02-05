@@ -231,6 +231,7 @@ func readPayloadClientConfig(ctx *cli.Context) v2_clients.PayloadClientConfig {
 
 	return v2_clients.PayloadClientConfig{
 		// TODO: Support proper user env injection
+		BlockNumberPollInterval: 1 * time.Second,
 		BlobEncodingVersion:     codecs.DefaultBlobEncoding,
 		EthRpcUrl:               ctx.String(EthRPCURLFlagName),
 		EigenDACertVerifierAddr: ctx.String(CertVerifierAddrName),
@@ -243,6 +244,7 @@ func ReadV2DispersalConfig(ctx *cli.Context) v2_clients.PayloadDisperserConfig {
 	payCfg := readPayloadClientConfig(ctx)
 
 	return v2_clients.PayloadDisperserConfig{
+		SignerPaymentKey: ctx.String(SignerPrivateKeyHexFlagName),
 		PayloadClientConfig: payCfg,
 		DisperseBlobTimeout: ctx.Duration(ResponseTimeoutFlagName),
 		// TODO: Explore making these user defined
