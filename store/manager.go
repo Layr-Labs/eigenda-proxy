@@ -74,7 +74,6 @@ func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.Commitment
 			return nil, errors.New("expected EigenDA backend for DA commitment type, but none configured")
 		}
 
-
 		var err error
 		var data []byte
 
@@ -89,31 +88,13 @@ func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.Commitment
 			m.log.Warn("Failed to read from cache targets", "err", err)
 		}
 
-		if version == commitments.CertV0 {
-			m.log.Debug("Reading blob from EigenDA")
-			// 2 - read blob from EigenDA v1
-			data, err := m.eigenda.Get(ctx, key)
-			if err == nil {
-				// verify v1 (payload, cert)
-				err = m.eigenda.Verify(ctx, key, data)
-				if err != nil {
-					return nil, err
-				}
-				return data, nil
-			}
-		} else if version == commitments.CertV1 {
-			m.log.Debug("Reading blob from EigenDAV2")
-			data, err := m.eigendaV2.Get(ctx, key)
-			if err == nil {
-				// verify v2 (payload, cert)
-				err = m.eigendaV2.Verify(ctx, key, data)
-				if err != nil {
-					return nil, err
-				}
-				m.log.Debug(fmt.Sprintf("%s", data))
-				return data, nil
-			}
+		// 2 - read blob from EigenDA
+		data, err = m.getEigenDAMode(ctx, version, data)
+		if err == nil {
+			return data, nil
 		}
+
+		m.log.Error(err.Error())
 
 		// 3 - read blob from fallbacks if enabled and data is non-retrievable from EigenDA
 		if m.secondary.FallbackEnabled() {
@@ -185,6 +166,41 @@ func (m *Manager) putEigenDAMode(ctx context.Context, value []byte) ([]byte, err
 	}
 
 	return nil, errors.New("no DA storage backend found")
+}
+
+func (m *Manager) getEigenDAMode(ctx context.Context, v commitments.EigenDACommit, key []byte) ([]byte, error) {
+	switch v {
+	case commitments.CertV0:
+		m.log.Debug("Reading blob from EigenDAV1 backend")
+		data, err := m.eigenda.Get(ctx, key)
+		if err == nil {
+			// verify v1 (payload, cert)
+			err = m.eigenda.Verify(ctx, key, data)
+			if err != nil {
+				return nil, err
+			}
+			return data, nil
+		}
+
+		return nil, err
+
+	case commitments.CertV1:
+		m.log.Debug("Reading blob from EigenDAV2 backend")
+		data, err := m.eigendaV2.Get(ctx, key)
+		if err == nil {
+			// verify v2 (payload, cert)
+			err = m.eigendaV2.Verify(ctx, key, data)
+			if err != nil {
+				return nil, err
+			}
+			return data, nil
+		}
+
+		return nil, err
+
+	default:
+		return nil, fmt.Errorf("commitment version unknown: %b", v)
+	}
 }
 
 // putKeccak256Mode ... put blob into S3 compatible backend

@@ -139,7 +139,7 @@ func parseVersionByte(w http.ResponseWriter, r *http.Request) (byte, error) {
 
 	case byte(commitments.CertV1):
 		return versionByte[0], nil
-		
+
 	default:
 		http.Error(w, fmt.Sprintf("unsupported version byte %x", versionByte), http.StatusBadRequest)
 		return 0, fmt.Errorf("unsupported version byte %x", versionByte)

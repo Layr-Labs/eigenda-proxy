@@ -10,7 +10,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/eigenda"
-	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/eigenda_v2"
+	eigendav2 "github.com/Layr-Labs/eigenda-proxy/store/generated_key/eigenda_v2"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
@@ -50,7 +50,7 @@ func loadBackends(targets []string, s3 common.PrecomputedKeyStore, redis *redis.
 			}
 			stores[i] = s3
 
-		case common.EigenDABackendType, common.MemoryBackendType:
+		case common.EigenDABackendType, common.MemoryBackendType, common.EigenDAV2BackendType:
 			panic(fmt.Sprintf("Invalid target for fallback: %s", f))
 
 		case common.UnknownBackendType:
@@ -64,7 +64,7 @@ func loadBackends(targets []string, s3 common.PrecomputedKeyStore, redis *redis.
 	return stores
 }
 
-func loadEigenDAV2Store(ctx context.Context, cfg CLIConfig, log logging.Logger) (*eigenda_v2.Store, error) {
+func loadEigenDAV2Store(ctx context.Context, cfg CLIConfig, log logging.Logger) (*eigendav2.Store, error) {
 	// TODO: Replace with real logger once dependency PRs are merged
 
 	gethCfg := geth.EthClientConfig{
@@ -113,8 +113,8 @@ func loadEigenDAV2Store(ctx context.Context, cfg CLIConfig, log logging.Logger) 
 		return nil, err
 	}
 
+	// TODO: Sanitize properly
 	splits := strings.Split(cfg.EigenDAConfig.EdaV1ClientConfig.RPC, ":")
-	println(fmt.Sprintf("%v", splits))
 
 	cfg.EigenDAConfig.V2DispersalConfig.SignerPaymentKey = cfg.EigenDAConfig.EdaV1ClientConfig.SignerPrivateKeyHex
 
@@ -139,17 +139,17 @@ func loadEigenDAV2Store(ctx context.Context, cfg CLIConfig, log logging.Logger) 
 		return nil, err
 	}
 
-	verifier, err := verification.NewCertVerifier(log, ethClient, cfg.EigenDAConfig.V2DispersalConfig.EigenDACertVerifierAddr, time.Second * 1)
+	verifier, err := verification.NewCertVerifier(log, ethClient, cfg.EigenDAConfig.V2DispersalConfig.EigenDACertVerifierAddr, time.Second*1)
 	if err != nil {
 		return nil, err
 	}
 
-	return eigenda_v2.NewStore(nil, &eigenda_v2.Config{
+	return eigendav2.NewStore(nil, &eigendav2.Config{
 		ServiceManagerAddr: cfg.EigenDAConfig.EdaV1ClientConfig.SvcManagerAddr,
 		MaxBlobSizeBytes:   cfg.EigenDAConfig.MemstoreConfig.MaxBlobSizeBytes,
 		StatusQueryTimeout: cfg.EigenDAConfig.EdaV1ClientConfig.StatusQueryTimeout,
 		PutRetries:         cfg.EigenDAConfig.PutRetries,
-	}, ethClient, disperser, retriever, verifier)
+	}, disperser, retriever, verifier)
 }
 
 // LoadStoreManager ... creates storage backend clients and instruments them into a storage routing abstraction
@@ -158,7 +158,7 @@ func LoadStoreManager(ctx context.Context, cfg CLIConfig, log logging.Logger, m 
 	var err error
 	var s3Store *s3.Store
 	var redisStore *redis.Store
-	var eigenDAV2Store *eigenda_v2.Store
+	var eigenDAV2Store *eigendav2.Store
 
 	// TODO: Replace with real logger once dependency PRs are merged
 

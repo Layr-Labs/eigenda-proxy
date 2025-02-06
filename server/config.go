@@ -108,7 +108,6 @@ func (cfg *Config) Check() error {
 		if dc.EigenDACertVerifierAddr == "" {
 			return fmt.Errorf("cert verifier contract address is required for interacting with EigenDA V2")
 		}
-
 	}
 
 	return cfg.StorageConfig.Check()

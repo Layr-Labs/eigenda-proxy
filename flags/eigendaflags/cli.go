@@ -60,7 +60,7 @@ func withEnvPrefix(envPrefix, s string) string {
 
 // CLIFlags ... used for EigenDA client configuration
 func CLIFlags(envPrefix, category string) []cli.Flag {
-	return []cli.Flag{
+	return append([]cli.Flag{
 		&cli.StringFlag{
 			Name:     DisperserRPCFlagName,
 			Usage:    "RPC endpoint of the EigenDA disperser.",
@@ -181,6 +181,13 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			EnvVars:  []string{withEnvPrefix(envPrefix, "PUT_RETRIES")},
 			Category: category,
 		},
+	},
+		v2Flags(envPrefix, category)...,
+	)
+}
+
+func v2Flags(envPrefix, category string) []cli.Flag {
+	return []cli.Flag{
 		// EigenDA V2 specific flags //
 		&cli.BoolFlag{
 			Name:     V2Enabled,
@@ -244,13 +251,13 @@ func ReadV2DispersalConfig(ctx *cli.Context) v2_clients.PayloadDisperserConfig {
 	payCfg := readPayloadClientConfig(ctx)
 
 	return v2_clients.PayloadDisperserConfig{
-		SignerPaymentKey: ctx.String(SignerPrivateKeyHexFlagName),
+		SignerPaymentKey:    ctx.String(SignerPrivateKeyHexFlagName),
 		PayloadClientConfig: payCfg,
 		DisperseBlobTimeout: ctx.Duration(ResponseTimeoutFlagName),
 		// TODO: Explore making these user defined
 		BlobCertifiedTimeout:   time.Second * 2,
 		BlobStatusPollInterval: time.Second * 1,
-		Quorums: []uint8{0,1},
+		Quorums:                []uint8{0, 1},
 	}
 }
 

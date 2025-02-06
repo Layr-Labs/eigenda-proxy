@@ -209,7 +209,7 @@ func (svr *Server) handlePostShared(w http.ResponseWriter, r *http.Request, comm
 		return err
 	}
 
-	responseCommit, err := commitments.EncodeCommitment(commitment, meta.Mode, commitments.EigenDACommit(meta.Version))
+	responseCommit, err := commitments.EncodeCommitment(commitment, meta.Mode, meta.Version)
 	if err != nil {
 		err = MetaError{
 			Err:  fmt.Errorf("failed to encode commitment %v (commitment mode %v): %w", commitment, meta.Mode, err),

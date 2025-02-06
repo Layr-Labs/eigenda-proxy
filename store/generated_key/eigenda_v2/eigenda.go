@@ -1,4 +1,4 @@
-package eigenda_v2
+package eigendav2
 
 import (
 	"context"
@@ -12,7 +12,6 @@ import (
 
 	"github.com/Layr-Labs/eigenda/api/clients/v2"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
-	eigenda_common "github.com/Layr-Labs/eigenda/common"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -43,9 +42,8 @@ type Store struct {
 
 var _ common.GeneratedKeyStore = (*Store)(nil)
 
-func NewStore(log log.Logger, cfg *Config, ethClient eigenda_common.EthClient,
+func NewStore(log log.Logger, cfg *Config,
 	disperser *clients.PayloadDisperser, retriever clients.PayloadRetriever, verifier verification.ICertVerifier) (*Store, error) {
-
 	return &Store{
 		log:       log,
 		cfg:       cfg,
@@ -63,7 +61,7 @@ func (e Store) Get(ctx context.Context, key []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
 	}
-	
+
 	payload, err := e.retriever.GetPayload(ctx, &cert)
 	if err != nil {
 		return nil, fmt.Errorf("getting payload: %w", err)
@@ -78,7 +76,7 @@ func (e Store) Get(ctx context.Context, key []byte) ([]byte, error) {
 //	Mapping status codes to 503 failover
 func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 	salt := uint32(0)
-	log.Info("Put EigenDA V2 backend")
+	e.log.Debug("Dispersing payload for EigenDA V2 network")
 
 	// TODO: Verify this retry or failover code for correctness against V2
 	// protocol
@@ -135,7 +133,8 @@ func (e Store) BackendType() common.BackendType {
 
 // Key is used to recover certificate fields and that verifies blob
 // against commitment to ensure data is valid and non-tampered.
-func (e Store) Verify(ctx context.Context, key []byte, value []byte) error {
+// TODO: tap into actual verification
+func (e Store) Verify(_ context.Context, _ []byte, _ []byte) error {
 	// var cert verification.EigenDACert
 	// err := rlp.DecodeBytes(key, cert)
 	// if err != nil {

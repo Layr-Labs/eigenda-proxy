@@ -26,6 +26,10 @@ import (
 
 var (
 	testLogger = logging.NewTextSLogger(os.Stdout, &logging.SLoggerOptions{})
+	testCfg    = Config{
+		Host: "localhost",
+		Port: 0,
+	}
 )
 
 const (
@@ -98,7 +102,7 @@ func TestHandlerGet(t *testing.T) {
 			// we need to create a router through which we can pass the request.
 			r := mux.NewRouter()
 			// enable this logger to help debug tests
-			server := NewServer("localhost", 0, mockStorageMgr, testLogger, metrics.NoopMetrics)
+			server := NewServer(&testCfg, mockStorageMgr, testLogger, metrics.NoopMetrics)
 			server.registerRoutes(r)
 			r.ServeHTTP(rec, req)
 
@@ -169,7 +173,7 @@ func TestHandlerPutSuccess(t *testing.T) {
 			// we need to create a router through which we can pass the request.
 			r := mux.NewRouter()
 			// enable this logger to help debug tests
-			server := NewServer("localhost", 0, mockStorageMgr, testLogger, metrics.NoopMetrics)
+			server := NewServer(&testCfg, mockStorageMgr, testLogger, metrics.NoopMetrics)
 			server.registerRoutes(r)
 			r.ServeHTTP(rec, req)
 
@@ -254,7 +258,7 @@ func TestHandlerPutErrors(t *testing.T) {
 				// we need to create a router through which we can pass the request.
 				r := mux.NewRouter()
 				// enable this logger to help debug tests
-				server := NewServer("localhost", 0, mockStorageMgr, testLogger, metrics.NoopMetrics)
+				server := NewServer(&testCfg, mockStorageMgr, testLogger, metrics.NoopMetrics)
 				server.registerRoutes(r)
 				r.ServeHTTP(rec, req)
 
