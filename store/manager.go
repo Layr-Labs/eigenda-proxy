@@ -14,7 +14,7 @@ import (
 
 // IManager ... read/write interface
 type IManager interface {
-	Get(ctx context.Context, key []byte, cm commitments.CommitmentMode, version commitments.EigenDACommit) ([]byte, error)
+	Get(ctx context.Context, key []byte, cm commitments.CommitmentMeta) ([]byte, error)
 	Put(ctx context.Context, cm commitments.CommitmentMode, key, value []byte) ([]byte, error)
 }
 
@@ -24,31 +24,46 @@ type Manager struct {
 
 	s3 common.PrecomputedKeyStore // OP commitment mode && keccak256 commitment type
 	// ALT DA commitment types for OP mode && std commitment mode for standard /client
-	eigenda   common.GeneratedKeyStore // v0 da commitment version
-	eigendaV2 common.GeneratedKeyStore // v1 da commitment version
+	eigenda    common.GeneratedKeyStore // v0 da commitment version
+	eigendaV2  common.GeneratedKeyStore // v1 da commitment version
+	writeV2 bool // write blobs to EigenDAV2 backend
 
 	// secondary storage backends (caching and fallbacks)
-	secondary    ISecondary
-	useEigenDAV2 bool
+	secondary ISecondary
 }
 
 // NewManager ... Init
 func NewManager(eigenda common.GeneratedKeyStore, eigenDAV2 common.GeneratedKeyStore, s3 common.PrecomputedKeyStore,
 	l logging.Logger, secondary ISecondary, useV2 bool) (IManager, error) {
+
+	// 1 - Determine where to disperse blobs
+	var writeV2 = true
+	if eigenda != nil && !useV2 {
+		writeV2 = false
+	}
+
+	// 2 - Enforce invariants
+	if writeV2 && eigenDAV2 == nil {
+		return nil, fmt.Errorf("EigenDA V2 dispersal enabled but no v2 store provided")
+	}
+
+	if !writeV2 && eigenda == nil {
+		return nil, fmt.Errorf("EigenDA dispersal enabled but no store provided")
+	}
+
 	return &Manager{
-		log:          l,
-		eigenda:      eigenda,
-		eigendaV2:    eigenDAV2,
-		s3:           s3,
-		secondary:    secondary,
-		useEigenDAV2: useV2,
+		log:        l,
+		eigenda:    eigenda,
+		eigendaV2:  eigenDAV2,
+		s3:         s3,
+		secondary:  secondary,
+		writeV2: writeV2,
 	}, nil
 }
 
 // Get ... fetches a value from a storage backend based on the (commitment mode, type)
-func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.CommitmentMode,
-	version commitments.EigenDACommit) ([]byte, error) {
-	switch cm {
+func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.CommitmentMeta) ([]byte, error) {
+	switch cm.Mode {
 	case commitments.OptimismKeccak:
 
 		if m.s3 == nil {
@@ -89,7 +104,7 @@ func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.Commitment
 		}
 
 		// 2 - read blob from EigenDA
-		data, err = m.getEigenDAMode(ctx, version, data)
+		data, err = m.getEigenDAMode(ctx, cm.Version, key)
 		if err == nil {
 			return data, nil
 		}
@@ -150,22 +165,14 @@ func (m *Manager) Put(ctx context.Context, cm commitments.CommitmentMode, key, v
 	return commit, nil
 }
 
-// TODO: Establish a means for sharing EigenDA version with the upstream
-// caller to properly encode before returning commitment to rollup
-// currently is always V0
 // putEigenDAMode ... disperses blob to EigenDA backend
 func (m *Manager) putEigenDAMode(ctx context.Context, value []byte) ([]byte, error) {
-	if m.eigenda != nil && !m.useEigenDAV2 { // disperse v1
+	if !m.writeV2 { // disperse v1
 		m.log.Info("Storing data to EigenDA backend")
 		return m.eigenda.Put(ctx, value)
 	}
 
-	if m.eigendaV2 != nil && m.useEigenDAV2 { // disperse v2
-		m.log.Info("Storing data to EigenDA v2 backend")
-		return m.eigendaV2.Put(ctx, value)
-	}
-
-	return nil, errors.New("no DA storage backend found")
+	return m.eigendaV2.Put(ctx, value)
 }
 
 func (m *Manager) getEigenDAMode(ctx context.Context, v commitments.EigenDACommit, key []byte) ([]byte, error) {
