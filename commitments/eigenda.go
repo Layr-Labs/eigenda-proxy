@@ -5,6 +5,7 @@ type EigenDACommit byte
 const (
 	// EigenDA V1
 	CertV0 EigenDACommit = iota
+	// EigenDA V2
 	CertV1
 )
 
@@ -20,8 +21,8 @@ type EigenDACommitment struct {
 	b      []byte
 }
 
-// NewV0CertCommitment creates a new commitment from the given input.
-func NewCertCommitment(input []byte, v EigenDACommit) EigenDACommitment {
+// NewEigenDACommitment creates a new commitment from the given input.
+func NewEigenDACommitment(input []byte, v EigenDACommit) EigenDACommitment {
 	return EigenDACommitment{
 		prefix: v,
 		b:      input,

@@ -24,9 +24,9 @@ type Manager struct {
 
 	s3 common.PrecomputedKeyStore // OP commitment mode && keccak256 commitment type
 	// ALT DA commitment types for OP mode && std commitment mode for standard /client
-	eigenda    common.GeneratedKeyStore // v0 da commitment version
-	eigendaV2  common.GeneratedKeyStore // v1 da commitment version
-	writeV2 bool // write blobs to EigenDAV2 backend
+	eigenda   common.GeneratedKeyStore // v0 da commitment version
+	eigendaV2 common.GeneratedKeyStore // v1 da commitment version
+	writeV2   bool                     // write blobs to EigenDAV2 backend
 
 	// secondary storage backends (caching and fallbacks)
 	secondary ISecondary
@@ -52,12 +52,12 @@ func NewManager(eigenda common.GeneratedKeyStore, eigenDAV2 common.GeneratedKeyS
 	}
 
 	return &Manager{
-		log:        l,
-		eigenda:    eigenda,
-		eigendaV2:  eigenDAV2,
-		s3:         s3,
-		secondary:  secondary,
-		writeV2: writeV2,
+		log:       l,
+		eigenda:   eigenda,
+		eigendaV2: eigenDAV2,
+		s3:        s3,
+		secondary: secondary,
+		writeV2:   writeV2,
 	}, nil
 }
 
