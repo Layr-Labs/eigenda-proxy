@@ -61,6 +61,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Value:    "resources/g1.point",
 			Category: category,
 		},
+		// TODO(#272): https://github.com/Layr-Labs/eigenda-proxy/issues/272
 		// &cli.StringFlag{
 		// 	Name:     G2PathFlagName,
 		// 	Usage:    "Directory path to g2.point file.",
