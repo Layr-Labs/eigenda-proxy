@@ -155,9 +155,9 @@ To target this feature, use the CLI flags `--eigenda-svc-manager-addr`, `--eigen
 An optional `--eigenda.confirmation-depth` flag can be provided to specify a number of ETH block confirmations to wait for the confirmBatch to have landed onchain before returning the cert to the batcher after having dispersed a blob in the put route. The flag value can either be the string 'finalized' or a number:
 `finalized`: Wait for the confirmBatch transaction to be finalized on-chain before returning the cert to the batcher
 `0`: Verify the cert immediately upon blob confirmation and return the cert
-`N where 0<N<64`: Wait `N` blocks before returning the cert to the batcher (default value is 5)
+`N where 0<N<64`: Wait `N` blocks before returning the cert to the batcher
 
-The default value is 5. Using 0 is dangerous: see [troubleshooting the batch-hash-mismatch error](./docs/troubleshooting_v1.md#batch-hash-mismatch-error).
+The default value is 8. Using 0 is dangerous: see [troubleshooting the batch-hash-mismatch error](./docs/troubleshooting_v1.md#batch-hash-mismatch-error).
 
 ### In-Memory Backend
 
