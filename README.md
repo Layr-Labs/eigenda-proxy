@@ -157,6 +157,8 @@ An optional `--eigenda.confirmation-depth` flag can be provided to specify a num
 `0`: Verify the cert immediately upon blob confirmation and return the cert
 `N where 0<N<64`: Wait `N` blocks before returning the cert to the batcher (default value is 5)
 
+The default value is 5. Using 0 is dangerous: see [troubleshooting the batch-hash-mismatch error](./docs/troubleshooting_v1.md#batch-hash-mismatch-error).
+
 ### In-Memory Backend
 
 An ephemeral memory store backend can be used for faster feedback testing when testing rollup integrations. To target this feature, use the CLI flags `--memstore.enabled`, `--memstore.expiration`.
