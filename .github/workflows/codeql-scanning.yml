@@ -38,6 +38,11 @@ jobs:
       uses: github/codeql-action/init@dd746615b3b9d728a6a37ca2045b68ca76d4841a #3.28.8
       with:
         languages: go
+
+    - name: Trail of Bits Go Queries
+      uses: github/codeql-action/init@dd746615b3b9d728a6a37ca2045b68ca76d4841a #3.28.8
+      with:
+        packs: trailofbits/go-queries
         
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@dd746615b3b9d728a6a37ca2045b68ca76d4841a #3.28.8
