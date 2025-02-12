@@ -177,6 +177,8 @@ In the event that the EigenDA disperser or network is down, the proxy will retur
 
 This behavior is turned on by default, but configurable via the `--eigenda.confirmation-timeout` flag (set to 15 mins by default currently). If a blob is not confirmed within this time, the proxy will return a 503 status code. This should be set long enough to accomodate for the disperser's batching interval (typically 10 minutes), signature gathering, and onchain submission.
 
+This behavior can be modified to write to a secondary storage target when EigenDA write fails by setting the `--store.enable-write-on-eigenda-failure` flag to `true`. This flag only works with OP Stack-based rollups.
+
 ## Blob Lifecycle
 
 > Warning: the below diagrams describe EigenDA V2 interactions. EigenDA V1 is very similar, but has slight discrepancies.

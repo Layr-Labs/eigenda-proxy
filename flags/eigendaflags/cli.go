@@ -29,7 +29,8 @@ var (
 	EthRPCURLFlagName                    = withFlagPrefix("eth-rpc")
 	SvcManagerAddrFlagName               = withFlagPrefix("svc-manager-addr")
 	// Flags that are proxy specific, and not used by the eigenda-client
-	PutRetriesFlagName = withFlagPrefix("put-retries")
+	PutRetriesFlagName          = withFlagPrefix("put-retries")
+	EnableWriteFallbackFlagName = withFlagPrefix("enable-write-on-eigenda-failure")
 )
 
 func withFlagPrefix(s string) string {
@@ -161,6 +162,14 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Usage:    "Number of times to retry blob dispersals.",
 			Value:    3,
 			EnvVars:  []string{withEnvPrefix(envPrefix, "PUT_RETRIES")},
+			Category: category,
+		},
+		&cli.BoolFlag{
+			Name: EnableWriteFallbackFlagName,
+			Usage: "Enable writing to secondary storage when EigenDA write fails. " +
+				"DANGER: incompatible with secure rollup integrations (i.e, working fraud or validity proofs). Default is false.",
+			Value:    false,
+			EnvVars:  []string{withEnvPrefix(envPrefix, "WRITE_ON_EIGENDA_FAILURE")},
 			Category: category,
 		},
 	}

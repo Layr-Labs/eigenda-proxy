@@ -14,11 +14,12 @@ import (
 )
 
 type Config struct {
-	EdaClientConfig clients.EigenDAClientConfig
-	MemstoreConfig  memstore.Config
-	StorageConfig   store.Config
-	VerifierConfig  verify.Config
-	PutRetries      uint
+	EdaClientConfig  clients.EigenDAClientConfig
+	MemstoreConfig   memstore.Config
+	StorageConfig    store.Config
+	VerifierConfig   verify.Config
+	PutRetries       uint
+	UseWriteFallback bool
 
 	MemstoreEnabled bool
 }
@@ -27,12 +28,13 @@ type Config struct {
 func ReadConfig(ctx *cli.Context) Config {
 	edaClientConfig := eigendaflags.ReadConfig(ctx)
 	return Config{
-		EdaClientConfig: edaClientConfig,
-		VerifierConfig:  verify.ReadConfig(ctx, edaClientConfig),
-		PutRetries:      ctx.Uint(eigendaflags.PutRetriesFlagName),
-		MemstoreEnabled: ctx.Bool(memstore.EnabledFlagName),
-		MemstoreConfig:  memstore.ReadConfig(ctx),
-		StorageConfig:   store.ReadConfig(ctx),
+		EdaClientConfig:  edaClientConfig,
+		VerifierConfig:   verify.ReadConfig(ctx, edaClientConfig),
+		PutRetries:       ctx.Uint(eigendaflags.PutRetriesFlagName),
+		UseWriteFallback: ctx.Bool(eigendaflags.EnableWriteFallbackFlagName),
+		MemstoreEnabled:  ctx.Bool(memstore.EnabledFlagName),
+		MemstoreConfig:   memstore.ReadConfig(ctx),
+		StorageConfig:    store.ReadConfig(ctx),
 	}
 }
 
