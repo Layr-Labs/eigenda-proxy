@@ -18,7 +18,11 @@ PID=$!
 trap "kill $PID" EXIT
 
 # Wait 5 seconds for startup to happen
+echo "sleeping 5 seconds to let the proxy start up"
 sleep 5
+
+echo "Pinging the proxy's health endpoint"
+curl 'http://localhost:3100/health'
 
 # Script will automatically kill process due to trap
 # If eigenda-proxy has failed, trap will error out and script will exit with an error code
