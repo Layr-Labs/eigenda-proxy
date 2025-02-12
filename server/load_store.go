@@ -140,5 +140,5 @@ func LoadStoreManager(ctx context.Context, cfg CLIConfig, log logging.Logger, m 
 		"s3", s3Store != nil,
 		"redis", redisStore != nil,
 	)
-	return store.NewManager(eigenDA, s3Store, log, secondary)
+	return store.NewManager(eigenDA, s3Store, log, secondary, cfg.EigenDAConfig.UseWriteFallback)
 }

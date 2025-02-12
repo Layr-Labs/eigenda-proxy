@@ -111,17 +111,23 @@ type Cfg struct {
 	UseS3Caching       bool
 	UseRedisCaching    bool
 	UseS3Fallback      bool
+	// enable writing to secondary storage on EigenDA failure
+	UseWriteFallback bool
+	// simulate EigenDA failure
+	SimulateEigenDAFailure bool
 }
 
 func TestConfig(useMemory bool) *Cfg {
 	return &Cfg{
-		UseMemory:          useMemory,
-		Expiration:         14 * 24 * time.Hour,
-		UseKeccak256ModeS3: false,
-		UseS3Caching:       false,
-		UseRedisCaching:    false,
-		UseS3Fallback:      false,
-		WriteThreadCount:   0,
+		UseMemory:              useMemory,
+		Expiration:             14 * 24 * time.Hour,
+		UseKeccak256ModeS3:     false,
+		UseS3Caching:           false,
+		UseRedisCaching:        false,
+		UseS3Fallback:          false,
+		WriteThreadCount:       0,
+		UseWriteFallback:       false,
+		SimulateEigenDAFailure: false,
 	}
 }
 
@@ -208,10 +214,11 @@ func TestSuiteConfig(testCfg *Cfg) server.CLIConfig {
 		},
 		MemstoreEnabled: testCfg.UseMemory,
 		MemstoreConfig: memstore.Config{
-			BlobExpiration:   testCfg.Expiration,
-			MaxBlobSizeBytes: maxBlobLengthBytes,
+			BlobExpiration:         testCfg.Expiration,
+			MaxBlobSizeBytes:       maxBlobLengthBytes,
+			SimulateEigenDAFailure: testCfg.SimulateEigenDAFailure,
 		},
-
+		UseWriteFallback: testCfg.UseWriteFallback,
 		StorageConfig: store.Config{
 			AsyncPutWorkers: testCfg.WriteThreadCount,
 		},

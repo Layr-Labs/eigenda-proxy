@@ -10,6 +10,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigensdk-go/logging"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 // IManager ... read/write interface
@@ -27,16 +28,18 @@ type Manager struct {
 
 	// secondary storage backends (caching and fallbacks)
 	secondary ISecondary
+	// redundant write flag
+	useWriteFallback bool
 }
 
 // NewManager ... Init
-func NewManager(eigenda common.GeneratedKeyStore, s3 common.PrecomputedKeyStore, l logging.Logger,
-	secondary ISecondary) (IManager, error) {
+func NewManager(eigenda common.GeneratedKeyStore, s3 common.PrecomputedKeyStore, l logging.Logger, secondary ISecondary, useWriteFallback bool) (IManager, error) {
 	return &Manager{
-		log:       l,
-		eigenda:   eigenda,
-		s3:        s3,
-		secondary: secondary,
+		log:              l,
+		eigenda:          eigenda,
+		s3:               s3,
+		secondary:        secondary,
+		useWriteFallback: useWriteFallback,
 	}, nil
 }
 
@@ -124,6 +127,24 @@ func (m *Manager) Put(ctx context.Context, cm commitments.CommitmentMode, key, v
 	}
 
 	if err != nil {
+		m.log.Error("Failed to write to EigenDA backend", "err", err)
+
+		// don't do redundant write to hide the misuse/misconfiguration of the proxy
+		if errors.Is(err, common.ErrProxyOversizedBlob) {
+			return nil, err
+		}
+
+		// write to EigenDA failed, which shouldn't happen if the backend is functioning properly
+		// use the payload as the key to keep the batcher alive
+		if m.useWriteFallback && m.secondary.Enabled() && !m.secondary.AsyncWriteEntry() {
+			redundantErr := m.secondary.HandleRedundantWrites(ctx, value, value)
+			if redundantErr != nil {
+				m.log.Error("Failed to write to redundant backends", "err", redundantErr)
+				return nil, redundantErr
+			}
+
+			return crypto.Keccak256(value), nil
+		}
 		return nil, err
 	}
 

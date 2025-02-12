@@ -1,6 +1,7 @@
 package store
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"net/http"
@@ -8,9 +9,11 @@ import (
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
+	verifypackage "github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/ethereum-optimism/optimism/op-service/retry"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/rlp"
 
 	"github.com/ethereum/go-ethereum/log"
 )
@@ -153,6 +156,14 @@ func (sm *SecondaryManager) MultiSourceRead(ctx context.Context, commitment []by
 	}
 
 	key := crypto.Keccak256(commitment)
+
+	// check if key is an RLP encoded certificate, if not, assume it's a cache key
+	var cert verifypackage.Certificate
+	err := rlp.DecodeBytes(commitment, &cert)
+	if err != nil {
+		key = commitment
+	}
+
 	for _, src := range sources {
 		cb := sm.m.RecordSecondaryRequest(src.BackendType().String(), http.MethodGet)
 		data, err := src.Get(ctx, key)
@@ -170,7 +181,14 @@ func (sm *SecondaryManager) MultiSourceRead(ctx context.Context, commitment []by
 
 		// verify cert:data using provided verification function
 		sm.verifyLock.Lock()
-		err = verify(ctx, commitment, data)
+
+		if bytes.Equal(key, commitment) {
+			err = src.Verify(ctx, commitment, data)
+		} else {
+			// verify cert:data using EigenDA verification checks
+			err = verify(ctx, commitment, data)
+		}
+
 		if err != nil {
 			cb(Failed)
 			log.Warn("Failed to verify blob", "err", err, "backend", src.BackendType())

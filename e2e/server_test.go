@@ -267,3 +267,79 @@ func TestProxyReadFallback(t *testing.T) {
 	requireWriteReadSecondary(t, ts.Metrics.SecondaryRequestsTotal, common.S3BackendType)
 	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
 }
+
+// Ensures that when EigenDA write fails and enable-write-on-eigenda-failure is true,
+// the data is not written to the secondary storage and the write fails.
+func TestProxyRedundantWriteOnEigenDAFailure(t *testing.T) {
+	if !runIntegrationTests || runTestnetIntegrationTests {
+		t.Skip("Skipping test as INTEGRATION env var not set")
+	}
+
+	t.Parallel()
+
+	// Setup server with S3 as secondary and simulate EigenDA failure
+	testCfg := e2e.TestConfig(useMemory())
+	testCfg.UseS3Fallback = true
+	testCfg.UseWriteFallback = true
+	testCfg.SimulateEigenDAFailure = true
+
+	tsConfig := e2e.TestSuiteConfig(testCfg)
+	ts, kill := e2e.CreateTestSuite(tsConfig)
+	defer kill()
+
+	cfg := &client.Config{
+		URL: ts.Address(),
+	}
+	daClient := client.New(cfg)
+
+	// Write data when EigenDA is "failing"
+	expectedBlob := e2e.RandBytes(1_000_000)
+	t.Log("Setting input data on proxy server...")
+	blobInfo, err := daClient.SetData(ts.Ctx, expectedBlob)
+	require.NoError(t, err)
+
+	// Try to read data - should succeed because it was written to secondary
+	t.Log("Getting input data from proxy server...")
+	actualBlob, err := daClient.GetData(ts.Ctx, blobInfo)
+	require.NoError(t, err)
+	require.Equal(t, expectedBlob, actualBlob)
+
+	// Verify metrics show secondary write and read
+	requireWriteReadSecondary(t, ts.Metrics.SecondaryRequestsTotal, common.S3BackendType)
+}
+
+// Ensures that when EigenDA write fails and enable-write-on-eigenda-failure is false,
+// the data is not written to the secondary storage.
+func TestProxyRedundantWriteDisabled(t *testing.T) {
+	if !runIntegrationTests || runTestnetIntegrationTests {
+		t.Skip("Skipping test as INTEGRATION env var not set")
+	}
+
+	t.Parallel()
+
+	// Setup server with S3 as secondary and simulate EigenDA failure
+	testCfg := e2e.TestConfig(useMemory())
+	testCfg.UseS3Fallback = true
+	testCfg.UseWriteFallback = false
+	testCfg.SimulateEigenDAFailure = true
+
+	tsConfig := e2e.TestSuiteConfig(testCfg)
+	ts, kill := e2e.CreateTestSuite(tsConfig)
+	defer kill()
+
+	cfg := &client.Config{
+		URL: ts.Address(),
+	}
+	daClient := client.New(cfg)
+
+	// Write data when EigenDA is "failing"
+	expectedBlob := e2e.RandBytes(1_000_000)
+	t.Log("Setting input data on proxy server...")
+	blobInfo, err := daClient.SetData(ts.Ctx, expectedBlob)
+	require.Error(t, err)
+
+	// Try to read data - should fail because it was not written to secondary
+	t.Log("Getting input data from proxy server...")
+	_, err = daClient.GetData(ts.Ctx, blobInfo)
+	require.Error(t, err)
+}
