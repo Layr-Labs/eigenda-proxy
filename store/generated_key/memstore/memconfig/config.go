@@ -27,11 +27,11 @@ type Config struct {
 // Patches are reads as ConfigUpdates instead to handle omitted fields.
 func (c Config) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		MaxBlobSizeBytes        uint64 `json:"MaxBlobSizeBytes"`
-		BlobExpiration          string `json:"BlobExpiration"`
-		PutLatency              string `json:"PutLatency"`
-		GetLatency              string `json:"GetLatency"`
-		PutReturnsFailoverError bool   `json:"PutReturnsFailoverError"`
+		MaxBlobSizeBytes        uint64
+		BlobExpiration          string
+		PutLatency              string
+		GetLatency              string
+		PutReturnsFailoverError bool
 	}{
 		MaxBlobSizeBytes:        c.MaxBlobSizeBytes,
 		BlobExpiration:          c.BlobExpiration.String(),
