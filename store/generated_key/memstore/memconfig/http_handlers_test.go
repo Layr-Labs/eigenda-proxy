@@ -97,7 +97,7 @@ func TestHandlersHTTP_GetConfig(t *testing.T) {
 			expectedResp, err := safeConfig.Config().MarshalJSON()
 			require.NoError(t, err)
 			resp := rec.Body.String()
-			require.Equal(t, string(expectedResp) + "\n", resp)
+			require.Equal(t, string(expectedResp)+"\n", resp)
 		})
 	}
 }
