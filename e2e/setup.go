@@ -275,6 +275,7 @@ func CreateTestSuite(testSuiteCfg server.CLIConfig) (TestSuite, func()) {
 
 	log.Info("Starting proxy server...")
 	r := mux.NewRouter()
+	proxySvr.RegisterRoutes(r)
 	err = proxySvr.Start(r)
 	if err != nil {
 		panic(err)
