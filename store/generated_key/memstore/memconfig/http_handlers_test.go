@@ -2,7 +2,6 @@ package memconfig
 
 import (
 	"bytes"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -91,17 +90,14 @@ func TestHandlersHTTP_GetConfig(t *testing.T) {
 			router.ServeHTTP(rec, req)
 
 			require.Equal(t, tt.expectedCode, rec.Code)
-
-			var response Config
-			err := json.NewDecoder(rec.Body).Decode(&response)
 			if tt.expectError {
-				require.Error(t, err)
 				return
 			}
 
+			expectedResp, err := safeConfig.Config().MarshalJSON()
 			require.NoError(t, err)
-			expectedConfig := safeConfig.Config()
-			require.Equal(t, expectedConfig, response)
+			resp := rec.Body.String()
+			require.Equal(t, string(expectedResp) + "\n", resp)
 		})
 	}
 }
