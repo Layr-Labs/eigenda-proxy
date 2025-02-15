@@ -49,6 +49,14 @@ type SafeConfig struct {
 	config Config
 }
 
+// Need this because we marshal the entire proxy config on startup
+// to log it, and private fields are not marshalled.
+func (sc *SafeConfig) MarshalJSON() ([]byte, error) {
+	sc.mu.RLock()
+	defer sc.mu.RUnlock()
+	return json.Marshal(sc.config)
+}
+
 func NewSafeConfig(config Config) *SafeConfig {
 	return &SafeConfig{
 		config: config,
