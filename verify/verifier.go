@@ -61,15 +61,16 @@ func NewVerifier(cfg *Config, l logging.Logger) (*Verifier, error) {
 	var err error
 
 	if cfg.VerifyCerts {
-		log.Info("Certificate verification against Ethereum state enabled")
 		cv, err = NewCertVerifier(cfg, l)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create cert verifier: %w", err)
 		}
+		log.Info("Certificate verification against Ethereum state enabled", "confirmation_depth", cfg.EthConfirmationDepth)
 	} else {
 		log.Warn("Certificate verification against Ethereum state disabled")
 	}
 
+	log.Info("Creating blob KZG verifier")
 	kzgVerifier, err := kzgverifier.NewVerifier(cfg.KzgConfig, encoding.DefaultConfig())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create kzg verifier: %w", err)
