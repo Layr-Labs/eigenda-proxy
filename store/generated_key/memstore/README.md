@@ -11,7 +11,7 @@ The Memstore backend is a simple in-memory key-value store that is meant to repl
 ## Configuration
 
 See [memconfig/config.go](./memconfig/config.go) for the configuration options.
-These can all be set via their respective flags or environment variables.
+These can all be set via their respective flags or environment variables. Run `./bin/eigenda-proxy --help | grep memstore` to see these.
 
 ## Config REST API
 
