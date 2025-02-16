@@ -1,6 +1,6 @@
 # Memstore Backend
 
-The Memstore backend is a simple in-memory key-value store that is meant to replace a real EigenDA backend (talking to the disperser) for testing and development purposes. It is not recommended for production use.
+The Memstore backend is a simple in-memory key-value store that is meant to replace a real EigenDA backend (talking to the disperser) for testing and development purposes. It is **never** recommended for production use.
 
 ## Usage
 
