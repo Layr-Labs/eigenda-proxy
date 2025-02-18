@@ -10,6 +10,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/server"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
 	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
 	"github.com/urfave/cli/v2"
 
@@ -49,9 +50,8 @@ type ProxyConfig struct {
 
 	EdaV2ClientConfig common.V2ClientConfig
 
-	MemstoreConfig memstore.Config
+	MemstoreConfig *memconfig.SafeConfig
 	StorageConfig  store.Config
-	PutRetries     uint
 
 	// TODO: Build support for V2 memstore implementation
 	// currently setting to true would emulate V1 EigenDA
@@ -59,6 +59,9 @@ type ProxyConfig struct {
 	MemstoreEnabled bool
 
 	EigenDAV2Enabled bool
+
+	PutRetries       uint
+	MaxBlobSizeBytes uint
 }
 
 type V2ClientConfig struct {
@@ -85,6 +88,7 @@ func ReadProxyConfig(ctx *cli.Context) ProxyConfig {
 		MemstoreConfig:      memstore.ReadConfig(ctx),
 		StorageConfig:       store.ReadConfig(ctx),
 		EigenDAV2Enabled:    edaClientV2Config.Enabled,
+		MaxBlobSizeBytes:    ctx.Uint(verify.MaxBlobLengthFlagName),
 	}
 
 	return cfg

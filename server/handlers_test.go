@@ -259,7 +259,7 @@ func TestHandlerPutErrors(t *testing.T) {
 				r := mux.NewRouter()
 				// enable this logger to help debug tests
 				server := NewServer(&testCfg, mockStorageMgr, testLogger, metrics.NoopMetrics)
-				server.registerRoutes(r)
+				server.RegisterRoutes(r)
 				r.ServeHTTP(rec, req)
 
 				require.Equal(t, tt.expectedHTTPCode, rec.Code)

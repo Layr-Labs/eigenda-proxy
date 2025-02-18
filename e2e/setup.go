@@ -262,12 +262,12 @@ func CreateTestSuite(testSuiteCfg config.AppConfig) (TestSuite, func()) {
 	m := metrics.NewEmulatedMetricer()
 	ctx := context.Background()
 
-	sm, err := store.NewStoreLoader(ctx,
+	sm, err := store.NewBuilder(ctx,
 		testSuiteCfg.EigenDAConfig.StorageConfig,
 		testSuiteCfg.EigenDAConfig.EdaV1VerifierConfig,
 		testSuiteCfg.EigenDAConfig.EdaV1ClientConfig,
 		testSuiteCfg.EigenDAConfig.EdaV2ClientConfig,
-		log, m).LoadManager()
+		log, m).BuildManager(ctx, testSuiteCfg.EigenDAConfig.PutRetries, testSuiteCfg.EigenDAConfig.MaxBlobSizeBytes)
 	if err != nil {
 		panic(err)
 	}

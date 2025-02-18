@@ -1,6 +1,7 @@
 package eigendaflags
 
 import (
+	"fmt"
 	"net"
 	"time"
 
@@ -217,7 +218,7 @@ func readPayloadDisperserCfg(ctx *cli.Context) v2_clients.PayloadDisperserConfig
 func readDisperserCfg(ctx *cli.Context) v2_clients.DisperserClientConfig {
 	hostStr, portStr, err := net.SplitHostPort(ctx.String(DisperserFlagName))
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("could not read disperser RPC port from provided endpoint: %s", err.Error()))
 	}
 
 	return v2_clients.DisperserClientConfig{

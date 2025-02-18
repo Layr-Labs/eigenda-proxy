@@ -32,7 +32,7 @@ type Builder struct {
 	log     logging.Logger
 	metrics metrics.Metricer
 
-	memConfig *memconfig.Config
+	memConfig *memconfig.SafeConfig
 
 	// configs
 	managerCfg     Config
@@ -45,7 +45,7 @@ func NewBuilder(ctx context.Context, cfg Config,
 	v1VerifierCfg verify.Config,
 	v1EdaClientCfg clients.EigenDAClientConfig,
 	v2ClientCfg common.V2ClientConfig,
-	memConfig *memconfig.Config,
+	memConfig *memconfig.SafeConfig,
 	log logging.Logger, metrics metrics.Metricer) *Builder {
 	return &Builder{ctx, log, metrics, memConfig, cfg, v1VerifierCfg, v1EdaClientCfg, v2ClientCfg}
 }
@@ -127,7 +127,7 @@ func (d *Builder) BuildEigenDAV2Backend() (*eigendav2.Store, error) {
 	}, disperser, retriever, verifier)
 }
 
-func (d *Builder) BuildEigenDAV1Backend(ctx context.Context, putRetries uint) (common.GeneratedKeyStore, error) {
+func (d *Builder) BuildEigenDAV1Backend(ctx context.Context, putRetries uint, maxBlobSize uint) (common.GeneratedKeyStore, error) {
 	verifier, err := verify.NewVerifier(&d.v1VerifierCfg, d.log)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create verifier: %w", err)
@@ -142,7 +142,7 @@ func (d *Builder) BuildEigenDAV1Backend(ctx context.Context, putRetries uint) (c
 	var eigenDA common.GeneratedKeyStore
 	if d.memConfig != nil {
 		d.log.Info("Using memstore backend for EigenDA")
-		eigenDA, err = memstore.New(ctx, verifier, d.log, memconfig.NewSafeConfig(*d.memConfig))
+		eigenDA, err = memstore.New(ctx, verifier, d.log, d.memConfig)
 	} else {
 		// EigenDAV1 backend dependency injection
 		var client *clients.EigenDAClient
@@ -157,7 +157,7 @@ func (d *Builder) BuildEigenDAV1Backend(ctx context.Context, putRetries uint) (c
 			verifier,
 			d.log,
 			&eigenda.StoreConfig{
-				MaxBlobSizeBytes:     d.memConfig.MaxBlobSizeBytes,
+				MaxBlobSizeBytes:     uint64(maxBlobSize),
 				EthConfirmationDepth: d.v1VerifierCfg.EthConfirmationDepth,
 				StatusQueryTimeout:   d.v1EdaClientCfg.StatusQueryTimeout,
 				PutRetries:           putRetries,
@@ -168,7 +168,7 @@ func (d *Builder) BuildEigenDAV1Backend(ctx context.Context, putRetries uint) (c
 	return eigenDA, nil
 }
 
-func (d *Builder) BuildManager(ctx context.Context, putRetries uint) (IManager, error) {
+func (d *Builder) BuildManager(ctx context.Context, putRetries uint, maxBlobSize uint) (IManager, error) {
 	var err error
 	var s3Store *s3.Store
 	var redisStore *redis.Store
@@ -200,7 +200,7 @@ func (d *Builder) BuildManager(ctx context.Context, putRetries uint) (IManager, 
 		}
 	}
 
-	eigenDAV1Store, err = d.BuildEigenDAV1Backend(ctx, putRetries)
+	eigenDAV1Store, err = d.BuildEigenDAV1Backend(ctx, putRetries, maxBlobSize)
 
 	fallbacks := d.BuildSecondaries(d.managerCfg.FallbackTargets, s3Store, redisStore)
 	caches := d.BuildSecondaries(d.managerCfg.CacheTargets, s3Store, redisStore)

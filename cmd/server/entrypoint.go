@@ -47,14 +47,14 @@ func StartProxySvr(cliCtx *cli.Context) error {
 	ctx, ctxCancel := context.WithCancel(cliCtx.Context)
 	defer ctxCancel()
 
-	var memConfig *memconfig.Config = cfg.EigenDAConfig.MemstoreConfig
+	var memConfig *memconfig.SafeConfig = cfg.EigenDAConfig.MemstoreConfig
 	if !cfg.EigenDAConfig.MemstoreEnabled {
 		memConfig = nil
 	}
 
 	sm, err := store.NewBuilder(ctx, cfg.EigenDAConfig.StorageConfig,
 		cfg.EigenDAConfig.EdaV1VerifierConfig, cfg.EigenDAConfig.EdaV1ClientConfig,
-		cfg.EigenDAConfig.EdaV2ClientConfig, memConfig, log, m).BuildManager(ctx, cfg.EigenDAConfig.EdaV2ClientConfig.PutRetries)
+		cfg.EigenDAConfig.EdaV2ClientConfig, memConfig, log, m).BuildManager(ctx, cfg.EigenDAConfig.EdaV2ClientConfig.PutRetries, cfg.EigenDAConfig.MaxBlobSizeBytes)
 	if err != nil {
 		return fmt.Errorf("failed to create store: %w", err)
 	}

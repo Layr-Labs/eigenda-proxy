@@ -17,6 +17,10 @@ import (
 )
 
 type Config struct {
+	// maximum allowed blob size for dispersal
+	// this is irrespective of the disperser's limits
+	// and could result in failed payload submissions if
+	// set incorrectly
 	MaxBlobSizeBytes uint64
 
 	// number of times to retry an eigenda blob dispersal
@@ -118,7 +122,7 @@ func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 	return rlp.EncodeToBytes(cert)
 }
 
-// Backend returns the backend type for EigenDA Store
+// BackendType returns the backend type for EigenDA Store
 func (e Store) BackendType() common.BackendType {
 	return common.EigenDAV2BackendType
 }
@@ -126,13 +130,12 @@ func (e Store) BackendType() common.BackendType {
 // Key is used to recover certificate fields and that verifies blob
 // against commitment to ensure data is valid and non-tampered.
 // TODO: tap into actual verification
-func (e Store) Verify(_ context.Context, _ []byte, _ []byte) error {
-	// var cert verification.EigenDACert
-	// err := rlp.DecodeBytes(key, cert)
-	// if err != nil {
-	// 	return fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
-	// }
+func (e Store) Verify(ctx context.Context, key []byte, value []byte) error {
+	var cert verification.EigenDACert
+	err := rlp.DecodeBytes(key, cert)
+	if err != nil {
+		return fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
+	}
 
-	// return e.verifier.VerifyCertV2(ctx, &cert)
-	return nil
+	return e.verifier.VerifyCertV2(ctx, &cert)
 }
