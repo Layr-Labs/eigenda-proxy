@@ -13,15 +13,14 @@ import (
 var (
 	// This is a temporary feature flag that will be deprecated once all client
 	// dependencies migrate to using EigenDA V2 network
-	V2EnabledFlagName       = withFlagPrefix("enabled")
-	DisperserFlagName       = withFlagPrefix("disperser-rpc")
-	DisableTLSFlagName      = withFlagPrefix("disable-tls")
-	CustomQuorumIDsFlagName = withFlagPrefix("custom-quorum-ids")
-	BlobStatusPollInterval  = withFlagPrefix("blob-status-poll-interval")
-	// TODO: Determine whether we should change this to something like PaymentPrivateKeyHex
-	PutBlobEncodingVersionFlagName = withFlagPrefix("put-blob-encoding-version")
-	// TODO: Consider renaming this to FFT mode or something pseudo-similar
-	DisablePointVerificationModeFlagName = withFlagPrefix("disable-point-verification-mode")
+	V2EnabledFlagName = withFlagPrefix("enabled")
+
+	DisperserFlagName               = withFlagPrefix("disperser-rpc")
+	DisableTLSFlagName              = withFlagPrefix("disable-tls")
+	CustomQuorumIDsFlagName         = withFlagPrefix("custom-quorum-ids")
+	BlobStatusPollInterval          = withFlagPrefix("blob-status-poll-interval")
+	PutBlobEncodingVersionFlagName  = withFlagPrefix("put-blob-encoding-version")
+	PointEvaluationDisabledFlagName = withFlagPrefix("polynomial-form")
 
 	PutRetriesFlagName           = withFlagPrefix("put-retries")
 	SignerPaymentKeyHexFlagName  = withFlagPrefix("signer-payment-key-hex")
@@ -66,7 +65,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		},
 		&cli.StringFlag{
 			Name:     SignerPaymentKeyHexFlagName,
-			Usage:    "Hex-encoded signer private key. Used for authn/authz and rate limits on EigenDA disperser. Should not be associated with an Ethereum address holding any funds.",
+			Usage:    "Hex-encoded signer private key. Used for authorizing payments with EigenDA disperser. Should not be associated with an Ethereum address holding any funds.",
 			EnvVars:  []string{withEnvPrefix(envPrefix, "SIGNER_PRIVATE_KEY_HEX")},
 			Category: category,
 		},
@@ -78,9 +77,9 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Category: category,
 		},
 		&cli.BoolFlag{
-			Name:     DisablePointVerificationModeFlagName,
-			Usage:    "Disable point verification mode. This mode performs IFFT on data before writing and FFT on data after reading. Disabling requires supplying the entire blob for verification against the KZG commitment.",
-			EnvVars:  []string{withEnvPrefix(envPrefix, "DISABLE_POINT_VERIFICATION_MODE")},
+			Name:     PointEvaluationDisabledFlagName,
+			Usage:    "Disables IFFT transformation done during payload encoding. Using this mode results in blobs that can't be proven.",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "COEFFICIENT_PAYLOAD_DISABLED")},
 			Value:    false,
 			Category: category,
 		},
@@ -184,21 +183,19 @@ func ReadConfig(ctx *cli.Context) common.V2ClientConfig {
 }
 
 func readPayloadClientConfig(ctx *cli.Context) v2_clients.PayloadClientConfig {
-	noPolynomial := ctx.Bool(DisablePointVerificationModeFlagName)
-	polyMode := codecs.PolynomialFormCoeff
+	polyForm := codecs.PolynomialFormCoeff
 
-	// if point verification mode is disabled then blob is treated as evaluations and
-	// not FFT'd before dispersal
-	if noPolynomial {
-		polyMode = codecs.PolynomialFormEval
+	// if point evaluation mode is disabled then blob is treated as evaluations and
+	// not iFFT'd before dispersal and FFT'd on retrieval
+	if ctx.Bool(PointEvaluationDisabledFlagName) {
+		polyForm = codecs.PolynomialFormEval
 	}
 
 	return v2_clients.PayloadClientConfig{
-		// TODO: Support proper user env injection
 		BlockNumberPollInterval: 1 * time.Second,
 		BlobEncodingVersion:     codecs.DefaultBlobEncoding,
 		EigenDACertVerifierAddr: ctx.String(CertVerifierAddrFlagName),
-		PayloadPolynomialForm:   polyMode,
+		PayloadPolynomialForm:   polyForm,
 		BlobVersion:             uint16(ctx.Int(BlobVersionFlagName)),
 	}
 }
