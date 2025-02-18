@@ -96,9 +96,9 @@ func ReadProxyConfig(ctx *cli.Context) ProxyConfig {
 
 // Check ... verifies that configuration values are adequately set
 func (cfg *ProxyConfig) Check() error {
-	// provide dummy values to eigenda client config. Since the client won't be called in this
-	// mode it doesn't matter.
 	if cfg.MemstoreEnabled {
+		// provide dummy values to eigenda client config. Since the client won't be called in this
+		// mode it doesn't matter.
 		cfg.EdaV1ClientConfig.SvcManagerAddr = "0x0000000000000000000000000000000000000000"
 		cfg.EdaV1ClientConfig.EthRpcUrl = "http://0.0.0.0:666"
 	} else {
@@ -131,15 +131,23 @@ func (cfg *ProxyConfig) Check() error {
 	if cfg.EigenDAV2Enabled {
 
 		if cfg.EdaV2ClientConfig.ServiceManagerAddress == "" {
-			return fmt.Errorf("service manager address is required for interacting with EigenDA V2")
+			return fmt.Errorf("service manager address is required for using EigenDA V2 backend")
 		}
 
 		if cfg.EdaV2ClientConfig.EthRPC == "" {
-			return fmt.Errorf("eth rpc is required for interacting with EigenDA V2")
+			return fmt.Errorf("eth rpc is required for using EigenDA V2 backend")
 		}
 
 		if cfg.EdaV2ClientConfig.PayloadClientCfg.EigenDACertVerifierAddr == "" {
-			return fmt.Errorf("cert verifier contract address is required for interacting with EigenDA V2")
+			return fmt.Errorf("cert verifier contract address is required for using EigenDA V2 backend")
+		}
+
+		if cfg.EdaV2ClientConfig.PayloadClientCfg.SignerPaymentKey == "" {
+			return fmt.Errorf("signer payment private key hex is required for using EigenDA V2 backend")
+		}
+
+		if cfg.EdaV2ClientConfig.DisperserClientCfg.Hostname == "" {
+			return fmt.Errorf("disperser hostname is required for using EigenDA V2 backend")
 		}
 	}
 

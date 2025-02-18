@@ -8,6 +8,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda/api/clients/codecs"
 	v2_clients "github.com/Layr-Labs/eigenda/api/clients/v2"
+	"github.com/Layr-Labs/eigenda/core"
 	"github.com/urfave/cli/v2"
 )
 
@@ -44,6 +45,13 @@ func withEnvPrefix(envPrefix, s string) string {
 }
 func CLIFlags(envPrefix, category string) []cli.Flag {
 	return []cli.Flag{
+		&cli.BoolFlag{
+			Name:     V2EnabledFlagName,
+			Usage:    "Enable blob dispersal and retrieval against EigenDA v2 protocol.",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "V2_ENABLED")},
+			Category: category,
+			Required: false,
+		},
 		&cli.StringFlag{
 			Name:     DisperserFlagName,
 			Usage:    "RPC endpoint of the EigenDA disperser.",
@@ -52,7 +60,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		},
 		&cli.BoolFlag{
 			Name:     DisableTLSFlagName,
-			Usage:    "Disable TLS for gRPC communication with the EigenDA disperser. Default is false.",
+			Usage:    "Disable TLS for gRPC communication with the EigenDA disperser and retrieval subnet. Default is false.",
 			Value:    false,
 			EnvVars:  []string{withEnvPrefix(envPrefix, "GRPC_DISABLE_TLS")},
 			Category: category,
@@ -120,13 +128,6 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Category: category,
 			Required: false,
 			Value:    time.Second * 30,
-		},
-		&cli.BoolFlag{
-			Name:     V2EnabledFlagName,
-			Usage:    "Enable blob dispersal and retrieval against EigenDA v2 protocol.",
-			EnvVars:  []string{withEnvPrefix(envPrefix, "V2_ENABLED")},
-			Category: category,
-			Required: false,
 		},
 		&cli.StringFlag{
 			Name:     CertVerifierAddrFlagName,
@@ -204,14 +205,18 @@ func readPayloadClientConfig(ctx *cli.Context) v2_clients.PayloadClientConfig {
 func readPayloadDisperserCfg(ctx *cli.Context) v2_clients.PayloadDisperserConfig {
 	payCfg := readPayloadClientConfig(ctx)
 
+	var customQuorums []core.QuorumID
+	for _, uintValue := range ctx.UintSlice(CustomQuorumIDsFlagName) {
+		customQuorums = append(customQuorums, uint8(uintValue))
+	}
+
 	return v2_clients.PayloadDisperserConfig{
-		SignerPaymentKey:    ctx.String(SignerPaymentKeyHexFlagName),
-		PayloadClientConfig: payCfg,
-		DisperseBlobTimeout: ctx.Duration(DisperseBlobTimeoutFlagName),
-		// TODO: Explore making these user defined
+		SignerPaymentKey:       ctx.String(SignerPaymentKeyHexFlagName),
+		PayloadClientConfig:    payCfg,
+		DisperseBlobTimeout:    ctx.Duration(DisperseBlobTimeoutFlagName),
 		BlobCertifiedTimeout:   ctx.Duration(BlobCertifiedTimeoutFlagName),
 		BlobStatusPollInterval: ctx.Duration(BlobStatusPollInterval),
-		Quorums:                []uint8{0, 1},
+		Quorums:                append(common.DefaultQuorums, customQuorums...),
 	}
 }
 
