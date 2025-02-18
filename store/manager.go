@@ -14,35 +14,56 @@ import (
 
 // IManager ... read/write interface
 type IManager interface {
-	Get(ctx context.Context, key []byte, cm commitments.CommitmentMode) ([]byte, error)
+	Get(ctx context.Context, key []byte, cm commitments.CommitmentMeta) ([]byte, error)
 	Put(ctx context.Context, cm commitments.CommitmentMode, key, value []byte) ([]byte, error)
 }
 
 // Manager ... storage backend routing layer
 type Manager struct {
 	log logging.Logger
-	// primary storage backends
-	eigenda common.GeneratedKeyStore   // ALT DA commitment type for OP mode && std commitment mode for standard /client
-	s3      common.PrecomputedKeyStore // OP commitment mode && keccak256 commitment type
+
+	s3 common.PrecomputedKeyStore // OP commitment mode && keccak256 commitment type
+	// ALT DA commitment types for OP mode && std commitment mode for standard /client
+	eigenda   common.GeneratedKeyStore // v0 da commitment version
+	eigendaV2 common.GeneratedKeyStore // v1 da commitment version
+	writeV2   bool                     // write blobs to EigenDAV2 backend
 
 	// secondary storage backends (caching and fallbacks)
 	secondary ISecondary
 }
 
 // NewManager ... Init
-func NewManager(eigenda common.GeneratedKeyStore, s3 common.PrecomputedKeyStore, l logging.Logger,
-	secondary ISecondary) (IManager, error) {
+func NewManager(eigenda common.GeneratedKeyStore, eigenDAV2 common.GeneratedKeyStore, s3 common.PrecomputedKeyStore,
+	l logging.Logger, secondary ISecondary, useV2 bool) (IManager, error) {
+
+	// 1 - Determine where to disperse blobs
+	var writeV2 = true
+	if eigenda != nil && !useV2 {
+		writeV2 = false
+	}
+
+	// 2 - Enforce invariants
+	if writeV2 && eigenDAV2 == nil {
+		return nil, fmt.Errorf("EigenDA V2 dispersal enabled but no v2 store provided")
+	}
+
+	if !writeV2 && eigenda == nil {
+		return nil, fmt.Errorf("EigenDA dispersal enabled but no store provided")
+	}
+
 	return &Manager{
 		log:       l,
 		eigenda:   eigenda,
+		eigendaV2: eigenDAV2,
 		s3:        s3,
 		secondary: secondary,
+		writeV2:   writeV2,
 	}, nil
 }
 
 // Get ... fetches a value from a storage backend based on the (commitment mode, type)
-func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.CommitmentMode) ([]byte, error) {
-	switch cm {
+func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.CommitmentMeta) ([]byte, error) {
+	switch cm.Mode {
 	case commitments.OptimismKeccak:
 
 		if m.s3 == nil {
@@ -68,6 +89,9 @@ func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.Commitment
 			return nil, errors.New("expected EigenDA backend for DA commitment type, but none configured")
 		}
 
+		var err error
+		var data []byte
+
 		// 1 - read blob from cache if enabled
 		if m.secondary.CachingEnabled() {
 			m.log.Debug("Retrieving data from cached backends")
@@ -80,15 +104,12 @@ func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.Commitment
 		}
 
 		// 2 - read blob from EigenDA
-		data, err := m.eigenda.Get(ctx, key)
+		data, err = m.getEigenDAMode(ctx, cm.Version, key)
 		if err == nil {
-			// verify
-			err = m.eigenda.Verify(ctx, key, data)
-			if err != nil {
-				return nil, err
-			}
 			return data, nil
 		}
+
+		m.log.Error(err.Error())
 
 		// 3 - read blob from fallbacks if enabled and data is non-retrievable from EigenDA
 		if m.secondary.FallbackEnabled() {
@@ -100,7 +121,6 @@ func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.Commitment
 		} else {
 			return nil, err
 		}
-
 		return data, err
 
 	default:
@@ -147,12 +167,47 @@ func (m *Manager) Put(ctx context.Context, cm commitments.CommitmentMode, key, v
 
 // putEigenDAMode ... disperses blob to EigenDA backend
 func (m *Manager) putEigenDAMode(ctx context.Context, value []byte) ([]byte, error) {
-	if m.eigenda != nil {
-		m.log.Debug("Storing data to EigenDA backend")
+	if !m.writeV2 { // disperse v1
+		m.log.Info("Storing data to EigenDA backend")
 		return m.eigenda.Put(ctx, value)
 	}
 
-	return nil, errors.New("no DA storage backend found")
+	return m.eigendaV2.Put(ctx, value)
+}
+
+func (m *Manager) getEigenDAMode(ctx context.Context, v commitments.EigenDACommit, key []byte) ([]byte, error) {
+	switch v {
+	case commitments.CertV0:
+		m.log.Debug("Reading blob from EigenDAV1 backend")
+		data, err := m.eigenda.Get(ctx, key)
+		if err == nil {
+			// verify v1 (payload, cert)
+			err = m.eigenda.Verify(ctx, key, data)
+			if err != nil {
+				return nil, err
+			}
+			return data, nil
+		}
+
+		return nil, err
+
+	case commitments.CertV1:
+		m.log.Debug("Reading blob from EigenDAV2 backend")
+		data, err := m.eigendaV2.Get(ctx, key)
+		if err == nil {
+			// verify v2 (payload, cert)
+			err = m.eigendaV2.Verify(ctx, key, data)
+			if err != nil {
+				return nil, err
+			}
+			return data, nil
+		}
+
+		return nil, err
+
+	default:
+		return nil, fmt.Errorf("commitment version unknown: %b", v)
+	}
 }
 
 // putKeccak256Mode ... put blob into S3 compatible backend

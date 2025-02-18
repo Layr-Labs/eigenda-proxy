@@ -117,18 +117,6 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Value:    false,
 			Category: category,
 		},
-		&cli.BoolFlag{
-			// This flag is DEPRECATED. Use ConfirmationDepthFlagName, which accept "finalization" or a number <64.
-			Name:     WaitForFinalizationFlagName,
-			Usage:    "Wait for blob finalization before returning from PutBlob.",
-			EnvVars:  []string{withEnvPrefix(envPrefix, "WAIT_FOR_FINALIZATION")},
-			Value:    false,
-			Category: category,
-			Hidden:   true,
-			Action: func(_ *cli.Context, _ bool) error {
-				return fmt.Errorf("flag --%s is deprecated, instead use --%s finalized", WaitForFinalizationFlagName, ConfirmationDepthFlagName)
-			},
-		},
 		&cli.StringFlag{
 			Name: ConfirmationDepthFlagName,
 			Usage: "Number of Ethereum blocks to wait after the blob's batch has been included on-chain, " +

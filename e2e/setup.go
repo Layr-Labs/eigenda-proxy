@@ -9,13 +9,14 @@ import (
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
+	"github.com/Layr-Labs/eigenda-proxy/config"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/server"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
-	"github.com/Layr-Labs/eigenda-proxy/verify"
+	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	"github.com/Layr-Labs/eigensdk-go/logging"
@@ -30,12 +31,12 @@ import (
 )
 
 const (
-	privateKey = "SIGNER_PRIVATE_KEY"
-	ethRPC     = "ETHEREUM_RPC"
-	transport  = "http"
-	svcName    = "eigenda_proxy"
-	host       = "127.0.0.1"
-	holeskyDA  = "disperser-holesky.eigenda.xyz:443"
+	privateKey         = "SIGNER_PRIVATE_KEY"
+	ethRPC             = "ETHEREUM_RPC"
+	transport          = "http"
+	svcName            = "eigenda_proxy"
+	host               = "127.0.0.1"
+	v1DisperserHolesky = "disperser-holesky.eigenda.xyz:443"
 )
 
 var (
@@ -126,19 +127,19 @@ func TestConfig(useMemory bool) *Cfg {
 	}
 }
 
-func createRedisConfig(eigendaCfg server.Config) server.CLIConfig {
+func createRedisConfig(eigendaCfg config.ProxyConfig) config.AppConfig {
 	eigendaCfg.StorageConfig.RedisConfig = redis.Config{
 		Endpoint: redisEndpoint,
 		Password: "",
 		DB:       0,
 		Eviction: 10 * time.Minute,
 	}
-	return server.CLIConfig{
+	return config.AppConfig{
 		EigenDAConfig: eigendaCfg,
 	}
 }
 
-func createS3Config(eigendaCfg server.Config) server.CLIConfig {
+func createS3Config(eigendaCfg config.ProxyConfig) config.AppConfig {
 	// generate random string
 	bucketName := "eigenda-proxy-test-" + RandStr(10)
 	createS3Bucket(bucketName)
@@ -152,12 +153,12 @@ func createS3Config(eigendaCfg server.Config) server.CLIConfig {
 		AccessKeyID:     "minioadmin",
 		CredentialType:  s3.CredentialTypeStatic,
 	}
-	return server.CLIConfig{
+	return config.AppConfig{
 		EigenDAConfig: eigendaCfg,
 	}
 }
 
-func TestSuiteConfig(testCfg *Cfg) server.CLIConfig {
+func TestSuiteConfig(testCfg *Cfg) config.AppConfig {
 	// load signer key from environment
 	pk := os.Getenv(privateKey)
 	if pk == "" && !testCfg.UseMemory {
@@ -183,9 +184,9 @@ func TestSuiteConfig(testCfg *Cfg) server.CLIConfig {
 	}
 
 	svcManagerAddr := "0xD4A7E1Bd8015057293f0D0A557088c286942e84b" // holesky testnet
-	eigendaCfg := server.Config{
-		EdaClientConfig: clients.EigenDAClientConfig{
-			RPC:                      holeskyDA,
+	eigendaCfg := config.ProxyConfig{
+		EdaV1ClientConfig: clients.EigenDAClientConfig{
+			RPC:                      v1DisperserHolesky,
 			StatusQueryTimeout:       time.Minute * 45,
 			StatusQueryRetryInterval: pollInterval,
 			DisableTLS:               false,
@@ -193,7 +194,7 @@ func TestSuiteConfig(testCfg *Cfg) server.CLIConfig {
 			EthRpcUrl:                ethRPC,
 			SvcManagerAddr:           svcManagerAddr,
 		},
-		VerifierConfig: verify.Config{
+		EdaV1VerifierConfig: verify.Config{
 			VerifyCerts:          false,
 			RPCURL:               ethRPC,
 			SvcManagerAddr:       svcManagerAddr,
@@ -218,10 +219,10 @@ func TestSuiteConfig(testCfg *Cfg) server.CLIConfig {
 	}
 
 	if testCfg.UseMemory {
-		eigendaCfg.EdaClientConfig.SignerPrivateKeyHex = "0000000000000000000100000000000000000000000000000000000000000000"
+		eigendaCfg.EdaV1ClientConfig.SignerPrivateKeyHex = "0000000000000000000100000000000000000000000000000000000000000000"
 	}
 
-	var cfg server.CLIConfig
+	var cfg config.AppConfig
 	switch {
 	case testCfg.UseKeccak256ModeS3:
 		cfg = createS3Config(eigendaCfg)
@@ -239,9 +240,9 @@ func TestSuiteConfig(testCfg *Cfg) server.CLIConfig {
 		cfg = createRedisConfig(eigendaCfg)
 
 	default:
-		cfg = server.CLIConfig{
+		cfg = config.AppConfig{
 			EigenDAConfig: eigendaCfg,
-			MetricsCfg:    metrics.CLIConfig{},
+			MetricsCfg:    metrics.Config{},
 		}
 	}
 
@@ -255,23 +256,24 @@ type TestSuite struct {
 	Metrics *metrics.EmulatedMetricer
 }
 
-func CreateTestSuite(testSuiteCfg server.CLIConfig) (TestSuite, func()) {
+func CreateTestSuite(testSuiteCfg config.AppConfig) (TestSuite, func()) {
 	log := logging.NewTextSLogger(os.Stdout, &logging.SLoggerOptions{})
 
 	m := metrics.NewEmulatedMetricer()
 	ctx := context.Background()
-	sm, err := server.LoadStoreManager(
-		ctx,
-		testSuiteCfg,
-		log,
-		m,
-	)
 
+	sm, err := store.NewBuilder(ctx,
+		testSuiteCfg.EigenDAConfig.StorageConfig,
+		testSuiteCfg.EigenDAConfig.EdaV1VerifierConfig,
+		testSuiteCfg.EigenDAConfig.EdaV1ClientConfig,
+		testSuiteCfg.EigenDAConfig.EdaV2ClientConfig,
+		testSuiteCfg.EigenDAConfig.MemstoreConfig,
+		log, m).BuildManager(ctx, testSuiteCfg.EigenDAConfig.PutRetries, testSuiteCfg.EigenDAConfig.MaxBlobSizeBytes)
 	if err != nil {
 		panic(err)
 	}
 
-	proxySvr := server.NewServer(host, 0, sm, log, m)
+	proxySvr := server.NewServer(&testSuiteCfg.EigenDAConfig.ServerConfig, sm, log, m)
 
 	log.Info("Starting proxy server...")
 	r := mux.NewRouter()

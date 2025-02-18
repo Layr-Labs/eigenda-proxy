@@ -1,4 +1,4 @@
-package server
+package config
 
 import (
 	"testing"
@@ -6,19 +6,19 @@ import (
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
-	"github.com/Layr-Labs/eigenda-proxy/verify"
+	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	"github.com/stretchr/testify/require"
 )
 
-func validCfg() *Config {
+func validCfg() *ProxyConfig {
 	maxBlobLengthBytes, err := common.ParseBytesAmount("2MiB")
 	if err != nil {
 		panic(err)
 	}
-	return &Config{
-		EdaClientConfig: clients.EigenDAClientConfig{
+	return &ProxyConfig{
+		EdaV1ClientConfig: clients.EigenDAClientConfig{
 			RPC:                          "http://localhost:8545",
 			StatusQueryRetryInterval:     5 * time.Second,
 			StatusQueryTimeout:           30 * time.Minute,
@@ -29,7 +29,7 @@ func validCfg() *Config {
 			PutBlobEncodingVersion:       0,
 			DisablePointVerificationMode: false,
 		},
-		VerifierConfig: verify.Config{
+		EdaV1VerifierConfig: verify.Config{
 			KzgConfig: &kzg.KzgConfig{
 				G1Path:         "path/to/g1",
 				G2PowerOf2Path: "path/to/g2",
@@ -63,8 +63,8 @@ func TestConfigVerification(t *testing.T) {
 			cfg := validCfg()
 			// cert verification only makes sense when memstore is disabled (we use eigenda as backend)
 			cfg.MemstoreEnabled = false
-			cfg.VerifierConfig.VerifyCerts = true
-			cfg.VerifierConfig.SvcManagerAddr = ""
+			cfg.EdaV1VerifierConfig.VerifyCerts = true
+			cfg.EdaV1VerifierConfig.SvcManagerAddr = ""
 
 			err := cfg.Check()
 			require.Error(t, err)
@@ -74,8 +74,8 @@ func TestConfigVerification(t *testing.T) {
 			cfg := validCfg()
 			// cert verification only makes sense when memstore is disabled (we use eigenda as backend)
 			cfg.MemstoreEnabled = false
-			cfg.VerifierConfig.VerifyCerts = true
-			cfg.VerifierConfig.RPCURL = ""
+			cfg.EdaV1VerifierConfig.VerifyCerts = true
+			cfg.EdaV1VerifierConfig.RPCURL = ""
 
 			err := cfg.Check()
 			require.Error(t, err)
@@ -84,7 +84,7 @@ func TestConfigVerification(t *testing.T) {
 		t.Run("CantDoCertVerificationWhenMemstoreEnabled", func(t *testing.T) {
 			cfg := validCfg()
 			cfg.MemstoreEnabled = true
-			cfg.VerifierConfig.VerifyCerts = true
+			cfg.EdaV1VerifierConfig.VerifyCerts = true
 
 			err := cfg.Check()
 			require.Error(t, err)
@@ -93,21 +93,21 @@ func TestConfigVerification(t *testing.T) {
 		t.Run("EigenDAClientFieldsAreDefaultSetWhenMemStoreEnabled", func(t *testing.T) {
 			cfg := validCfg()
 			cfg.MemstoreEnabled = true
-			cfg.VerifierConfig.VerifyCerts = false
-			cfg.VerifierConfig.RPCURL = ""
-			cfg.VerifierConfig.SvcManagerAddr = ""
+			cfg.EdaV1VerifierConfig.VerifyCerts = false
+			cfg.EdaV1VerifierConfig.RPCURL = ""
+			cfg.EdaV1VerifierConfig.SvcManagerAddr = ""
 
 			err := cfg.Check()
 			require.NoError(t, err)
-			require.True(t, len(cfg.EdaClientConfig.EthRpcUrl) > 1)
-			require.True(t, len(cfg.EdaClientConfig.SvcManagerAddr) > 1)
+			require.True(t, len(cfg.EdaV1ClientConfig.EthRpcUrl) > 1)
+			require.True(t, len(cfg.EdaV1ClientConfig.SvcManagerAddr) > 1)
 		})
 
 		t.Run("FailWhenEigenDAClientFieldsAreUnsetAndMemStoreDisabled", func(t *testing.T) {
 			cfg := validCfg()
 			cfg.MemstoreEnabled = false
-			cfg.VerifierConfig.RPCURL = ""
-			cfg.VerifierConfig.SvcManagerAddr = ""
+			cfg.EdaV1VerifierConfig.RPCURL = ""
+			cfg.EdaV1VerifierConfig.SvcManagerAddr = ""
 
 			err := cfg.Check()
 			require.Error(t, err)
