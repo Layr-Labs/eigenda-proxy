@@ -1,4 +1,4 @@
-name: per-pr
+name: CI # this name appears in the badge on the README
 
 on:
   push:
