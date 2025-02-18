@@ -24,16 +24,17 @@ var (
 	PutBlobEncodingVersionFlagName  = withFlagPrefix("put-blob-encoding-version")
 	PointEvaluationDisabledFlagName = withFlagPrefix("polynomial-form")
 
-	PutRetriesFlagName           = withFlagPrefix("put-retries")
-	SignerPaymentKeyHexFlagName  = withFlagPrefix("signer-payment-key-hex")
-	DisperseBlobTimeoutFlagName  = withFlagPrefix("disperse-blob-timeout")
-	BlobCertifiedTimeoutFlagName = withFlagPrefix("blob-certified-timeout")
-	CertVerifierAddrFlagName     = withFlagPrefix("cert-verifier-addr")
-	RelayTimeoutFlagName         = withFlagPrefix("relay-timeout")
-	ContractCallTimeoutFlagName  = withFlagPrefix("contract-call-timeout")
-	BlobVersionFlagName          = withFlagPrefix("blob-version")
-	EthRPCURLFlagName            = withFlagPrefix("eth-rpc")
-	SvcManagerAddrFlagName       = withFlagPrefix("svc-manager-addr")
+	PutRetriesFlagName              = withFlagPrefix("put-retries")
+	SignerPaymentKeyHexFlagName     = withFlagPrefix("signer-payment-key-hex")
+	DisperseBlobTimeoutFlagName     = withFlagPrefix("disperse-blob-timeout")
+	BlobCertifiedTimeoutFlagName    = withFlagPrefix("blob-certified-timeout")
+	CertVerifierAddrFlagName        = withFlagPrefix("cert-verifier-addr")
+	RelayTimeoutFlagName            = withFlagPrefix("relay-timeout")
+	ContractCallTimeoutFlagName     = withFlagPrefix("contract-call-timeout")
+	BlobVersionFlagName             = withFlagPrefix("blob-version")
+	BlockNumberPollIntervalFlagName = withEnvPrefix("block-number-poll-interval")
+	EthRPCURLFlagName               = withFlagPrefix("eth-rpc")
+	SvcManagerAddrFlagName          = withFlagPrefix("svc-manager-addr")
 )
 
 func withFlagPrefix(s string) string {
@@ -47,7 +48,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 	return []cli.Flag{
 		&cli.BoolFlag{
 			Name:     V2EnabledFlagName,
-			Usage:    "Enable blob dispersal and retrieval against EigenDA v2 protocol.",
+			Usage:    "Enable blob dispersal and retrieval against EigenDA V2 protocol.",
 			EnvVars:  []string{withEnvPrefix(envPrefix, "V2_ENABLED")},
 			Category: category,
 			Required: false,
@@ -80,7 +81,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		},
 		&cli.UintFlag{
 			Name:     PutBlobEncodingVersionFlagName,
-			Usage:    "Blob encoding version to use when writing blobs from the high-level interface.",
+			Usage:    "Blob encoding version to use when writing blobs from the high-level interface. Currently only supports (0).",
 			EnvVars:  []string{withEnvPrefix(envPrefix, "PUT_BLOB_ENCODING_VERSION")},
 			Value:    0,
 			Category: category,
@@ -94,21 +95,22 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		},
 		&cli.StringFlag{
 			Name:     EthRPCURLFlagName,
-			Usage:    "URL of the Ethereum RPC endpoint. Needed to confirm blobs landed onchain.",
+			Usage:    "URL of the Ethereum RPC endpoint. Needed to verify EigenDA certs against an onchain EigenDACertVerifier contract.",
 			EnvVars:  []string{withEnvPrefix(envPrefix, "ETH_RPC")},
 			Category: category,
 			Required: false,
 		},
 		&cli.StringFlag{
-			Name:     SvcManagerAddrFlagName,
-			Usage:    "Address of the EigenDAServiceManager contract. Required to confirm blobs landed onchain. See https://github.com/Layr-Labs/eigenlayer-middleware/?tab=readme-ov-file#current-mainnet-deployment",
+			Name: SvcManagerAddrFlagName,
+			Usage: `Address of the EigenDAServiceManager contract. Required for initializing onchain system context and reading relay states from registry.
+					   See https://github.com/Layr-Labs/eigenlayer-middleware/?tab=readme-ov-file#current-mainnet-deployment`,
 			EnvVars:  []string{withEnvPrefix(envPrefix, "SERVICE_MANAGER_ADDR")},
 			Category: category,
 			Required: false,
 		},
 		&cli.UintFlag{
 			Name:     PutRetriesFlagName,
-			Usage:    "Number of times to retry blob dispersals.",
+			Usage:    "Number of times to retry blob dispersals before serving an error response.",
 			Value:    3,
 			EnvVars:  []string{withEnvPrefix(envPrefix, "PUT_RETRIES")},
 			Category: category,
@@ -123,7 +125,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		},
 		&cli.DurationFlag{
 			Name:     BlobCertifiedTimeoutFlagName,
-			Usage:    "Maximum amount of time to wait for blob certification against the on-chain CertVerifier.",
+			Usage:    "Maximum amount of time to wait for blob certification against the on-chain EigenDACertVerifier.",
 			EnvVars:  []string{withEnvPrefix(envPrefix, "CERTIFY_BLOB_TIMEOUT")},
 			Category: category,
 			Required: false,
@@ -138,7 +140,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		},
 		&cli.DurationFlag{
 			Name:     ContractCallTimeoutFlagName,
-			Usage:    "Timeout used when performing smart contract eth_calls.",
+			Usage:    "Timeout used when performing smart contract call operation (i.e, eth_call).",
 			EnvVars:  []string{withEnvPrefix(envPrefix, "CONTRACT_CALL_TIMEOUT")},
 			Category: category,
 			Value:    10 * time.Second,
@@ -146,7 +148,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		},
 		&cli.DurationFlag{
 			Name:     RelayTimeoutFlagName,
-			Usage:    "Timeout used when querying a relay for blob contents.",
+			Usage:    "Timeout used when querying an individual relay for blob contents.",
 			EnvVars:  []string{withEnvPrefix(envPrefix, "RELAY_TIMEOUT")},
 			Category: category,
 			Value:    10 * time.Second,
@@ -161,9 +163,22 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Required: false,
 		},
 		&cli.UintFlag{
-			Name:     BlobVersionFlagName,
-			Usage:    "Blob version used when dispersing. Currently only supports (0).",
+			Name: BlobVersionFlagName,
+			Usage: `Blob version used when dispersing. 
+					   This refers to a global version maintained by EigenDA governance 
+					   and is injected in the BlobHeader before dispersing.
+					   Currently only supports (0).`,
 			EnvVars:  []string{withEnvPrefix(envPrefix, "BLOB_VERSION")},
+			Category: category,
+			Value:    uint(0),
+			Required: false,
+		},
+		&cli.UintFlag{
+			Name: BlockNumberPollIntervalFlagName,
+			Usage: `Polling interval used for querying latest block from ETH RPC provider.
+					   Latest blocks are queried as a precondition to ensure the node is up-to-date
+					   or >= reference block number that the EigenDA disperser accredited the certificate.`,
+			EnvVars:  []string{withEnvPrefix(envPrefix, "BLOCK_NUMBER_POLL_INTERVAL")},
 			Category: category,
 			Value:    uint(0),
 			Required: false,
@@ -185,16 +200,16 @@ func ReadConfig(ctx *cli.Context) common.V2ClientConfig {
 }
 
 func readPayloadClientConfig(ctx *cli.Context) v2_clients.PayloadClientConfig {
-	polyForm := codecs.PolynomialFormCoeff
+	polyForm := codecs.PolynomialFormEval
 
 	// if point evaluation mode is disabled then blob is treated as evaluations and
 	// not iFFT'd before dispersal and FFT'd on retrieval
 	if ctx.Bool(PointEvaluationDisabledFlagName) {
-		polyForm = codecs.PolynomialFormEval
+		polyForm = codecs.PolynomialFormCoeff
 	}
 
 	return v2_clients.PayloadClientConfig{
-		BlockNumberPollInterval: 1 * time.Second,
+		BlockNumberPollInterval: ctx.Duration(BlockNumberPollIntervalFlagName),
 		BlobEncodingVersion:     codecs.DefaultBlobEncoding,
 		EigenDACertVerifierAddr: ctx.String(CertVerifierAddrFlagName),
 		PayloadPolynomialForm:   polyForm,
