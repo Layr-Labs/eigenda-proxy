@@ -6,26 +6,21 @@ import (
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
+	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/avast/retry-go/v4"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/Layr-Labs/eigenda/api/clients/v2"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
 type Config struct {
-	// address of service manager - used for loading chain state
-	ServiceManagerAddr string
-
 	MaxBlobSizeBytes uint64
 
-	// total duration time that client waits for blob to confirm
-	StatusQueryTimeout time.Duration
-
-	// number of times to retry eigenda blob dispersals
+	// number of times to retry an eigenda blob dispersal
+	// before yielding an error to the handler
 	PutRetries uint
 }
 
@@ -33,7 +28,7 @@ type Config struct {
 // EigenDA V2 protocol.
 type Store struct {
 	cfg *Config
-	log log.Logger
+	log logging.Logger
 
 	disperser *clients.PayloadDisperser
 	retriever clients.PayloadRetriever
@@ -42,7 +37,7 @@ type Store struct {
 
 var _ common.GeneratedKeyStore = (*Store)(nil)
 
-func NewStore(log log.Logger, cfg *Config,
+func NewStore(log logging.Logger, cfg *Config,
 	disperser *clients.PayloadDisperser, retriever clients.PayloadRetriever, verifier verification.ICertVerifier) (*Store, error) {
 	return &Store{
 		log:       log,
@@ -75,20 +70,17 @@ func (e Store) Get(ctx context.Context, key []byte) ([]byte, error) {
 //
 //	Mapping status codes to 503 failover
 func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
-	salt := uint32(0)
-	e.log.Debug("Dispersing payload for EigenDA V2 network")
+	e.log.Debug("Dispersing payload to EigenDA V2 network")
 
-	// TODO: Verify this retry or failover code for correctness against V2
-	// protocol
+	// TODO: https://github.com/Layr-Labs/eigenda/issues/1271
 
 	// We attempt to disperse the blob to EigenDA up to 3 times, unless we get a 400 error on any attempt.
+
 	cert, err := retry.DoWithData(
 		func() (*verification.EigenDACert, error) {
-			// TODO: Figure out salt mgmt
-			return e.disperser.SendPayload(ctx, value, salt)
+			return e.disperser.SendPayload(ctx, value, uint32(0))
 		},
 		retry.RetryIf(func(err error) bool {
-			salt++ // increment salt before retrying
 			st, isGRPCError := status.FromError(err)
 			if !isGRPCError {
 				// api.ErrorFailover is returned, so we should retry

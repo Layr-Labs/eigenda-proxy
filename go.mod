@@ -5,7 +5,7 @@ go 1.22.0
 toolchain go1.22.7
 
 require (
-	github.com/Layr-Labs/eigenda v0.8.6-rc.0.0.20250204212656-37a4d6de4778
+	github.com/Layr-Labs/eigenda v0.8.6-rc.0.0.20250212173538-d64650160067
 	github.com/Layr-Labs/eigenda-proxy/client v0.0.0-00010101000000-000000000000
 	github.com/Layr-Labs/eigensdk-go v0.2.0-beta.1.0.20250118004418-2a25f31b3b28
 	github.com/avast/retry-go/v4 v4.6.0
@@ -259,6 +259,7 @@ require (
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/shirou/gopsutil/v3 v3.23.12 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
+	github.com/shurcooL/graphql v0.0.0-20230722043721-ed46e5a46466 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/status-im/keycard-go v0.2.0 // indirect
