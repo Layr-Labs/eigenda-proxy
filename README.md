@@ -4,11 +4,9 @@ A basic REST server for Rollups with the following endpoints:
 - POST routes: used by sequencers to encode their payloads (batches of transactions or state transitions) into EigenDA blobs, submit them to the EigenDA disperser to make them available, and receive a DA certificate to be submitted to the rollup's batcher inbox.
 - GET routes: used by validators to retrieve the blob from the EigenDA network given a DA Certificate, decode the blob back into the original payload, and return it to the validator, to be used in its derivation pipeline.
 
-# TODO: update these badges
-[![Compiles](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/build.yml/badge.svg)](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/build.yml)
-[![Unit Tests](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/unit-tests.yml)
-[![Linter](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/lint.yml/badge.svg)](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/lint.yml)
-[![Integration Tests](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/holesky-test.yml/badge.svg)](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/holesky-test.yml)
+[![per-pr-ci](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/per-pr.yml/badge.svg)](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/per-pr.yml)
+[![push-image-ghcr](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/push-ghcr.yml/badge.svg)](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/push-ghcr.yml)
+
 
 [Integration Guide](https://docs.eigenda.xyz/integrations-guides/dispersal/clients/eigenda-proxy) | [EigenDA Repo](https://github.com/Layr-Labs/eigenda)
 
@@ -30,7 +28,6 @@ Features:
 In order to disperse to the EigenDA network in production, or at high throughput on testnet, please register your authentication ethereum address through [this form](https://forms.gle/3QRNTYhSMacVFNcU8). Your EigenDA authentication keypair address should not be associated with any funds anywhere.
 
 - [EigenDA Proxy](#eigenda-proxy)
-- [TODO: update these badges](#todo-update-these-badges)
   - [Overview](#overview)
   - [Deployment Guide](#deployment-guide)
     - [Hardware Requirements](#hardware-requirements)
