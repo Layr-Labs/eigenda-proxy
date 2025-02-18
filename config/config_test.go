@@ -1,4 +1,4 @@
-package server
+package config
 
 import (
 	"testing"
@@ -12,12 +12,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func validCfg() *Config {
+func validCfg() *ProxyConfig {
 	maxBlobLengthBytes, err := common.ParseBytesAmount("2MiB")
 	if err != nil {
 		panic(err)
 	}
-	return &Config{
+	return &ProxyConfig{
 		EdaV1ClientConfig: clients.EigenDAClientConfig{
 			RPC:                          "http://localhost:8545",
 			StatusQueryRetryInterval:     5 * time.Second,
@@ -29,7 +29,7 @@ func validCfg() *Config {
 			PutBlobEncodingVersion:       0,
 			DisablePointVerificationMode: false,
 		},
-		VerifierConfig: verify.Config{
+		EdaV1VerifierConfig: verify.Config{
 			KzgConfig: &kzg.KzgConfig{
 				G1Path:         "path/to/g1",
 				G2PowerOf2Path: "path/to/g2",
@@ -63,8 +63,8 @@ func TestConfigVerification(t *testing.T) {
 			cfg := validCfg()
 			// cert verification only makes sense when memstore is disabled (we use eigenda as backend)
 			cfg.MemstoreEnabled = false
-			cfg.VerifierConfig.VerifyCerts = true
-			cfg.VerifierConfig.SvcManagerAddr = ""
+			cfg.EdaV1VerifierConfig.VerifyCerts = true
+			cfg.EdaV1VerifierConfig.SvcManagerAddr = ""
 
 			err := cfg.Check()
 			require.Error(t, err)
@@ -74,8 +74,8 @@ func TestConfigVerification(t *testing.T) {
 			cfg := validCfg()
 			// cert verification only makes sense when memstore is disabled (we use eigenda as backend)
 			cfg.MemstoreEnabled = false
-			cfg.VerifierConfig.VerifyCerts = true
-			cfg.VerifierConfig.RPCURL = ""
+			cfg.EdaV1VerifierConfig.VerifyCerts = true
+			cfg.EdaV1VerifierConfig.RPCURL = ""
 
 			err := cfg.Check()
 			require.Error(t, err)
@@ -84,7 +84,7 @@ func TestConfigVerification(t *testing.T) {
 		t.Run("CantDoCertVerificationWhenMemstoreEnabled", func(t *testing.T) {
 			cfg := validCfg()
 			cfg.MemstoreEnabled = true
-			cfg.VerifierConfig.VerifyCerts = true
+			cfg.EdaV1VerifierConfig.VerifyCerts = true
 
 			err := cfg.Check()
 			require.Error(t, err)
@@ -93,9 +93,9 @@ func TestConfigVerification(t *testing.T) {
 		t.Run("EigenDAClientFieldsAreDefaultSetWhenMemStoreEnabled", func(t *testing.T) {
 			cfg := validCfg()
 			cfg.MemstoreEnabled = true
-			cfg.VerifierConfig.VerifyCerts = false
-			cfg.VerifierConfig.RPCURL = ""
-			cfg.VerifierConfig.SvcManagerAddr = ""
+			cfg.EdaV1VerifierConfig.VerifyCerts = false
+			cfg.EdaV1VerifierConfig.RPCURL = ""
+			cfg.EdaV1VerifierConfig.SvcManagerAddr = ""
 
 			err := cfg.Check()
 			require.NoError(t, err)
@@ -106,8 +106,8 @@ func TestConfigVerification(t *testing.T) {
 		t.Run("FailWhenEigenDAClientFieldsAreUnsetAndMemStoreDisabled", func(t *testing.T) {
 			cfg := validCfg()
 			cfg.MemstoreEnabled = false
-			cfg.VerifierConfig.RPCURL = ""
-			cfg.VerifierConfig.SvcManagerAddr = ""
+			cfg.EdaV1VerifierConfig.RPCURL = ""
+			cfg.EdaV1VerifierConfig.SvcManagerAddr = ""
 
 			err := cfg.Check()
 			require.Error(t, err)

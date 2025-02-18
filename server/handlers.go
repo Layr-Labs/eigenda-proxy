@@ -101,7 +101,7 @@ func (svr *Server) handleGetOPGenericCommitment(w http.ResponseWriter, r *http.R
 func (svr *Server) handleGetShared(ctx context.Context, w http.ResponseWriter, comm []byte, meta commitments.CommitmentMeta) error {
 	commitmentHex := hex.EncodeToString(comm)
 	svr.log.Info("Processing GET request", "commitment", commitmentHex, "commitmentMeta", meta)
-	input, err := svr.sm.Get(ctx, comm, meta.Mode, meta.Version)
+	input, err := svr.sm.Get(ctx, comm, meta)
 	if err != nil {
 		err = MetaError{
 			Err:  fmt.Errorf("get request failed with commitment %v: %w", commitmentHex, err),
@@ -130,7 +130,7 @@ func (svr *Server) handlePostStdCommitment(w http.ResponseWriter, r *http.Reques
 		Version: commitments.CertV0,
 	}
 
-	if svr.cfg.EigenDAV2Enabled {
+	if svr.cfg.DisperseV2 {
 		commitmentMeta.Version = commitments.CertV1
 	}
 
@@ -170,7 +170,7 @@ func (svr *Server) handlePostOPGenericCommitment(w http.ResponseWriter, r *http.
 		Version: commitments.CertV0,
 	}
 
-	if svr.cfg.EigenDAV2Enabled {
+	if svr.cfg.DisperseV2 {
 		commitmentMeta.Version = commitments.CertV1
 	}
 

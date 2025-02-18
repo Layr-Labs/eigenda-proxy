@@ -5,7 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/Layr-Labs/eigenda-proxy/config"
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
+
 	proxy_logging "github.com/Layr-Labs/eigenda-proxy/logging"
+	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
@@ -28,7 +32,7 @@ func StartProxySvr(cliCtx *cli.Context) error {
 
 	log.Info("Starting EigenDA Proxy Server", "version", Version, "date", Date, "commit", Commit)
 
-	cfg := server.ReadCLIConfig(cliCtx)
+	cfg := config.ReadCLIConfig(cliCtx)
 	if err := cfg.Check(); err != nil {
 		return err
 	}
@@ -42,11 +46,18 @@ func StartProxySvr(cliCtx *cli.Context) error {
 	ctx, ctxCancel := context.WithCancel(cliCtx.Context)
 	defer ctxCancel()
 
-	sm, err := server.LoadStoreManager(ctx, cfg, log, m)
+	var memConfig *memstore.Config = &cfg.EigenDAConfig.MemstoreConfig
+	if !cfg.EigenDAConfig.MemstoreEnabled {
+		memConfig = nil
+	}
+
+	sm, err := store.NewBuilder(ctx, cfg.EigenDAConfig.StorageConfig,
+		cfg.EigenDAConfig.EdaV1VerifierConfig, cfg.EigenDAConfig.EdaV1ClientConfig,
+		cfg.EigenDAConfig.EdaV2ClientConfig, memConfig, log, m).BuildManager(ctx, cfg.EigenDAConfig.EdaV2ClientConfig.PutRetries)
 	if err != nil {
 		return fmt.Errorf("failed to create store: %w", err)
 	}
-	server := server.NewServer(&cfg.EigenDAConfig, sm, log, m)
+	server := server.NewServer(&cfg.EigenDAConfig.ServerConfig, sm, log, m)
 
 	if err := server.Start(); err != nil {
 		return fmt.Errorf("failed to start the DA server: %w", err)
@@ -63,8 +74,8 @@ func StartProxySvr(cliCtx *cli.Context) error {
 	}()
 
 	if cfg.MetricsCfg.Enabled {
-		log.Debug("starting metrics server", "addr", cfg.MetricsCfg.ListenAddr, "port", cfg.MetricsCfg.ListenPort)
-		svr, err := m.StartServer(cfg.MetricsCfg.ListenAddr, cfg.MetricsCfg.ListenPort)
+		log.Debug("starting metrics server", "addr", cfg.MetricsCfg.Host, "port", cfg.MetricsCfg.Port)
+		svr, err := m.StartServer(cfg.MetricsCfg.Host, cfg.MetricsCfg.Port)
 		if err != nil {
 			return fmt.Errorf("failed to start metrics server: %w", err)
 		}
@@ -83,7 +94,7 @@ func StartProxySvr(cliCtx *cli.Context) error {
 // TODO: we should probably just change EdaClientConfig struct definition in eigenda-client
 func prettyPrintConfig(cliCtx *cli.Context, log logging.Logger) error {
 	// we read a new config which we modify to hide private info in order to log the rest
-	cfg := server.ReadCLIConfig(cliCtx)
+	cfg := config.ReadCLIConfig(cliCtx)
 	if cfg.EigenDAConfig.EdaV1ClientConfig.SignerPrivateKeyHex != "" {
 		cfg.EigenDAConfig.EdaV1ClientConfig.SignerPrivateKeyHex = "*****" // marshaling defined in client config
 	}
