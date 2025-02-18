@@ -51,9 +51,9 @@ func StartProxySvr(cliCtx *cli.Context) error {
 		memConfig = nil
 	}
 
-	sm, err := store.NewStoreLoader(ctx, cfg.EigenDAConfig.StorageConfig,
+	sm, err := store.NewBuilder(ctx, cfg.EigenDAConfig.StorageConfig,
 		cfg.EigenDAConfig.EdaV1VerifierConfig, cfg.EigenDAConfig.EdaV1ClientConfig,
-		cfg.EigenDAConfig.EdaV2ClientConfig, memConfig, log, m).LoadManager(ctx, cfg.EigenDAConfig.EdaV2ClientConfig.PutRetries)
+		cfg.EigenDAConfig.EdaV2ClientConfig, memConfig, log, m).BuildManager(ctx, cfg.EigenDAConfig.EdaV2ClientConfig.PutRetries)
 	if err != nil {
 		return fmt.Errorf("failed to create store: %w", err)
 	}

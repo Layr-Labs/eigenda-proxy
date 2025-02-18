@@ -24,9 +24,9 @@ import (
 	geth_common "github.com/ethereum/go-ethereum/common"
 )
 
-// StoreLoader centralizes dependency initialization
+// Builder centralizes dependency initialization
 // It ensures proper typing and avoids redundant logic scattered across functions.
-type StoreLoader struct {
+type Builder struct {
 	ctx     context.Context
 	log     logging.Logger
 	metrics metrics.Metricer
@@ -40,16 +40,16 @@ type StoreLoader struct {
 	v2ClientCfg    common.V2ClientConfig
 }
 
-func NewStoreLoader(ctx context.Context, cfg Config,
+func NewBuilder(ctx context.Context, cfg Config,
 	v1VerifierCfg verify.Config,
 	v1EdaClientCfg clients.EigenDAClientConfig,
 	v2ClientCfg common.V2ClientConfig,
 	memConfig *memstore.Config,
-	log logging.Logger, metrics metrics.Metricer) *StoreLoader {
-	return &StoreLoader{ctx, log, metrics, memConfig, cfg, v1VerifierCfg, v1EdaClientCfg, v2ClientCfg}
+	log logging.Logger, metrics metrics.Metricer) *Builder {
+	return &Builder{ctx, log, metrics, memConfig, cfg, v1VerifierCfg, v1EdaClientCfg, v2ClientCfg}
 }
 
-func (d *StoreLoader) loadSecondaries(targets []string, s3Store common.PrecomputedKeyStore, redisStore *redis.Store) []common.PrecomputedKeyStore {
+func (d *Builder) BuildSecondaries(targets []string, s3Store common.PrecomputedKeyStore, redisStore *redis.Store) []common.PrecomputedKeyStore {
 	stores := make([]common.PrecomputedKeyStore, len(targets))
 
 	for i, target := range targets {
@@ -71,7 +71,7 @@ func (d *StoreLoader) loadSecondaries(targets []string, s3Store common.Precomput
 	return stores
 }
 
-func (d *StoreLoader) loadEigenDAV2Store() (*eigendav2.Store, error) {
+func (d *Builder) BuildEigenDAV2Backend() (*eigendav2.Store, error) {
 	gethCfg := geth.EthClientConfig{
 		RPCURLs: []string{d.v1EdaClientCfg.EthRpcUrl},
 	}
@@ -126,7 +126,7 @@ func (d *StoreLoader) loadEigenDAV2Store() (*eigendav2.Store, error) {
 	}, disperser, retriever, verifier)
 }
 
-func (d *StoreLoader) loadEigenDAV1Store(ctx context.Context, putRetries uint) (common.GeneratedKeyStore, error) {
+func (d *Builder) BuildEigenDAV1Backend(ctx context.Context, putRetries uint) (common.GeneratedKeyStore, error) {
 	verifier, err := verify.NewVerifier(&d.v1VerifierCfg, d.log)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create verifier: %w", err)
@@ -167,7 +167,7 @@ func (d *StoreLoader) loadEigenDAV1Store(ctx context.Context, putRetries uint) (
 	return eigenDA, nil
 }
 
-func (d *StoreLoader) LoadManager(ctx context.Context, putRetries uint) (IManager, error) {
+func (d *Builder) BuildManager(ctx context.Context, putRetries uint) (IManager, error) {
 	var err error
 	var s3Store *s3.Store
 	var redisStore *redis.Store
@@ -193,16 +193,16 @@ func (d *StoreLoader) LoadManager(ctx context.Context, putRetries uint) (IManage
 	}
 
 	if d.v2ClientCfg.Enabled {
-		eigenDAV2Store, err = d.loadEigenDAV2Store()
+		eigenDAV2Store, err = d.BuildEigenDAV2Backend()
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	eigenDAV1Store, err = d.loadEigenDAV1Store(ctx, putRetries)
+	eigenDAV1Store, err = d.BuildEigenDAV1Backend(ctx, putRetries)
 
-	fallbacks := d.loadSecondaries(d.managerCfg.FallbackTargets, s3Store, redisStore)
-	caches := d.loadSecondaries(d.managerCfg.CacheTargets, s3Store, redisStore)
+	fallbacks := d.BuildSecondaries(d.managerCfg.FallbackTargets, s3Store, redisStore)
+	caches := d.BuildSecondaries(d.managerCfg.CacheTargets, s3Store, redisStore)
 	secondary := NewSecondaryManager(d.log, d.metrics, caches, fallbacks)
 
 	if secondary.Enabled() { // only spin-up go routines if secondary storage is enabled
