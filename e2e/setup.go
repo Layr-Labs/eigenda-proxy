@@ -267,6 +267,7 @@ func CreateTestSuite(testSuiteCfg config.AppConfig) (TestSuite, func()) {
 		testSuiteCfg.EigenDAConfig.EdaV1VerifierConfig,
 		testSuiteCfg.EigenDAConfig.EdaV1ClientConfig,
 		testSuiteCfg.EigenDAConfig.EdaV2ClientConfig,
+		testSuiteCfg.EigenDAConfig.MemstoreConfig,
 		log, m).BuildManager(ctx, testSuiteCfg.EigenDAConfig.PutRetries, testSuiteCfg.EigenDAConfig.MaxBlobSizeBytes)
 	if err != nil {
 		panic(err)
