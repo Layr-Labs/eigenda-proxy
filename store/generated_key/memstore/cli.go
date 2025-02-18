@@ -5,15 +5,17 @@ import (
 	"os"
 	"time"
 
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
 	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
 	"github.com/urfave/cli/v2"
 )
 
 var (
-	EnabledFlagName    = withFlagPrefix("enabled")
-	ExpirationFlagName = withFlagPrefix("expiration")
-	PutLatencyFlagName = withFlagPrefix("put-latency")
-	GetLatencyFlagName = withFlagPrefix("get-latency")
+	EnabledFlagName                 = withFlagPrefix("enabled")
+	ExpirationFlagName              = withFlagPrefix("expiration")
+	PutLatencyFlagName              = withFlagPrefix("put-latency")
+	GetLatencyFlagName              = withFlagPrefix("get-latency")
+	PutReturnsFailoverErrorFlagName = withFlagPrefix("put-returns-failover-error")
 )
 
 func withFlagPrefix(s string) string {
@@ -39,12 +41,20 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Usage:    "Whether to use memstore for DA logic.",
 			EnvVars:  []string{withEnvPrefix(envPrefix, "ENABLED"), withDeprecatedEnvPrefix(envPrefix, "ENABLED")},
 			Category: category,
-			Action: func(_ *cli.Context, _ bool) error {
+			Action: func(ctx *cli.Context, enabled bool) error {
 				if _, ok := os.LookupEnv(withDeprecatedEnvPrefix(envPrefix, "ENABLED")); ok {
 					return fmt.Errorf("env var %s is deprecated for flag %s, use %s instead",
 						withDeprecatedEnvPrefix(envPrefix, "ENABLED"),
 						EnabledFlagName,
 						withEnvPrefix(envPrefix, "ENABLED"))
+				}
+				if enabled {
+					// If memstore is enabled, we disable cert verification,
+					// because memstore generates some meaningless certs.
+					err := ctx.Set(verify.CertVerificationDisabledFlagName, "true")
+					if err != nil {
+						return fmt.Errorf("failed to set %s: %w", verify.CertVerificationDisabledFlagName, err)
+					}
 				}
 				return nil
 			},
@@ -79,18 +89,27 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			EnvVars:  []string{withEnvPrefix(envPrefix, "GET_LATENCY")},
 			Category: category,
 		},
+		&cli.BoolFlag{
+			Name:     PutReturnsFailoverErrorFlagName,
+			Usage:    fmt.Sprintf("When true, Put requests will return a failover error, after sleeping for --%s duration.", PutLatencyFlagName),
+			Value:    false,
+			EnvVars:  []string{withEnvPrefix(envPrefix, "PUT_RETURNS_FAILOVER_ERROR")},
+			Category: category,
+		},
 	}
 }
 
-func ReadConfig(ctx *cli.Context) Config {
-	return Config{
-		// TODO: there has to be a better way to get MaxBlobLengthBytes
-		// right now we get it from the verifier cli, but there's probably a way to share flags more nicely?
-		// maybe use a duplicate but hidden flag in memstore category, and set it using the action by reading
-		// from the other flag?
-		MaxBlobSizeBytes: verify.MaxBlobLengthBytes,
-		BlobExpiration:   ctx.Duration(ExpirationFlagName),
-		PutLatency:       ctx.Duration(PutLatencyFlagName),
-		GetLatency:       ctx.Duration(GetLatencyFlagName),
-	}
+func ReadConfig(ctx *cli.Context) *memconfig.SafeConfig {
+	return memconfig.NewSafeConfig(
+		memconfig.Config{
+			// TODO: there has to be a better way to get MaxBlobLengthBytes
+			// right now we get it from the verifier cli, but there's probably a way to share flags more nicely?
+			// maybe use a duplicate but hidden flag in memstore category, and set it using the action by reading
+			// from the other flag?
+			MaxBlobSizeBytes:        verify.MaxBlobLengthBytes,
+			BlobExpiration:          ctx.Duration(ExpirationFlagName),
+			PutLatency:              ctx.Duration(PutLatencyFlagName),
+			GetLatency:              ctx.Duration(GetLatencyFlagName),
+			PutReturnsFailoverError: ctx.Bool(PutReturnsFailoverErrorFlagName),
+		})
 }

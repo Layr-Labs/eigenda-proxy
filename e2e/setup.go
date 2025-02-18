@@ -13,7 +13,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/server"
 	"github.com/Layr-Labs/eigenda-proxy/store"
-	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
@@ -21,6 +21,7 @@ import (
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/gorilla/mux"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"golang.org/x/exp/rand"
@@ -208,11 +209,10 @@ func TestSuiteConfig(testCfg *Cfg) config.AppConfig {
 			},
 		},
 		MemstoreEnabled: testCfg.UseMemory,
-		MemstoreConfig: memstore.Config{
+		MemstoreConfig: memconfig.NewSafeConfig(memconfig.Config{
 			BlobExpiration:   testCfg.Expiration,
 			MaxBlobSizeBytes: maxBlobLengthBytes,
-		},
-
+		}),
 		StorageConfig: store.Config{
 			AsyncPutWorkers: testCfg.WriteThreadCount,
 		},
@@ -275,7 +275,9 @@ func CreateTestSuite(testSuiteCfg config.AppConfig) (TestSuite, func()) {
 	proxySvr := server.NewServer(&testSuiteCfg.EigenDAConfig.ServerConfig, sm, log, m)
 
 	log.Info("Starting proxy server...")
-	err = proxySvr.Start()
+	r := mux.NewRouter()
+	proxySvr.RegisterRoutes(r)
+	err = proxySvr.Start(r)
 	if err != nil {
 		panic(err)
 	}

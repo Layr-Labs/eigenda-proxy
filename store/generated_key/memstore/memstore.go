@@ -3,6 +3,7 @@ package memstore
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -11,7 +12,9 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
 	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
+	"github.com/Layr-Labs/eigenda/api"
 	"github.com/Layr-Labs/eigenda/api/clients/codecs"
 	eigenda_common "github.com/Layr-Labs/eigenda/api/grpc/common"
 	"github.com/Layr-Labs/eigenda/api/grpc/disperser"
@@ -24,28 +27,26 @@ const (
 	BytesPerFieldElement = 32
 )
 
-type Config struct {
-	MaxBlobSizeBytes uint64
-	BlobExpiration   time.Duration
-	// artificial latency added for memstore backend to mimic eigenda's latency
-	PutLatency time.Duration
-	GetLatency time.Duration
-}
-
 /*
 MemStore is a simple in-memory store for blobs which uses an expiration
 time to evict blobs to best emulate the ephemeral nature of blobs dispersed to
 EigenDA operators.
 */
 type MemStore struct {
-	sync.RWMutex
+	// We use a SafeConfig because it is shared with the MemStore api
+	// which can change its values concurrently.
+	config *memconfig.SafeConfig
+	log    logging.Logger
 
-	config    Config
-	log       logging.Logger
+	// mu protects keyStarts and store (and verifier??)
+	mu        sync.RWMutex
 	keyStarts map[string]time.Time
 	store     map[string][]byte
-	verifier  *verify.Verifier
-	codec     codecs.BlobCodec
+	// We only use the verifier for kzgCommitment verification.
+	// MemStore generates random certs which can't be verified.
+	// TODO: we should probably refactor the Verifier to be able to only take in a BlobVerifier here.
+	verifier *verify.Verifier
+	codec    codecs.BlobCodec
 
 	reads int
 }
@@ -54,7 +55,7 @@ var _ common.GeneratedKeyStore = (*MemStore)(nil)
 
 // New ... constructor
 func New(
-	ctx context.Context, verifier *verify.Verifier, log logging.Logger, config Config,
+	ctx context.Context, verifier *verify.Verifier, log logging.Logger, config *memconfig.SafeConfig,
 ) (*MemStore, error) {
 	store := &MemStore{
 		log:       log,
@@ -65,7 +66,7 @@ func New(
 		codec:     codecs.NewIFFTCodec(codecs.NewDefaultBlobCodec()),
 	}
 
-	if store.config.BlobExpiration != 0 {
+	if store.config.BlobExpiration() != 0 {
 		log.Info("memstore expiration enabled", "time", store.config.BlobExpiration)
 		go store.pruningLoop(ctx)
 	}
@@ -90,11 +91,11 @@ func (e *MemStore) pruningLoop(ctx context.Context) {
 
 // pruneExpired ... removes expired blobs from the store based on the expiration time.
 func (e *MemStore) pruneExpired() {
-	e.Lock()
-	defer e.Unlock()
+	e.mu.Lock()
+	defer e.mu.Unlock()
 
 	for commit, dur := range e.keyStarts {
-		if time.Since(dur) >= e.config.BlobExpiration {
+		if time.Since(dur) >= e.config.BlobExpiration() {
 			delete(e.keyStarts, commit)
 			delete(e.store, commit)
 
@@ -105,10 +106,10 @@ func (e *MemStore) pruneExpired() {
 
 // Get fetches a value from the store.
 func (e *MemStore) Get(_ context.Context, commit []byte) ([]byte, error) {
-	time.Sleep(e.config.GetLatency)
+	time.Sleep(e.config.LatencyGETRoute())
 	e.reads++
-	e.RLock()
-	defer e.RUnlock()
+	e.mu.RLock()
+	defer e.mu.RUnlock()
 
 	var cert verify.Certificate
 	err := rlp.DecodeBytes(commit, &cert)
@@ -133,18 +134,21 @@ func (e *MemStore) Get(_ context.Context, commit []byte) ([]byte, error) {
 
 // Put inserts a value into the store.
 func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
-	time.Sleep(e.config.PutLatency)
+	time.Sleep(e.config.LatencyPUTRoute())
+	if e.config.PutReturnsFailoverError() {
+		return nil, api.NewErrorFailover(errors.New("memstore in failover simulation mode"))
+	}
 	encodedVal, err := e.codec.EncodeBlob(value)
 	if err != nil {
 		return nil, err
 	}
 
-	if uint64(len(encodedVal)) > e.config.MaxBlobSizeBytes {
-		return nil, fmt.Errorf("%w: blob length %d, max blob size %d", common.ErrProxyOversizedBlob, len(value), e.config.MaxBlobSizeBytes)
+	if uint64(len(encodedVal)) > e.config.MaxBlobSizeBytes() {
+		return nil, fmt.Errorf("%w: blob length %d, max blob size %d", common.ErrProxyOversizedBlob, len(value), e.config.MaxBlobSizeBytes())
 	}
 
-	e.Lock()
-	defer e.Unlock()
+	e.mu.Lock()
+	defer e.mu.Unlock()
 
 	commitment, err := e.verifier.Commit(encodedVal)
 	if err != nil {

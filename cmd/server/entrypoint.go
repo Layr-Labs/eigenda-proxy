@@ -6,11 +6,12 @@ import (
 	"fmt"
 
 	"github.com/Layr-Labs/eigenda-proxy/config"
-	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 
 	proxy_logging "github.com/Layr-Labs/eigenda-proxy/logging"
 	"github.com/Layr-Labs/eigenda-proxy/store"
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
 	"github.com/Layr-Labs/eigensdk-go/logging"
+	"github.com/gorilla/mux"
 
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/server"
@@ -46,7 +47,7 @@ func StartProxySvr(cliCtx *cli.Context) error {
 	ctx, ctxCancel := context.WithCancel(cliCtx.Context)
 	defer ctxCancel()
 
-	var memConfig *memstore.Config = &cfg.EigenDAConfig.MemstoreConfig
+	var memConfig *memconfig.Config = cfg.EigenDAConfig.MemstoreConfig
 	if !cfg.EigenDAConfig.MemstoreEnabled {
 		memConfig = nil
 	}
@@ -57,9 +58,15 @@ func StartProxySvr(cliCtx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create store: %w", err)
 	}
-	server := server.NewServer(&cfg.EigenDAConfig.ServerConfig, sm, log, m)
 
-	if err := server.Start(); err != nil {
+	server := server.NewServer(&cfg.EigenDAConfig.ServerConfig, sm, log, m)
+	r := mux.NewRouter()
+	server.RegisterRoutes(r)
+	if cfg.EigenDAConfig.MemstoreEnabled {
+		memconfig.NewHandlerHTTP(log, cfg.EigenDAConfig.MemstoreConfig).RegisterMemstoreConfigHandlers(r)
+	}
+
+	if err := server.Start(r); err != nil {
 		return fmt.Errorf("failed to start the DA server: %w", err)
 	}
 

@@ -57,7 +57,7 @@ In order to disperse to the EigenDA network in production, or at high throughput
     - [E2E Fuzz](#e2e-fuzz)
     - [Holesky](#holesky)
   - [Metrics](#metrics)
-  - [Flags](#flags)
+  - [Flags and Env Vars](#flags-and-env-vars)
   - [Resources](#resources)
 
 
@@ -152,10 +152,12 @@ To target this feature, use the CLI flags `--eigenda-svc-manager-addr`, `--eigen
 
 #### Soft Confirmations
 
-An optional `--eigenda-eth-confirmation-depth` flag can be provided to specify a number of ETH block confirmations to wait before verifying the blob certificate. This allows for blobs to be accredited upon `confirmation` versus waiting (e.g, 25-30m) for `finalization`. The following integer expressions are supported:
-`-1`: Wait for blob finalization
-`0`: Verify the cert immediately upon blob confirmation and return the blob
-`N where N>0`: Wait `N` blocks before verifying the cert and returning the blob
+An optional `--eigenda.confirmation-depth` flag can be provided to specify a number of ETH block confirmations to wait for the confirmBatch to have landed onchain before returning the cert to the batcher after having dispersed a blob in the put route. The flag value can either be the string 'finalized' or a number:
+`finalized`: Wait for the confirmBatch transaction to be finalized on-chain before returning the cert to the batcher
+`0`: Verify the cert immediately upon blob confirmation and return the cert
+`N where 0<N<64`: Wait `N` blocks before returning the cert to the batcher
+
+The default value is 8. Using 0 is dangerous: see [troubleshooting the batch-hash-mismatch error](./docs/troubleshooting_v1.md#batch-hash-mismatch-error).
 
 ### In-Memory Backend
 
@@ -248,8 +250,9 @@ To the see list of available metrics, run `./bin/eigenda-proxy doc metrics`
 
 To quickly set up monitoring dashboard, add eigenda-proxy metrics endpoint to a reachable prometheus server config as a scrape target, add prometheus datasource to Grafana to, and import the existing [Grafana dashboard JSON file](./grafana_dashboard.json)
 
-## Flags
+## Flags and Env Vars
 
+<<<<<<< HEAD
 > Note: this list is hand-crafted and is very likely to be out of date. 
 > 
 > To get a list of exact flags available with a given version, run `eigenda-proxy --help`
@@ -303,6 +306,9 @@ To quickly set up monitoring dashboard, add eigenda-proxy metrics endpoint to a 
 | `--redis.eviction`                          | `24h0m0s`                       | `$EIGENDA_PROXY_REDIS_EVICTION`                          | entry eviction/expiration time                                                                                                                                                                                |
 | `--help, -h`                                | `false`                         |                                                          | Show help.                                                                                                                                                                                                    |
 | `--version, -v`                             | `false`                         |                                                          | Print the version.                                                                                                                                                                                            |
+=======
+To get a list of exact flags and env vars available to configure a given version of eigenda-proxy, run `eigenda-proxy --help`.
+>>>>>>> daf39e2c93ffebc997fb0a545167aea07367a8a0
 
 ## Resources
 

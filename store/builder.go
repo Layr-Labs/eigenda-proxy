@@ -10,6 +10,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/eigenda"
 	eigendav2 "github.com/Layr-Labs/eigenda-proxy/store/generated_key/eigenda_v2"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
@@ -31,7 +32,7 @@ type Builder struct {
 	log     logging.Logger
 	metrics metrics.Metricer
 
-	memConfig *memstore.Config
+	memConfig *memconfig.Config
 
 	// configs
 	managerCfg     Config
@@ -44,7 +45,7 @@ func NewBuilder(ctx context.Context, cfg Config,
 	v1VerifierCfg verify.Config,
 	v1EdaClientCfg clients.EigenDAClientConfig,
 	v2ClientCfg common.V2ClientConfig,
-	memConfig *memstore.Config,
+	memConfig *memconfig.Config,
 	log logging.Logger, metrics metrics.Metricer) *Builder {
 	return &Builder{ctx, log, metrics, memConfig, cfg, v1VerifierCfg, v1EdaClientCfg, v2ClientCfg}
 }
@@ -141,7 +142,7 @@ func (d *Builder) BuildEigenDAV1Backend(ctx context.Context, putRetries uint) (c
 	var eigenDA common.GeneratedKeyStore
 	if d.memConfig != nil {
 		d.log.Info("Using memstore backend for EigenDA")
-		eigenDA, err = memstore.New(ctx, verifier, d.log, *d.memConfig)
+		eigenDA, err = memstore.New(ctx, verifier, d.log, memconfig.NewSafeConfig(*d.memConfig))
 	} else {
 		// EigenDAV1 backend dependency injection
 		var client *clients.EigenDAClient
