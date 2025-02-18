@@ -178,6 +178,7 @@ func ReadConfig(ctx *cli.Context) common.V2ClientConfig {
 		DisperserClientCfg: readDisperserCfg(ctx),
 		PayloadClientCfg:   readPayloadDisperserCfg(ctx),
 		RetrievalConfig:    readRetrievalConfig(ctx),
+		EthRPC:             ctx.String(EthRPCURLFlagName),
 		PutRetries:         ctx.Uint(PutRetriesFlagName),
 	}
 }

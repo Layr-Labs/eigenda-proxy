@@ -14,6 +14,7 @@ type V2ClientConfig struct {
 	PayloadClientCfg      clients_v2.PayloadDisperserConfig
 	RetrievalConfig       clients_v2.RelayPayloadRetrieverConfig
 	ServiceManagerAddress string
+	EthRPC                string
 	PutRetries            uint
 }
 

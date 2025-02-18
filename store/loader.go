@@ -16,7 +16,6 @@ import (
 	"github.com/Layr-Labs/eigenda/api/clients"
 	clients_v2 "github.com/Layr-Labs/eigenda/api/clients/v2"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
-	"github.com/rs/zerolog/log"
 
 	"github.com/Layr-Labs/eigenda/common/geth"
 	eigenda_eth "github.com/Layr-Labs/eigenda/core/eth"
@@ -127,26 +126,26 @@ func (d *StoreLoader) loadEigenDAV2Store() (*eigendav2.Store, error) {
 	}, disperser, retriever, verifier)
 }
 
-func (d *StoreLoader) loadEigenDAV1Store(ctx context.Context, putRetries uint) (*eigenda.Store, error) {
+func (d *StoreLoader) loadEigenDAV1Store(ctx context.Context, putRetries uint) (common.GeneratedKeyStore, error) {
 	verifier, err := verify.NewVerifier(&d.v1VerifierCfg, d.log)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create verifier: %w", err)
 	}
 
 	if d.v1VerifierCfg.VerifyCerts {
-		log.Info("Certificate verification with Ethereum enabled")
+		d.log.Info("Certificate verification with Ethereum enabled")
 	} else {
-		log.Warn("Verification disabled")
+		d.log.Warn("Verification disabled")
 	}
 	// create EigenDA backend store
 	var eigenDA common.GeneratedKeyStore
 	if d.memConfig != nil {
-		log.Info("Using memstore backend for EigenDA")
+		d.log.Info("Using memstore backend for EigenDA")
 		eigenDA, err = memstore.New(ctx, verifier, d.log, *d.memConfig)
 	} else {
 		// EigenDAV1 backend dependency injection
 		var client *clients.EigenDAClient
-		log.Warn("Using EigenDA backend.. This backend type will be deprecated soon. Please migrate to V2.")
+		d.log.Warn("Using EigenDA backend.. This backend type will be deprecated soon. Please migrate to V2.")
 		client, err = clients.NewEigenDAClient(d.log, d.v1EdaClientCfg)
 		if err != nil {
 			return nil, err
@@ -173,7 +172,7 @@ func (d *StoreLoader) LoadManager(ctx context.Context, putRetries uint) (IManage
 	var s3Store *s3.Store
 	var redisStore *redis.Store
 	var eigenDAV2Store *eigendav2.Store
-	var eigenDAV1Store *eigenda.Store
+	var eigenDAV1Store common.GeneratedKeyStore
 
 	if d.managerCfg.S3Config.Bucket != "" {
 		d.log.Info("Using S3 backend")
@@ -207,14 +206,14 @@ func (d *StoreLoader) LoadManager(ctx context.Context, putRetries uint) (IManage
 	secondary := NewSecondaryManager(d.log, d.metrics, caches, fallbacks)
 
 	if secondary.Enabled() { // only spin-up go routines if secondary storage is enabled
-		log.Debug("Starting secondary write loop(s)", "count", d.managerCfg.AsyncPutWorkers)
+		d.log.Debug("Starting secondary write loop(s)", "count", d.managerCfg.AsyncPutWorkers)
 
 		for i := 0; i < d.managerCfg.AsyncPutWorkers; i++ {
 			go secondary.WriteSubscriptionLoop(ctx)
 		}
 	}
 
-	log.Info("Created storage backends",
+	d.log.Info("Created storage backends",
 		"eigenda_v1", eigenDAV1Store != nil,
 		"eigenda_v2", eigenDAV2Store != nil,
 		"s3", s3Store != nil,

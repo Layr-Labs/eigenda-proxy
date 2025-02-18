@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/Layr-Labs/eigenda-proxy/config"
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 
 	proxy_logging "github.com/Layr-Labs/eigenda-proxy/logging"
 	"github.com/Layr-Labs/eigenda-proxy/store"
@@ -45,9 +46,14 @@ func StartProxySvr(cliCtx *cli.Context) error {
 	ctx, ctxCancel := context.WithCancel(cliCtx.Context)
 	defer ctxCancel()
 
+	var memConfig *memstore.Config = &cfg.EigenDAConfig.MemstoreConfig
+	if !cfg.EigenDAConfig.MemstoreEnabled {
+		memConfig = nil
+	}
+
 	sm, err := store.NewStoreLoader(ctx, cfg.EigenDAConfig.StorageConfig,
 		cfg.EigenDAConfig.EdaV1VerifierConfig, cfg.EigenDAConfig.EdaV1ClientConfig,
-		cfg.EigenDAConfig.EdaV2ClientConfig, log, m).LoadManager()
+		cfg.EigenDAConfig.EdaV2ClientConfig, memConfig, log, m).LoadManager(ctx, cfg.EigenDAConfig.EdaV2ClientConfig.PutRetries)
 	if err != nil {
 		return fmt.Errorf("failed to create store: %w", err)
 	}

@@ -40,7 +40,7 @@ func ReadCLIConfig(ctx *cli.Context) AppConfig {
 	}
 }
 
-// ProxyConfig ... Higher order config which bundles all configs for instrumenting
+// ProxyConfig ... Higher order config which bundles all configs for orchestrating
 // the proxy server with necessary client context
 type ProxyConfig struct {
 	ServerConfig        server.Config
@@ -53,6 +53,9 @@ type ProxyConfig struct {
 	StorageConfig  store.Config
 	PutRetries     uint
 
+	// TODO: Build support for V2 memstore implementation
+	// currently setting to true would emulate V1 EigenDA
+	// backend interactions but not V2
 	MemstoreEnabled bool
 
 	EigenDAV2Enabled bool
@@ -89,25 +92,20 @@ func ReadProxyConfig(ctx *cli.Context) ProxyConfig {
 
 // Check ... verifies that configuration values are adequately set
 func (cfg *ProxyConfig) Check() error {
-	if !cfg.MemstoreEnabled {
-		if cfg.EdaV1ClientConfig.RPC == "" {
-			return fmt.Errorf("using eigenda backend (memstore.enabled=false) but eigenda disperser rpc url is not set")
-		}
-	}
-
 	// provide dummy values to eigenda client config. Since the client won't be called in this
 	// mode it doesn't matter.
 	if cfg.MemstoreEnabled {
 		cfg.EdaV1ClientConfig.SvcManagerAddr = "0x0000000000000000000000000000000000000000"
 		cfg.EdaV1ClientConfig.EthRpcUrl = "http://0.0.0.0:666"
-	}
-
-	if !cfg.MemstoreEnabled {
+	} else {
 		if cfg.EdaV1ClientConfig.SvcManagerAddr == "" {
 			return fmt.Errorf("service manager address is required for communication with EigenDA")
 		}
 		if cfg.EdaV1ClientConfig.EthRpcUrl == "" {
 			return fmt.Errorf("eth prc url is required for communication with EigenDA")
+		}
+		if cfg.EdaV1ClientConfig.RPC == "" {
+			return fmt.Errorf("using eigenda backend (memstore.enabled=false) but eigenda disperser rpc url is not set")
 		}
 	}
 
@@ -128,15 +126,15 @@ func (cfg *ProxyConfig) Check() error {
 	// V2 dispersal/retrieval enabled
 	if cfg.EigenDAV2Enabled {
 
-		if cfg.EdaV1ClientConfig.SvcManagerAddr == "" {
+		if cfg.EdaV2ClientConfig.ServiceManagerAddress == "" {
 			return fmt.Errorf("service manager address is required for interacting with EigenDA V2")
 		}
 
-		if cfg.EdaV1ClientConfig.EthRpcUrl == "" {
+		if cfg.EdaV2ClientConfig.EthRPC == "" {
 			return fmt.Errorf("eth rpc is required for interacting with EigenDA V2")
 		}
 
-		if cfg.EdaV2ClientConfig.ServiceManagerAddress == "" {
+		if cfg.EdaV2ClientConfig.PayloadClientCfg.EigenDACertVerifierAddr == "" {
 			return fmt.Errorf("cert verifier contract address is required for interacting with EigenDA V2")
 		}
 	}
