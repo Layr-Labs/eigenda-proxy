@@ -202,7 +202,7 @@ func ReadConfig(ctx *cli.Context) common.V2ClientConfig {
 func readPayloadClientConfig(ctx *cli.Context) v2_clients.PayloadClientConfig {
 	polyForm := codecs.PolynomialFormEval
 
-	// if point evaluation mode is disabled then blob is treated as evaluations and
+	// if point evaluation mode is disabled then blob is treated as coefficients and
 	// not iFFT'd before dispersal and FFT'd on retrieval
 	if ctx.Bool(PointEvaluationDisabledFlagName) {
 		polyForm = codecs.PolynomialFormCoeff

@@ -50,9 +50,9 @@ func NewBuilder(ctx context.Context, cfg Config,
 	return &Builder{ctx, log, metrics, memConfig, cfg, v1VerifierCfg, v1EdaClientCfg, v2ClientCfg}
 }
 
-// BuildSecondaries ... Creates a slice of secondary targets used for either read
+// buildSecondaries ... Creates a slice of secondary targets used for either read
 // failover or caching
-func (d *Builder) BuildSecondaries(targets []string, s3Store common.PrecomputedKeyStore, redisStore *redis.Store) []common.PrecomputedKeyStore {
+func (d *Builder) buildSecondaries(targets []string, s3Store common.PrecomputedKeyStore, redisStore *redis.Store) []common.PrecomputedKeyStore {
 	stores := make([]common.PrecomputedKeyStore, len(targets))
 
 	for i, target := range targets {
@@ -74,8 +74,8 @@ func (d *Builder) BuildSecondaries(targets []string, s3Store common.PrecomputedK
 	return stores
 }
 
-// BuildEigenDAV2Backend ... Builds EigenDA V2 storage backend
-func (d *Builder) BuildEigenDAV2Backend(maxBlobSizeBytes uint) (*eigendav2.Store, error) {
+// buildEigenDAV2Backend ... Builds EigenDA V2 storage backend
+func (d *Builder) buildEigenDAV2Backend(maxBlobSizeBytes uint) (*eigendav2.Store, error) {
 	gethCfg := geth.EthClientConfig{
 		RPCURLs: []string{d.v1EdaClientCfg.EthRpcUrl},
 	}
@@ -136,8 +136,8 @@ func (d *Builder) BuildEigenDAV2Backend(maxBlobSizeBytes uint) (*eigendav2.Store
 	}, disperser, retriever, verifier)
 }
 
-// BuildEigenDAV1Backend ... Builds EigenDA V1 storage backend
-func (d *Builder) BuildEigenDAV1Backend(ctx context.Context, putRetries uint, maxBlobSize uint) (common.GeneratedKeyStore, error) {
+// buildEigenDAV1Backend ... Builds EigenDA V1 storage backend
+func (d *Builder) buildEigenDAV1Backend(ctx context.Context, putRetries uint, maxBlobSize uint) (common.GeneratedKeyStore, error) {
 	verifier, err := verify.NewVerifier(&d.v1VerifierCfg, d.log)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create verifier: %w", err)
@@ -206,16 +206,16 @@ func (d *Builder) BuildManager(ctx context.Context, putRetries uint, maxBlobSize
 
 	if d.v2ClientCfg.Enabled {
 		d.log.Debug("Using EigenDA V2 storage backend")
-		eigenDAV2Store, err = d.BuildEigenDAV2Backend(maxBlobSize)
+		eigenDAV2Store, err = d.buildEigenDAV2Backend(maxBlobSize)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	eigenDAV1Store, err = d.BuildEigenDAV1Backend(ctx, putRetries, maxBlobSize)
+	eigenDAV1Store, err = d.buildEigenDAV1Backend(ctx, putRetries, maxBlobSize)
 
-	fallbacks := d.BuildSecondaries(d.managerCfg.FallbackTargets, s3Store, redisStore)
-	caches := d.BuildSecondaries(d.managerCfg.CacheTargets, s3Store, redisStore)
+	fallbacks := d.buildSecondaries(d.managerCfg.FallbackTargets, s3Store, redisStore)
+	caches := d.buildSecondaries(d.managerCfg.CacheTargets, s3Store, redisStore)
 	secondary := NewSecondaryManager(d.log, d.metrics, caches, fallbacks)
 
 	if secondary.Enabled() { // only spin-up go routines if secondary storage is enabled
