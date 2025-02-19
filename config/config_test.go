@@ -18,7 +18,7 @@ func validCfg() *ProxyConfig {
 	if err != nil {
 		panic(err)
 	}
-	pc := &ProxyConfig{
+	proxyCfg := &ProxyConfig{
 		EdaV1ClientConfig: clients.EigenDAClientConfig{
 			RPC:                          "http://localhost:8545",
 			StatusQueryRetryInterval:     5 * time.Second,
@@ -62,8 +62,8 @@ func validCfg() *ProxyConfig {
 		EigenDAV2Enabled: true,
 	}
 
-	pc.EdaV2ClientConfig.PayloadClientCfg.EigenDACertVerifierAddr = "0x0000000000032443134"
-	return pc
+	proxyCfg.EdaV2ClientConfig.PayloadClientCfg.EigenDACertVerifierAddr = "0x0000000000032443134"
+	return proxyCfg
 }
 
 func TestConfigVerification(t *testing.T) {
