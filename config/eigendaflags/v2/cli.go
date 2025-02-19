@@ -61,7 +61,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		},
 		&cli.BoolFlag{
 			Name:     DisableTLSFlagName,
-			Usage:    "Disable TLS for gRPC communication with the EigenDA disperser and retrieval subnet. Default is false.",
+			Usage:    "Disable TLS for gRPC communication with the EigenDA disperser and retrieval subnet.",
 			Value:    false,
 			EnvVars:  []string{withEnvPrefix(envPrefix, "GRPC_DISABLE_TLS")},
 			Category: category,
