@@ -50,7 +50,9 @@ func NewBuilder(ctx context.Context, cfg Config,
 	return &Builder{ctx, log, metrics, memConfig, cfg, v1VerifierCfg, v1EdaClientCfg, v2ClientCfg}
 }
 
-func (d *Builder) BuildSecondaries(targets []string, s3Store common.PrecomputedKeyStore, redisStore *redis.Store) []common.PrecomputedKeyStore {
+// buildSecondaries ... Creates a slice of secondary targets used for either read
+// failover or caching
+func (d *Builder) buildSecondaries(targets []string, s3Store common.PrecomputedKeyStore, redisStore *redis.Store) []common.PrecomputedKeyStore {
 	stores := make([]common.PrecomputedKeyStore, len(targets))
 
 	for i, target := range targets {
@@ -72,7 +74,8 @@ func (d *Builder) BuildSecondaries(targets []string, s3Store common.PrecomputedK
 	return stores
 }
 
-func (d *Builder) BuildEigenDAV2Backend() (*eigendav2.Store, error) {
+// buildEigenDAV2Backend ... Builds EigenDA V2 storage backend
+func (d *Builder) buildEigenDAV2Backend(maxBlobSizeBytes uint) (*eigendav2.Store, error) {
 	gethCfg := geth.EthClientConfig{
 		RPCURLs: []string{d.v1EdaClientCfg.EthRpcUrl},
 	}
@@ -89,6 +92,8 @@ func (d *Builder) BuildEigenDAV2Backend() (*eigendav2.Store, error) {
 		return nil, err
 	}
 
+	// initialize eth reader object to fetch relay urls from
+	// onchain EigenDARelayRegistry contract
 	reader, err := eigenda_eth.NewReader(d.log, ethClient, "0x0", d.v2ClientCfg.ServiceManagerAddress)
 	if err != nil {
 		return nil, err
@@ -100,8 +105,10 @@ func (d *Builder) BuildEigenDAV2Backend() (*eigendav2.Store, error) {
 	}
 
 	relayCfg := clients_v2.RelayClientConfig{
-		UseSecureGrpcFlag:  true,
-		MaxGRPCMessageSize: d.v2ClientCfg.PutRetries,
+		UseSecureGrpcFlag: d.v2ClientCfg.DisperserClientCfg.UseSecureGrpcFlag,
+		// we should never expect a message greater than our allowed max blob size.
+		// 10% of max blob size is added for additional safety
+		MaxGRPCMessageSize: maxBlobSizeBytes + (maxBlobSizeBytes / 10),
 		Sockets:            relayURLs,
 	}
 
@@ -110,6 +117,8 @@ func (d *Builder) BuildEigenDAV2Backend() (*eigendav2.Store, error) {
 		return nil, err
 	}
 
+	// TODO: https://github.com/Layr-Labs/eigenda-proxy/issues/274
+	// ^ why prover/encoder fields are nil'd out
 	disperser, err := clients_v2.BuildPayloadDisperser(d.log, d.v2ClientCfg.PayloadClientCfg, &d.v2ClientCfg.DisperserClientCfg, &gethCfg, nil, nil)
 	if err != nil {
 		return nil, err
@@ -127,7 +136,8 @@ func (d *Builder) BuildEigenDAV2Backend() (*eigendav2.Store, error) {
 	}, disperser, retriever, verifier)
 }
 
-func (d *Builder) BuildEigenDAV1Backend(ctx context.Context, putRetries uint, maxBlobSize uint) (common.GeneratedKeyStore, error) {
+// buildEigenDAV1Backend ... Builds EigenDA V1 storage backend
+func (d *Builder) buildEigenDAV1Backend(ctx context.Context, putRetries uint, maxBlobSize uint) (common.GeneratedKeyStore, error) {
 	verifier, err := verify.NewVerifier(&d.v1VerifierCfg, d.log)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create verifier: %w", err)
@@ -168,6 +178,7 @@ func (d *Builder) BuildEigenDAV1Backend(ctx context.Context, putRetries uint, ma
 	return eigenDA, nil
 }
 
+// BuildManager ... Builds storage manager object
 func (d *Builder) BuildManager(ctx context.Context, putRetries uint, maxBlobSize uint) (IManager, error) {
 	var err error
 	var s3Store *s3.Store
@@ -176,7 +187,7 @@ func (d *Builder) BuildManager(ctx context.Context, putRetries uint, maxBlobSize
 	var eigenDAV1Store common.GeneratedKeyStore
 
 	if d.managerCfg.S3Config.Bucket != "" {
-		d.log.Info("Using S3 backend")
+		d.log.Debug("Using S3 storage backend")
 		s3Store, err = s3.NewStore(d.managerCfg.S3Config)
 	}
 
@@ -185,7 +196,7 @@ func (d *Builder) BuildManager(ctx context.Context, putRetries uint, maxBlobSize
 	}
 
 	if d.managerCfg.RedisConfig.Endpoint != "" {
-		d.log.Info("Using Redis backend")
+		d.log.Debug("Using Redis storage backend")
 		redisStore, err = redis.NewStore(&d.managerCfg.RedisConfig)
 	}
 
@@ -194,16 +205,17 @@ func (d *Builder) BuildManager(ctx context.Context, putRetries uint, maxBlobSize
 	}
 
 	if d.v2ClientCfg.Enabled {
-		eigenDAV2Store, err = d.BuildEigenDAV2Backend()
+		d.log.Debug("Using EigenDA V2 storage backend")
+		eigenDAV2Store, err = d.buildEigenDAV2Backend(maxBlobSize)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	eigenDAV1Store, err = d.BuildEigenDAV1Backend(ctx, putRetries, maxBlobSize)
+	eigenDAV1Store, err = d.buildEigenDAV1Backend(ctx, putRetries, maxBlobSize)
 
-	fallbacks := d.BuildSecondaries(d.managerCfg.FallbackTargets, s3Store, redisStore)
-	caches := d.BuildSecondaries(d.managerCfg.CacheTargets, s3Store, redisStore)
+	fallbacks := d.buildSecondaries(d.managerCfg.FallbackTargets, s3Store, redisStore)
+	caches := d.buildSecondaries(d.managerCfg.CacheTargets, s3Store, redisStore)
 	secondary := NewSecondaryManager(d.log, d.metrics, caches, fallbacks)
 
 	if secondary.Enabled() { // only spin-up go routines if secondary storage is enabled
@@ -219,6 +231,10 @@ func (d *Builder) BuildManager(ctx context.Context, putRetries uint, maxBlobSize
 		"eigenda_v2", eigenDAV2Store != nil,
 		"s3", s3Store != nil,
 		"redis", redisStore != nil,
+		"read_fallback", len(fallbacks) > 0,
+		"caching", len(caches) > 0,
+		"async_secondary_writes", (secondary.Enabled() && d.managerCfg.AsyncPutWorkers > 0),
+		"verify_v1_certs", d.v1VerifierCfg.VerifyCerts,
 	)
 	return NewManager(nil, eigenDAV2Store, s3Store, d.log, secondary, d.v2ClientCfg.Enabled)
 }
