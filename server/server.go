@@ -132,10 +132,7 @@ func parseVersionByte(w http.ResponseWriter, r *http.Request) (byte, error) {
 		return 0, fmt.Errorf("version byte is not a single byte: %s", versionByteHex)
 	}
 	switch versionByte[0] {
-	case byte(commitments.CertV0):
-		return versionByte[0], nil
-
-	case byte(commitments.CertV1):
+	case byte(commitments.CertV0), byte(commitments.CertV1):
 		return versionByte[0], nil
 
 	default:

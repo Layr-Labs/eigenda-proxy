@@ -8,6 +8,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
 	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
 	"github.com/Layr-Labs/eigenda/api/clients"
+	v2_clients "github.com/Layr-Labs/eigenda/api/clients/v2"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	"github.com/stretchr/testify/require"
 )
@@ -17,7 +18,7 @@ func validCfg() *ProxyConfig {
 	if err != nil {
 		panic(err)
 	}
-	return &ProxyConfig{
+	proxyCfg := &ProxyConfig{
 		EdaV1ClientConfig: clients.EigenDAClientConfig{
 			RPC:                          "http://localhost:8545",
 			StatusQueryRetryInterval:     5 * time.Second,
@@ -45,7 +46,24 @@ func validCfg() *ProxyConfig {
 		MemstoreConfig: memconfig.NewSafeConfig(memconfig.Config{
 			BlobExpiration: 25 * time.Minute,
 		}),
+		EdaV2ClientConfig: common.V2ClientConfig{
+			Enabled: true,
+			DisperserClientCfg: v2_clients.DisperserClientConfig{
+				Hostname:          "http://localhost",
+				Port:              "9999",
+				UseSecureGrpcFlag: true,
+			},
+			PayloadClientCfg: v2_clients.PayloadDisperserConfig{
+				SignerPaymentKey: "0x000000000000000",
+			},
+			ServiceManagerAddress: "0x1234567890abcdef",
+			EthRPC:                "http://localhost:8545",
+		},
+		EigenDAV2Enabled: true,
 	}
+
+	proxyCfg.EdaV2ClientConfig.PayloadClientCfg.EigenDACertVerifierAddr = "0x0000000000032443134"
+	return proxyCfg
 }
 
 func TestConfigVerification(t *testing.T) {
@@ -111,6 +129,23 @@ func TestConfigVerification(t *testing.T) {
 
 			err := cfg.Check()
 			require.Error(t, err)
+		})
+		t.Run("FailWhenRequiredEigenDAV2FieldsAreUnset", func(t *testing.T) {
+			cfg := validCfg()
+			cfg.EdaV2ClientConfig.EthRPC = ""
+			require.Error(t, cfg.Check())
+
+			cfg = validCfg()
+			cfg.EdaV2ClientConfig.DisperserClientCfg.Hostname = ""
+			require.Error(t, cfg.Check())
+
+			cfg = validCfg()
+			cfg.EdaV2ClientConfig.PayloadClientCfg.EigenDACertVerifierAddr = ""
+			require.Error(t, cfg.Check())
+
+			cfg = validCfg()
+			cfg.EdaV2ClientConfig.PayloadClientCfg.SignerPaymentKey = ""
+			require.Error(t, cfg.Check())
 		})
 	})
 
