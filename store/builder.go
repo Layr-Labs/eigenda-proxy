@@ -107,8 +107,8 @@ func (d *Builder) BuildEigenDAV2Backend(maxBlobSizeBytes uint) (*eigendav2.Store
 	relayCfg := clients_v2.RelayClientConfig{
 		UseSecureGrpcFlag: d.v2ClientCfg.DisperserClientCfg.UseSecureGrpcFlag,
 		// we should never expect a message greater than our allowed max blob size.
-		// 1 MB of padding is added for additional safety
-		MaxGRPCMessageSize: maxBlobSizeBytes + 1_000_000,
+		// 10% of max blob size is added for additional safety
+		MaxGRPCMessageSize: maxBlobSizeBytes + (maxBlobSizeBytes / 10),
 		Sockets:            relayURLs,
 	}
 

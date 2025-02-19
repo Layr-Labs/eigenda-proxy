@@ -20,8 +20,8 @@ var (
 	DisperserFlagName               = withFlagPrefix("disperser-rpc")
 	DisableTLSFlagName              = withFlagPrefix("disable-tls")
 	CustomQuorumIDsFlagName         = withFlagPrefix("custom-quorum-ids")
-	BlobStatusPollInterval          = withFlagPrefix("blob-status-poll-interval")
-	PutBlobEncodingVersionFlagName  = withFlagPrefix("put-blob-encoding-version")
+	BlobStatusPollIntervalFlagName  = withFlagPrefix("blob-status-poll-interval")
+	PayloadEncodingVersionFlagName  = withFlagPrefix("payload-encoding-version")
 	PointEvaluationDisabledFlagName = withFlagPrefix("polynomial-form")
 
 	PutRetriesFlagName              = withFlagPrefix("put-retries")
@@ -31,7 +31,7 @@ var (
 	CertVerifierAddrFlagName        = withFlagPrefix("cert-verifier-addr")
 	RelayTimeoutFlagName            = withFlagPrefix("relay-timeout")
 	ContractCallTimeoutFlagName     = withFlagPrefix("contract-call-timeout")
-	BlobVersionFlagName             = withFlagPrefix("blob-version")
+	BlobParamsVersionFlagName       = withFlagPrefix("blob-version")
 	BlockNumberPollIntervalFlagName = withEnvPrefix("block-number-poll-interval")
 	EthRPCURLFlagName               = withFlagPrefix("eth-rpc")
 	SvcManagerAddrFlagName          = withFlagPrefix("svc-manager-addr")
@@ -80,9 +80,9 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Category: category,
 		},
 		&cli.UintFlag{
-			Name:     PutBlobEncodingVersionFlagName,
-			Usage:    "Blob encoding version to use when writing blobs from the high-level interface. Currently only supports (0).",
-			EnvVars:  []string{withEnvPrefix(envPrefix, "PUT_BLOB_ENCODING_VERSION")},
+			Name:     PayloadEncodingVersionFlagName,
+			Usage:    "Payload encoding version used for transforming payloads into an EigenDA blob representation. Currently only supports (0).",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "PAYLOAD_ENCODING_VERSION")},
 			Value:    0,
 			Category: category,
 		},
@@ -155,7 +155,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Required: false,
 		},
 		&cli.DurationFlag{
-			Name:     BlobStatusPollInterval,
+			Name:     BlobStatusPollIntervalFlagName,
 			Usage:    "Duration to query for blob status updates during dispersal.",
 			EnvVars:  []string{withEnvPrefix(envPrefix, "BLOB_STATUS_POLL_INTERVAL")},
 			Category: category,
@@ -163,12 +163,12 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Required: false,
 		},
 		&cli.UintFlag{
-			Name: BlobVersionFlagName,
-			Usage: `Blob version used when dispersing. 
+			Name: BlobParamsVersionFlagName,
+			Usage: `Blob params version used when dispersing. 
 					   This refers to a global version maintained by EigenDA governance 
 					   and is injected in the BlobHeader before dispersing.
 					   Currently only supports (0).`,
-			EnvVars:  []string{withEnvPrefix(envPrefix, "BLOB_VERSION")},
+			EnvVars:  []string{withEnvPrefix(envPrefix, "BLOB_PARAMS_VERSION")},
 			Category: category,
 			Value:    uint(0),
 			Required: false,
@@ -213,7 +213,7 @@ func readPayloadClientConfig(ctx *cli.Context) v2_clients.PayloadClientConfig {
 		BlobEncodingVersion:     codecs.DefaultBlobEncoding,
 		EigenDACertVerifierAddr: ctx.String(CertVerifierAddrFlagName),
 		PayloadPolynomialForm:   polyForm,
-		BlobVersion:             uint16(ctx.Int(BlobVersionFlagName)),
+		BlobVersion:             uint16(ctx.Int(BlobParamsVersionFlagName)),
 	}
 }
 
@@ -226,12 +226,12 @@ func readPayloadDisperserCfg(ctx *cli.Context) v2_clients.PayloadDisperserConfig
 	}
 
 	return v2_clients.PayloadDisperserConfig{
-		SignerPaymentKey:       ctx.String(SignerPaymentKeyHexFlagName),
-		PayloadClientConfig:    payCfg,
-		DisperseBlobTimeout:    ctx.Duration(DisperseBlobTimeoutFlagName),
-		BlobCertifiedTimeout:   ctx.Duration(BlobCertifiedTimeoutFlagName),
-		BlobStatusPollInterval: ctx.Duration(BlobStatusPollInterval),
-		Quorums:                append(common.DefaultQuorums, customQuorums...),
+		SignerPaymentKey:               ctx.String(SignerPaymentKeyHexFlagName),
+		PayloadClientConfig:            payCfg,
+		DisperseBlobTimeout:            ctx.Duration(DisperseBlobTimeoutFlagName),
+		BlobCertifiedTimeout:           ctx.Duration(BlobCertifiedTimeoutFlagName),
+		BlobStatusPollIntervalFlagName: ctx.Duration(BlobStatusPollIntervalFlagName),
+		Quorums:                        append(common.DefaultQuorums, customQuorums...),
 	}
 }
 
