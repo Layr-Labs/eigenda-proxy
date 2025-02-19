@@ -267,3 +267,38 @@ func TestProxyReadFallback(t *testing.T) {
 	requireWriteReadSecondary(t, ts.Metrics.SecondaryRequestsTotal, common.S3BackendType)
 	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
 }
+
+func TestProxyMemConfigClientCanGetAndPatch(t *testing.T) {
+	// test can't be ran against holesky since its specific to memstore
+	if !runIntegrationTests || runTestnetIntegrationTests {
+		t.Skip("Skipping test as INTEGRATION env var not set")
+	}
+	t.Parallel()
+
+	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory()))
+	ts, kill := e2e.CreateTestSuite(tsConfig)
+	defer kill()
+
+	memClient := client.NewMemCfgClient(&client.Config{
+		URL: "http://" + ts.Server.Endpoint(),
+	})
+
+	// 1 - ensure cfg can be read from memconfig handlers
+	cfg, err := memClient.GetConfig(ts.Ctx)
+	require.NoError(t, err)
+
+	// 2 - update PutLatency field && ensure that newly fetched config reflects change
+	expectedChange := time.Second * 420
+	cfg.PutLatency = expectedChange
+
+	cfg, err = memClient.UpdateConfig(ts.Ctx, cfg)
+	require.NoError(t, err)
+
+	require.Equal(t, cfg.PutLatency, expectedChange)
+
+	// 3 - get cfg again to verify that memconfig state update is now reflected on server
+	cfg, err = memClient.GetConfig(ts.Ctx)
+
+	require.NoError(t, err)
+	require.Equal(t, cfg.PutLatency, expectedChange)
+}
