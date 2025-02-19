@@ -34,7 +34,6 @@ func ParseEnv() {
 	runIntegrationTests = os.Getenv("INTEGRATION") == "true" || os.Getenv("INTEGRATION") == "1"
 	runTestnetIntegrationTests = os.Getenv("TESTNET") == "true" || os.Getenv("TESTNET") == "1"
 
-
 	if runIntegrationTests && runTestnetIntegrationTests {
 		panic("only one of INTEGRATION=true or TESTNET=true env var can be set")
 	}
