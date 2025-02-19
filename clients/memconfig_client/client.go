@@ -1,4 +1,4 @@
-package client
+package memconfig_client
 
 import (
 	"bytes"
@@ -12,6 +12,10 @@ import (
 const (
 	memConfigEndpoint = "/memstore/config"
 )
+
+type Config struct {
+	URL string // EigenDA proxy REST API URL
+}
 
 // MemConfig ... contains properties that are used to configure the MemStore's behavior.
 // this is copied directly from /store/generated_key/memstore/memconfig. 
@@ -77,20 +81,20 @@ func (cfg *intermediaryCfg) IntoMemConfig() (*MemConfig, error) {
 }
 
 
-// MemCfgClient implements a standard client for the eigenda-proxy
+// Client implements a standard client for the eigenda-proxy
 // that can be used for updating a memstore configuration in real-time
 // this is useful for API driven tests in protocol forks that leverage
 // custom integrations with EigenDA
-type MemCfgClient struct {
+type Client struct {
 	cfg        *Config
 	httpClient *http.Client
 }
 
-// NewMemCfgClient ... client constructor
-func NewMemCfgClient(cfg *Config) *MemCfgClient {
+// New ... memconfig client constructor
+func New(cfg *Config) *Client {
 	cfg.URL = cfg.URL + memConfigEndpoint // initialize once to avoid unnecessary ops when patch/get
 
-	scc := &MemCfgClient{
+	scc := &Client{
 		cfg: cfg,
 		httpClient: http.DefaultClient,
 	}
@@ -102,12 +106,12 @@ func NewMemCfgClient(cfg *Config) *MemCfgClient {
 func decodeResponseToMemCfg(resp *http.Response) (*MemConfig, error) {
 	var cfg intermediaryCfg
 	if err := json.NewDecoder(resp.Body).Decode(&cfg); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not decode response body to intermediary cfg: %w", err)
 	}
 	return cfg.IntoMemConfig()
 }
 // GetConfig retrieves the current configuration.
-func (c *MemCfgClient) GetConfig(ctx context.Context) (*MemConfig, error) {
+func (c *Client) GetConfig(ctx context.Context) (*MemConfig, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.cfg.URL, &bytes.Buffer{})
 	if err != nil {
 		return nil, err 
@@ -115,7 +119,7 @@ func (c *MemCfgClient) GetConfig(ctx context.Context) (*MemConfig, error) {
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -128,20 +132,20 @@ func (c *MemCfgClient) GetConfig(ctx context.Context) (*MemConfig, error) {
 
 // UpdateConfig updates the configuration using the new MemConfig instance
 // by sending a PATCH request to the proxy server
-func (c *MemCfgClient) UpdateConfig(ctx context.Context, update *MemConfig) (*MemConfig, error) {
+func (c *Client) UpdateConfig(ctx context.Context, update *MemConfig) (*MemConfig, error) {
 	body, err := update.MarshalJSON()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to marshal config update to json bytes: %w", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPatch, c.cfg.URL, bytes.NewBuffer(body))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to do request: %w", err)
 	}
 	defer resp.Body.Close()
 
