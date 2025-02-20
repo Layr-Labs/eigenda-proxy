@@ -1,0 +1,119 @@
+package ephemeral_db
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"sync"
+	"time"
+
+	"github.com/Layr-Labs/eigenda-proxy/common"
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
+	"github.com/Layr-Labs/eigenda/api"
+	"github.com/Layr-Labs/eigensdk-go/logging"
+)
+
+const (
+	DefaultPruneInterval = 500 * time.Millisecond
+)
+
+type DB struct {
+	config *memconfig.SafeConfig
+	log    logging.Logger
+
+	mu        sync.RWMutex
+	keyStarts map[string]time.Time
+	store     map[string][]byte
+}
+
+func New(ctx context.Context, cfg *memconfig.SafeConfig, log logging.Logger) *DB {
+	db := &DB{
+		config:    cfg,
+		keyStarts: make(map[string]time.Time),
+		store:     make(map[string][]byte),
+		log:       log,
+	}
+
+	if cfg.BlobExpiration() != 0 {
+		db.log.Info("ephemeral db expiration enabled for payload entries.", "time", cfg.BlobExpiration)
+		go db.pruningLoop(ctx)
+	}
+
+	return db
+}
+
+// Insert
+func (db *DB) InsertEphemeralEntry(key []byte, value []byte) error {
+	if db.config.PutReturnsFailoverError() {
+		return api.NewErrorFailover(errors.New("ephemeral db in failover simulation mode"))
+	}
+	if uint64(len(value)) > db.config.MaxBlobSizeBytes() {
+		return fmt.Errorf("%w: blob length %d, max blob size %d", common.ErrProxyOversizedBlob, len(value), db.config.MaxBlobSizeBytes())
+	}
+
+	time.Sleep(db.config.LatencyPUTRoute())
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	strKey := string(key)
+
+	_, exists := db.store[strKey]
+	if exists {
+		return fmt.Errorf("payload key already exists in ephemeral db: %s", strKey)
+	}
+
+	db.store[strKey] = value
+	// add expiration if applicable
+
+	if db.config.BlobExpiration() > 0 {
+		db.keyStarts[strKey] = time.Now()
+	}
+
+	return nil
+}
+
+// FetchEphemeralEntry
+func (db *DB) FetchEphemeralEntry(key []byte) ([]byte, error) {
+
+	time.Sleep(db.config.LatencyGETRoute())
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	payload, exists := db.store[string(key)]
+
+	if !exists {
+		return nil, fmt.Errorf("payload not found for key: %s", string(key))
+	}
+
+	return payload, nil
+}
+
+// pruningLoop ... runs a background goroutine to prune expired blobs from the store on a regular interval.
+func (db *DB) pruningLoop(ctx context.Context) {
+	timer := time.NewTicker(DefaultPruneInterval)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+
+		case <-timer.C:
+			db.pruneExpired()
+		}
+	}
+}
+
+// pruneExpired ... removes expired blobs from the store based on the expiration time.
+func (db *DB) pruneExpired() {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
+	for commit, dur := range db.keyStarts {
+		if time.Since(dur) >= db.config.BlobExpiration() {
+			delete(db.keyStarts, commit)
+			delete(db.store, commit)
+
+			db.log.Debug("blob pruned", "commit", commit)
+		}
+	}
+}

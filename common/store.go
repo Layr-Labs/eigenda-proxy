@@ -12,7 +12,8 @@ type BackendType uint8
 const (
 	EigenDABackendType BackendType = iota
 	EigenDAV2BackendType
-	MemoryBackendType
+	MemstoreV1BackendType
+	MemstoreV2BackendType
 	S3BackendType
 	RedisBackendType
 
@@ -29,8 +30,10 @@ func (b BackendType) String() string {
 		return "EigenDA"
 	case EigenDAV2BackendType:
 		return "EigenDAV2"
-	case MemoryBackendType:
-		return "Memory"
+	case MemstoreV1BackendType:
+		return "EigenDAV1Memstore"
+	case MemstoreV2BackendType:
+		return "EigenDAV2Memstore"
 	case S3BackendType:
 		return "S3"
 	case RedisBackendType:
@@ -50,8 +53,10 @@ func StringToBackendType(s string) BackendType {
 		return EigenDABackendType
 	case "eigenda_v2":
 		return EigenDAV2BackendType
-	case "memory":
-		return MemoryBackendType
+	case "memory_v1":
+		return MemstoreV1BackendType
+	case "memory_v2":
+		return MemstoreV2BackendType
 	case "s3":
 		return S3BackendType
 	case "redis":
