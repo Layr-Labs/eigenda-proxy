@@ -131,7 +131,9 @@ func (c *Client) GetConfig(ctx context.Context) (*MemConfig, error) {
 }
 
 // UpdateConfig updates the configuration using the new MemConfig instance
-// by sending a PATCH request to the proxy server
+// Despite the API using a PATH method, this function treats the "update" config
+// as a POST and modifies every associated field. This could present issues if 
+// misused in a testing framework which imports it.
 func (c *Client) UpdateConfig(ctx context.Context, update *MemConfig) (*MemConfig, error) {
 	body, err := update.MarshalJSON()
 	if err != nil {
