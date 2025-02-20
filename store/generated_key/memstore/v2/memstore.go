@@ -99,12 +99,19 @@ func (e *MemStore) Get(_ context.Context, commit []byte) ([]byte, error) {
 }
 
 // Put inserts a value into the store.
+// ephemeral db key = keccak256(pseudo_random_cert)
+// this is done to verify that a rollup must be able to provide
+// the same certificate used in dispersal for retrieval
 func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
 	encodedVal, err := e.codec.EncodeBlob(value)
 	if err != nil {
 		return nil, err
 	}
 
+	// compute kzg data commitment. this is useful for testing
+	// READPREIMAGE functionality in the arbitrum x eigenda integration since
+	// preimage key is computed within the VM from hashing a recomputation of the data
+	// commitment
 	dataCommitment, err := verification.GenerateBlobCommitment(e.g1SRS, encodedVal)
 	if err != nil {
 		return nil, err
@@ -136,7 +143,6 @@ func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
 					Length:     uint32(len(encodedVal)),
 				},
 				PaymentHeaderHash: [32]byte(randomBytes(32)),
-				Salt:              randUint32(),
 			},
 			Signature: randomBytes(48), // 384 bits
 			RelayKeys: []uint32{randUint32(), randUint32()},
@@ -192,13 +198,13 @@ func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
 	}
 
 	err = e.InsertEphemeralEntry(crypto.Keccak256Hash(b).Bytes(), encodedVal)
-	if err != nil {
+	if err != nil { // don't wrap here so api.ErrorFailover{} isn't modified
 		return nil, err
 	}
 
 	certBytes, err := rlp.EncodeToBytes(artificialV2Cert)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("rlp decode v2 cert: %w", err)
 	}
 
 	return certBytes, nil

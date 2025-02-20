@@ -17,15 +17,19 @@ const (
 	DefaultPruneInterval = 500 * time.Millisecond
 )
 
+// DB ... An ephemeral && simple in-memory database used to emulate
+// an EigenDA network for dispersal/retrieval operations.
 type DB struct {
+	// knobs used to express artificial conditions for testing
 	config *memconfig.SafeConfig
 	log    logging.Logger
 
 	mu        sync.RWMutex
-	keyStarts map[string]time.Time
-	store     map[string][]byte
+	keyStarts map[string]time.Time // used for managing expiration
+	store     map[string][]byte    // db
 }
 
+// New ... constructor
 func New(ctx context.Context, cfg *memconfig.SafeConfig, log logging.Logger) *DB {
 	db := &DB{
 		config:    cfg,
@@ -42,7 +46,7 @@ func New(ctx context.Context, cfg *memconfig.SafeConfig, log logging.Logger) *DB
 	return db
 }
 
-// Insert
+// InsertEphemeralEntry ... inserts a value into the db provided a key
 func (db *DB) InsertEphemeralEntry(key []byte, value []byte) error {
 	if db.config.PutReturnsFailoverError() {
 		return api.NewErrorFailover(errors.New("ephemeral db in failover simulation mode"))
@@ -72,7 +76,7 @@ func (db *DB) InsertEphemeralEntry(key []byte, value []byte) error {
 	return nil
 }
 
-// FetchEphemeralEntry
+// FetchEphemeralEntry ... looks up a value from the db provided a key
 func (db *DB) FetchEphemeralEntry(key []byte) ([]byte, error) {
 
 	time.Sleep(db.config.LatencyGETRoute())

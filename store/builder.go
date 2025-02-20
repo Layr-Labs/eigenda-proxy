@@ -132,14 +132,15 @@ func (d *Builder) buildEigenDAV2Backend(maxBlobSizeBytes uint) (common.Generated
 		return nil, err
 	}
 
-	verifier, err := verification.NewCertVerifier(d.log, ethClient, d.v2ClientCfg.PayloadClientCfg.EigenDACertVerifierAddr, time.Second*1)
+	verifier, err := verification.NewCertVerifier(d.log, ethClient, time.Second*1)
 	if err != nil {
 		return nil, err
 	}
 
 	return eigendav2.NewStore(d.log, &eigendav2.Config{
-		MaxBlobSizeBytes: uint64(maxBlobSizeBytes),
-		PutRetries:       d.v2ClientCfg.PutRetries,
+		CertVerifierAddress: d.v2ClientCfg.PayloadClientCfg.EigenDACertVerifierAddr,
+		MaxBlobSizeBytes:    uint64(maxBlobSizeBytes),
+		PutRetries:          d.v2ClientCfg.PutRetries,
 	}, disperser, retriever, verifier)
 }
 
@@ -241,5 +242,5 @@ func (d *Builder) BuildManager(ctx context.Context, putRetries uint, maxBlobSize
 		"async_secondary_writes", (secondary.Enabled() && d.managerCfg.AsyncPutWorkers > 0),
 		"verify_v1_certs", d.v1VerifierCfg.VerifyCerts,
 	)
-	return NewManager(nil, eigenDAV2Store, s3Store, d.log, secondary, d.v2ClientCfg.Enabled)
+	return NewManager(eigenDAV1Store, eigenDAV2Store, s3Store, d.log, secondary, d.v2ClientCfg.Enabled)
 }

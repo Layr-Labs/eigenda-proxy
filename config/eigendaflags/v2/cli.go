@@ -32,7 +32,7 @@ var (
 	RelayTimeoutFlagName            = withFlagPrefix("relay-timeout")
 	ContractCallTimeoutFlagName     = withFlagPrefix("contract-call-timeout")
 	BlobParamsVersionFlagName       = withFlagPrefix("blob-version")
-	BlockNumberPollIntervalFlagName = withEnvPrefix("block-number-poll-interval")
+	BlockNumberPollIntervalFlagName = withFlagPrefix("block-number-poll-interval")
 	EthRPCURLFlagName               = withFlagPrefix("eth-rpc")
 	SvcManagerAddrFlagName          = withFlagPrefix("svc-manager-addr")
 )
@@ -49,7 +49,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.BoolFlag{
 			Name:     V2EnabledFlagName,
 			Usage:    "Enable blob dispersal and retrieval against EigenDA V2 protocol.",
-			EnvVars:  []string{withEnvPrefix(envPrefix, "V2_ENABLED")},
+			EnvVars:  []string{withEnvPrefix(envPrefix, "ENABLED")},
 			Category: category,
 			Required: false,
 		},
@@ -210,7 +210,7 @@ func readPayloadClientConfig(ctx *cli.Context) v2_clients.PayloadClientConfig {
 
 	return v2_clients.PayloadClientConfig{
 		BlockNumberPollInterval: ctx.Duration(BlockNumberPollIntervalFlagName),
-		BlobEncodingVersion:     codecs.DefaultBlobEncoding,
+		PayloadEncodingVersion:  codecs.PayloadEncodingVersion0,
 		EigenDACertVerifierAddr: ctx.String(CertVerifierAddrFlagName),
 		PayloadPolynomialForm:   polyForm,
 		BlobVersion:             uint16(ctx.Int(BlobParamsVersionFlagName)),
@@ -226,12 +226,12 @@ func readPayloadDisperserCfg(ctx *cli.Context) v2_clients.PayloadDisperserConfig
 	}
 
 	return v2_clients.PayloadDisperserConfig{
-		SignerPaymentKey:               ctx.String(SignerPaymentKeyHexFlagName),
-		PayloadClientConfig:            payCfg,
-		DisperseBlobTimeout:            ctx.Duration(DisperseBlobTimeoutFlagName),
-		BlobCertifiedTimeout:           ctx.Duration(BlobCertifiedTimeoutFlagName),
-		BlobStatusPollIntervalFlagName: ctx.Duration(BlobStatusPollIntervalFlagName),
-		Quorums:                        append(common.DefaultQuorums, customQuorums...),
+		SignerPaymentKey:       ctx.String(SignerPaymentKeyHexFlagName),
+		PayloadClientConfig:    payCfg,
+		DisperseBlobTimeout:    ctx.Duration(DisperseBlobTimeoutFlagName),
+		BlobCertifiedTimeout:   ctx.Duration(BlobCertifiedTimeoutFlagName),
+		BlobStatusPollInterval: ctx.Duration(BlobStatusPollIntervalFlagName),
+		Quorums:                append(common.DefaultQuorums, customQuorums...),
 	}
 }
 

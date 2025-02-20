@@ -165,7 +165,7 @@ func ReadConfig(ctx *cli.Context) clients.EigenDAClientConfig {
 		DisableTLS:                   ctx.Bool(DisableTLSFlagName),
 		CustomQuorumIDs:              ctx.UintSlice(CustomQuorumIDsFlagName),
 		SignerPrivateKeyHex:          ctx.String(SignerPrivateKeyHexFlagName),
-		PutBlobEncodingVersion:       codecs.BlobEncodingVersion(ctx.Uint(PutBlobEncodingVersionFlagName)),
+		PutBlobEncodingVersion:       codecs.PayloadEncodingVersion(ctx.Uint(PutBlobEncodingVersionFlagName)),
 		DisablePointVerificationMode: ctx.Bool(DisablePointVerificationModeFlagName),
 		WaitForFinalization:          waitForFinalization,
 		WaitForConfirmationDepth:     confirmationDepth,
