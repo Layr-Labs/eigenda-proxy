@@ -188,7 +188,7 @@ func TestSuiteConfig(testCfg *Cfg) config.AppConfig {
 	svcManagerAddr := "0xD4A7E1Bd8015057293f0D0A557088c286942e84b" // holesky testnet
 	eigendaCfg := config.ProxyConfig{
 		ServerConfig: server.Config{
-			DisperseV2: true,
+			DisperseV2: testCfg.UseV2,
 			Host:       host,
 			Port:       0,
 		},
