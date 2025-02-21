@@ -36,6 +36,10 @@ test-unit:
 test-e2e-local:
 	INTEGRATION=true go test -timeout 1m ./e2e -parallel 4
 
+# Local E2E tests, leveraging op-e2e framework. Also tests the standard client against the proxy.
+test-e2e-local-v2:
+	INTEGRATION_V2=true go test -timeout 1m ./e2e -parallel 4
+
 # E2E tests against holesky testnet
 test-e2e-holesky:
 	TESTNET=true go test -timeout 50m ./e2e  -parallel 4
