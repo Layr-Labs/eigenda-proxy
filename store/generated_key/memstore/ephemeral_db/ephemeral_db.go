@@ -24,6 +24,7 @@ type DB struct {
 	config *memconfig.SafeConfig
 	log    logging.Logger
 
+	// mu guards the below fields
 	mu        sync.RWMutex
 	keyStarts map[string]time.Time // used for managing expiration
 	store     map[string][]byte    // db
@@ -38,6 +39,7 @@ func New(ctx context.Context, cfg *memconfig.SafeConfig, log logging.Logger) *DB
 		log:       log,
 	}
 
+	// if no expiration set then blobs will be persisted indefinitely
 	if cfg.BlobExpiration() != 0 {
 		db.log.Info("ephemeral db expiration enabled for payload entries.", "time", cfg.BlobExpiration)
 		go db.pruningLoop(ctx)
@@ -46,8 +48,8 @@ func New(ctx context.Context, cfg *memconfig.SafeConfig, log logging.Logger) *DB
 	return db
 }
 
-// InsertEphemeralEntry ... inserts a value into the db provided a key
-func (db *DB) InsertEphemeralEntry(key []byte, value []byte) error {
+// InsertEntry ... inserts a value into the db provided a key
+func (db *DB) InsertEntry(key []byte, value []byte) error {
 	if db.config.PutReturnsFailoverError() {
 		return api.NewErrorFailover(errors.New("ephemeral db in failover simulation mode"))
 	}
@@ -76,8 +78,8 @@ func (db *DB) InsertEphemeralEntry(key []byte, value []byte) error {
 	return nil
 }
 
-// FetchEphemeralEntry ... looks up a value from the db provided a key
-func (db *DB) FetchEphemeralEntry(key []byte) ([]byte, error) {
+// FetchEntry ... looks up a value from the db provided a key
+func (db *DB) FetchEntry(key []byte) ([]byte, error) {
 
 	time.Sleep(db.config.LatencyGETRoute())
 	db.mu.RLock()

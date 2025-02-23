@@ -38,10 +38,10 @@ func TestGetSet(t *testing.T) {
 
 	testKey := []byte("bland")
 	expected := []byte(testPreimage)
-	err := db.InsertEphemeralEntry(testKey, expected)
+	err := db.InsertEntry(testKey, expected)
 	require.NoError(t, err)
 
-	actual, err := db.FetchEphemeralEntry(testKey)
+	actual, err := db.FetchEntry(testKey)
 	require.NoError(t, err)
 	require.Equal(t, expected, actual)
 }
@@ -58,13 +58,13 @@ func TestExpiration(t *testing.T) {
 	preimage := []byte(testPreimage)
 	testKey := []byte("bland")
 
-	err := db.InsertEphemeralEntry(testKey, preimage)
+	err := db.InsertEntry(testKey, preimage)
 	require.NoError(t, err)
 
 	// sleep 1 second and verify that older blob entries are removed
 	time.Sleep(time.Second * 1)
 
-	_, err = db.FetchEphemeralEntry(testKey)
+	_, err = db.FetchEntry(testKey)
 	require.Error(t, err)
 }
 
@@ -86,18 +86,18 @@ func TestLatency(t *testing.T) {
 	testKey := []byte("bland")
 
 	timeBeforePut := time.Now()
-	err := db.InsertEphemeralEntry(testKey, preimage)
+	err := db.InsertEntry(testKey, preimage)
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, time.Since(timeBeforePut), putLatency)
 
 	timeBeforeGet := time.Now()
-	_, err = db.FetchEphemeralEntry(testKey)
+	_, err = db.FetchEntry(testKey)
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, time.Since(timeBeforeGet), getLatency)
 
 }
 
-func TestPutRetursFailoverErrorConfig(t *testing.T) {
+func TestPutReturnsFailoverErrorConfig(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -107,15 +107,15 @@ func TestPutRetursFailoverErrorConfig(t *testing.T) {
 	db := New(ctx, config, testLogger)
 	testKey := []byte("som-key")
 
-	err := db.InsertEphemeralEntry(testKey, []byte("some-value"))
+	err := db.InsertEntry(testKey, []byte("some-value"))
 	require.NoError(t, err)
 
 	config.SetPUTReturnsFailoverError(true)
 
 	// failover mode should only affect Put route
-	_, err = db.FetchEphemeralEntry(testKey)
+	_, err = db.FetchEntry(testKey)
 	require.NoError(t, err)
 
-	err = db.InsertEphemeralEntry(testKey, []byte("some-value"))
+	err = db.InsertEntry(testKey, []byte("some-value"))
 	require.ErrorIs(t, err, &api.ErrorFailover{})
 }

@@ -70,7 +70,7 @@ func (e *MemStore) Get(_ context.Context, commit []byte) ([]byte, error) {
 	}
 
 	// construct lookup key identical to EigenDA V1
-	encodedBlob, err := e.FetchEphemeralEntry(cert.BlobVerificationProof.InclusionProof)
+	encodedBlob, err := e.FetchEntry(cert.BlobVerificationProof.InclusionProof)
 	if err != nil {
 		return nil, fmt.Errorf("fetching entry via v1 memstore: %w", err)
 	}
@@ -137,7 +137,7 @@ func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	err = e.InsertEphemeralEntry(cert.BlobVerificationProof.InclusionProof, encodedVal)
+	err = e.InsertEntry(cert.BlobVerificationProof.InclusionProof, encodedVal)
 	if err != nil {
 		return nil, err
 	}

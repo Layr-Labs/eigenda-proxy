@@ -14,15 +14,17 @@ import (
 // TODO: we should eventually move all of these flags into the eigenda repo
 
 var (
-	DisperserRPCFlagName                 = withFlagPrefix("disperser-rpc")
-	ResponseTimeoutFlagName              = withFlagPrefix("response-timeout")
-	ConfirmationTimeoutFlagName          = withFlagPrefix("confirmation-timeout")
-	StatusQueryRetryIntervalFlagName     = withFlagPrefix("status-query-retry-interval")
-	StatusQueryTimeoutFlagName           = withFlagPrefix("status-query-timeout")
-	DisableTLSFlagName                   = withFlagPrefix("disable-tls")
-	CustomQuorumIDsFlagName              = withFlagPrefix("custom-quorum-ids")
-	SignerPrivateKeyHexFlagName          = withFlagPrefix("signer-private-key-hex")
-	PutBlobEncodingVersionFlagName       = withFlagPrefix("put-blob-encoding-version")
+	DisperserRPCFlagName             = withFlagPrefix("disperser-rpc")
+	ResponseTimeoutFlagName          = withFlagPrefix("response-timeout")
+	ConfirmationTimeoutFlagName      = withFlagPrefix("confirmation-timeout")
+	StatusQueryRetryIntervalFlagName = withFlagPrefix("status-query-retry-interval")
+	StatusQueryTimeoutFlagName       = withFlagPrefix("status-query-timeout")
+	DisableTLSFlagName               = withFlagPrefix("disable-tls")
+	CustomQuorumIDsFlagName          = withFlagPrefix("custom-quorum-ids")
+	SignerPrivateKeyHexFlagName      = withFlagPrefix("signer-private-key-hex")
+	// using put-blob for external/user facing flag name to avoid having to deprecate
+	// flag
+	PayloadEncodingVersionFlagName       = withFlagPrefix("put-blob-encoding-version")
 	DisablePointVerificationModeFlagName = withFlagPrefix("disable-point-verification-mode")
 	WaitForFinalizationFlagName          = withFlagPrefix("wait-for-finalization")
 	ConfirmationDepthFlagName            = withFlagPrefix("confirmation-depth")
@@ -104,7 +106,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Category: category,
 		},
 		&cli.UintFlag{
-			Name:     PutBlobEncodingVersionFlagName,
+			Name:     PayloadEncodingVersionFlagName,
 			Usage:    "Blob encoding version to use when writing blobs from the high-level interface.",
 			EnvVars:  []string{withEnvPrefix(envPrefix, "PUT_BLOB_ENCODING_VERSION")},
 			Value:    0,
@@ -157,15 +159,17 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 func ReadConfig(ctx *cli.Context) clients.EigenDAClientConfig {
 	waitForFinalization, confirmationDepth := parseConfirmationFlag(ctx.String(ConfirmationDepthFlagName))
 	return clients.EigenDAClientConfig{
-		RPC:                          ctx.String(DisperserRPCFlagName),
-		ResponseTimeout:              ctx.Duration(ResponseTimeoutFlagName),
-		ConfirmationTimeout:          ctx.Duration(ConfirmationTimeoutFlagName),
-		StatusQueryRetryInterval:     ctx.Duration(StatusQueryRetryIntervalFlagName),
-		StatusQueryTimeout:           ctx.Duration(StatusQueryTimeoutFlagName),
-		DisableTLS:                   ctx.Bool(DisableTLSFlagName),
-		CustomQuorumIDs:              ctx.UintSlice(CustomQuorumIDsFlagName),
-		SignerPrivateKeyHex:          ctx.String(SignerPrivateKeyHexFlagName),
-		PutBlobEncodingVersion:       codecs.PayloadEncodingVersion(ctx.Uint(PutBlobEncodingVersionFlagName)),
+		RPC:                      ctx.String(DisperserRPCFlagName),
+		ResponseTimeout:          ctx.Duration(ResponseTimeoutFlagName),
+		ConfirmationTimeout:      ctx.Duration(ConfirmationTimeoutFlagName),
+		StatusQueryRetryInterval: ctx.Duration(StatusQueryRetryIntervalFlagName),
+		StatusQueryTimeout:       ctx.Duration(StatusQueryTimeoutFlagName),
+		DisableTLS:               ctx.Bool(DisableTLSFlagName),
+		CustomQuorumIDs:          ctx.UintSlice(CustomQuorumIDsFlagName),
+		SignerPrivateKeyHex:      ctx.String(SignerPrivateKeyHexFlagName),
+		// using put-blob for external/user facing flag name to avoid having to deprecate
+		// flag
+		PutBlobEncodingVersion:       codecs.PayloadEncodingVersion(ctx.Uint(PayloadEncodingVersionFlagName)),
 		DisablePointVerificationMode: ctx.Bool(DisablePointVerificationModeFlagName),
 		WaitForFinalization:          waitForFinalization,
 		WaitForConfirmationDepth:     confirmationDepth,

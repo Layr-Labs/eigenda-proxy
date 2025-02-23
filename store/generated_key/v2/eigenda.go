@@ -1,4 +1,4 @@
-package eigendav2
+package eigenda
 
 import (
 	"context"
@@ -19,6 +19,8 @@ import (
 type Config struct {
 	// cert verifier address used for verifying
 	// DA certificates
+	// TODO: Support dynamic client injection
+	// https://github.com/Layr-Labs/eigenda-proxy/issues/307
 	CertVerifierAddress string
 
 	// maximum allowed blob size for dispersal

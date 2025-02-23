@@ -3,7 +3,6 @@ package memstore
 import (
 	"context"
 	"crypto/rand"
-	"encoding/json"
 	"fmt"
 	"math/big"
 
@@ -16,7 +15,6 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
 	"github.com/Layr-Labs/eigenda/api/clients/codecs"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
-
 	cert_verifier_binding "github.com/Layr-Labs/eigenda/contracts/bindings/EigenDACertVerifier"
 
 	"github.com/Layr-Labs/eigensdk-go/logging"
@@ -55,6 +53,7 @@ time to evict blobs to best emulate the ephemeral nature of blobs dispersed to
 EigenDA V2 operators.
 */
 type MemStore struct {
+	// keccak(MarshalJSON(randomlyGeneratedCert)) -> Blob
 	*ephemeral_db.DB
 	log logging.Logger
 
@@ -77,42 +76,13 @@ func New(
 	}, nil
 }
 
-// Get fetches a value from the store.
-func (e *MemStore) Get(_ context.Context, commit []byte) ([]byte, error) {
-	var cert verification.EigenDACert
-	err := rlp.DecodeBytes(commit, &cert)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode DA cert to RLP format: %w", err)
-	}
-
-	key, err := json.Marshal(cert)
-	if err != nil {
-		return nil, err
-	}
-
-	encodedBlob, err := e.FetchEphemeralEntry(crypto.Keccak256Hash(key).Bytes())
-	if err != nil {
-		return nil, fmt.Errorf("fetching entry via v2 memstore: %w", err)
-	}
-
-	return e.codec.DecodeBlob(encodedBlob)
-}
-
-// Put inserts a value into the store.
-// ephemeral db key = keccak256(pseudo_random_cert)
-// this is done to verify that a rollup must be able to provide
-// the same certificate used in dispersal for retrieval
-func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
-	encodedVal, err := e.codec.EncodeBlob(value)
-	if err != nil {
-		return nil, err
-	}
-
+// generateRandomCert ... generates a pseudo random EigenDA V2 certificate
+func (e *MemStore) generateRandomCert(blobContents []byte) (*verification.EigenDACert, error) {
 	// compute kzg data commitment. this is useful for testing
 	// READPREIMAGE functionality in the arbitrum x eigenda integration since
 	// preimage key is computed within the VM from hashing a recomputation of the data
 	// commitment
-	dataCommitment, err := verification.GenerateBlobCommitment(e.g1SRS, encodedVal)
+	dataCommitment, err := verification.GenerateBlobCommitment(e.g1SRS, blobContents)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +110,7 @@ func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
 						Y: [2]*big.Int{randInt(1), randInt(1)},
 					},
 					Commitment: g1CommitPoint,
-					Length:     uint32(len(encodedVal)),
+					Length:     uint32(len(blobContents)),
 				},
 				PaymentHeaderHash: [32]byte(randomBytes(32)),
 			},
@@ -186,25 +156,46 @@ func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
 		},
 	}
 
-	artificialV2Cert := verification.EigenDACert{
+	return &verification.EigenDACert{
 		BlobInclusionInfo:           pseudoRandomBlobInclusionInfo,
 		BatchHeader:                 randomBatchHeader,
 		NonSignerStakesAndSignature: randomNonSignerStakesAndSigs,
-	}
+	}, nil
+}
 
-	b, err := json.Marshal(artificialV2Cert)
+// Get fetches a value from the store.
+func (e *MemStore) Get(_ context.Context, commit []byte) ([]byte, error) {
+	encodedBlob, err := e.FetchEntry(crypto.Keccak256Hash(commit).Bytes())
 	if err != nil {
-		return nil, fmt.Errorf("unmarshal V2 cert: %w", err)
+		return nil, fmt.Errorf("fetching entry via v2 memstore: %w", err)
 	}
 
-	err = e.InsertEphemeralEntry(crypto.Keccak256Hash(b).Bytes(), encodedVal)
-	if err != nil { // don't wrap here so api.ErrorFailover{} isn't modified
+	return e.codec.DecodeBlob(encodedBlob)
+}
+
+// Put inserts a value into the store.
+// ephemeral db key = keccak256(pseudo_random_cert)
+// this is done to verify that a rollup must be able to provide
+// the same certificate used in dispersal for retrieval
+func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
+	encodedVal, err := e.codec.EncodeBlob(value)
+	if err != nil {
 		return nil, err
+	}
+
+	artificialV2Cert, err := e.generateRandomCert(encodedVal)
+	if err != nil {
+		return nil, fmt.Errorf("generating random cert: %w", err)
 	}
 
 	certBytes, err := rlp.EncodeToBytes(artificialV2Cert)
 	if err != nil {
 		return nil, fmt.Errorf("rlp decode v2 cert: %w", err)
+	}
+
+	err = e.InsertEntry(crypto.Keccak256Hash(certBytes).Bytes(), encodedVal)
+	if err != nil { // don't wrap here so api.ErrorFailover{} isn't modified
+		return nil, err
 	}
 
 	return certBytes, nil
