@@ -113,7 +113,7 @@ func (e *MemStore) Get(_ context.Context, commit []byte) ([]byte, error) {
 
 	var encodedBlob []byte
 	var exists bool
-	if encodedBlob, exists = e.store[string(crypto.Keccak256Hash(commit).String())]; !exists {
+	if encodedBlob, exists = e.store[crypto.Keccak256Hash(commit).String()]; !exists {
 		return nil, fmt.Errorf("commitment key not found")
 	}
 
