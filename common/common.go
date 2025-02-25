@@ -4,7 +4,24 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	clients_v2 "github.com/Layr-Labs/eigenda/api/clients/v2"
+	"github.com/Layr-Labs/eigenda/core"
 )
+
+var (
+	DefaultQuorums = []core.QuorumID{0, 1}
+)
+
+type V2ClientConfig struct {
+	Enabled               bool
+	DisperserClientCfg    clients_v2.DisperserClientConfig
+	PayloadClientCfg      clients_v2.PayloadDisperserConfig
+	RetrievalConfig       clients_v2.RelayPayloadRetrieverConfig
+	ServiceManagerAddress string
+	EthRPC                string
+	PutRetries            uint
+}
 
 const GlobalPrefix = "EIGENDA_PROXY"
 

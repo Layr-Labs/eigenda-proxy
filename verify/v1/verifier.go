@@ -45,7 +45,6 @@ func (c Config) MarshalJSON() ([]byte, error) {
 	return json.Marshal(aux)
 }
 
-// TODO: right now verification and confirmation depth are tightly coupled. we should decouple them
 type Verifier struct {
 	// kzgVerifier is needed to commit blobs to the memstore
 	kzgVerifier *kzgverifier.Verifier
