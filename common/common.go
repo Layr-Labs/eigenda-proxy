@@ -23,6 +23,30 @@ type V2ClientConfig struct {
 	PutRetries            uint
 }
 
+func (cfg *V2ClientConfig) Check() error {
+	if cfg.ServiceManagerAddress == "" {
+		return fmt.Errorf("service manager address is required for using EigenDA V2 backend")
+	}
+
+	if cfg.EthRPC == "" {
+		return fmt.Errorf("eth rpc is required for using EigenDA V2 backend")
+	}
+
+	if cfg.PayloadClientCfg.EigenDACertVerifierAddr == "" {
+		return fmt.Errorf("cert verifier contract address is required for using EigenDA V2 backend")
+	}
+
+	if cfg.PayloadClientCfg.SignerPaymentKey == "" {
+		return fmt.Errorf("signer payment private key hex is required for using EigenDA V2 backend")
+	}
+
+	if cfg.DisperserClientCfg.Hostname == "" {
+		return fmt.Errorf("disperser hostname is required for using EigenDA V2 backend")
+	}
+
+	return nil
+}
+
 const GlobalPrefix = "EIGENDA_PROXY"
 
 func PrefixEnvVar(prefix, suffix string) []string {

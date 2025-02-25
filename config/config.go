@@ -134,25 +134,9 @@ func (cfg *ProxyConfig) Check() error {
 
 	// V2 dispersal/retrieval enabled
 	if cfg.EigenDAV2Enabled && !cfg.MemstoreEnabled {
-
-		if cfg.EdaV2ClientConfig.ServiceManagerAddress == "" {
-			return fmt.Errorf("service manager address is required for using EigenDA V2 backend")
-		}
-
-		if cfg.EdaV2ClientConfig.EthRPC == "" {
-			return fmt.Errorf("eth rpc is required for using EigenDA V2 backend")
-		}
-
-		if cfg.EdaV2ClientConfig.PayloadClientCfg.EigenDACertVerifierAddr == "" {
-			return fmt.Errorf("cert verifier contract address is required for using EigenDA V2 backend")
-		}
-
-		if cfg.EdaV2ClientConfig.PayloadClientCfg.SignerPaymentKey == "" {
-			return fmt.Errorf("signer payment private key hex is required for using EigenDA V2 backend")
-		}
-
-		if cfg.EdaV2ClientConfig.DisperserClientCfg.Hostname == "" {
-			return fmt.Errorf("disperser hostname is required for using EigenDA V2 backend")
+		err := cfg.EdaV2ClientConfig.Check()
+		if err != nil {
+			return err
 		}
 	}
 

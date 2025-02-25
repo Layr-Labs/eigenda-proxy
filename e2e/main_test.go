@@ -1,6 +1,7 @@
 package e2e_test
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"testing"
@@ -48,7 +49,7 @@ func ParseEnv() {
 		panic("only one of INTEGRATION=true or INTEGRATION_V2=true env var can be set")
 	}
 
-	println("fuzz_tests", runFuzzTests, "integration_tests_v1", runIntegrationTests,
+	fmt.Print("fuzz_tests", runFuzzTests, "integration_tests_v1", runIntegrationTests,
 		"integration_tests_v2", runIntegrationTestsV2, "testnet_integration_tests", runTestnetIntegrationTests,
 	)
 }

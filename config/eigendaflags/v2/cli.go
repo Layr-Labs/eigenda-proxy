@@ -213,7 +213,8 @@ func readPayloadClientConfig(ctx *cli.Context) v2_clients.PayloadClientConfig {
 		PayloadEncodingVersion:  codecs.PayloadEncodingVersion0,
 		EigenDACertVerifierAddr: ctx.String(CertVerifierAddrFlagName),
 		PayloadPolynomialForm:   polyForm,
-		BlobVersion:             uint16(ctx.Int(BlobParamsVersionFlagName)),
+		// #nosec G115 - only overflow on incorrect user input
+		BlobVersion: uint16(ctx.Int(BlobParamsVersionFlagName)),
 	}
 }
 
@@ -221,6 +222,7 @@ func readPayloadDisperserCfg(ctx *cli.Context) v2_clients.PayloadDisperserConfig
 	payCfg := readPayloadClientConfig(ctx)
 
 	var customQuorums []core.QuorumID
+	// #nosec G115 - only overflow on incorrect user input
 	for _, uintValue := range ctx.UintSlice(CustomQuorumIDsFlagName) {
 		customQuorums = append(customQuorums, uint8(uintValue))
 	}

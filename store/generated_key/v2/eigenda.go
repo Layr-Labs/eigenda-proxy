@@ -136,7 +136,7 @@ func (e Store) BackendType() common.BackendType {
 // Key is used to recover certificate fields and that verifies blob
 // against commitment to ensure data is valid and non-tampered.
 // TODO: tap into actual verification
-func (e Store) Verify(ctx context.Context, key []byte, value []byte) error {
+func (e Store) Verify(ctx context.Context, key []byte, _ []byte) error {
 	var cert verification.EigenDACert
 	err := rlp.DecodeBytes(key, cert)
 	if err != nil {

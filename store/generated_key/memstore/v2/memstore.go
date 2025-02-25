@@ -24,7 +24,7 @@ const (
 	BytesPerFieldElement = 32
 )
 
-// randomBytes ... Generates random byte slice provided
+// unsafeRandomBytes ... Generates random byte slice provided
 // size. Errors when generating are ignored since this is only
 // used for constructing dummy certificates when testing insecure integrations.
 // in the worst case it doesn't work and returns empty arrays which would only
@@ -32,19 +32,20 @@ const (
 // since they'd resolve to the same commitment and blob key. This shouldn't matter
 // given this is typically used for testing standard E2E functionality against a rollup
 // stack which SHOULD never submit an identical batch more than once.
-func randomBytes(size uint) []byte {
+func unsafeRandomBytes(size uint) []byte {
 	entropy := make([]byte, size)
 	_, _ = rand.Read(entropy)
 	return entropy
 }
 
-func randInt(max int64) *big.Int {
+func unsafeRandInt(max int64) *big.Int {
 	randInt, _ := rand.Int(rand.Reader, big.NewInt(max))
 	return randInt
 }
 
-func randUint32() uint32 {
-	return uint32(randInt(32).Uint64())
+func unsafeRandUint32() uint32 {
+	// #nosec G115 - downcasting only on random value
+	return uint32(unsafeRandInt(32).Uint64())
 }
 
 /*
@@ -102,57 +103,58 @@ func (e *MemStore) generateRandomCert(blobContents []byte) (*verification.EigenD
 				QuorumNumbers: []byte{byte(0x0), byte(0x1)}, // quorum 0 && quorum 1
 				Commitment: cert_verifier_binding.BlobCommitment{
 					LengthCommitment: cert_verifier_binding.BN254G2Point{
-						X: [2]*big.Int{randInt(1000), randInt(1000)},
-						Y: [2]*big.Int{randInt(1000), randInt(1000)},
+						X: [2]*big.Int{unsafeRandInt(1000), unsafeRandInt(1000)},
+						Y: [2]*big.Int{unsafeRandInt(1000), unsafeRandInt(1000)},
 					},
 					LengthProof: cert_verifier_binding.BN254G2Point{
-						X: [2]*big.Int{randInt(1), randInt(1)},
-						Y: [2]*big.Int{randInt(1), randInt(1)},
+						X: [2]*big.Int{unsafeRandInt(1), unsafeRandInt(1)},
+						Y: [2]*big.Int{unsafeRandInt(1), unsafeRandInt(1)},
 					},
 					Commitment: g1CommitPoint,
-					Length:     uint32(len(blobContents)),
+					// #nosec G115 - can never overflow on 16MiB blobs
+					Length: uint32(len(blobContents)),
 				},
-				PaymentHeaderHash: [32]byte(randomBytes(32)),
+				PaymentHeaderHash: [32]byte(unsafeRandomBytes(32)),
 			},
-			Signature: randomBytes(48), // 384 bits
-			RelayKeys: []uint32{randUint32(), randUint32()},
+			Signature: unsafeRandomBytes(48), // 384 bits
+			RelayKeys: []uint32{unsafeRandUint32(), unsafeRandUint32()},
 		},
-		BlobIndex:      uint32(randInt(1_000).Uint64()),
-		InclusionProof: randomBytes(128),
+		BlobIndex:      uint32(unsafeRandInt(1_000).Uint64()),
+		InclusionProof: unsafeRandomBytes(128),
 	}
 
 	randomBatchHeader := cert_verifier_binding.BatchHeaderV2{
-		BatchRoot:            [32]byte(randomBytes(32)),
-		ReferenceBlockNumber: randUint32(),
+		BatchRoot:            [32]byte(unsafeRandomBytes(32)),
+		ReferenceBlockNumber: unsafeRandUint32(),
 	}
 
 	randomNonSignerStakesAndSigs := cert_verifier_binding.NonSignerStakesAndSignature{
-		NonSignerQuorumBitmapIndices: []uint32{randUint32(), randUint32()},
+		NonSignerQuorumBitmapIndices: []uint32{unsafeRandUint32(), unsafeRandUint32()},
 		NonSignerPubkeys: []cert_verifier_binding.BN254G1Point{
 			cert_verifier_binding.BN254G1Point{
-				X: randInt(1000),
-				Y: randInt(1000),
+				X: unsafeRandInt(1000),
+				Y: unsafeRandInt(1000),
 			},
 		},
 		QuorumApks: []cert_verifier_binding.BN254G1Point{
 			cert_verifier_binding.BN254G1Point{
-				X: randInt(1000),
-				Y: randInt(1000),
+				X: unsafeRandInt(1000),
+				Y: unsafeRandInt(1000),
 			},
 		},
 		ApkG2: cert_verifier_binding.BN254G2Point{
-			X: [2]*big.Int{randInt(1000), randInt(10000)},
-			Y: [2]*big.Int{randInt(1000), randInt(1000)},
+			X: [2]*big.Int{unsafeRandInt(1000), unsafeRandInt(10000)},
+			Y: [2]*big.Int{unsafeRandInt(1000), unsafeRandInt(1000)},
 		},
-		QuorumApkIndices:  []uint32{randUint32(), randUint32()},
-		TotalStakeIndices: []uint32{randUint32(), randUint32(), randUint32()},
+		QuorumApkIndices:  []uint32{unsafeRandUint32(), unsafeRandUint32()},
+		TotalStakeIndices: []uint32{unsafeRandUint32(), unsafeRandUint32(), unsafeRandUint32()},
 		NonSignerStakeIndices: [][]uint32{
-			[]uint32{randUint32(), randUint32()},
-			[]uint32{randUint32(), randUint32()},
+			[]uint32{unsafeRandUint32(), unsafeRandUint32()},
+			[]uint32{unsafeRandUint32(), unsafeRandUint32()},
 		},
 		Sigma: cert_verifier_binding.BN254G1Point{
-			X: randInt(1000),
-			Y: randInt(1000),
+			X: unsafeRandInt(1000),
+			Y: unsafeRandInt(1000),
 		},
 	}
 

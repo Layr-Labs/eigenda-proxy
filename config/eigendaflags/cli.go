@@ -169,6 +169,7 @@ func ReadConfig(ctx *cli.Context) clients.EigenDAClientConfig {
 		SignerPrivateKeyHex:      ctx.String(SignerPrivateKeyHexFlagName),
 		// using put-blob for external/user facing flag name to avoid having to deprecate
 		// flag
+		// #nosec G115 - only overflow on incorrect user input
 		PutBlobEncodingVersion:       codecs.PayloadEncodingVersion(ctx.Uint(PayloadEncodingVersionFlagName)),
 		DisablePointVerificationMode: ctx.Bool(DisablePointVerificationModeFlagName),
 		WaitForFinalization:          waitForFinalization,

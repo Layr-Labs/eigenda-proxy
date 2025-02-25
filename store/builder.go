@@ -68,6 +68,7 @@ func (d *Builder) buildSecondaries(targets []string, s3Store common.PrecomputedK
 				panic(fmt.Sprintf("S3 backend not configured: %s", target))
 			}
 			stores[i] = s3Store
+
 		default:
 			panic(fmt.Sprintf("Invalid backend target: %s", target))
 		}
@@ -156,8 +157,7 @@ func (d *Builder) buildEigenDAV1Backend(ctx context.Context, putRetries uint, ma
 	} else {
 		d.log.Warn("Certificate verification disabled. This can result in invalid EigenDA certificates being accredited.")
 	}
-	// create EigenDA backend store
-	var eigenDA common.GeneratedKeyStore
+
 	if d.memConfig != nil {
 		d.log.Info("Using memstore backend for EigenDA V1")
 		return memstore.New(ctx, verifier, d.log, d.memConfig)
@@ -170,7 +170,7 @@ func (d *Builder) buildEigenDAV1Backend(ctx context.Context, putRetries uint, ma
 		return nil, err
 	}
 
-	eigenDA, err = eigenda.NewStore(
+	return eigenda.NewStore(
 		client,
 		verifier,
 		d.log,
@@ -182,7 +182,6 @@ func (d *Builder) buildEigenDAV1Backend(ctx context.Context, putRetries uint, ma
 		},
 	)
 
-	return eigenDA, nil
 }
 
 // BuildManager ... Builds storage manager object
@@ -219,6 +218,9 @@ func (d *Builder) BuildManager(ctx context.Context, putRetries uint, maxBlobSize
 	}
 
 	eigenDAV1Store, err = d.buildEigenDAV1Backend(ctx, putRetries, maxBlobSize)
+	if err != nil {
+		return nil, err
+	}
 
 	fallbacks := d.buildSecondaries(d.managerCfg.FallbackTargets, s3Store, redisStore)
 	caches := d.buildSecondaries(d.managerCfg.CacheTargets, s3Store, redisStore)
