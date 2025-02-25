@@ -53,9 +53,13 @@ type ProxyConfig struct {
 	MemstoreConfig *memconfig.SafeConfig
 	StorageConfig  store.Config
 
-	// TODO: Build support for V2 memstore implementation
-	// currently setting to true would emulate V1 EigenDA
-	// backend interactions but not V2
+	// Enabling will turn on memstore for both V1 && V2
+	/*
+	   Currently the memstore is not persisted to disk,
+	   and is lost when proxy is stopped. Testing migrations
+	   is currently not supported because it requires restarting
+	   the proxy with new flags, which will cause the memstore db to be wiped.
+	*/
 	MemstoreEnabled bool
 
 	EigenDAV2Enabled bool
@@ -82,13 +86,14 @@ func ReadProxyConfig(ctx *cli.Context) ProxyConfig {
 			Port:       ctx.Int(PortFlagName),
 		},
 		EdaV1ClientConfig:   edaClientV1Config,
+		EdaV2ClientConfig:   edaClientV2Config,
 		EdaV1VerifierConfig: verify.ReadConfig(ctx, edaClientV1Config),
 		PutRetries:          ctx.Uint(eigendaflags.PutRetriesFlagName),
 		MemstoreEnabled:     ctx.Bool(memstore.EnabledFlagName),
 		MemstoreConfig:      memstore.ReadConfig(ctx),
 		StorageConfig:       store.ReadConfig(ctx),
 		EigenDAV2Enabled:    edaClientV2Config.Enabled,
-		MaxBlobSizeBytes:    ctx.Uint(verify.MaxBlobLengthFlagName),
+		MaxBlobSizeBytes:    uint(verify.MaxBlobLengthBytes),
 	}
 
 	return cfg
@@ -128,7 +133,7 @@ func (cfg *ProxyConfig) Check() error {
 	}
 
 	// V2 dispersal/retrieval enabled
-	if cfg.EigenDAV2Enabled {
+	if cfg.EigenDAV2Enabled && !cfg.MemstoreEnabled {
 
 		if cfg.EdaV2ClientConfig.ServiceManagerAddress == "" {
 			return fmt.Errorf("service manager address is required for using EigenDA V2 backend")

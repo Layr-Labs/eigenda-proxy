@@ -1,4 +1,4 @@
-package eigendav2
+package eigenda
 
 import (
 	"context"
@@ -17,6 +17,12 @@ import (
 )
 
 type Config struct {
+	// cert verifier address used for verifying
+	// DA certificates
+	// TODO: Support dynamic client injection
+	// https://github.com/Layr-Labs/eigenda-proxy/issues/307
+	CertVerifierAddress string
+
 	// maximum allowed blob size for dispersal
 	// this is irrespective of the disperser's limits
 	// and could result in failed payload submissions if
@@ -82,7 +88,7 @@ func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 
 	cert, err := retry.DoWithData(
 		func() (*verification.EigenDACert, error) {
-			return e.disperser.SendPayload(ctx, value, uint32(0))
+			return e.disperser.SendPayload(ctx, e.cfg.CertVerifierAddress, value)
 		},
 		retry.RetryIf(func(err error) bool {
 			st, isGRPCError := status.FromError(err)
@@ -137,5 +143,5 @@ func (e Store) Verify(ctx context.Context, key []byte, value []byte) error {
 		return fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
 	}
 
-	return e.verifier.VerifyCertV2(ctx, &cert)
+	return e.verifier.VerifyCertV2(ctx, e.cfg.CertVerifierAddress, &cert)
 }

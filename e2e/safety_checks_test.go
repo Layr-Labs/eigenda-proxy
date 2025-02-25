@@ -27,7 +27,7 @@ func TestOpClientKeccak256MalformedInputs(t *testing.T) {
 	}
 
 	t.Parallel()
-	testCfg := e2e.TestConfig(useMemory())
+	testCfg := e2e.TestConfig(useMemory(), useV2())
 	testCfg.UseKeccak256ModeS3 = true
 	tsConfig := e2e.TestSuiteConfig(testCfg)
 	ts, kill := e2e.CreateTestSuite(tsConfig)
@@ -69,13 +69,13 @@ func TestOpClientKeccak256MalformedInputs(t *testing.T) {
 // many unicode characters, single unicode character and an empty preimage. It then tries to get the data from the
 // proxy server with empty byte, single byte and random string.
 func TestProxyClientMalformedInputCases(t *testing.T) {
-	if !runIntegrationTests && !runTestnetIntegrationTests {
+	if !runIntegrationTests && !runTestnetIntegrationTests && !runIntegrationTestsV2 {
 		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
 	}
 
 	t.Parallel()
 
-	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory()))
+	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), useV2()))
 	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 
@@ -111,12 +111,12 @@ func TestProxyClientMalformedInputCases(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("get data edge cases - unsupported version byte 01", func(t *testing.T) {
-		testCert := []byte{1}
+	t.Run("get data edge cases - unsupported version byte 02", func(t *testing.T) {
+		testCert := []byte{2}
 		_, err := daClient.GetData(ts.Ctx, testCert)
 		require.Error(t, err)
 		assert.True(t,
-			strings.Contains(err.Error(), "unsupported version byte 01") && !isNilPtrDerefPanic(err.Error()))
+			strings.Contains(err.Error(), "unsupported version byte 02") && !isNilPtrDerefPanic(err.Error()))
 	})
 
 	t.Run("get data edge cases - huge cert", func(t *testing.T) {
@@ -135,17 +135,17 @@ func TestProxyClientMalformedInputCases(t *testing.T) {
 //
 //	that an OP Keccak commitment mode is provided when S3 is non-configured server side
 func TestKeccak256CommitmentRequestErrorsWhenS3NotSet(t *testing.T) {
-	if !runIntegrationTests && !runTestnetIntegrationTests {
+	if !runIntegrationTests && !runTestnetIntegrationTests && !runIntegrationTestsV2 {
 		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
 	}
 
 	t.Parallel()
 
-	testCfg := e2e.TestConfig(useMemory())
+	testCfg := e2e.TestConfig(useMemory(), useV2())
 	testCfg.UseKeccak256ModeS3 = true
 
 	tsConfig := e2e.TestSuiteConfig(testCfg)
-	tsConfig.EigenDAConfig.StorageConfig.S3Config.Endpoint = ""
+	tsConfig.EigenDAConfig.StorageConfig.S3Config.Endpoint = "localhost:1234"
 	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 
@@ -159,13 +159,13 @@ func TestKeccak256CommitmentRequestErrorsWhenS3NotSet(t *testing.T) {
 }
 
 func TestOversizedBlobRequestErrors(t *testing.T) {
-	if !runIntegrationTests && !runTestnetIntegrationTests {
+	if !runIntegrationTests && !runTestnetIntegrationTests && !runIntegrationTestsV2 {
 		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
 	}
 
 	t.Parallel()
 
-	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory()))
+	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), useV2()))
 	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 
@@ -182,11 +182,18 @@ func TestOversizedBlobRequestErrors(t *testing.T) {
 	require.Error(t, err)
 
 	oversizedError := false
+	// error returned from EigenDA V1 disperser
+	if strings.Contains(err.Error(), "blob size cannot exceed") {
+		oversizedError = true
+	}
+
+	// error caught within proxy
 	if strings.Contains(err.Error(), "blob is larger than max blob size") {
 		oversizedError = true
 	}
 
-	if strings.Contains(err.Error(), "blob size cannot exceed") {
+	// error caught within proxy
+	if strings.Contains(err.Error(), "http: request body too large") {
 		oversizedError = true
 	}
 

@@ -3,18 +3,15 @@ package memstore
 import (
 	"context"
 	"crypto/rand"
-	"errors"
 	"fmt"
 	"math/big"
-	"sync"
-	"time"
 
 	"github.com/ethereum/go-ethereum/rlp"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/ephemeral_db"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
 	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
-	"github.com/Layr-Labs/eigenda/api"
 	"github.com/Layr-Labs/eigenda/api/clients/codecs"
 	eigenda_common "github.com/Layr-Labs/eigenda/api/grpc/common"
 	"github.com/Layr-Labs/eigenda/api/grpc/disperser"
@@ -22,33 +19,32 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
+func randomBytes(size uint) []byte {
+	entropy := make([]byte, size)
+	_, _ = rand.Read(entropy)
+	return entropy
+}
+
 const (
-	DefaultPruneInterval = 500 * time.Millisecond
 	BytesPerFieldElement = 32
 )
 
 /*
 MemStore is a simple in-memory store for blobs which uses an expiration
 time to evict blobs to best emulate the ephemeral nature of blobs dispersed to
-EigenDA operators.
+EigenDA V1 operators.
 */
 type MemStore struct {
+	*ephemeral_db.DB
 	// We use a SafeConfig because it is shared with the MemStore api
 	// which can change its values concurrently.
-	config *memconfig.SafeConfig
-	log    logging.Logger
+	log logging.Logger
 
-	// mu protects keyStarts and store (and verifier??)
-	mu        sync.RWMutex
-	keyStarts map[string]time.Time
-	store     map[string][]byte
 	// We only use the verifier for kzgCommitment verification.
 	// MemStore generates random certs which can't be verified.
 	// TODO: we should probably refactor the Verifier to be able to only take in a BlobVerifier here.
 	verifier *verify.Verifier
 	codec    codecs.BlobCodec
-
-	reads int
 }
 
 var _ common.GeneratedKeyStore = (*MemStore)(nil)
@@ -57,76 +53,26 @@ var _ common.GeneratedKeyStore = (*MemStore)(nil)
 func New(
 	ctx context.Context, verifier *verify.Verifier, log logging.Logger, config *memconfig.SafeConfig,
 ) (*MemStore, error) {
-	store := &MemStore{
-		log:       log,
-		config:    config,
-		keyStarts: make(map[string]time.Time),
-		store:     make(map[string][]byte),
-		verifier:  verifier,
-		codec:     codecs.NewIFFTCodec(codecs.NewDefaultBlobCodec()),
-	}
-
-	if store.config.BlobExpiration() != 0 {
-		log.Info("memstore expiration enabled", "time", store.config.BlobExpiration)
-		go store.pruningLoop(ctx)
-	}
-
-	return store, nil
-}
-
-// pruningLoop ... runs a background goroutine to prune expired blobs from the store on a regular interval.
-func (e *MemStore) pruningLoop(ctx context.Context) {
-	timer := time.NewTicker(DefaultPruneInterval)
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-
-		case <-timer.C:
-			e.pruneExpired()
-		}
-	}
-}
-
-// pruneExpired ... removes expired blobs from the store based on the expiration time.
-func (e *MemStore) pruneExpired() {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-
-	for commit, dur := range e.keyStarts {
-		if time.Since(dur) >= e.config.BlobExpiration() {
-			delete(e.keyStarts, commit)
-			delete(e.store, commit)
-
-			e.log.Debug("blob pruned", "commit", commit)
-		}
-	}
+	return &MemStore{
+		ephemeral_db.New(ctx, config, log),
+		log,
+		verifier,
+		codecs.NewIFFTCodec(codecs.NewDefaultBlobCodec()),
+	}, nil
 }
 
 // Get fetches a value from the store.
 func (e *MemStore) Get(_ context.Context, commit []byte) ([]byte, error) {
-	time.Sleep(e.config.LatencyGETRoute())
-	e.reads++
-	e.mu.RLock()
-	defer e.mu.RUnlock()
-
 	var cert verify.Certificate
 	err := rlp.DecodeBytes(commit, &cert)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode DA cert to RLP format: %w", err)
 	}
 
-	var encodedBlob []byte
-	var exists bool
-	if encodedBlob, exists = e.store[string(cert.BlobVerificationProof.InclusionProof)]; !exists {
-		return nil, fmt.Errorf("commitment key not found")
-	}
-
-	// Don't need to do this really since it's a mock store
-	err = e.verifier.VerifyCommitment(cert.BlobHeader.Commitment, encodedBlob)
+	// construct lookup key identical to EigenDA V1
+	encodedBlob, err := e.FetchEntry(cert.BlobVerificationProof.InclusionProof)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("fetching entry via v1 memstore: %w", err)
 	}
 
 	return e.codec.DecodeBlob(encodedBlob)
@@ -134,33 +80,17 @@ func (e *MemStore) Get(_ context.Context, commit []byte) ([]byte, error) {
 
 // Put inserts a value into the store.
 func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
-	time.Sleep(e.config.LatencyPUTRoute())
-	if e.config.PutReturnsFailoverError() {
-		return nil, api.NewErrorFailover(errors.New("memstore in failover simulation mode"))
-	}
 	encodedVal, err := e.codec.EncodeBlob(value)
 	if err != nil {
 		return nil, err
 	}
-
-	if uint64(len(encodedVal)) > e.config.MaxBlobSizeBytes() {
-		return nil, fmt.Errorf("%w: blob length %d, max blob size %d", common.ErrProxyOversizedBlob, len(value), e.config.MaxBlobSizeBytes())
-	}
-
-	e.mu.Lock()
-	defer e.mu.Unlock()
 
 	commitment, err := e.verifier.Commit(encodedVal)
 	if err != nil {
 		return nil, err
 	}
 
-	// generate batch header hash
-	entropy := make([]byte, 10)
-	_, err = rand.Read(entropy)
-	if err != nil {
-		return nil, err
-	}
+	entropy := randomBytes(10)
 	mockBatchRoot := crypto.Keccak256Hash(entropy)
 	blockNum, _ := rand.Int(rand.Reader, big.NewInt(1000))
 
@@ -206,18 +136,11 @@ func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	// construct key
-	bytesKeys := cert.BlobVerificationProof.InclusionProof
 
-	certStr := string(bytesKeys)
-
-	if _, exists := e.store[certStr]; exists {
-		return nil, fmt.Errorf("commitment key already exists")
+	err = e.InsertEntry(cert.BlobVerificationProof.InclusionProof, encodedVal)
+	if err != nil {
+		return nil, err
 	}
-
-	e.store[certStr] = encodedVal
-	// add expiration
-	e.keyStarts[certStr] = time.Now()
 
 	return certBytes, nil
 }
@@ -227,5 +150,5 @@ func (e *MemStore) Verify(_ context.Context, _, _ []byte) error {
 }
 
 func (e *MemStore) BackendType() common.BackendType {
-	return common.MemoryBackendType
+	return common.MemstoreV1BackendType
 }

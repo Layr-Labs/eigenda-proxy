@@ -5,7 +5,7 @@ go 1.22.0
 toolchain go1.22.7
 
 require (
-	github.com/Layr-Labs/eigenda v0.8.6-rc.0.0.20250212173538-d64650160067
+	github.com/Layr-Labs/eigenda v0.9.0-rc.0
 	github.com/Layr-Labs/eigenda-proxy/client v0.0.0-00010101000000-000000000000
 	github.com/Layr-Labs/eigensdk-go v0.2.0-beta.1.0.20250118004418-2a25f31b3b28
 	github.com/avast/retry-go/v4 v4.6.0

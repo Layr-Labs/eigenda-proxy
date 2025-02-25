@@ -29,6 +29,8 @@ func validCfg() *ProxyConfig {
 			SignerPrivateKeyHex:          "private-key-hex",
 			PutBlobEncodingVersion:       0,
 			DisablePointVerificationMode: false,
+			SvcManagerAddr:               "0x00000000069",
+			EthRpcUrl:                    "http://localhosts",
 		},
 		EdaV1VerifierConfig: verify.Config{
 			KzgConfig: &kzg.KzgConfig{
@@ -42,7 +44,7 @@ func validCfg() *ProxyConfig {
 			RPCURL:               "http://localhost:8545",
 			EthConfirmationDepth: 12,
 		},
-		MemstoreEnabled: true,
+		MemstoreEnabled: false,
 		MemstoreConfig: memconfig.NewSafeConfig(memconfig.Config{
 			BlobExpiration: 25 * time.Minute,
 		}),

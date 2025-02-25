@@ -61,7 +61,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		},
 		&cli.DurationFlag{
 			Name:     ExpirationFlagName,
-			Usage:    "Duration that a memstore blob/commitment pair is allowed to live.",
+			Usage:    "Duration that a memstore blob/commitment pair is allowed to live. Setting to (0) results in no expiration.",
 			Value:    25 * time.Minute,
 			EnvVars:  []string{withEnvPrefix(envPrefix, "EXPIRATION"), withDeprecatedEnvPrefix(envPrefix, "EXPIRATION")},
 			Category: category,

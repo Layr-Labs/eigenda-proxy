@@ -105,6 +105,7 @@ func startRedisContainer() error {
 }
 
 type Cfg struct {
+	UseV2            bool
 	UseMemory        bool
 	Expiration       time.Duration
 	WriteThreadCount int
@@ -115,8 +116,9 @@ type Cfg struct {
 	UseS3Fallback      bool
 }
 
-func TestConfig(useMemory bool) *Cfg {
+func TestConfig(useMemory bool, useV2 bool) *Cfg {
 	return &Cfg{
+		UseV2:              useV2,
 		UseMemory:          useMemory,
 		Expiration:         14 * 24 * time.Hour,
 		UseKeccak256ModeS3: false,
@@ -185,6 +187,11 @@ func TestSuiteConfig(testCfg *Cfg) config.AppConfig {
 
 	svcManagerAddr := "0xD4A7E1Bd8015057293f0D0A557088c286942e84b" // holesky testnet
 	eigendaCfg := config.ProxyConfig{
+		ServerConfig: server.Config{
+			DisperseV2: testCfg.UseV2,
+			Host:       host,
+			Port:       0,
+		},
 		EdaV1ClientConfig: clients.EigenDAClientConfig{
 			RPC:                      v1DisperserHolesky,
 			StatusQueryTimeout:       time.Minute * 45,
@@ -213,9 +220,15 @@ func TestSuiteConfig(testCfg *Cfg) config.AppConfig {
 			BlobExpiration:   testCfg.Expiration,
 			MaxBlobSizeBytes: maxBlobLengthBytes,
 		}),
+
+		EdaV2ClientConfig: common.V2ClientConfig{
+			Enabled: testCfg.UseV2,
+		},
 		StorageConfig: store.Config{
 			AsyncPutWorkers: testCfg.WriteThreadCount,
 		},
+
+		EigenDAV2Enabled: testCfg.UseV2,
 	}
 
 	if testCfg.UseMemory {

@@ -23,17 +23,34 @@ import (
 // when referencing memstore since we don't profile the eigenDAClient interactions
 var (
 	runTestnetIntegrationTests bool // holesky tests
-	runIntegrationTests        bool // memstore tests
+	runIntegrationTests        bool // memstore V1 tests
+	runIntegrationTestsV2      bool // memstore V2 tests
 	runFuzzTests               bool // fuzz tests
 )
+
+func flagActivated(envVar string) bool {
+	return os.Getenv(envVar) == "true" || os.Getenv(envVar) == "1"
+}
 
 // ParseEnv ... reads testing cfg fields. Go test flags don't work for this library due to the dependency on Optimism's E2E framework
 // which initializes test flags per init function which is called before an init in this package.
 func ParseEnv() {
-	runFuzzTests = os.Getenv("FUZZ") == "true" || os.Getenv("FUZZ") == "1"
+	runFuzzTests = flagActivated("FUZZ")
+	runIntegrationTestsV2 = flagActivated("INTEGRATION_V2")
+	runIntegrationTests = flagActivated("INTEGRATION")
+	runTestnetIntegrationTests = flagActivated("TESTNET")
+
 	if runIntegrationTests && runTestnetIntegrationTests {
 		panic("only one of INTEGRATION=true or TESTNET=true env var can be set")
 	}
+
+	if runIntegrationTests && runIntegrationTestsV2 {
+		panic("only one of INTEGRATION=true or INTEGRATION_V2=true env var can be set")
+	}
+
+	println("fuzz_tests", runFuzzTests, "integration_tests_v1", runIntegrationTests,
+		"integration_tests_v2", runIntegrationTestsV2, "testnet_integration_tests", runTestnetIntegrationTests,
+	)
 }
 
 // TestMain ... run main controller

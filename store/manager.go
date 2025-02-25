@@ -168,7 +168,7 @@ func (m *Manager) Put(ctx context.Context, cm commitments.CommitmentMode, key, v
 // putEigenDAMode ... disperses blob to EigenDA backend
 func (m *Manager) putEigenDAMode(ctx context.Context, value []byte) ([]byte, error) {
 	if !m.writeV2 { // disperse v1
-		m.log.Info("Storing data to EigenDA backend")
+		m.log.Info("Storing data to EigenDA V1 backend")
 		return m.eigenda.Put(ctx, value)
 	}
 

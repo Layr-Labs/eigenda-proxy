@@ -8,9 +8,10 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/eigenda"
-	eigendav2 "github.com/Layr-Labs/eigenda-proxy/store/generated_key/eigenda_v2"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
+	memstorev2 "github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/v2"
+	eigendav2 "github.com/Layr-Labs/eigenda-proxy/store/generated_key/v2"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
@@ -75,19 +76,26 @@ func (d *Builder) buildSecondaries(targets []string, s3Store common.PrecomputedK
 }
 
 // buildEigenDAV2Backend ... Builds EigenDA V2 storage backend
-func (d *Builder) buildEigenDAV2Backend(maxBlobSizeBytes uint) (*eigendav2.Store, error) {
+func (d *Builder) buildEigenDAV2Backend(maxBlobSizeBytes uint) (common.GeneratedKeyStore, error) {
+	// TODO: Figure out how to better manage the v1 verifier
+	// may make sense to live in some global kzg config that's passed
+	// down across EigenDA versions
+	g1Points, err := kzg.ReadG1Points(
+		d.v1VerifierCfg.KzgConfig.G1Path,
+		d.v1VerifierCfg.KzgConfig.SRSNumberToLoad, 4)
+	if err != nil {
+		return nil, err
+	}
+
+	if d.memConfig != nil {
+		return memstorev2.New(d.ctx, d.log, d.memConfig, g1Points)
+	}
+
 	gethCfg := geth.EthClientConfig{
 		RPCURLs: []string{d.v1EdaClientCfg.EthRpcUrl},
 	}
 
 	ethClient, err := geth.NewClient(gethCfg, geth_common.Address{}, 0, d.log)
-	if err != nil {
-		return nil, err
-	}
-
-	g1Points, err := kzg.ReadG1Points(
-		d.v1VerifierCfg.KzgConfig.G1Path,
-		d.v1VerifierCfg.KzgConfig.SRSNumberToLoad, 4)
 	if err != nil {
 		return nil, err
 	}
@@ -124,15 +132,15 @@ func (d *Builder) buildEigenDAV2Backend(maxBlobSizeBytes uint) (*eigendav2.Store
 		return nil, err
 	}
 
-	verifier, err := verification.NewCertVerifier(d.log, ethClient, d.v2ClientCfg.PayloadClientCfg.EigenDACertVerifierAddr, time.Second*1)
+	verifier, err := verification.NewCertVerifier(d.log, ethClient, time.Second*1)
 	if err != nil {
 		return nil, err
 	}
 
 	return eigendav2.NewStore(d.log, &eigendav2.Config{
-		// TODO: understand how to manage MaxBlobSizeBytes field
-		// MaxBlobSizeBytes:   d.v2ClientCfg.DisperserClientCfg.MaxBlobSizeBytes,
-		PutRetries: d.v2ClientCfg.PutRetries,
+		CertVerifierAddress: d.v2ClientCfg.PayloadClientCfg.EigenDACertVerifierAddr,
+		MaxBlobSizeBytes:    uint64(maxBlobSizeBytes),
+		PutRetries:          d.v2ClientCfg.PutRetries,
 	}, disperser, retriever, verifier)
 }
 
@@ -146,34 +154,33 @@ func (d *Builder) buildEigenDAV1Backend(ctx context.Context, putRetries uint, ma
 	if d.v1VerifierCfg.VerifyCerts {
 		d.log.Info("Certificate verification with Ethereum enabled")
 	} else {
-		d.log.Warn("Verification disabled")
+		d.log.Warn("Certificate verification disabled. This can result in invalid EigenDA certificates being accredited.")
 	}
 	// create EigenDA backend store
 	var eigenDA common.GeneratedKeyStore
 	if d.memConfig != nil {
-		d.log.Info("Using memstore backend for EigenDA")
-		eigenDA, err = memstore.New(ctx, verifier, d.log, d.memConfig)
-	} else {
-		// EigenDAV1 backend dependency injection
-		var client *clients.EigenDAClient
-		d.log.Warn("Using EigenDA backend.. This backend type will be deprecated soon. Please migrate to V2.")
-		client, err = clients.NewEigenDAClient(d.log, d.v1EdaClientCfg)
-		if err != nil {
-			return nil, err
-		}
-
-		eigenDA, err = eigenda.NewStore(
-			client,
-			verifier,
-			d.log,
-			&eigenda.StoreConfig{
-				MaxBlobSizeBytes:     uint64(maxBlobSize),
-				EthConfirmationDepth: d.v1VerifierCfg.EthConfirmationDepth,
-				StatusQueryTimeout:   d.v1EdaClientCfg.StatusQueryTimeout,
-				PutRetries:           putRetries,
-			},
-		)
+		d.log.Info("Using memstore backend for EigenDA V1")
+		return memstore.New(ctx, verifier, d.log, d.memConfig)
 	}
+	// EigenDAV1 backend dependency injection
+	var client *clients.EigenDAClient
+	d.log.Warn("Using EigenDA backend.. This backend type will be deprecated soon. Please migrate to V2.")
+	client, err = clients.NewEigenDAClient(d.log, d.v1EdaClientCfg)
+	if err != nil {
+		return nil, err
+	}
+
+	eigenDA, err = eigenda.NewStore(
+		client,
+		verifier,
+		d.log,
+		&eigenda.StoreConfig{
+			MaxBlobSizeBytes:     uint64(maxBlobSize),
+			EthConfirmationDepth: d.v1VerifierCfg.EthConfirmationDepth,
+			StatusQueryTimeout:   d.v1EdaClientCfg.StatusQueryTimeout,
+			PutRetries:           putRetries,
+		},
+	)
 
 	return eigenDA, nil
 }
@@ -183,8 +190,7 @@ func (d *Builder) BuildManager(ctx context.Context, putRetries uint, maxBlobSize
 	var err error
 	var s3Store *s3.Store
 	var redisStore *redis.Store
-	var eigenDAV2Store *eigendav2.Store
-	var eigenDAV1Store common.GeneratedKeyStore
+	var eigenDAV1Store, eigenDAV2Store common.GeneratedKeyStore
 
 	if d.managerCfg.S3Config.Bucket != "" {
 		d.log.Debug("Using S3 storage backend")
@@ -236,5 +242,5 @@ func (d *Builder) BuildManager(ctx context.Context, putRetries uint, maxBlobSize
 		"async_secondary_writes", (secondary.Enabled() && d.managerCfg.AsyncPutWorkers > 0),
 		"verify_v1_certs", d.v1VerifierCfg.VerifyCerts,
 	)
-	return NewManager(nil, eigenDAV2Store, s3Store, d.log, secondary, d.v2ClientCfg.Enabled)
+	return NewManager(eigenDAV1Store, eigenDAV2Store, s3Store, d.log, secondary, d.v2ClientCfg.Enabled)
 }
