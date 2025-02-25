@@ -214,7 +214,7 @@ func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	cert, err := e.generateRandomCert(value)
+	cert, err := e.generateRandomCert(encodedVal)
 	if err != nil {
 		return nil, err
 	}
