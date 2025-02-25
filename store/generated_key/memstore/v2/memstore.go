@@ -53,7 +53,7 @@ time to evict blobs to best emulate the ephemeral nature of blobs dispersed to
 EigenDA V2 operators.
 */
 type MemStore struct {
-	// keccak(MarshalJSON(randomlyGeneratedCert)) -> Blob
+	// keccak(RLP(randomlyGeneratedCert)) -> Blob
 	*ephemeral_db.DB
 	log logging.Logger
 

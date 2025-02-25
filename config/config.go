@@ -54,10 +54,12 @@ type ProxyConfig struct {
 	StorageConfig  store.Config
 
 	// Enabling will turn on memstore for both V1 && V2
-	// currently there is no way to reference V1 when testing migrations
-	// since ephemeral state lives in-memory. It may make sense to enable
-	// some form of snap shots to be able to better simulate upgrades
-	// against a rollup stack.
+	/*
+	   Currently the memstore is not persisted to disk,
+	   and is lost when proxy is stopped. Testing migrations
+	   is currently not supported because it requires restarting
+	   the proxy with new flags, which will cause the memstore db to be wiped.
+	*/
 	MemstoreEnabled bool
 
 	EigenDAV2Enabled bool
