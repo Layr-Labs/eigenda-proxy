@@ -126,8 +126,8 @@ func TestConfigVerification(t *testing.T) {
 		t.Run("FailWhenEigenDAClientFieldsAreUnsetAndMemStoreDisabled", func(t *testing.T) {
 			cfg := validCfg()
 			cfg.MemstoreEnabled = false
-			cfg.EdaV1VerifierConfig.RPCURL = ""
-			cfg.EdaV1VerifierConfig.SvcManagerAddr = ""
+			cfg.EdaV1ClientConfig.EthRpcUrl = ""
+			cfg.EdaV1ClientConfig.SvcManagerAddr = ""
 
 			err := cfg.Check()
 			require.Error(t, err)

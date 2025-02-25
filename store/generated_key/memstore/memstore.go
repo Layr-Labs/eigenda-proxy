@@ -36,8 +36,6 @@ EigenDA V1 operators.
 */
 type MemStore struct {
 	*ephemeral_db.DB
-	// We use a SafeConfig because it is shared with the MemStore api
-	// which can change its values concurrently.
 	log logging.Logger
 
 	// We only use the verifier for kzgCommitment verification.
@@ -63,14 +61,7 @@ func New(
 
 // Get fetches a value from the store.
 func (e *MemStore) Get(_ context.Context, commit []byte) ([]byte, error) {
-	var cert verify.Certificate
-	err := rlp.DecodeBytes(commit, &cert)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode DA cert to RLP format: %w", err)
-	}
-
-	// construct lookup key identical to EigenDA V1
-	encodedBlob, err := e.FetchEntry(cert.BlobVerificationProof.InclusionProof)
+	encodedBlob, err := e.FetchEntry(crypto.Keccak256Hash(commit).Bytes())
 	if err != nil {
 		return nil, fmt.Errorf("fetching entry via v1 memstore: %w", err)
 	}
@@ -137,7 +128,9 @@ func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	err = e.InsertEntry(cert.BlobVerificationProof.InclusionProof, encodedVal)
+	certKey := crypto.Keccak256Hash(certBytes).Bytes()
+
+	err = e.InsertEntry(certKey, encodedVal)
 	if err != nil {
 		return nil, err
 	}
