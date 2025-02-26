@@ -15,6 +15,8 @@ import (
 	"github.com/Layr-Labs/eigenda/api/clients/codecs"
 	eigenda_common "github.com/Layr-Labs/eigenda/api/grpc/common"
 	"github.com/Layr-Labs/eigenda/api/grpc/disperser"
+	"github.com/Layr-Labs/eigenda/core"
+
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/ethereum/go-ethereum/crypto"
 )
@@ -59,29 +61,19 @@ func New(
 	}, nil
 }
 
-// Get fetches a value from the store.
-func (e *MemStore) Get(_ context.Context, commit []byte) ([]byte, error) {
-	encodedBlob, err := e.FetchEntry(crypto.Keccak256Hash(commit).Bytes())
-	if err != nil {
-		return nil, fmt.Errorf("fetching entry via v1 memstore: %w", err)
-	}
-
-	return e.codec.DecodeBlob(encodedBlob)
-}
-
-// Put inserts a value into the store.
-func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
-	encodedVal, err := e.codec.EncodeBlob(value)
+// generateRandomCert ... generates random EigenDA V1 certificate
+func (e *MemStore) generateRandomCert(blobValue []byte) (*verify.Certificate, error) {
+	commitment, err := e.verifier.Commit(blobValue)
 	if err != nil {
 		return nil, err
 	}
 
-	commitment, err := e.verifier.Commit(encodedVal)
+	// generate batch root hash
+	entropy := make([]byte, 10)
+	_, err = rand.Read(entropy)
 	if err != nil {
 		return nil, err
 	}
-
-	entropy := randomBytes(10)
 	mockBatchRoot := crypto.Keccak256Hash(entropy)
 	blockNum, _ := rand.Int(rand.Reader, big.NewInt(1000))
 
@@ -93,7 +85,7 @@ func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
 				X: commitment.X.Marshal(),
 				Y: commitment.Y.Marshal(),
 			},
-			DataLength: uint32((len(encodedVal) + BytesPerFieldElement - 1) / BytesPerFieldElement), // #nosec G115
+			DataLength: uint32((len(blobValue) + BytesPerFieldElement - 1) / BytesPerFieldElement), // #nosec G115
 			BlobQuorumParams: []*disperser.BlobQuorumParam{
 				{
 					QuorumNumber:                    1,
@@ -112,7 +104,7 @@ func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
 					ReferenceBlockNumber:    num,
 				},
 				SignatoryRecordHash:     mockBatchRoot[:],
-				Fee:                     []byte{},
+				Fee:                     []byte{0x00},
 				ConfirmationBlockNumber: num,
 				BatchHeaderHash:         []byte{},
 			},
@@ -121,6 +113,49 @@ func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
 			InclusionProof: entropy,
 			QuorumIndexes:  []byte{0x1, 0x0},
 		},
+	}
+
+	// compute batch header hash
+	// this is necessary since EigenDA x Arbitrum reconstructs
+	// the batch header hash before querying proxy since hash field
+	// isn't persisted via the onchain cert posted to the inbox
+	bh := cert.BlobVerificationProof.BatchMetadata.BatchHeader
+
+	reducedHeader := core.BatchHeader{
+		BatchRoot:            [32]byte(bh.GetBatchRoot()),
+		ReferenceBlockNumber: uint(bh.GetReferenceBlockNumber()),
+	}
+
+	headerHash, err := reducedHeader.GetBatchHeaderHash()
+	if err != nil {
+		return nil, fmt.Errorf("generating batch header hash: %w", err)
+	}
+
+	cert.BlobVerificationProof.BatchMetadata.BatchHeaderHash = headerHash[:]
+
+	return cert, nil
+}
+
+// Get fetches a value from the store.
+func (e *MemStore) Get(_ context.Context, commit []byte) ([]byte, error) {
+	encodedBlob, err := e.FetchEntry(crypto.Keccak256Hash(commit).Bytes())
+	if err != nil {
+		return nil, fmt.Errorf("fetching entry via v1 memstore: %w", err)
+	}
+
+	return e.codec.DecodeBlob(encodedBlob)
+}
+
+// Put inserts a value into the store.
+func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
+	encodedVal, err := e.codec.EncodeBlob(value)
+	if err != nil {
+		return nil, err
+	}
+
+	cert, err := e.generateRandomCert(encodedVal)
+	if err != nil {
+		return nil, err
 	}
 
 	certBytes, err := rlp.EncodeToBytes(cert)
