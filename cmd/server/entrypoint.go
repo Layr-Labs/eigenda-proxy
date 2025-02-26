@@ -47,14 +47,18 @@ func StartProxySvr(cliCtx *cli.Context) error {
 	ctx, ctxCancel := context.WithCancel(cliCtx.Context)
 	defer ctxCancel()
 
-	var memConfig *memconfig.SafeConfig = cfg.EigenDAConfig.MemstoreConfig
+	memConfig := cfg.EigenDAConfig.MemstoreConfig
 	if !cfg.EigenDAConfig.MemstoreEnabled {
 		memConfig = nil
 	}
 
-	sm, err := store.NewBuilder(ctx, cfg.EigenDAConfig.StorageConfig,
+	sm, err := store.NewBuilder(
+		ctx, cfg.EigenDAConfig.StorageConfig,
 		cfg.EigenDAConfig.EdaV1VerifierConfig, cfg.EigenDAConfig.EdaV1ClientConfig,
-		cfg.EigenDAConfig.EdaV2ClientConfig, memConfig, log, m).BuildManager(ctx, cfg.EigenDAConfig.EdaV2ClientConfig.PutRetries, cfg.EigenDAConfig.MaxBlobSizeBytes)
+		cfg.EigenDAConfig.EdaV2ClientConfig, memConfig, log, m,
+	).BuildManager(
+		ctx, cfg.EigenDAConfig.EdaV2ClientConfig.PutRetries,
+		cfg.EigenDAConfig.MaxBlobSizeBytes, cfg.EigenDAConfig.EigenDACertVerifierAddress)
 	if err != nil {
 		return fmt.Errorf("failed to create store: %w", err)
 	}
@@ -113,6 +117,9 @@ func prettyPrintConfig(cliCtx *cli.Context, log logging.Logger) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
-	log.Info(fmt.Sprintf("Initializing EigenDA proxy server with config (\"*****\" fields are hidden): %v", string(configJSON)))
+	log.Info(
+		fmt.Sprintf(
+			"Initializing EigenDA proxy server with config (\"*****\" fields are hidden): %v",
+			string(configJSON)))
 	return nil
 }

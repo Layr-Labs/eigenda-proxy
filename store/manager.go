@@ -33,9 +33,9 @@ type Manager struct {
 }
 
 // NewManager ... Init
-func NewManager(eigenda common.GeneratedKeyStore, eigenDAV2 common.GeneratedKeyStore, s3 common.PrecomputedKeyStore,
+func NewManager(
+	eigenda common.GeneratedKeyStore, eigenDAV2 common.GeneratedKeyStore, s3 common.PrecomputedKeyStore,
 	l logging.Logger, secondary ISecondary, useV2 bool) (IManager, error) {
-
 	// 1 - Determine where to disperse blobs
 	var writeV2 = true
 	if eigenda != nil && !useV2 {

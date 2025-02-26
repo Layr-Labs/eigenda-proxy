@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
-	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/ephemeral_db"
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/ephemeraldb"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
 	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
 	"github.com/Layr-Labs/eigenda/api/clients/codecs"
@@ -21,12 +21,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-func randomBytes(size uint) []byte {
-	entropy := make([]byte, size)
-	_, _ = rand.Read(entropy)
-	return entropy
-}
-
 const (
 	BytesPerFieldElement = 32
 )
@@ -37,7 +31,7 @@ time to evict blobs to best emulate the ephemeral nature of blobs dispersed to
 EigenDA V1 operators.
 */
 type MemStore struct {
-	*ephemeral_db.DB
+	*ephemeraldb.DB
 	log logging.Logger
 
 	// We only use the verifier for kzgCommitment verification.
@@ -54,7 +48,7 @@ func New(
 	ctx context.Context, verifier *verify.Verifier, log logging.Logger, config *memconfig.SafeConfig,
 ) (*MemStore, error) {
 	return &MemStore{
-		ephemeral_db.New(ctx, config, log),
+		ephemeraldb.New(ctx, config, log),
 		log,
 		verifier,
 		codecs.NewIFFTCodec(codecs.NewDefaultBlobCodec()),
