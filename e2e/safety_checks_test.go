@@ -122,11 +122,11 @@ func TestProxyClientMalformedInputCases(t *testing.T) {
 	t.Run("get data edge cases - huge cert", func(t *testing.T) {
 		// TODO: we need to add the 0 version byte at the beginning.
 		// should this not be done automatically by the std_commitment client?
-		testCert := append([]byte{0}, e2e.RandBytes(10000)...)
+		testCert := append([]byte{0x0}, e2e.RandBytes(10000)...)
 		_, err := daClient.GetData(ts.Ctx, testCert)
 		require.Error(t, err)
 		assert.True(t, strings.Contains(err.Error(),
-			"failed to decode DA cert to RLP format: rlp: expected input list for verify.Certificate") &&
+			"payload not found for key") &&
 			!isNilPtrDerefPanic(err.Error()))
 	})
 }
