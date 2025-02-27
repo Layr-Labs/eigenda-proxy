@@ -11,22 +11,22 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/eigenda"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
-	memstorev2 "github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/v2"
-	eigendav2 "github.com/Layr-Labs/eigenda-proxy/store/generated_key/v2"
+	memstore_v2 "github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/v2"
+	eigenda_v2 "github.com/Layr-Labs/eigenda-proxy/store/generated_key/v2"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
 	"github.com/Layr-Labs/eigenda/api/clients"
-	clientsv2 "github.com/Layr-Labs/eigenda/api/clients/v2"
+	clients_v2 "github.com/Layr-Labs/eigenda/api/clients/v2"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
-	commonda "github.com/Layr-Labs/eigenda/common"
+	common_da "github.com/Layr-Labs/eigenda/common"
 	"github.com/Layr-Labs/eigenda/common/geth"
 	auth "github.com/Layr-Labs/eigenda/core/auth/v2"
-	eigendaeth "github.com/Layr-Labs/eigenda/core/eth"
+	eigenda_eth "github.com/Layr-Labs/eigenda/core/eth"
 	"github.com/Layr-Labs/eigenda/encoding/kzg/prover"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/consensys/gnark-crypto/ecc/bn254"
-	gethcommon "github.com/ethereum/go-ethereum/common"
+	geth_common "github.com/ethereum/go-ethereum/common"
 )
 
 // Builder centralizes dependency initialization
@@ -99,7 +99,7 @@ func (d *Builder) buildEigenDAV2Backend(
 	}
 
 	if d.memConfig != nil {
-		return memstorev2.New(d.ctx, d.log, d.memConfig, kzgProver.Srs.G1)
+		return memstore_v2.New(d.ctx, d.log, d.memConfig, kzgProver.Srs.G1)
 	}
 
 	ethClient, err := d.buildEthClient()
@@ -123,13 +123,13 @@ func (d *Builder) buildEigenDAV2Backend(
 		return nil, fmt.Errorf("build payload disperser: %w", err)
 	}
 
-	v2Config := &eigendav2.Config{
+	v2Config := &eigenda_v2.Config{
 		CertVerifierAddress: eigenDACertVerifierAddress,
 		MaxBlobSizeBytes:    uint64(maxBlobSizeBytes),
 		PutRetries:          d.v2ClientCfg.PutRetries,
 	}
 
-	return eigendav2.NewStore(d.log, v2Config, payloadDisperser, relayPayloadRetriever, certVerifier)
+	return eigenda_v2.NewStore(d.log, v2Config, payloadDisperser, relayPayloadRetriever, certVerifier)
 }
 
 // buildEigenDAV1Backend ... Builds EigenDA V1 storage backend
@@ -242,12 +242,12 @@ func (d *Builder) BuildManager(
 	return NewManager(eigenDAV1Store, eigenDAV2Store, s3Store, d.log, secondary, d.v2ClientCfg.Enabled)
 }
 
-func (d *Builder) buildEthClient() (commonda.EthClient, error) {
+func (d *Builder) buildEthClient() (common_da.EthClient, error) {
 	gethCfg := geth.EthClientConfig{
 		RPCURLs: []string{d.v1EdaClientCfg.EthRpcUrl},
 	}
 
-	ethClient, err := geth.NewClient(gethCfg, gethcommon.Address{}, 0, d.log)
+	ethClient, err := geth.NewClient(gethCfg, geth_common.Address{}, 0, d.log)
 	if err != nil {
 		return nil, fmt.Errorf("create geth client: %w", err)
 	}
@@ -256,16 +256,16 @@ func (d *Builder) buildEthClient() (commonda.EthClient, error) {
 }
 
 func (d *Builder) buildRelayPayloadRetriever(
-	ethClient commonda.EthClient,
+	ethClient common_da.EthClient,
 	maxBlobSizeBytes uint,
 	g1Srs []bn254.G1Affine,
-) (*clientsv2.RelayPayloadRetriever, error) {
+) (*clients_v2.RelayPayloadRetriever, error) {
 	relayClient, err := d.buildRelayClient(ethClient, maxBlobSizeBytes)
 	if err != nil {
 		return nil, fmt.Errorf("build relay client: %w", err)
 	}
 
-	relayPayloadRetriever, err := clientsv2.NewRelayPayloadRetriever(
+	relayPayloadRetriever, err := clients_v2.NewRelayPayloadRetriever(
 		d.log,
 		//nolint:gosec // disable G404: this doesn't need to be cryptographically secure
 		rand.New(rand.NewSource(time.Now().UnixNano())),
@@ -279,8 +279,10 @@ func (d *Builder) buildRelayPayloadRetriever(
 	return relayPayloadRetriever, nil
 }
 
-func (d *Builder) buildRelayClient(ethClient commonda.EthClient, maxBlobSizeBytes uint) (clientsv2.RelayClient, error) {
-	reader, err := eigendaeth.NewReader(d.log, ethClient, "0x0", d.v2ClientCfg.ServiceManagerAddress)
+func (d *Builder) buildRelayClient(
+	ethClient common_da.EthClient,
+	maxBlobSizeBytes uint) (clients_v2.RelayClient, error) {
+	reader, err := eigenda_eth.NewReader(d.log, ethClient, "0x0", d.v2ClientCfg.ServiceManagerAddress)
 	if err != nil {
 		return nil, fmt.Errorf("new eth reader: %w", err)
 	}
@@ -290,7 +292,7 @@ func (d *Builder) buildRelayClient(ethClient commonda.EthClient, maxBlobSizeByte
 		return nil, err
 	}
 
-	relayCfg := &clientsv2.RelayClientConfig{
+	relayCfg := &clients_v2.RelayClientConfig{
 		UseSecureGrpcFlag: d.v2ClientCfg.DisperserClientCfg.UseSecureGrpcFlag,
 		// we should never expect a message greater than our allowed max blob size.
 		// 10% of max blob size is added for additional safety
@@ -298,7 +300,7 @@ func (d *Builder) buildRelayClient(ethClient commonda.EthClient, maxBlobSizeByte
 		Sockets:            relayURLs,
 	}
 
-	relayClient, err := clientsv2.NewRelayClient(relayCfg, d.log)
+	relayClient, err := clients_v2.NewRelayClient(relayCfg, d.log)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create relay client: %w", err)
 	}
@@ -309,18 +311,18 @@ func (d *Builder) buildRelayClient(ethClient commonda.EthClient, maxBlobSizeByte
 func (d *Builder) buildPayloadDisperser(
 	kzgProver *prover.Prover,
 	certVerifier *verification.CertVerifier,
-) (*clientsv2.PayloadDisperser, error) {
+) (*clients_v2.PayloadDisperser, error) {
 	signer, err := auth.NewLocalBlobRequestSigner(d.v2ClientCfg.PayloadDisperserCfg.SignerPaymentKey)
 	if err != nil {
 		return nil, fmt.Errorf("new local blob request signer: %w", err)
 	}
 
-	disperserClient, err := clientsv2.NewDisperserClient(&d.v2ClientCfg.DisperserClientCfg, signer, kzgProver, nil)
+	disperserClient, err := clients_v2.NewDisperserClient(&d.v2ClientCfg.DisperserClientCfg, signer, kzgProver, nil)
 	if err != nil {
 		return nil, fmt.Errorf("new disperser client: %w", err)
 	}
 
-	payloadDisperser, err := clientsv2.NewPayloadDisperser(
+	payloadDisperser, err := clients_v2.NewPayloadDisperser(
 		d.log,
 		d.v2ClientCfg.PayloadDisperserCfg,
 		disperserClient,
