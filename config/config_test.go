@@ -56,7 +56,7 @@ func validCfg() *ProxyConfig {
 				Port:              "9999",
 				UseSecureGrpcFlag: true,
 			},
-			PayloadClientCfg: v2_clients.PayloadDisperserConfig{
+			PayloadDisperserCfg: v2_clients.PayloadDisperserConfig{
 				SignerPaymentKey: "0x000000000000000",
 			},
 			ServiceManagerAddress: "0x1234567890abcdef",
@@ -151,7 +151,7 @@ func TestConfigVerification(t *testing.T) {
 					require.Error(t, cfg.Check())
 
 					cfg = validCfg()
-					cfg.EdaV2ClientConfig.PayloadClientCfg.SignerPaymentKey = ""
+					cfg.EdaV2ClientConfig.PayloadDisperserCfg.SignerPaymentKey = ""
 					require.Error(t, cfg.Check())
 				})
 		})

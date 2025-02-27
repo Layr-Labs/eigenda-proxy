@@ -190,11 +190,11 @@ func ReadConfig(ctx *cli.Context) common.V2ClientConfig {
 		Enabled:               ctx.Bool(V2EnabledFlagName),
 		ServiceManagerAddress: ctx.String(SvcManagerAddrFlagName),
 
-		DisperserClientCfg: readDisperserCfg(ctx),
-		PayloadClientCfg:   readPayloadDisperserCfg(ctx),
-		RetrievalConfig:    readRetrievalConfig(ctx),
-		EthRPC:             ctx.String(EthRPCURLFlagName),
-		PutRetries:         ctx.Uint(PutRetriesFlagName),
+		DisperserClientCfg:       readDisperserCfg(ctx),
+		PayloadDisperserCfg:      readPayloadDisperserCfg(ctx),
+		RelayPayloadRetrieverCfg: readRetrievalConfig(ctx),
+		EthRPC:                   ctx.String(EthRPCURLFlagName),
+		PutRetries:               ctx.Uint(PutRetriesFlagName),
 	}
 }
 

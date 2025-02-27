@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
@@ -16,14 +17,16 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
 	"github.com/Layr-Labs/eigenda/api/clients"
-	clients_v2 "github.com/Layr-Labs/eigenda/api/clients/v2"
+	clientsv2 "github.com/Layr-Labs/eigenda/api/clients/v2"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
-
+	commonda "github.com/Layr-Labs/eigenda/common"
 	"github.com/Layr-Labs/eigenda/common/geth"
-	eigenda_eth "github.com/Layr-Labs/eigenda/core/eth"
-	"github.com/Layr-Labs/eigenda/encoding/kzg"
+	auth "github.com/Layr-Labs/eigenda/core/auth/v2"
+	eigendaeth "github.com/Layr-Labs/eigenda/core/eth"
+	"github.com/Layr-Labs/eigenda/encoding/kzg/prover"
 	"github.com/Layr-Labs/eigensdk-go/logging"
-	geth_common "github.com/ethereum/go-ethereum/common"
+	"github.com/consensys/gnark-crypto/ecc/bn254"
+	gethcommon "github.com/ethereum/go-ethereum/common"
 )
 
 // Builder centralizes dependency initialization
@@ -89,77 +92,44 @@ func (d *Builder) buildEigenDAV2Backend(
 	eigenDACertVerifierAddress string,
 ) (common.GeneratedKeyStore, error) {
 	// TODO: Figure out how to better manage the v1 verifier
-	// may make sense to live in some global kzg config that's passed
-	// down across EigenDA versions
-	g1Points, err := kzg.ReadG1Points(
-		d.v1VerifierCfg.KzgConfig.G1Path,
-		d.v1VerifierCfg.KzgConfig.SRSNumberToLoad, 4)
+	//  may make sense to live in some global kzg config that's passed down across EigenDA versions
+	kzgProver, err := prover.NewProver(d.v1VerifierCfg.KzgConfig, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("new KZG prover: %w", err)
 	}
 
 	if d.memConfig != nil {
-		return memstorev2.New(d.ctx, d.log, d.memConfig, g1Points)
+		return memstorev2.New(d.ctx, d.log, d.memConfig, kzgProver.Srs.G1)
 	}
 
-	gethCfg := geth.EthClientConfig{
-		RPCURLs: []string{d.v1EdaClientCfg.EthRpcUrl},
-	}
-
-	ethClient, err := geth.NewClient(gethCfg, geth_common.Address{}, 0, d.log)
+	ethClient, err := d.buildEthClient()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("build eth client: %w", err)
 	}
 
-	// initialize eth reader object to fetch relay urls from
-	// onchain EigenDARelayRegistry contract
-	reader, err := eigenda_eth.NewReader(d.log, ethClient, "0x0", d.v2ClientCfg.ServiceManagerAddress)
+	relayPayloadRetriever, err := d.buildRelayPayloadRetriever(ethClient, maxBlobSizeBytes, kzgProver.Srs.G1)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("build relay payload retriever: %w", err)
 	}
 
-	relayURLs, err := reader.GetRelayURLs(d.ctx)
+	certVerifier, err := verification.NewCertVerifier(
+		d.log, ethClient, d.v2ClientCfg.PayloadDisperserCfg.BlockNumberPollInterval)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("new cert verifier: %w", err)
 	}
 
-	relayCfg := clients_v2.RelayClientConfig{
-		UseSecureGrpcFlag: d.v2ClientCfg.DisperserClientCfg.UseSecureGrpcFlag,
-		// we should never expect a message greater than our allowed max blob size.
-		// 10% of max blob size is added for additional safety
-		MaxGRPCMessageSize: maxBlobSizeBytes + (maxBlobSizeBytes / 10),
-		Sockets:            relayURLs,
-	}
-
-	retriever, err := clients_v2.BuildRelayPayloadRetriever(d.log, d.v2ClientCfg.RetrievalConfig, &relayCfg, g1Points)
+	payloadDisperser, err := d.buildPayloadDisperser(kzgProver, certVerifier)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("build payload disperser: %w", err)
 	}
 
-	// TODO: https://github.com/Layr-Labs/eigenda-proxy/issues/274
-	// ^ why prover/encoder fields are nil'd out
-	disperser, err := clients_v2.BuildPayloadDisperser(
-		d.log,
-		d.v2ClientCfg.PayloadClientCfg,
-		&d.v2ClientCfg.DisperserClientCfg,
-		&gethCfg,
-		nil,
-		nil)
-	if err != nil {
-		return nil, err
+	v2Config := &eigendav2.Config{
+		CertVerifierAddress: eigenDACertVerifierAddress,
+		MaxBlobSizeBytes:    uint64(maxBlobSizeBytes),
+		PutRetries:          d.v2ClientCfg.PutRetries,
 	}
 
-	verifier, err := verification.NewCertVerifier(d.log, ethClient, time.Second*1)
-	if err != nil {
-		return nil, err
-	}
-
-	return eigendav2.NewStore(
-		d.log, &eigendav2.Config{
-			CertVerifierAddress: eigenDACertVerifierAddress,
-			MaxBlobSizeBytes:    uint64(maxBlobSizeBytes),
-			PutRetries:          d.v2ClientCfg.PutRetries,
-		}, disperser, retriever, verifier)
+	return eigendav2.NewStore(d.log, v2Config, payloadDisperser, relayPayloadRetriever, certVerifier)
 }
 
 // buildEigenDAV1Backend ... Builds EigenDA V1 storage backend
@@ -270,4 +240,94 @@ func (d *Builder) BuildManager(
 		"verify_v1_certs", d.v1VerifierCfg.VerifyCerts,
 	)
 	return NewManager(eigenDAV1Store, eigenDAV2Store, s3Store, d.log, secondary, d.v2ClientCfg.Enabled)
+}
+
+func (d *Builder) buildEthClient() (commonda.EthClient, error) {
+	gethCfg := geth.EthClientConfig{
+		RPCURLs: []string{d.v1EdaClientCfg.EthRpcUrl},
+	}
+
+	ethClient, err := geth.NewClient(gethCfg, gethcommon.Address{}, 0, d.log)
+	if err != nil {
+		return nil, fmt.Errorf("create geth client: %w", err)
+	}
+
+	return ethClient, nil
+}
+
+func (d *Builder) buildRelayPayloadRetriever(
+	ethClient commonda.EthClient,
+	maxBlobSizeBytes uint,
+	g1Srs []bn254.G1Affine,
+) (*clientsv2.RelayPayloadRetriever, error) {
+	relayClient, err := d.buildRelayClient(ethClient, maxBlobSizeBytes)
+	if err != nil {
+		return nil, fmt.Errorf("build relay client: %w", err)
+	}
+
+	relayPayloadRetriever, err := clientsv2.NewRelayPayloadRetriever(
+		d.log,
+		//nolint:gosec // disable G404: this doesn't need to be cryptographically secure
+		rand.New(rand.NewSource(time.Now().UnixNano())),
+		d.v2ClientCfg.RelayPayloadRetrieverCfg,
+		relayClient,
+		g1Srs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create relay payload retriever: %w", err)
+	}
+
+	return relayPayloadRetriever, nil
+}
+
+func (d *Builder) buildRelayClient(ethClient commonda.EthClient, maxBlobSizeBytes uint) (clientsv2.RelayClient, error) {
+	reader, err := eigendaeth.NewReader(d.log, ethClient, "0x0", d.v2ClientCfg.ServiceManagerAddress)
+	if err != nil {
+		return nil, fmt.Errorf("new eth reader: %w", err)
+	}
+
+	relayURLs, err := reader.GetRelayURLs(d.ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	relayCfg := &clientsv2.RelayClientConfig{
+		UseSecureGrpcFlag: d.v2ClientCfg.DisperserClientCfg.UseSecureGrpcFlag,
+		// we should never expect a message greater than our allowed max blob size.
+		// 10% of max blob size is added for additional safety
+		MaxGRPCMessageSize: maxBlobSizeBytes + (maxBlobSizeBytes / 10),
+		Sockets:            relayURLs,
+	}
+
+	relayClient, err := clientsv2.NewRelayClient(relayCfg, d.log)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create relay client: %w", err)
+	}
+
+	return relayClient, nil
+}
+
+func (d *Builder) buildPayloadDisperser(
+	kzgProver *prover.Prover,
+	certVerifier *verification.CertVerifier,
+) (*clientsv2.PayloadDisperser, error) {
+	signer, err := auth.NewLocalBlobRequestSigner(d.v2ClientCfg.PayloadDisperserCfg.SignerPaymentKey)
+	if err != nil {
+		return nil, fmt.Errorf("new local blob request signer: %w", err)
+	}
+
+	disperserClient, err := clientsv2.NewDisperserClient(&d.v2ClientCfg.DisperserClientCfg, signer, kzgProver, nil)
+	if err != nil {
+		return nil, fmt.Errorf("new disperser client: %w", err)
+	}
+
+	payloadDisperser, err := clientsv2.NewPayloadDisperser(
+		d.log,
+		d.v2ClientCfg.PayloadDisperserCfg,
+		disperserClient,
+		certVerifier)
+	if err != nil {
+		return nil, fmt.Errorf("new payload disperser: %w", err)
+	}
+
+	return payloadDisperser, nil
 }

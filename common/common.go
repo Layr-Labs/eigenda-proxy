@@ -14,13 +14,13 @@ var (
 )
 
 type V2ClientConfig struct {
-	Enabled               bool
-	DisperserClientCfg    clients_v2.DisperserClientConfig
-	PayloadClientCfg      clients_v2.PayloadDisperserConfig
-	RetrievalConfig       clients_v2.RelayPayloadRetrieverConfig
-	ServiceManagerAddress string
-	EthRPC                string
-	PutRetries            uint
+	Enabled                  bool
+	DisperserClientCfg       clients_v2.DisperserClientConfig
+	PayloadDisperserCfg      clients_v2.PayloadDisperserConfig
+	RelayPayloadRetrieverCfg clients_v2.RelayPayloadRetrieverConfig
+	ServiceManagerAddress    string
+	EthRPC                   string
+	PutRetries               uint
 }
 
 func (cfg *V2ClientConfig) Check() error {
@@ -32,7 +32,7 @@ func (cfg *V2ClientConfig) Check() error {
 		return fmt.Errorf("eth rpc is required for using EigenDA V2 backend")
 	}
 
-	if cfg.PayloadClientCfg.SignerPaymentKey == "" {
+	if cfg.PayloadDisperserCfg.SignerPaymentKey == "" {
 		return fmt.Errorf("signer payment private key hex is required for using EigenDA V2 backend")
 	}
 
