@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
-	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/ephemeral_db"
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/ephemeraldb"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
 	"github.com/Layr-Labs/eigenda/api/clients/codecs"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
@@ -38,8 +38,8 @@ func unsafeRandomBytes(size uint) []byte {
 	return entropy
 }
 
-func unsafeRandInt(max int64) *big.Int {
-	randInt, _ := rand.Int(rand.Reader, big.NewInt(max))
+func unsafeRandInt(maxValue int64) *big.Int {
+	randInt, _ := rand.Int(rand.Reader, big.NewInt(maxValue))
 	return randInt
 }
 
@@ -55,7 +55,7 @@ EigenDA V2 operators.
 */
 type MemStore struct {
 	// keccak(RLP(randomlyGeneratedCert)) -> Blob
-	*ephemeral_db.DB
+	*ephemeraldb.DB
 	log logging.Logger
 
 	g1SRS []bn254.G1Affine
@@ -70,7 +70,7 @@ func New(
 	g1SRS []bn254.G1Affine,
 ) (*MemStore, error) {
 	return &MemStore{
-		ephemeral_db.New(ctx, config, log),
+		ephemeraldb.New(ctx, config, log),
 		log,
 		g1SRS,
 		codecs.NewIFFTCodec(codecs.NewDefaultBlobCodec()),
@@ -119,6 +119,7 @@ func (e *MemStore) generateRandomCert(blobContents []byte) (*verification.EigenD
 			Signature: unsafeRandomBytes(48), // 384 bits
 			RelayKeys: []uint32{unsafeRandUint32(), unsafeRandUint32()},
 		},
+		// #nosec G115 - max value 1000 guaranteed to be safe for uint32
 		BlobIndex:      uint32(unsafeRandInt(1_000).Uint64()),
 		InclusionProof: unsafeRandomBytes(128),
 	}
@@ -131,13 +132,13 @@ func (e *MemStore) generateRandomCert(blobContents []byte) (*verification.EigenD
 	randomNonSignerStakesAndSigs := cert_verifier_binding.NonSignerStakesAndSignature{
 		NonSignerQuorumBitmapIndices: []uint32{unsafeRandUint32(), unsafeRandUint32()},
 		NonSignerPubkeys: []cert_verifier_binding.BN254G1Point{
-			cert_verifier_binding.BN254G1Point{
+			{
 				X: unsafeRandInt(1000),
 				Y: unsafeRandInt(1000),
 			},
 		},
 		QuorumApks: []cert_verifier_binding.BN254G1Point{
-			cert_verifier_binding.BN254G1Point{
+			{
 				X: unsafeRandInt(1000),
 				Y: unsafeRandInt(1000),
 			},
@@ -149,8 +150,8 @@ func (e *MemStore) generateRandomCert(blobContents []byte) (*verification.EigenD
 		QuorumApkIndices:  []uint32{unsafeRandUint32(), unsafeRandUint32()},
 		TotalStakeIndices: []uint32{unsafeRandUint32(), unsafeRandUint32(), unsafeRandUint32()},
 		NonSignerStakeIndices: [][]uint32{
-			[]uint32{unsafeRandUint32(), unsafeRandUint32()},
-			[]uint32{unsafeRandUint32(), unsafeRandUint32()},
+			{unsafeRandUint32(), unsafeRandUint32()},
+			{unsafeRandUint32(), unsafeRandUint32()},
 		},
 		Sigma: cert_verifier_binding.BN254G1Point{
 			X: unsafeRandInt(1000),

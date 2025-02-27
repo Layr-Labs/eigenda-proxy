@@ -66,6 +66,8 @@ type ProxyConfig struct {
 
 	PutRetries       uint
 	MaxBlobSizeBytes uint
+
+	EigenDACertVerifierAddress string
 }
 
 type V2ClientConfig struct {
@@ -85,15 +87,16 @@ func ReadProxyConfig(ctx *cli.Context) ProxyConfig {
 			Host:       ctx.String(ListenAddrFlagName),
 			Port:       ctx.Int(PortFlagName),
 		},
-		EdaV1ClientConfig:   edaClientV1Config,
-		EdaV2ClientConfig:   edaClientV2Config,
-		EdaV1VerifierConfig: verify.ReadConfig(ctx, edaClientV1Config),
-		PutRetries:          ctx.Uint(eigendaflags.PutRetriesFlagName),
-		MemstoreEnabled:     ctx.Bool(memstore.EnabledFlagName),
-		MemstoreConfig:      memstore.ReadConfig(ctx),
-		StorageConfig:       store.ReadConfig(ctx),
-		EigenDAV2Enabled:    edaClientV2Config.Enabled,
-		MaxBlobSizeBytes:    uint(verify.MaxBlobLengthBytes),
+		EdaV1ClientConfig:          edaClientV1Config,
+		EdaV2ClientConfig:          edaClientV2Config,
+		EdaV1VerifierConfig:        verify.ReadConfig(ctx, edaClientV1Config),
+		PutRetries:                 ctx.Uint(eigendaflags.PutRetriesFlagName),
+		MemstoreEnabled:            ctx.Bool(memstore.EnabledFlagName),
+		MemstoreConfig:             memstore.ReadConfig(ctx),
+		StorageConfig:              store.ReadConfig(ctx),
+		EigenDAV2Enabled:           edaClientV2Config.Enabled,
+		MaxBlobSizeBytes:           uint(verify.MaxBlobLengthBytes),
+		EigenDACertVerifierAddress: eigendaflags_v2.CertVerifierAddrFlagName,
 	}
 
 	return cfg
@@ -122,7 +125,9 @@ func (cfg *ProxyConfig) Check() error {
 	// TODO: move this verification logic to verify/cli.go
 	if cfg.EdaV1VerifierConfig.VerifyCerts {
 		if cfg.MemstoreEnabled {
-			return fmt.Errorf("cannot enable cert verification when memstore is enabled. use --%s", verify.CertVerificationDisabledFlagName)
+			return fmt.Errorf(
+				"cannot enable cert verification when memstore is enabled. use --%s",
+				verify.CertVerificationDisabledFlagName)
 		}
 		if cfg.EdaV1VerifierConfig.RPCURL == "" {
 			return fmt.Errorf("cert verification enabled but eth rpc is not set")

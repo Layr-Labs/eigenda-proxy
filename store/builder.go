@@ -42,21 +42,28 @@ type Builder struct {
 	v2ClientCfg    common.V2ClientConfig
 }
 
-func NewBuilder(ctx context.Context, cfg Config,
+func NewBuilder(
+	ctx context.Context, cfg Config,
 	v1VerifierCfg verify.Config,
 	v1EdaClientCfg clients.EigenDAClientConfig,
 	v2ClientCfg common.V2ClientConfig,
 	memConfig *memconfig.SafeConfig,
-	log logging.Logger, metrics metrics.Metricer) *Builder {
+	log logging.Logger, metrics metrics.Metricer,
+) *Builder {
 	return &Builder{ctx, log, metrics, memConfig, cfg, v1VerifierCfg, v1EdaClientCfg, v2ClientCfg}
 }
 
 // buildSecondaries ... Creates a slice of secondary targets used for either read
 // failover or caching
-func (d *Builder) buildSecondaries(targets []string, s3Store common.PrecomputedKeyStore, redisStore *redis.Store) []common.PrecomputedKeyStore {
+func (d *Builder) buildSecondaries(
+	targets []string,
+	s3Store common.PrecomputedKeyStore,
+	redisStore *redis.Store,
+) []common.PrecomputedKeyStore {
 	stores := make([]common.PrecomputedKeyStore, len(targets))
 
 	for i, target := range targets {
+		//nolint:exhaustive // TODO: implement additional secondaries
 		switch common.StringToBackendType(target) {
 		case common.RedisBackendType:
 			if redisStore == nil {
@@ -77,7 +84,10 @@ func (d *Builder) buildSecondaries(targets []string, s3Store common.PrecomputedK
 }
 
 // buildEigenDAV2Backend ... Builds EigenDA V2 storage backend
-func (d *Builder) buildEigenDAV2Backend(maxBlobSizeBytes uint) (common.GeneratedKeyStore, error) {
+func (d *Builder) buildEigenDAV2Backend(
+	maxBlobSizeBytes uint,
+	eigenDACertVerifierAddress string,
+) (common.GeneratedKeyStore, error) {
 	// TODO: Figure out how to better manage the v1 verifier
 	// may make sense to live in some global kzg config that's passed
 	// down across EigenDA versions
@@ -128,7 +138,13 @@ func (d *Builder) buildEigenDAV2Backend(maxBlobSizeBytes uint) (common.Generated
 
 	// TODO: https://github.com/Layr-Labs/eigenda-proxy/issues/274
 	// ^ why prover/encoder fields are nil'd out
-	disperser, err := clients_v2.BuildPayloadDisperser(d.log, d.v2ClientCfg.PayloadClientCfg, &d.v2ClientCfg.DisperserClientCfg, &gethCfg, nil, nil)
+	disperser, err := clients_v2.BuildPayloadDisperser(
+		d.log,
+		d.v2ClientCfg.PayloadClientCfg,
+		&d.v2ClientCfg.DisperserClientCfg,
+		&gethCfg,
+		nil,
+		nil)
 	if err != nil {
 		return nil, err
 	}
@@ -138,15 +154,19 @@ func (d *Builder) buildEigenDAV2Backend(maxBlobSizeBytes uint) (common.Generated
 		return nil, err
 	}
 
-	return eigendav2.NewStore(d.log, &eigendav2.Config{
-		CertVerifierAddress: d.v2ClientCfg.PayloadClientCfg.EigenDACertVerifierAddr,
-		MaxBlobSizeBytes:    uint64(maxBlobSizeBytes),
-		PutRetries:          d.v2ClientCfg.PutRetries,
-	}, disperser, retriever, verifier)
+	return eigendav2.NewStore(
+		d.log, &eigendav2.Config{
+			CertVerifierAddress: eigenDACertVerifierAddress,
+			MaxBlobSizeBytes:    uint64(maxBlobSizeBytes),
+			PutRetries:          d.v2ClientCfg.PutRetries,
+		}, disperser, retriever, verifier)
 }
 
 // buildEigenDAV1Backend ... Builds EigenDA V1 storage backend
-func (d *Builder) buildEigenDAV1Backend(ctx context.Context, putRetries uint, maxBlobSize uint) (common.GeneratedKeyStore, error) {
+func (d *Builder) buildEigenDAV1Backend(
+	ctx context.Context,
+	putRetries uint,
+	maxBlobSize uint) (common.GeneratedKeyStore, error) {
 	verifier, err := verify.NewVerifier(&d.v1VerifierCfg, d.log)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create verifier: %w", err)
@@ -181,11 +201,15 @@ func (d *Builder) buildEigenDAV1Backend(ctx context.Context, putRetries uint, ma
 			PutRetries:           putRetries,
 		},
 	)
-
 }
 
 // BuildManager ... Builds storage manager object
-func (d *Builder) BuildManager(ctx context.Context, putRetries uint, maxBlobSize uint) (IManager, error) {
+func (d *Builder) BuildManager(
+	ctx context.Context,
+	putRetries uint,
+	maxBlobSize uint,
+	eigenDaCertVerifierAddress string,
+) (IManager, error) {
 	var err error
 	var s3Store *s3.Store
 	var redisStore *redis.Store
@@ -211,7 +235,7 @@ func (d *Builder) BuildManager(ctx context.Context, putRetries uint, maxBlobSize
 
 	if d.v2ClientCfg.Enabled {
 		d.log.Debug("Using EigenDA V2 storage backend")
-		eigenDAV2Store, err = d.buildEigenDAV2Backend(maxBlobSize)
+		eigenDAV2Store, err = d.buildEigenDAV2Backend(maxBlobSize, eigenDaCertVerifierAddress)
 		if err != nil {
 			return nil, err
 		}
@@ -234,7 +258,8 @@ func (d *Builder) BuildManager(ctx context.Context, putRetries uint, maxBlobSize
 		}
 	}
 
-	d.log.Info("Created storage backends",
+	d.log.Info(
+		"Created storage backends",
 		"eigenda_v1", eigenDAV1Store != nil,
 		"eigenda_v2", eigenDAV2Store != nil,
 		"s3", s3Store != nil,

@@ -66,7 +66,8 @@ func startMinIOContainer() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	minioContainer, err := miniotc.Run(ctx,
+	minioContainer, err := miniotc.Run(
+		ctx,
 		"minio/minio:RELEASE.2024-10-02T17-50-41Z",
 		miniotc.WithUsername("minioadmin"),
 		miniotc.WithPassword("minioadmin"),
@@ -89,7 +90,8 @@ func startRedisContainer() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	redisContainer, err := redistc.Run(ctx,
+	redisContainer, err := redistc.Run(
+		ctx,
 		"docker.io/redis:7",
 	)
 	if err != nil {
@@ -216,10 +218,11 @@ func TestSuiteConfig(testCfg *Cfg) config.AppConfig {
 			},
 		},
 		MemstoreEnabled: testCfg.UseMemory,
-		MemstoreConfig: memconfig.NewSafeConfig(memconfig.Config{
-			BlobExpiration:   testCfg.Expiration,
-			MaxBlobSizeBytes: maxBlobLengthBytes,
-		}),
+		MemstoreConfig: memconfig.NewSafeConfig(
+			memconfig.Config{
+				BlobExpiration:   testCfg.Expiration,
+				MaxBlobSizeBytes: maxBlobLengthBytes,
+			}),
 
 		EdaV2ClientConfig: common.V2ClientConfig{
 			Enabled: testCfg.UseV2,
@@ -275,13 +278,20 @@ func CreateTestSuite(testSuiteCfg config.AppConfig) (TestSuite, func()) {
 	m := metrics.NewEmulatedMetricer()
 	ctx := context.Background()
 
-	sm, err := store.NewBuilder(ctx,
+	sm, err := store.NewBuilder(
+		ctx,
 		testSuiteCfg.EigenDAConfig.StorageConfig,
 		testSuiteCfg.EigenDAConfig.EdaV1VerifierConfig,
 		testSuiteCfg.EigenDAConfig.EdaV1ClientConfig,
 		testSuiteCfg.EigenDAConfig.EdaV2ClientConfig,
 		testSuiteCfg.EigenDAConfig.MemstoreConfig,
-		log, m).BuildManager(ctx, testSuiteCfg.EigenDAConfig.PutRetries, testSuiteCfg.EigenDAConfig.MaxBlobSizeBytes)
+		log,
+		m,
+	).BuildManager(
+		ctx,
+		testSuiteCfg.EigenDAConfig.PutRetries,
+		testSuiteCfg.EigenDAConfig.MaxBlobSizeBytes,
+		testSuiteCfg.EigenDAConfig.EigenDACertVerifierAddress)
 	if err != nil {
 		panic(err)
 	}
@@ -328,10 +338,11 @@ func createS3Bucket(bucketName string) {
 	secretAccessKey := "minioadmin"
 	useSSL := false
 
-	minioClient, err := minio.New(endpoint, &minio.Options{
-		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
-		Secure: useSSL,
-	})
+	minioClient, err := minio.New(
+		endpoint, &minio.Options{
+			Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
+			Secure: useSSL,
+		})
 	if err != nil {
 		panic(err)
 	}

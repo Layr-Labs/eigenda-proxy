@@ -8,7 +8,6 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda/api/clients/codecs"
 	v2_clients "github.com/Layr-Labs/eigenda/api/clients/v2"
-	"github.com/Layr-Labs/eigenda/core"
 	"github.com/urfave/cli/v2"
 )
 
@@ -211,7 +210,6 @@ func readPayloadClientConfig(ctx *cli.Context) v2_clients.PayloadClientConfig {
 	return v2_clients.PayloadClientConfig{
 		BlockNumberPollInterval: ctx.Duration(BlockNumberPollIntervalFlagName),
 		PayloadEncodingVersion:  codecs.PayloadEncodingVersion0,
-		EigenDACertVerifierAddr: ctx.String(CertVerifierAddrFlagName),
 		PayloadPolynomialForm:   polyForm,
 		// #nosec G115 - only overflow on incorrect user input
 		BlobVersion: uint16(ctx.Int(BlobParamsVersionFlagName)),
@@ -221,19 +219,12 @@ func readPayloadClientConfig(ctx *cli.Context) v2_clients.PayloadClientConfig {
 func readPayloadDisperserCfg(ctx *cli.Context) v2_clients.PayloadDisperserConfig {
 	payCfg := readPayloadClientConfig(ctx)
 
-	var customQuorums []core.QuorumID
-	// #nosec G115 - only overflow on incorrect user input
-	for _, uintValue := range ctx.UintSlice(CustomQuorumIDsFlagName) {
-		customQuorums = append(customQuorums, uint8(uintValue))
-	}
-
 	return v2_clients.PayloadDisperserConfig{
 		SignerPaymentKey:       ctx.String(SignerPaymentKeyHexFlagName),
 		PayloadClientConfig:    payCfg,
 		DisperseBlobTimeout:    ctx.Duration(DisperseBlobTimeoutFlagName),
 		BlobCertifiedTimeout:   ctx.Duration(BlobCertifiedTimeoutFlagName),
 		BlobStatusPollInterval: ctx.Duration(BlobStatusPollIntervalFlagName),
-		Quorums:                append(common.DefaultQuorums, customQuorums...),
 	}
 }
 
@@ -248,7 +239,6 @@ func readDisperserCfg(ctx *cli.Context) v2_clients.DisperserClientConfig {
 		Port:              portStr,
 		UseSecureGrpcFlag: !ctx.Bool(DisableTLSFlagName),
 	}
-
 }
 
 func readRetrievalConfig(ctx *cli.Context) v2_clients.RelayPayloadRetrieverConfig {

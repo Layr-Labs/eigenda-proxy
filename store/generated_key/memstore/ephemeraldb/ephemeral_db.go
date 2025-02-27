@@ -1,4 +1,4 @@
-package ephemeral_db
+package ephemeraldb
 
 import (
 	"context"
@@ -54,7 +54,11 @@ func (db *DB) InsertEntry(key []byte, value []byte) error {
 		return api.NewErrorFailover(errors.New("ephemeral db in failover simulation mode"))
 	}
 	if uint64(len(value)) > db.config.MaxBlobSizeBytes() {
-		return fmt.Errorf("%w: blob length %d, max blob size %d", common.ErrProxyOversizedBlob, len(value), db.config.MaxBlobSizeBytes())
+		return fmt.Errorf(
+			"%w: blob length %d, max blob size %d",
+			common.ErrProxyOversizedBlob,
+			len(value),
+			db.config.MaxBlobSizeBytes())
 	}
 
 	time.Sleep(db.config.LatencyPUTRoute())
@@ -80,7 +84,6 @@ func (db *DB) InsertEntry(key []byte, value []byte) error {
 
 // FetchEntry ... looks up a value from the db provided a key
 func (db *DB) FetchEntry(key []byte) ([]byte, error) {
-
 	time.Sleep(db.config.LatencyGETRoute())
 	db.mu.RLock()
 	defer db.mu.RUnlock()

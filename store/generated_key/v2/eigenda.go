@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
+	"github.com/Layr-Labs/eigenda/api/clients/v2/coretypes"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/avast/retry-go/v4"
 	"google.golang.org/grpc/codes"
@@ -47,8 +48,13 @@ type Store struct {
 
 var _ common.GeneratedKeyStore = (*Store)(nil)
 
-func NewStore(log logging.Logger, cfg *Config,
-	disperser *clients.PayloadDisperser, retriever clients.PayloadRetriever, verifier verification.ICertVerifier) (*Store, error) {
+func NewStore(
+	log logging.Logger,
+	cfg *Config,
+	disperser *clients.PayloadDisperser,
+	retriever clients.PayloadRetriever,
+	verifier verification.ICertVerifier,
+) (*Store, error) {
 	return &Store{
 		log:       log,
 		cfg:       cfg,
@@ -72,7 +78,7 @@ func (e Store) Get(ctx context.Context, key []byte) ([]byte, error) {
 		return nil, fmt.Errorf("getting payload: %w", err)
 	}
 
-	return payload, nil
+	return payload.Serialize(), nil
 }
 
 // Put disperses a blob for some pre-image and returns the associated RLP encoded certificate commit.
@@ -86,33 +92,36 @@ func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 
 	// We attempt to disperse the blob to EigenDA up to 3 times, unless we get a 400 error on any attempt.
 
+	payload := coretypes.NewPayload(value)
+
 	cert, err := retry.DoWithData(
 		func() (*verification.EigenDACert, error) {
-			return e.disperser.SendPayload(ctx, e.cfg.CertVerifierAddress, value)
+			return e.disperser.SendPayload(ctx, e.cfg.CertVerifierAddress, payload)
 		},
-		retry.RetryIf(func(err error) bool {
-			st, isGRPCError := status.FromError(err)
-			if !isGRPCError {
-				// api.ErrorFailover is returned, so we should retry
-				return true
-			}
-			//nolint:exhaustive // we only care about a few grpc error codes
-			switch st.Code() {
-			case codes.InvalidArgument:
-				// we don't retry 400 errors because there is no point,
-				// we are passing invalid data
-				return false
-			case codes.ResourceExhausted:
-				// we retry on 429s because *can* mean we are being rate limited
-				// we sleep 1 second... very arbitrarily, because we don't have more info.
-				// grpc error itself should return a backoff time,
-				// see https://github.com/Layr-Labs/eigenda/issues/845 for more details
-				time.Sleep(1 * time.Second)
-				return true
-			default:
-				return true
-			}
-		}),
+		retry.RetryIf(
+			func(err error) bool {
+				st, isGRPCError := status.FromError(err)
+				if !isGRPCError {
+					// api.ErrorFailover is returned, so we should retry
+					return true
+				}
+				//nolint:exhaustive // we only care about a few grpc error codes
+				switch st.Code() {
+				case codes.InvalidArgument:
+					// we don't retry 400 errors because there is no point,
+					// we are passing invalid data
+					return false
+				case codes.ResourceExhausted:
+					// we retry on 429s because *can* mean we are being rate limited
+					// we sleep 1 second... very arbitrarily, because we don't have more info.
+					// grpc error itself should return a backoff time,
+					// see https://github.com/Layr-Labs/eigenda/issues/845 for more details
+					time.Sleep(1 * time.Second)
+					return true
+				default:
+					return true
+				}
+			}),
 		// only return the last error. If it is an api.ErrorFailover, then the handler will convert
 		// it to an http 503 to signify to the client (batcher) to failover to ethda
 		// b/c eigenda is temporarily down.
