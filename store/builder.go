@@ -20,7 +20,7 @@ import (
 	clients_v2 "github.com/Layr-Labs/eigenda/api/clients/v2"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/relay"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
-	common_da "github.com/Layr-Labs/eigenda/common"
+	common_eigenda "github.com/Layr-Labs/eigenda/common"
 	"github.com/Layr-Labs/eigenda/common/geth"
 	auth "github.com/Layr-Labs/eigenda/core/auth/v2"
 	eigenda_eth "github.com/Layr-Labs/eigenda/core/eth"
@@ -243,7 +243,7 @@ func (d *Builder) BuildManager(
 	return NewManager(eigenDAV1Store, eigenDAV2Store, s3Store, d.log, secondary, d.v2ClientCfg.Enabled)
 }
 
-func (d *Builder) buildEthClient() (common_da.EthClient, error) {
+func (d *Builder) buildEthClient() (common_eigenda.EthClient, error) {
 	gethCfg := geth.EthClientConfig{
 		RPCURLs: []string{d.v1EdaClientCfg.EthRpcUrl},
 	}
@@ -257,7 +257,7 @@ func (d *Builder) buildEthClient() (common_da.EthClient, error) {
 }
 
 func (d *Builder) buildRelayPayloadRetriever(
-	ethClient common_da.EthClient,
+	ethClient common_eigenda.EthClient,
 	maxBlobSizeBytes uint,
 	g1Srs []bn254.G1Affine,
 ) (*clients_v2.RelayPayloadRetriever, error) {
@@ -281,7 +281,7 @@ func (d *Builder) buildRelayPayloadRetriever(
 }
 
 func (d *Builder) buildRelayClient(
-	ethClient common_da.EthClient,
+	ethClient common_eigenda.EthClient,
 	maxBlobSizeBytes uint) (clients_v2.RelayClient, error) {
 	reader, err := eigenda_eth.NewReader(d.log, ethClient, "0x0", d.v2ClientCfg.ServiceManagerAddress)
 	if err != nil {
