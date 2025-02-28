@@ -18,6 +18,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	clients_v2 "github.com/Layr-Labs/eigenda/api/clients/v2"
+	"github.com/Layr-Labs/eigenda/api/clients/v2/relay"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
 	common_da "github.com/Layr-Labs/eigenda/common"
 	"github.com/Layr-Labs/eigenda/common/geth"
@@ -287,9 +288,9 @@ func (d *Builder) buildRelayClient(
 		return nil, fmt.Errorf("new eth reader: %w", err)
 	}
 
-	relayURLs, err := reader.GetRelayURLs(d.ctx)
+	relayURLProvider, err := relay.NewRelayUrlProvider(ethClient, reader.GetRelayRegistryAddress())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("new relay url provider: %w", err)
 	}
 
 	relayCfg := &clients_v2.RelayClientConfig{
@@ -297,10 +298,9 @@ func (d *Builder) buildRelayClient(
 		// we should never expect a message greater than our allowed max blob size.
 		// 10% of max blob size is added for additional safety
 		MaxGRPCMessageSize: maxBlobSizeBytes + (maxBlobSizeBytes / 10),
-		Sockets:            relayURLs,
 	}
 
-	relayClient, err := clients_v2.NewRelayClient(relayCfg, d.log)
+	relayClient, err := clients_v2.NewRelayClient(relayCfg, d.log, relayURLProvider)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create relay client: %w", err)
 	}
