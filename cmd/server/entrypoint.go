@@ -53,12 +53,20 @@ func StartProxySvr(cliCtx *cli.Context) error {
 	}
 
 	sm, err := store.NewBuilder(
-		ctx, cfg.EigenDAConfig.StorageConfig,
-		cfg.EigenDAConfig.EdaV1VerifierConfig, cfg.EigenDAConfig.EdaV1ClientConfig,
-		cfg.EigenDAConfig.EdaV2ClientConfig, memConfig, log, m,
+		ctx,
+		cfg.EigenDAConfig.StorageConfig,
+		cfg.EigenDAConfig.EdaVerifierConfigV1,
+		cfg.EigenDAConfig.EdaClientConfigV1,
+		cfg.EigenDAConfig.EdaClientConfigV2,
+		cfg.EigenDAConfig.EdaSecretConfigV2,
+		memConfig,
+		log,
+		m,
 	).BuildManager(
-		ctx, cfg.EigenDAConfig.EdaV2ClientConfig.PutRetries,
-		cfg.EigenDAConfig.MaxBlobSizeBytes, cfg.EigenDAConfig.EigenDACertVerifierAddress)
+		ctx,
+		cfg.EigenDAConfig.EdaClientConfigV2.PutRetries,
+		cfg.EigenDAConfig.MaxBlobSizeBytes,
+		cfg.EigenDAConfig.EigenDACertVerifierAddress)
 	if err != nil {
 		return fmt.Errorf("failed to create store: %w", err)
 	}
@@ -106,11 +114,11 @@ func StartProxySvr(cliCtx *cli.Context) error {
 func prettyPrintConfig(cliCtx *cli.Context, log logging.Logger) error {
 	// we read a new config which we modify to hide private info in order to log the rest
 	cfg := config.ReadCLIConfig(cliCtx)
-	if cfg.EigenDAConfig.EdaV1ClientConfig.SignerPrivateKeyHex != "" {
-		cfg.EigenDAConfig.EdaV1ClientConfig.SignerPrivateKeyHex = "*****" // marshaling defined in client config
+	if cfg.EigenDAConfig.EdaClientConfigV1.SignerPrivateKeyHex != "" {
+		cfg.EigenDAConfig.EdaClientConfigV1.SignerPrivateKeyHex = "*****" // marshaling defined in client config
 	}
-	if cfg.EigenDAConfig.EdaV1ClientConfig.EthRpcUrl != "" {
-		cfg.EigenDAConfig.EdaV1ClientConfig.EthRpcUrl = "*****" // hiding as RPC providers typically use sensitive API keys within
+	if cfg.EigenDAConfig.EdaClientConfigV1.EthRpcUrl != "" {
+		cfg.EigenDAConfig.EdaClientConfigV1.EthRpcUrl = "*****" // hiding as RPC providers typically use sensitive API keys within
 	}
 
 	configJSON, err := json.MarshalIndent(cfg, "", "  ")

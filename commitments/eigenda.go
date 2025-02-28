@@ -22,9 +22,9 @@ type EigenDACommitment struct {
 }
 
 // NewEigenDACommitment creates a new commitment from the given input.
-func NewEigenDACommitment(input []byte, v EigenDACommitmentType) EigenDACommitment {
+func NewEigenDACommitment(input []byte, commitmentType EigenDACommitmentType) EigenDACommitment {
 	return EigenDACommitment{
-		prefix: v,
+		prefix: commitmentType,
 		b:      input,
 	}
 }

@@ -6,7 +6,6 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/config/eigendaflags"
 	eigendaflags_v2 "github.com/Layr-Labs/eigenda-proxy/config/eigendaflags/v2"
-	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/server"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
@@ -15,40 +14,17 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/Layr-Labs/eigenda/api/clients"
-	clients_v2 "github.com/Layr-Labs/eigenda/api/clients/v2"
 )
-
-// AppConfig ... Highest order config. Stores
-// all relevant fields necessary for running both proxy
-// & metrics servers.
-type AppConfig struct {
-	EigenDAConfig ProxyConfig
-	MetricsCfg    metrics.Config
-}
-
-func (c AppConfig) Check() error {
-	err := c.EigenDAConfig.Check()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func ReadCLIConfig(ctx *cli.Context) AppConfig {
-	return AppConfig{
-		EigenDAConfig: ReadProxyConfig(ctx),
-		MetricsCfg:    metrics.ReadConfig(ctx),
-	}
-}
 
 // ProxyConfig ... Higher order config which bundles all configs for orchestrating
 // the proxy server with necessary client context
 type ProxyConfig struct {
 	ServerConfig        server.Config
-	EdaV1ClientConfig   clients.EigenDAClientConfig
-	EdaV1VerifierConfig verify.Config
+	EdaClientConfigV1   clients.EigenDAClientConfig
+	EdaVerifierConfigV1 verify.Config
 
-	EdaV2ClientConfig common.V2ClientConfig
+	EdaClientConfigV2 common.ClientConfigV2
+	EdaSecretConfigV2 common.SecretConfigV2
 
 	MemstoreConfig *memconfig.SafeConfig
 	StorageConfig  store.Config
@@ -70,16 +46,11 @@ type ProxyConfig struct {
 	EigenDACertVerifierAddress string
 }
 
-type V2ClientConfig struct {
-	DisperserClientCfg clients_v2.DisperserClientConfig
-	PayloadClientCfg   clients_v2.PayloadDisperserConfig
-	RetrievalConfig    clients_v2.RelayPayloadRetrieverConfig
-}
-
 // ReadProxyConfig ... parses the Config from the provided flags or environment variables.
 func ReadProxyConfig(ctx *cli.Context) ProxyConfig {
 	edaClientV1Config := eigendaflags.ReadConfig(ctx)
-	edaClientV2Config := eigendaflags_v2.ReadConfig(ctx)
+	edaClientV2Config := eigendaflags_v2.ReadClientConfigV2(ctx)
+	edaClientSecretConfigV2 := eigendaflags_v2.ReadSecretConfigV2(ctx)
 
 	cfg := ProxyConfig{
 		ServerConfig: server.Config{
@@ -87,9 +58,10 @@ func ReadProxyConfig(ctx *cli.Context) ProxyConfig {
 			Host:       ctx.String(ListenAddrFlagName),
 			Port:       ctx.Int(PortFlagName),
 		},
-		EdaV1ClientConfig:          edaClientV1Config,
-		EdaV2ClientConfig:          edaClientV2Config,
-		EdaV1VerifierConfig:        verify.ReadConfig(ctx, edaClientV1Config),
+		EdaClientConfigV1:          edaClientV1Config,
+		EdaClientConfigV2:          edaClientV2Config,
+		EdaSecretConfigV2:          edaClientSecretConfigV2,
+		EdaVerifierConfigV1:        verify.ReadConfig(ctx, edaClientV1Config),
 		PutRetries:                 ctx.Uint(eigendaflags.PutRetriesFlagName),
 		MemstoreEnabled:            ctx.Bool(memstore.EnabledFlagName),
 		MemstoreConfig:             memstore.ReadConfig(ctx),
@@ -107,39 +79,39 @@ func (cfg *ProxyConfig) Check() error {
 	if cfg.MemstoreEnabled {
 		// provide dummy values to eigenda client config. Since the client won't be called in this
 		// mode it doesn't matter.
-		cfg.EdaV1ClientConfig.SvcManagerAddr = "0x0000000000000000000000000000000000000000"
-		cfg.EdaV1ClientConfig.EthRpcUrl = "http://0.0.0.0:666"
+		cfg.EdaClientConfigV1.SvcManagerAddr = "0x0000000000000000000000000000000000000000"
+		cfg.EdaClientConfigV1.EthRpcUrl = "http://0.0.0.0:666"
 	} else {
-		if cfg.EdaV1ClientConfig.SvcManagerAddr == "" {
+		if cfg.EdaClientConfigV1.SvcManagerAddr == "" {
 			return fmt.Errorf("service manager address is required for communication with EigenDA")
 		}
-		if cfg.EdaV1ClientConfig.EthRpcUrl == "" {
+		if cfg.EdaClientConfigV1.EthRpcUrl == "" {
 			return fmt.Errorf("eth prc url is required for communication with EigenDA")
 		}
-		if cfg.EdaV1ClientConfig.RPC == "" {
+		if cfg.EdaClientConfigV1.RPC == "" {
 			return fmt.Errorf("using eigenda backend (memstore.enabled=false) but eigenda disperser rpc url is not set")
 		}
 	}
 
 	// cert verification is enabled
 	// TODO: move this verification logic to verify/cli.go
-	if cfg.EdaV1VerifierConfig.VerifyCerts {
+	if cfg.EdaVerifierConfigV1.VerifyCerts {
 		if cfg.MemstoreEnabled {
 			return fmt.Errorf(
 				"cannot enable cert verification when memstore is enabled. use --%s",
 				verify.CertVerificationDisabledFlagName)
 		}
-		if cfg.EdaV1VerifierConfig.RPCURL == "" {
+		if cfg.EdaVerifierConfigV1.RPCURL == "" {
 			return fmt.Errorf("cert verification enabled but eth rpc is not set")
 		}
-		if cfg.EdaV1VerifierConfig.SvcManagerAddr == "" {
+		if cfg.EdaVerifierConfigV1.SvcManagerAddr == "" {
 			return fmt.Errorf("cert verification enabled but svc manager address is not set")
 		}
 	}
 
 	// V2 dispersal/retrieval enabled
 	if cfg.EigenDAV2Enabled && !cfg.MemstoreEnabled {
-		err := cfg.EdaV2ClientConfig.Check()
+		err := cfg.EdaClientConfigV2.Check()
 		if err != nil {
 			return err
 		}

@@ -7,12 +7,12 @@ import (
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda/api/clients/codecs"
-	v2_clients "github.com/Layr-Labs/eigenda/api/clients/v2"
+	clients_v2 "github.com/Layr-Labs/eigenda/api/clients/v2"
 	"github.com/urfave/cli/v2"
 )
 
 var (
-	// This is a temporary feature flag that will be deprecated once all client
+	// V2EnabledFlagName is a temporary feature flag that will be deprecated once all client
 	// dependencies migrate to using EigenDA V2 network
 	V2EnabledFlagName = withFlagPrefix("enabled")
 
@@ -31,7 +31,7 @@ var (
 	RelayTimeoutFlagName            = withFlagPrefix("relay-timeout")
 	ContractCallTimeoutFlagName     = withFlagPrefix("contract-call-timeout")
 	BlobParamsVersionFlagName       = withFlagPrefix("blob-version")
-	BlockNumberPollIntervalFlagName = withFlagPrefix("block-number-poll-interval")
+	BlockNumberPollIntervalFlagName = withFlagPrefix("block-number-poll-interval-duration")
 	EthRPCURLFlagName               = withFlagPrefix("eth-rpc")
 	SvcManagerAddrFlagName          = withFlagPrefix("svc-manager-addr")
 )
@@ -185,20 +185,26 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 	}
 }
 
-func ReadConfig(ctx *cli.Context) common.V2ClientConfig {
-	return common.V2ClientConfig{
-		Enabled:               ctx.Bool(V2EnabledFlagName),
-		ServiceManagerAddress: ctx.String(SvcManagerAddrFlagName),
-
-		DisperserClientCfg:       readDisperserCfg(ctx),
-		PayloadDisperserCfg:      readPayloadDisperserCfg(ctx),
-		RelayPayloadRetrieverCfg: readRetrievalConfig(ctx),
-		EthRPC:                   ctx.String(EthRPCURLFlagName),
-		PutRetries:               ctx.Uint(PutRetriesFlagName),
+func ReadClientConfigV2(ctx *cli.Context) common.ClientConfigV2 {
+	return common.ClientConfigV2{
+		Enabled:                         ctx.Bool(V2EnabledFlagName),
+		ServiceManagerAddress:           ctx.String(SvcManagerAddrFlagName),
+		DisperserClientCfg:              readDisperserCfg(ctx),
+		PayloadDisperserCfg:             readPayloadDisperserCfg(ctx),
+		RelayPayloadRetrieverCfg:        readRetrievalConfig(ctx),
+		PutRetries:                      ctx.Uint(PutRetriesFlagName),
+		BlockNumberPollIntervalDuration: ctx.Duration(BlockNumberPollIntervalFlagName),
 	}
 }
 
-func readPayloadClientConfig(ctx *cli.Context) v2_clients.PayloadClientConfig {
+func ReadSecretConfigV2(ctx *cli.Context) common.SecretConfigV2 {
+	return common.SecretConfigV2{
+		SignerPaymentKey: SignerPaymentKeyHexFlagName,
+		EthRPCUrl:        ctx.String(EthRPCURLFlagName),
+	}
+}
+
+func readPayloadClientConfig(ctx *cli.Context) clients_v2.PayloadClientConfig {
 	polyForm := codecs.PolynomialFormEval
 
 	// if point evaluation mode is disabled then blob is treated as coefficients and
@@ -207,20 +213,17 @@ func readPayloadClientConfig(ctx *cli.Context) v2_clients.PayloadClientConfig {
 		polyForm = codecs.PolynomialFormCoeff
 	}
 
-	return v2_clients.PayloadClientConfig{
-		BlockNumberPollInterval: ctx.Duration(BlockNumberPollIntervalFlagName),
-		PayloadEncodingVersion:  codecs.PayloadEncodingVersion0,
-		PayloadPolynomialForm:   polyForm,
+	return clients_v2.PayloadClientConfig{
+		PayloadPolynomialForm: polyForm,
 		// #nosec G115 - only overflow on incorrect user input
 		BlobVersion: uint16(ctx.Int(BlobParamsVersionFlagName)),
 	}
 }
 
-func readPayloadDisperserCfg(ctx *cli.Context) v2_clients.PayloadDisperserConfig {
+func readPayloadDisperserCfg(ctx *cli.Context) clients_v2.PayloadDisperserConfig {
 	payCfg := readPayloadClientConfig(ctx)
 
-	return v2_clients.PayloadDisperserConfig{
-		SignerPaymentKey:       ctx.String(SignerPaymentKeyHexFlagName),
+	return clients_v2.PayloadDisperserConfig{
 		PayloadClientConfig:    payCfg,
 		DisperseBlobTimeout:    ctx.Duration(DisperseBlobTimeoutFlagName),
 		BlobCertifiedTimeout:   ctx.Duration(BlobCertifiedTimeoutFlagName),
@@ -228,21 +231,21 @@ func readPayloadDisperserCfg(ctx *cli.Context) v2_clients.PayloadDisperserConfig
 	}
 }
 
-func readDisperserCfg(ctx *cli.Context) v2_clients.DisperserClientConfig {
+func readDisperserCfg(ctx *cli.Context) clients_v2.DisperserClientConfig {
 	hostStr, portStr, err := net.SplitHostPort(ctx.String(DisperserFlagName))
 	if err != nil {
 		panic(fmt.Sprintf("could not read disperser RPC port from provided endpoint: %s", err.Error()))
 	}
 
-	return v2_clients.DisperserClientConfig{
+	return clients_v2.DisperserClientConfig{
 		Hostname:          hostStr,
 		Port:              portStr,
 		UseSecureGrpcFlag: !ctx.Bool(DisableTLSFlagName),
 	}
 }
 
-func readRetrievalConfig(ctx *cli.Context) v2_clients.RelayPayloadRetrieverConfig {
-	return v2_clients.RelayPayloadRetrieverConfig{
+func readRetrievalConfig(ctx *cli.Context) clients_v2.RelayPayloadRetrieverConfig {
+	return clients_v2.RelayPayloadRetrieverConfig{
 		PayloadClientConfig: readPayloadClientConfig(ctx),
 		RelayTimeout:        ctx.Duration(RelayTimeoutFlagName),
 	}

@@ -45,18 +45,30 @@ type Builder struct {
 	managerCfg     Config
 	v1VerifierCfg  verify.Config
 	v1EdaClientCfg clients.EigenDAClientConfig
-	v2ClientCfg    common.V2ClientConfig
+	v2ClientCfg    common.ClientConfigV2
+	v2SecretCfg    common.SecretConfigV2
 }
 
 func NewBuilder(
 	ctx context.Context, cfg Config,
 	v1VerifierCfg verify.Config,
 	v1EdaClientCfg clients.EigenDAClientConfig,
-	v2ClientCfg common.V2ClientConfig,
+	v2ClientCfg common.ClientConfigV2,
+	v2SecretCfg common.SecretConfigV2,
 	memConfig *memconfig.SafeConfig,
 	log logging.Logger, metrics metrics.Metricer,
 ) *Builder {
-	return &Builder{ctx, log, metrics, memConfig, cfg, v1VerifierCfg, v1EdaClientCfg, v2ClientCfg}
+	return &Builder{
+		ctx,
+		log,
+		metrics,
+		memConfig,
+		cfg,
+		v1VerifierCfg,
+		v1EdaClientCfg,
+		v2ClientCfg,
+		v2SecretCfg,
+	}
 }
 
 // buildSecondaries ... Creates a slice of secondary targets used for either read
@@ -117,7 +129,7 @@ func (d *Builder) buildEigenDAV2Backend(
 	}
 
 	certVerifier, err := verification.NewCertVerifier(
-		d.log, ethClient, d.v2ClientCfg.PayloadDisperserCfg.BlockNumberPollInterval)
+		d.log, ethClient, d.v2ClientCfg.BlockNumberPollIntervalDuration)
 	if err != nil {
 		return nil, fmt.Errorf("new cert verifier: %w", err)
 	}
@@ -346,7 +358,7 @@ func (d *Builder) buildLocalSigner(
 	ctx context.Context,
 	ethClient common_eigenda.EthClient,
 ) (core_v2.BlobRequestSigner, error) {
-	signer, err := auth.NewLocalBlobRequestSigner(d.v2ClientCfg.PayloadDisperserCfg.SignerPaymentKey)
+	signer, err := auth.NewLocalBlobRequestSigner(d.v2SecretCfg.SignerPaymentKey)
 	if err != nil {
 		return nil, fmt.Errorf("new local blob request signer: %w", err)
 	}

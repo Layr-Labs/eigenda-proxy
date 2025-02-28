@@ -4,47 +4,12 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-
-	clients_v2 "github.com/Layr-Labs/eigenda/api/clients/v2"
-	"github.com/Layr-Labs/eigenda/core"
 )
 
-var (
-	DefaultQuorums = []core.QuorumID{0, 1}
-)
-
-type V2ClientConfig struct {
-	Enabled                  bool
-	DisperserClientCfg       clients_v2.DisperserClientConfig
-	PayloadDisperserCfg      clients_v2.PayloadDisperserConfig
-	RelayPayloadRetrieverCfg clients_v2.RelayPayloadRetrieverConfig
-	ServiceManagerAddress    string
-	EthRPC                   string
-	PutRetries               uint
-}
-
-func (cfg *V2ClientConfig) Check() error {
-	if cfg.ServiceManagerAddress == "" {
-		return fmt.Errorf("service manager address is required for using EigenDA V2 backend")
-	}
-
-	if cfg.EthRPC == "" {
-		return fmt.Errorf("eth rpc is required for using EigenDA V2 backend")
-	}
-
-	if cfg.PayloadDisperserCfg.SignerPaymentKey == "" {
-		return fmt.Errorf("signer payment private key hex is required for using EigenDA V2 backend")
-	}
-
-	if cfg.DisperserClientCfg.Hostname == "" {
-		return fmt.Errorf("disperser hostname is required for using EigenDA V2 backend")
-	}
-
-	return nil
-}
-
+// GlobalPrefix is the prefix used for CLI flags
 const GlobalPrefix = "EIGENDA_PROXY"
 
+// PrefixEnvVar accepts a prefix and a suffix string, and combines them with a `_` delimiter
 func PrefixEnvVar(prefix, suffix string) []string {
 	return []string{prefix + "_" + suffix}
 }

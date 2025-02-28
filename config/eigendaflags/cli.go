@@ -22,8 +22,7 @@ var (
 	DisableTLSFlagName               = withFlagPrefix("disable-tls")
 	CustomQuorumIDsFlagName          = withFlagPrefix("custom-quorum-ids")
 	SignerPrivateKeyHexFlagName      = withFlagPrefix("signer-private-key-hex")
-	// using put-blob for external/user facing flag name to avoid having to deprecate
-	// flag
+	// using put-blob for external/user facing flag name to avoid having to deprecate flag
 	PayloadEncodingVersionFlagName       = withFlagPrefix("put-blob-encoding-version")
 	DisablePointVerificationModeFlagName = withFlagPrefix("disable-point-verification-mode")
 	WaitForFinalizationFlagName          = withFlagPrefix("wait-for-finalization")

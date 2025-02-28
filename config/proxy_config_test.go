@@ -19,7 +19,7 @@ func validCfg() *ProxyConfig {
 		panic(err)
 	}
 	proxyCfg := &ProxyConfig{
-		EdaV1ClientConfig: clients.EigenDAClientConfig{
+		EdaClientConfigV1: clients.EigenDAClientConfig{
 			RPC:                          "http://localhost:8545",
 			StatusQueryRetryInterval:     5 * time.Second,
 			StatusQueryTimeout:           30 * time.Minute,
@@ -32,7 +32,7 @@ func validCfg() *ProxyConfig {
 			SvcManagerAddr:               "0x00000000069",
 			EthRpcUrl:                    "http://localhosts",
 		},
-		EdaV1VerifierConfig: verify.Config{
+		EdaVerifierConfigV1: verify.Config{
 			KzgConfig: &kzg.KzgConfig{
 				G1Path:         "path/to/g1",
 				G2PowerOf2Path: "path/to/g2",
@@ -49,18 +49,14 @@ func validCfg() *ProxyConfig {
 			memconfig.Config{
 				BlobExpiration: 25 * time.Minute,
 			}),
-		EdaV2ClientConfig: common.V2ClientConfig{
+		EdaClientConfigV2: common.ClientConfigV2{
 			Enabled: true,
 			DisperserClientCfg: v2_clients.DisperserClientConfig{
 				Hostname:          "http://localhost",
 				Port:              "9999",
 				UseSecureGrpcFlag: true,
 			},
-			PayloadDisperserCfg: v2_clients.PayloadDisperserConfig{
-				SignerPaymentKey: "0x000000000000000",
-			},
 			ServiceManagerAddress: "0x1234567890abcdef",
-			EthRPC:                "http://localhost:8545",
 		},
 		EigenDAV2Enabled: true,
 	}
@@ -87,8 +83,8 @@ func TestConfigVerification(t *testing.T) {
 					cfg := validCfg()
 					// cert verification only makes sense when memstore is disabled (we use eigenda as backend)
 					cfg.MemstoreEnabled = false
-					cfg.EdaV1VerifierConfig.VerifyCerts = true
-					cfg.EdaV1VerifierConfig.SvcManagerAddr = ""
+					cfg.EdaVerifierConfigV1.VerifyCerts = true
+					cfg.EdaVerifierConfigV1.SvcManagerAddr = ""
 
 					err := cfg.Check()
 					require.Error(t, err)
@@ -99,8 +95,8 @@ func TestConfigVerification(t *testing.T) {
 					cfg := validCfg()
 					// cert verification only makes sense when memstore is disabled (we use eigenda as backend)
 					cfg.MemstoreEnabled = false
-					cfg.EdaV1VerifierConfig.VerifyCerts = true
-					cfg.EdaV1VerifierConfig.RPCURL = ""
+					cfg.EdaVerifierConfigV1.VerifyCerts = true
+					cfg.EdaVerifierConfigV1.RPCURL = ""
 
 					err := cfg.Check()
 					require.Error(t, err)
@@ -110,7 +106,7 @@ func TestConfigVerification(t *testing.T) {
 				"CantDoCertVerificationWhenMemstoreEnabled", func(t *testing.T) {
 					cfg := validCfg()
 					cfg.MemstoreEnabled = true
-					cfg.EdaV1VerifierConfig.VerifyCerts = true
+					cfg.EdaVerifierConfigV1.VerifyCerts = true
 
 					err := cfg.Check()
 					require.Error(t, err)
@@ -120,22 +116,22 @@ func TestConfigVerification(t *testing.T) {
 				"EigenDAClientFieldsAreDefaultSetWhenMemStoreEnabled", func(t *testing.T) {
 					cfg := validCfg()
 					cfg.MemstoreEnabled = true
-					cfg.EdaV1VerifierConfig.VerifyCerts = false
-					cfg.EdaV1VerifierConfig.RPCURL = ""
-					cfg.EdaV1VerifierConfig.SvcManagerAddr = ""
+					cfg.EdaVerifierConfigV1.VerifyCerts = false
+					cfg.EdaVerifierConfigV1.RPCURL = ""
+					cfg.EdaVerifierConfigV1.SvcManagerAddr = ""
 
 					err := cfg.Check()
 					require.NoError(t, err)
-					require.True(t, len(cfg.EdaV1ClientConfig.EthRpcUrl) > 1)
-					require.True(t, len(cfg.EdaV1ClientConfig.SvcManagerAddr) > 1)
+					require.True(t, len(cfg.EdaClientConfigV1.EthRpcUrl) > 1)
+					require.True(t, len(cfg.EdaClientConfigV1.SvcManagerAddr) > 1)
 				})
 
 			t.Run(
 				"FailWhenEigenDAClientFieldsAreUnsetAndMemStoreDisabled", func(t *testing.T) {
 					cfg := validCfg()
 					cfg.MemstoreEnabled = false
-					cfg.EdaV1ClientConfig.EthRpcUrl = ""
-					cfg.EdaV1ClientConfig.SvcManagerAddr = ""
+					cfg.EdaClientConfigV1.EthRpcUrl = ""
+					cfg.EdaClientConfigV1.SvcManagerAddr = ""
 
 					err := cfg.Check()
 					require.Error(t, err)
@@ -143,15 +139,7 @@ func TestConfigVerification(t *testing.T) {
 			t.Run(
 				"FailWhenRequiredEigenDAV2FieldsAreUnset", func(t *testing.T) {
 					cfg := validCfg()
-					cfg.EdaV2ClientConfig.EthRPC = ""
-					require.Error(t, cfg.Check())
-
-					cfg = validCfg()
-					cfg.EdaV2ClientConfig.DisperserClientCfg.Hostname = ""
-					require.Error(t, cfg.Check())
-
-					cfg = validCfg()
-					cfg.EdaV2ClientConfig.PayloadDisperserCfg.SignerPaymentKey = ""
+					cfg.EdaClientConfigV2.DisperserClientCfg.Hostname = ""
 					require.Error(t, cfg.Check())
 				})
 		})

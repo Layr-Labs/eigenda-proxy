@@ -194,7 +194,7 @@ func TestSuiteConfig(testCfg *Cfg) config.AppConfig {
 			Host:       host,
 			Port:       0,
 		},
-		EdaV1ClientConfig: clients.EigenDAClientConfig{
+		EdaClientConfigV1: clients.EigenDAClientConfig{
 			RPC:                      v1DisperserHolesky,
 			StatusQueryTimeout:       time.Minute * 45,
 			StatusQueryRetryInterval: pollInterval,
@@ -203,7 +203,7 @@ func TestSuiteConfig(testCfg *Cfg) config.AppConfig {
 			EthRpcUrl:                ethRPC,
 			SvcManagerAddr:           svcManagerAddr,
 		},
-		EdaV1VerifierConfig: verify.Config{
+		EdaVerifierConfigV1: verify.Config{
 			VerifyCerts:          false,
 			RPCURL:               ethRPC,
 			SvcManagerAddr:       svcManagerAddr,
@@ -224,7 +224,7 @@ func TestSuiteConfig(testCfg *Cfg) config.AppConfig {
 				MaxBlobSizeBytes: maxBlobLengthBytes,
 			}),
 
-		EdaV2ClientConfig: common.V2ClientConfig{
+		EdaClientConfigV2: common.ClientConfigV2{
 			Enabled: testCfg.UseV2,
 		},
 		StorageConfig: store.Config{
@@ -235,7 +235,7 @@ func TestSuiteConfig(testCfg *Cfg) config.AppConfig {
 	}
 
 	if testCfg.UseMemory {
-		eigendaCfg.EdaV1ClientConfig.SignerPrivateKeyHex = "0000000000000000000100000000000000000000000000000000000000000000"
+		eigendaCfg.EdaClientConfigV1.SignerPrivateKeyHex = "0000000000000000000100000000000000000000000000000000000000000000"
 	}
 
 	var cfg config.AppConfig
@@ -281,9 +281,10 @@ func CreateTestSuite(testSuiteCfg config.AppConfig) (TestSuite, func()) {
 	sm, err := store.NewBuilder(
 		ctx,
 		testSuiteCfg.EigenDAConfig.StorageConfig,
-		testSuiteCfg.EigenDAConfig.EdaV1VerifierConfig,
-		testSuiteCfg.EigenDAConfig.EdaV1ClientConfig,
-		testSuiteCfg.EigenDAConfig.EdaV2ClientConfig,
+		testSuiteCfg.EigenDAConfig.EdaVerifierConfigV1,
+		testSuiteCfg.EigenDAConfig.EdaClientConfigV1,
+		testSuiteCfg.EigenDAConfig.EdaClientConfigV2,
+		testSuiteCfg.EigenDAConfig.EdaSecretConfigV2,
 		testSuiteCfg.EigenDAConfig.MemstoreConfig,
 		log,
 		m,
