@@ -1,28 +1,28 @@
 package commitments
 
-type EigenDACommit byte
+type EigenDACommitmentType byte
 
 const (
 	// EigenDA V1
-	CertV0 EigenDACommit = iota
+	CertV0 EigenDACommitmentType = iota
 	// EigenDA V2
 	CertV1
 )
 
 // CertCommitment is the binary representation of a commitment.
 type CertCommitment interface {
-	CommitmentType() EigenDACommit
+	CommitmentType() EigenDACommitmentType
 	Encode() []byte
 	Verify(input []byte) error
 }
 
 type EigenDACommitment struct {
-	prefix EigenDACommit
+	prefix EigenDACommitmentType
 	b      []byte
 }
 
 // NewEigenDACommitment creates a new commitment from the given input.
-func NewEigenDACommitment(input []byte, v EigenDACommit) EigenDACommitment {
+func NewEigenDACommitment(input []byte, v EigenDACommitmentType) EigenDACommitment {
 	return EigenDACommitment{
 		prefix: v,
 		b:      input,
@@ -30,7 +30,7 @@ func NewEigenDACommitment(input []byte, v EigenDACommit) EigenDACommitment {
 }
 
 // CommitmentType returns the commitment type of EigenDACommitment.
-func (c EigenDACommitment) CommitmentType() EigenDACommit {
+func (c EigenDACommitment) CommitmentType() EigenDACommitmentType {
 	return c.prefix
 }
 

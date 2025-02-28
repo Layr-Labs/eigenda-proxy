@@ -175,7 +175,7 @@ func (m *Manager) putEigenDAMode(ctx context.Context, value []byte) ([]byte, err
 	return m.eigendaV2.Put(ctx, value)
 }
 
-func (m *Manager) getEigenDAMode(ctx context.Context, v commitments.EigenDACommit, key []byte) ([]byte, error) {
+func (m *Manager) getEigenDAMode(ctx context.Context, v commitments.EigenDACommitmentType, key []byte) ([]byte, error) {
 	switch v {
 	case commitments.CertV0:
 		m.log.Debug("Reading blob from EigenDAV1 backend")

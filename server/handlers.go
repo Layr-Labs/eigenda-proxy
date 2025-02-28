@@ -34,7 +34,7 @@ func (svr *Server) handleGetStdCommitment(w http.ResponseWriter, r *http.Request
 	}
 	commitmentMeta := commitments.CommitmentMeta{
 		Mode:    commitments.Standard,
-		Version: commitments.EigenDACommit(versionByte),
+		Version: commitments.EigenDACommitmentType(versionByte),
 	}
 
 	rawCommitmentHex, ok := mux.Vars(r)[routingVarNamePayloadHex]
@@ -83,7 +83,7 @@ func (svr *Server) handleGetOPGenericCommitment(w http.ResponseWriter, r *http.R
 	}
 	commitmentMeta := commitments.CommitmentMeta{
 		Mode:    commitments.OptimismGeneric,
-		Version: commitments.EigenDACommit(versionByte),
+		Version: commitments.EigenDACommitmentType(versionByte),
 	}
 
 	rawCommitmentHex, ok := mux.Vars(r)[routingVarNamePayloadHex]
@@ -98,7 +98,12 @@ func (svr *Server) handleGetOPGenericCommitment(w http.ResponseWriter, r *http.R
 	return svr.handleGetShared(r.Context(), w, commitment, commitmentMeta)
 }
 
-func (svr *Server) handleGetShared(ctx context.Context, w http.ResponseWriter, comm []byte, meta commitments.CommitmentMeta) error {
+func (svr *Server) handleGetShared(
+	ctx context.Context,
+	w http.ResponseWriter,
+	comm []byte,
+	meta commitments.CommitmentMeta,
+) error {
 	commitmentHex := hex.EncodeToString(comm)
 	svr.log.Info("Processing GET request", "commitment", commitmentHex, "commitmentMeta", meta)
 	input, err := svr.sm.Get(ctx, comm, meta)
@@ -177,7 +182,12 @@ func (svr *Server) handlePostOPGenericCommitment(w http.ResponseWriter, r *http.
 	return svr.handlePostShared(w, r, nil, commitmentMeta)
 }
 
-func (svr *Server) handlePostShared(w http.ResponseWriter, r *http.Request, comm []byte, meta commitments.CommitmentMeta) error {
+func (svr *Server) handlePostShared(
+	w http.ResponseWriter,
+	r *http.Request,
+	comm []byte,
+	meta commitments.CommitmentMeta,
+) error {
 	svr.log.Info("Processing POST request", "commitment", hex.EncodeToString(comm), "meta", meta)
 	input, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxRequestBodySize))
 	if err != nil {
