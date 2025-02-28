@@ -24,10 +24,12 @@ import (
 	"github.com/Layr-Labs/eigenda/common/geth"
 	auth "github.com/Layr-Labs/eigenda/core/auth/v2"
 	eigenda_eth "github.com/Layr-Labs/eigenda/core/eth"
+	core_v2 "github.com/Layr-Labs/eigenda/core/v2"
 	"github.com/Layr-Labs/eigenda/encoding/kzg/prover"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/consensys/gnark-crypto/ecc/bn254"
 	geth_common "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 // Builder centralizes dependency initialization
@@ -89,6 +91,7 @@ func (d *Builder) buildSecondaries(
 
 // buildEigenDAV2Backend ... Builds EigenDA V2 storage backend
 func (d *Builder) buildEigenDAV2Backend(
+	ctx context.Context,
 	maxBlobSizeBytes uint,
 	eigenDACertVerifierAddress string,
 ) (common.GeneratedKeyStore, error) {
@@ -119,7 +122,7 @@ func (d *Builder) buildEigenDAV2Backend(
 		return nil, fmt.Errorf("new cert verifier: %w", err)
 	}
 
-	payloadDisperser, err := d.buildPayloadDisperser(kzgProver, certVerifier)
+	payloadDisperser, err := d.buildPayloadDisperser(ctx, ethClient, kzgProver, certVerifier)
 	if err != nil {
 		return nil, fmt.Errorf("build payload disperser: %w", err)
 	}
@@ -206,7 +209,7 @@ func (d *Builder) BuildManager(
 
 	if d.v2ClientCfg.Enabled {
 		d.log.Debug("Using EigenDA V2 storage backend")
-		eigenDAV2Store, err = d.buildEigenDAV2Backend(maxBlobSize, eigenDaCertVerifierAddress)
+		eigenDAV2Store, err = d.buildEigenDAV2Backend(ctx, maxBlobSize, eigenDaCertVerifierAddress)
 		if err != nil {
 			return nil, err
 		}
@@ -309,12 +312,14 @@ func (d *Builder) buildRelayClient(
 }
 
 func (d *Builder) buildPayloadDisperser(
+	ctx context.Context,
+	ethClient common_eigenda.EthClient,
 	kzgProver *prover.Prover,
 	certVerifier *verification.CertVerifier,
 ) (*clients_v2.PayloadDisperser, error) {
-	signer, err := auth.NewLocalBlobRequestSigner(d.v2ClientCfg.PayloadDisperserCfg.SignerPaymentKey)
+	signer, err := d.buildLocalSigner(ctx, ethClient)
 	if err != nil {
-		return nil, fmt.Errorf("new local blob request signer: %w", err)
+		return nil, fmt.Errorf("build local signer: %w", err)
 	}
 
 	disperserClient, err := clients_v2.NewDisperserClient(&d.v2ClientCfg.DisperserClientCfg, signer, kzgProver, nil)
@@ -332,4 +337,32 @@ func (d *Builder) buildPayloadDisperser(
 	}
 
 	return payloadDisperser, nil
+}
+
+// buildLocalSigner attempts to check the pending balance of the created signer account. If the check fails, or if the
+// balance is determined to be 0, the user is warned with a log. This method doesn't return an error based on this check:
+// it's possible that a user could want to set up a signer before it's actually ready to be used
+func (d *Builder) buildLocalSigner(
+	ctx context.Context,
+	ethClient common_eigenda.EthClient,
+) (core_v2.BlobRequestSigner, error) {
+	signer, err := auth.NewLocalBlobRequestSigner(d.v2ClientCfg.PayloadDisperserCfg.SignerPaymentKey)
+	if err != nil {
+		return nil, fmt.Errorf("new local blob request signer: %w", err)
+	}
+
+	accountID := crypto.PubkeyToAddress(signer.PrivateKey.PublicKey)
+	pendingBalance, err := ethClient.PendingBalanceAt(ctx, accountID)
+
+	switch {
+	case err != nil:
+		d.log.Errorf("get pending balance for accountID %v: %v", accountID, err)
+	case pendingBalance == nil:
+		d.log.Errorf(
+			"get pending balance for accountID %v didn't return an error, but pending balance is nil", accountID)
+	case pendingBalance.Sign() <= 0:
+		d.log.Warnf("pending balance for accountID %v is zero", accountID)
+	}
+
+	return signer, nil
 }
