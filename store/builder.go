@@ -140,7 +140,7 @@ func (d *Builder) buildEigenDAV1Backend(
 	maxBlobSize uint) (common.GeneratedKeyStore, error) {
 	verifier, err := verify.NewVerifier(&d.v1VerifierCfg, d.log)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create verifier: %w", err)
+		return nil, fmt.Errorf("new verifier: %w", err)
 	}
 
 	if d.v1VerifierCfg.VerifyCerts {
@@ -274,7 +274,7 @@ func (d *Builder) buildRelayPayloadRetriever(
 		relayClient,
 		g1Srs)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create relay payload retriever: %w", err)
+		return nil, fmt.Errorf("new relay payload retriever: %w", err)
 	}
 
 	return relayPayloadRetriever, nil
@@ -302,7 +302,7 @@ func (d *Builder) buildRelayClient(
 
 	relayClient, err := clients_v2.NewRelayClient(relayCfg, d.log, relayURLProvider)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create relay client: %w", err)
+		return nil, fmt.Errorf("new relay client: %w", err)
 	}
 
 	return relayClient, nil
