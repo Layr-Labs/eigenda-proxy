@@ -161,16 +161,21 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 	}
 }
 
-func ReadClientConfigV2(ctx *cli.Context) common.ClientConfigV2 {
-	return common.ClientConfigV2{
+func ReadClientConfigV2(ctx *cli.Context) (*common.ClientConfigV2, error) {
+	disperserConfig, err := readDisperserCfg(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("read disperser config: %w", err)
+	}
+
+	return &common.ClientConfigV2{
 		Enabled:                         ctx.Bool(V2EnabledFlagName),
 		ServiceManagerAddress:           ctx.String(SvcManagerAddrFlagName),
-		DisperserClientCfg:              readDisperserCfg(ctx),
+		DisperserClientCfg:              *disperserConfig,
 		PayloadDisperserCfg:             readPayloadDisperserCfg(ctx),
 		RelayPayloadRetrieverCfg:        readRetrievalConfig(ctx),
 		PutRetries:                      ctx.Uint(PutRetriesFlagName),
 		BlockNumberPollIntervalDuration: ctx.Duration(BlockNumberPollIntervalFlagName),
-	}
+	}, nil
 }
 
 func ReadSecretConfigV2(ctx *cli.Context) common.SecretConfigV2 {
@@ -207,17 +212,17 @@ func readPayloadDisperserCfg(ctx *cli.Context) clients_v2.PayloadDisperserConfig
 	}
 }
 
-func readDisperserCfg(ctx *cli.Context) clients_v2.DisperserClientConfig {
+func readDisperserCfg(ctx *cli.Context) (*clients_v2.DisperserClientConfig, error) {
 	hostStr, portStr, err := net.SplitHostPort(ctx.String(DisperserFlagName))
 	if err != nil {
-		panic(fmt.Sprintf("could not read disperser RPC port from provided endpoint: %s", err.Error()))
+		return nil, fmt.Errorf("split host port '%s': %w", DisperserFlagName, err)
 	}
 
-	return clients_v2.DisperserClientConfig{
+	return &clients_v2.DisperserClientConfig{
 		Hostname:          hostStr,
 		Port:              portStr,
 		UseSecureGrpcFlag: !ctx.Bool(DisableTLSFlagName),
-	}
+	}, nil
 }
 
 func readRetrievalConfig(ctx *cli.Context) clients_v2.RelayPayloadRetrieverConfig {

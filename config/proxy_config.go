@@ -45,18 +45,21 @@ type ProxyConfig struct {
 }
 
 // ReadProxyConfig ... parses the Config from the provided flags or environment variables.
-func ReadProxyConfig(ctx *cli.Context) ProxyConfig {
+func ReadProxyConfig(ctx *cli.Context) (*ProxyConfig, error) {
 	edaClientV1Config := eigendaflags.ReadConfig(ctx)
-	edaClientV2Config := eigendaflags_v2.ReadClientConfigV2(ctx)
+	edaClientV2Config, err := eigendaflags_v2.ReadClientConfigV2(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("read client config v2: %w", err)
+	}
 
-	cfg := ProxyConfig{
+	cfg := &ProxyConfig{
 		ServerConfig: server.Config{
 			DisperseV2: edaClientV2Config.Enabled,
 			Host:       ctx.String(ListenAddrFlagName),
 			Port:       ctx.Int(PortFlagName),
 		},
 		EdaClientConfigV1:          edaClientV1Config,
-		EdaClientConfigV2:          edaClientV2Config,
+		EdaClientConfigV2:          *edaClientV2Config,
 		EdaVerifierConfigV1:        verify.ReadConfig(ctx, edaClientV1Config),
 		PutRetries:                 ctx.Uint(eigendaflags.PutRetriesFlagName),
 		MemstoreEnabled:            ctx.Bool(memstore.EnabledFlagName),
@@ -67,7 +70,7 @@ func ReadProxyConfig(ctx *cli.Context) ProxyConfig {
 		EigenDACertVerifierAddress: eigendaflags_v2.CertVerifierAddrFlagName,
 	}
 
-	return cfg
+	return cfg, nil
 }
 
 // Check ... verifies that configuration values are adequately set

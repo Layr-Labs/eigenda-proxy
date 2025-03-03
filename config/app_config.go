@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/urfave/cli/v2"
 )
@@ -20,9 +22,14 @@ func (c AppConfig) Check() error {
 	return nil
 }
 
-func ReadCLIConfig(ctx *cli.Context) AppConfig {
-	return AppConfig{
-		EigenDAConfig: ReadProxyConfig(ctx),
-		MetricsCfg:    metrics.ReadConfig(ctx),
+func ReadCLIConfig(ctx *cli.Context) (*AppConfig, error) {
+	proxyConfig, err := ReadProxyConfig(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("read proxy config: %w", err)
 	}
+
+	return &AppConfig{
+		EigenDAConfig: *proxyConfig,
+		MetricsCfg:    metrics.ReadConfig(ctx),
+	}, nil
 }

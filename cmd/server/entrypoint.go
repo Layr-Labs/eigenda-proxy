@@ -34,7 +34,11 @@ func StartProxySvr(cliCtx *cli.Context) error {
 
 	log.Info("Starting EigenDA Proxy Server", "version", Version, "date", Date, "commit", Commit)
 
-	cfg := config.ReadCLIConfig(cliCtx)
+	cfg, err := config.ReadCLIConfig(cliCtx)
+	if err != nil {
+		return fmt.Errorf("read cli config: %w", err)
+	}
+
 	if err := cfg.Check(); err != nil {
 		return err
 	}
@@ -117,7 +121,10 @@ func StartProxySvr(cliCtx *cli.Context) error {
 // TODO: we should probably just change EdaClientConfig struct definition in eigenda-client
 func prettyPrintConfig(cliCtx *cli.Context, log logging.Logger) error {
 	// we read a new config which we modify to hide private info in order to log the rest
-	cfg := config.ReadCLIConfig(cliCtx)
+	cfg, err := config.ReadCLIConfig(cliCtx)
+	if err != nil {
+		return fmt.Errorf("read cli config: %w", err)
+	}
 	if cfg.EigenDAConfig.EdaClientConfigV1.SignerPrivateKeyHex != "" {
 		cfg.EigenDAConfig.EdaClientConfigV1.SignerPrivateKeyHex = "*****" // marshaling defined in client config
 	}
