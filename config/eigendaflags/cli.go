@@ -22,7 +22,7 @@ var (
 	DisableTLSFlagName                   = withFlagPrefix("disable-tls")
 	CustomQuorumIDsFlagName              = withFlagPrefix("custom-quorum-ids")
 	SignerPrivateKeyHexFlagName          = withFlagPrefix("signer-private-key-hex")
-	PayloadEncodingVersionFlagName       = withFlagPrefix("put-blob-encoding-version")
+	PutBlobEncodingVersionFlagName       = withFlagPrefix("put-blob-encoding-version")
 	DisablePointVerificationModeFlagName = withFlagPrefix("disable-point-verification-mode")
 	ConfirmationDepthFlagName            = withFlagPrefix("confirmation-depth")
 	EthRPCURLFlagName                    = withFlagPrefix("eth-rpc")
@@ -103,7 +103,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Category: category,
 		},
 		&cli.UintFlag{
-			Name:     PayloadEncodingVersionFlagName,
+			Name:     PutBlobEncodingVersionFlagName,
 			Usage:    "Blob encoding version to use when writing blobs from the high-level interface.",
 			EnvVars:  []string{withEnvPrefix(envPrefix, "PUT_BLOB_ENCODING_VERSION")},
 			Value:    0,
@@ -165,7 +165,7 @@ func ReadConfig(ctx *cli.Context) clients.EigenDAClientConfig {
 		CustomQuorumIDs:          ctx.UintSlice(CustomQuorumIDsFlagName),
 		SignerPrivateKeyHex:      ctx.String(SignerPrivateKeyHexFlagName),
 		// #nosec G115 - only overflow on incorrect user input
-		PutBlobEncodingVersion:       codecs.PayloadEncodingVersion(ctx.Uint(PayloadEncodingVersionFlagName)),
+		PutBlobEncodingVersion:       codecs.PayloadEncodingVersion(ctx.Uint(PutBlobEncodingVersionFlagName)),
 		DisablePointVerificationMode: ctx.Bool(DisablePointVerificationModeFlagName),
 		WaitForFinalization:          waitForFinalization,
 		WaitForConfirmationDepth:     confirmationDepth,

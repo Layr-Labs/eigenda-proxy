@@ -30,7 +30,6 @@ var (
 	ContractCallTimeoutFlagName     = withFlagPrefix("contract-call-timeout")
 	BlobParamsVersionFlagName       = withFlagPrefix("blob-version")
 	BlockNumberPollIntervalFlagName = withFlagPrefix("block-number-poll-interval-duration")
-	EthRPCURLFlagName               = withFlagPrefix("eth-rpc")
 	SvcManagerAddrFlagName          = withFlagPrefix("svc-manager-addr")
 )
 
@@ -75,13 +74,6 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			EnvVars:  []string{withEnvPrefix(envPrefix, "DISABLE_POINT_EVALUATION")},
 			Value:    false,
 			Category: category,
-		},
-		&cli.StringFlag{
-			Name:     EthRPCURLFlagName,
-			Usage:    "URL of the Ethereum RPC endpoint. Needed to verify EigenDA certs against an onchain EigenDACertVerifier contract.",
-			EnvVars:  []string{withEnvPrefix(envPrefix, "ETH_RPC")},
-			Category: category,
-			Required: false,
 		},
 		&cli.StringFlag{
 			Name: SvcManagerAddrFlagName,
