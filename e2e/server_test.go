@@ -29,7 +29,8 @@ func TestOptimismClientWithKeccak256Commitment(t *testing.T) {
 	testCfg.UseKeccak256ModeS3 = true
 
 	tsConfig := e2e.TestSuiteConfig(testCfg)
-	ts, kill := e2e.CreateTestSuite(tsConfig)
+	tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
+	ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
 	defer kill()
 
 	requireOPClientSetGet(t, ts, e2e.RandBytes(100), true)
@@ -47,8 +48,11 @@ func TestOptimismClientWithGenericCommitment(t *testing.T) {
 
 	t.Parallel()
 
-	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), runIntegrationTestsV2))
-	ts, kill := e2e.CreateTestSuite(tsConfig)
+	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
+
+	tsConfig := e2e.TestSuiteConfig(testCfg)
+	tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
+	ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
 	defer kill()
 
 	requireOPClientSetGet(t, ts, e2e.RandBytes(100), false)
@@ -65,8 +69,11 @@ func TestProxyClientServerIntegration(t *testing.T) {
 		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
 	}
 
-	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), runIntegrationTestsV2))
-	ts, kill := e2e.CreateTestSuite(tsConfig)
+	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
+
+	tsConfig := e2e.TestSuiteConfig(testCfg)
+	tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
+	ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
 	t.Cleanup(kill)
 
 	cfg := &standard_client.Config{
@@ -142,8 +149,11 @@ func TestProxyClient(t *testing.T) {
 
 	t.Parallel()
 
-	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), runIntegrationTestsV2))
-	ts, kill := e2e.CreateTestSuite(tsConfig)
+	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
+
+	tsConfig := e2e.TestSuiteConfig(testCfg)
+	tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
+	ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
 	defer kill()
 
 	cfg := &standard_client.Config{
@@ -170,8 +180,11 @@ func TestProxyClientWriteRead(t *testing.T) {
 
 	t.Parallel()
 
-	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), runIntegrationTestsV2))
-	ts, kill := e2e.CreateTestSuite(tsConfig)
+	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
+
+	tsConfig := e2e.TestSuiteConfig(testCfg)
+	tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
+	ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
 	defer kill()
 
 	requireStandardClientSetGet(t, ts, e2e.RandBytes(100))
@@ -185,8 +198,11 @@ func TestProxyWithMaximumSizedBlob(t *testing.T) {
 
 	t.Parallel()
 
-	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), runIntegrationTestsV2))
-	ts, kill := e2e.CreateTestSuite(tsConfig)
+	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
+
+	tsConfig := e2e.TestSuiteConfig(testCfg)
+	tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
+	ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
 	defer kill()
 
 	requireStandardClientSetGet(t, ts, e2e.RandBytes(16_000_000))
@@ -207,7 +223,8 @@ func TestProxyCaching(t *testing.T) {
 	testCfg.UseS3Caching = true
 
 	tsConfig := e2e.TestSuiteConfig(testCfg)
-	ts, kill := e2e.CreateTestSuite(tsConfig)
+	tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
+	ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
 	defer kill()
 
 	requireStandardClientSetGet(t, ts, e2e.RandBytes(1_000_000))
@@ -226,7 +243,8 @@ func TestProxyCachingWithRedis(t *testing.T) {
 	testCfg.UseRedisCaching = true
 
 	tsConfig := e2e.TestSuiteConfig(testCfg)
-	ts, kill := e2e.CreateTestSuite(tsConfig)
+	tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
+	ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
 	defer kill()
 
 	requireStandardClientSetGet(t, ts, e2e.RandBytes(1_000_000))
@@ -255,7 +273,8 @@ func TestProxyReadFallback(t *testing.T) {
 	testCfg.Expiration = time.Millisecond * 1
 
 	tsConfig := e2e.TestSuiteConfig(testCfg)
-	ts, kill := e2e.CreateTestSuite(tsConfig)
+	tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
+	ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
 	defer kill()
 
 	cfg := &standard_client.Config{
@@ -285,8 +304,11 @@ func TestProxyMemConfigClientCanGetAndPatch(t *testing.T) {
 	}
 	t.Parallel()
 
-	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), runIntegrationTestsV2))
-	ts, kill := e2e.CreateTestSuite(tsConfig)
+	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
+
+	tsConfig := e2e.TestSuiteConfig(testCfg)
+	tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
+	ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
 	defer kill()
 
 	memClient := memconfig_client.New(

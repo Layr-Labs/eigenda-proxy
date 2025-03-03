@@ -24,7 +24,6 @@ type ProxyConfig struct {
 	EdaVerifierConfigV1 verify.Config
 
 	EdaClientConfigV2 common.ClientConfigV2
-	EdaSecretConfigV2 common.SecretConfigV2
 
 	MemstoreConfig *memconfig.SafeConfig
 	StorageConfig  store.Config
@@ -50,7 +49,6 @@ type ProxyConfig struct {
 func ReadProxyConfig(ctx *cli.Context) ProxyConfig {
 	edaClientV1Config := eigendaflags.ReadConfig(ctx)
 	edaClientV2Config := eigendaflags_v2.ReadClientConfigV2(ctx)
-	edaClientSecretConfigV2 := eigendaflags_v2.ReadSecretConfigV2(ctx)
 
 	cfg := ProxyConfig{
 		ServerConfig: server.Config{
@@ -60,7 +58,6 @@ func ReadProxyConfig(ctx *cli.Context) ProxyConfig {
 		},
 		EdaClientConfigV1:          edaClientV1Config,
 		EdaClientConfigV2:          edaClientV2Config,
-		EdaSecretConfigV2:          edaClientSecretConfigV2,
 		EdaVerifierConfigV1:        verify.ReadConfig(ctx, edaClientV1Config),
 		PutRetries:                 ctx.Uint(eigendaflags.PutRetriesFlagName),
 		MemstoreEnabled:            ctx.Bool(memstore.EnabledFlagName),

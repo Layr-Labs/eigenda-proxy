@@ -139,7 +139,8 @@ func TestOptimismKeccak256Commitment(gt *testing.T) {
 	testCfg.UseKeccak256ModeS3 = true
 
 	tsConfig := e2e.TestSuiteConfig(testCfg)
-	proxyTS, shutDown := e2e.CreateTestSuite(tsConfig)
+	tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
+	proxyTS, shutDown := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
 	defer shutDown()
 
 	t := actions.NewDefaultTesting(gt)
@@ -188,8 +189,11 @@ func TestOptimismGenericCommitment(gt *testing.T) {
 		gt.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
 	}
 
-	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), runIntegrationTestsV2))
-	proxyTS, shutDown := e2e.CreateTestSuite(tsConfig)
+	testConfig := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
+
+	tsConfig := e2e.TestSuiteConfig(testConfig)
+	tsSecretConfig := e2e.TestSuiteSecretConfig(testConfig)
+	proxyTS, shutDown := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
 	defer shutDown()
 
 	t := actions.NewDefaultTesting(gt)

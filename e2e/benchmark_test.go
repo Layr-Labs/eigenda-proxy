@@ -24,7 +24,8 @@ func BenchmarkPutsWithSecondary(b *testing.B) {
 	testCfg.WriteThreadCount = threadInt
 
 	tsConfig := TestSuiteConfig(testCfg)
-	ts, kill := CreateTestSuite(tsConfig)
+	tsSecretConfig := TestSuiteSecretConfig(testCfg)
+	ts, kill := CreateTestSuite(tsConfig, tsSecretConfig)
 	defer kill()
 
 	cfg := &standard_client.Config{

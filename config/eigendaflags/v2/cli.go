@@ -183,8 +183,7 @@ func ReadClientConfigV2(ctx *cli.Context) common.ClientConfigV2 {
 
 func ReadSecretConfigV2(ctx *cli.Context) common.SecretConfigV2 {
 	return common.SecretConfigV2{
-		SignerPaymentKey: SignerPaymentKeyHexFlagName,
-		EthRPCUrl:        ctx.String(EthRPCURLFlagName),
+		SignerPaymentKey: ctx.String(SignerPaymentKeyHexFlagName),
 	}
 }
 

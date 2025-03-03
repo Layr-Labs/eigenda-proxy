@@ -266,6 +266,18 @@ func TestSuiteConfig(testCfg *Cfg) config.AppConfig {
 	return cfg
 }
 
+func TestSuiteSecretConfig(testCfg *Cfg) common.SecretConfigV2 {
+	// load signer key from environment
+	signerPrivateKey := os.Getenv(privateKey)
+	if signerPrivateKey == "" && !testCfg.UseMemory {
+		panic("SIGNER_PRIVATE_KEY environment variable not set")
+	}
+
+	return common.SecretConfigV2{
+		SignerPaymentKey: signerPrivateKey,
+	}
+}
+
 type TestSuite struct {
 	Ctx     context.Context
 	Log     logging.Logger
@@ -273,7 +285,7 @@ type TestSuite struct {
 	Metrics *metrics.EmulatedMetricer
 }
 
-func CreateTestSuite(testSuiteCfg config.AppConfig) (TestSuite, func()) {
+func CreateTestSuite(testSuiteCfg config.AppConfig, secretConfigV2 common.SecretConfigV2) (TestSuite, func()) {
 	log := logging.NewTextSLogger(os.Stdout, &logging.SLoggerOptions{})
 
 	m := metrics.NewEmulatedMetricer()
@@ -285,7 +297,7 @@ func CreateTestSuite(testSuiteCfg config.AppConfig) (TestSuite, func()) {
 		testSuiteCfg.EigenDAConfig.EdaVerifierConfigV1,
 		testSuiteCfg.EigenDAConfig.EdaClientConfigV1,
 		testSuiteCfg.EigenDAConfig.EdaClientConfigV2,
-		testSuiteCfg.EigenDAConfig.EdaSecretConfigV2,
+		secretConfigV2,
 		testSuiteCfg.EigenDAConfig.MemstoreConfig,
 		log,
 		m,

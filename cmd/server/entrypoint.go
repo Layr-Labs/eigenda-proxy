@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/Layr-Labs/eigenda-proxy/config"
+	eigendaflags_v2 "github.com/Layr-Labs/eigenda-proxy/config/eigendaflags/v2"
 
 	proxy_logging "github.com/Layr-Labs/eigenda-proxy/logging"
 	"github.com/Layr-Labs/eigenda-proxy/store"
@@ -42,6 +43,9 @@ func StartProxySvr(cliCtx *cli.Context) error {
 		return fmt.Errorf("failed to pretty print config: %w", err)
 	}
 
+	// secret config is kept entirely separate from the other config values, which may be printed
+	secretConfig := eigendaflags_v2.ReadSecretConfigV2(cliCtx)
+
 	m := metrics.NewMetrics("default")
 
 	ctx, ctxCancel := context.WithCancel(cliCtx.Context)
@@ -58,7 +62,7 @@ func StartProxySvr(cliCtx *cli.Context) error {
 		cfg.EigenDAConfig.EdaVerifierConfigV1,
 		cfg.EigenDAConfig.EdaClientConfigV1,
 		cfg.EigenDAConfig.EdaClientConfigV2,
-		cfg.EigenDAConfig.EdaSecretConfigV2,
+		secretConfig,
 		memConfig,
 		log,
 		m,
@@ -119,9 +123,6 @@ func prettyPrintConfig(cliCtx *cli.Context, log logging.Logger) error {
 	}
 	if cfg.EigenDAConfig.EdaClientConfigV1.EthRpcUrl != "" {
 		cfg.EigenDAConfig.EdaClientConfigV1.EthRpcUrl = "*****" // hiding as RPC providers typically use sensitive API keys within
-	}
-	if cfg.EigenDAConfig.StorageConfig.RedisConfig.Password != "" {
-		cfg.EigenDAConfig.StorageConfig.RedisConfig.Password = "*****" // hiding Redis password
 	}
 
 	configJSON, err := json.MarshalIndent(cfg, "", "  ")

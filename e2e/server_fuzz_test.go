@@ -17,8 +17,11 @@ func FuzzProxyClientServerIntegration(f *testing.F) {
 		f.Skip("Skipping test as FUZZ env var not set")
 	}
 
-	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), runIntegrationTestsV2))
-	ts, kill := e2e.CreateTestSuite(tsConfig)
+	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
+
+	tsConfig := e2e.TestSuiteConfig(testCfg)
+	tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
+	ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
 
 	for r := rune(0); r <= unicode.MaxRune; r++ {
 		if unicode.IsPrint(r) {
