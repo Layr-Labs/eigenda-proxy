@@ -120,6 +120,9 @@ func prettyPrintConfig(cliCtx *cli.Context, log logging.Logger) error {
 	if cfg.EigenDAConfig.EdaClientConfigV1.EthRpcUrl != "" {
 		cfg.EigenDAConfig.EdaClientConfigV1.EthRpcUrl = "*****" // hiding as RPC providers typically use sensitive API keys within
 	}
+	if cfg.EigenDAConfig.StorageConfig.RedisConfig.Password != "" {
+		cfg.EigenDAConfig.StorageConfig.RedisConfig.Password = "*****" // hiding Redis password
+	}
 
 	configJSON, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
@@ -129,5 +132,6 @@ func prettyPrintConfig(cliCtx *cli.Context, log logging.Logger) error {
 		fmt.Sprintf(
 			"Initializing EigenDA proxy server with config (\"*****\" fields are hidden): %v",
 			string(configJSON)))
+
 	return nil
 }
