@@ -127,16 +127,21 @@ func StartProxySvr(cliCtx *cli.Context) error {
 
 // TODO: we should probably just change EdaClientConfig struct definition in eigenda-client
 func prettyPrintConfig(cliCtx *cli.Context, log logging.Logger) error {
+	redacted := "******"
+
 	// we read a new config which we modify to hide private info in order to log the rest
 	cfg, err := config.ReadCLIConfig(cliCtx)
 	if err != nil {
 		return fmt.Errorf("read cli config: %w", err)
 	}
 	if cfg.EigenDAConfig.EdaClientConfigV1.SignerPrivateKeyHex != "" {
-		cfg.EigenDAConfig.EdaClientConfigV1.SignerPrivateKeyHex = "*****" // marshaling defined in client config
+		cfg.EigenDAConfig.EdaClientConfigV1.SignerPrivateKeyHex = redacted // marshaling defined in client config
 	}
 	if cfg.EigenDAConfig.EdaClientConfigV1.EthRpcUrl != "" {
-		cfg.EigenDAConfig.EdaClientConfigV1.EthRpcUrl = "*****" // hiding as RPC providers typically use sensitive API keys within
+		cfg.EigenDAConfig.EdaClientConfigV1.EthRpcUrl = redacted // hiding as RPC providers typically use sensitive API keys within
+	}
+	if cfg.EigenDAConfig.StorageConfig.RedisConfig.Password != "" {
+		cfg.EigenDAConfig.StorageConfig.RedisConfig.Password = redacted // masking Redis password
 	}
 
 	configJSON, err := json.MarshalIndent(cfg, "", "  ")
