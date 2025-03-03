@@ -252,13 +252,12 @@ To quickly set up monitoring dashboard, add eigenda-proxy metrics endpoint to a 
 
 ## Flags and Env Vars
 
-<<<<<<< HEAD
 > Note: this list is hand-crafted and is very likely to be out of date. 
 > 
 > To get a list of exact flags available with a given version, run `eigenda-proxy --help`
 
 | Flag                                        | Default Value                   | Environment Variable                                     | Description                                                                                                                                                                                                   |
-| ------------------------------------------- | ------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|---------------------------------------------| ------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--addr`                                    | `"127.0.0.1"`                   | `$EIGENDA_PROXY_ADDR`                                    | Server listening address                                                                                                                                                                                      |
 | `--eigenda.cache-path`                      | `"resources/SRSTables/"`        | `$EIGENDA_PROXY_EIGENDA_TARGET_CACHE_PATH`               | path to SRS tables for caching.                                                                                                                                                                     |
 | `--eigenda.custom-quorum-ids`               |                                 | `$EIGENDA_PROXY_EIGENDA_CUSTOM_QUORUM_IDS`               | Custom quorum IDs for writing blobs. Should not include default quorums 0 or 1.                                                                                                                               |
@@ -279,7 +278,7 @@ To quickly set up monitoring dashboard, add eigenda-proxy metrics endpoint to a 
 | `--eigenda.status-query-timeout`            | `30m0s`                         | `$EIGENDA_PROXY_EIGENDA_STATUS_QUERY_TIMEOUT`            | Duration to wait for a blob to finalize after being sent for dispersal. Default is 30 minutes.                                                                                                                |
 | `--log.format`                              | `text`                          | `$EIGENDA_PROXY_LOG_FORMAT`                              | The format of the log file. Accepted options are 'json' and 'text' (default: "json")                                                                                                               |
 | `--log.level`                               | `INFO`                          | `$EIGENDA_PROXY_LOG_LEVEL`                               | The lowest log level that will be output. The lowest log level that will be output. Accepted options are "debug", "info", "warn" "error"                                                                                                                                                                     |
-| `log.path`                                  | `""`                              | `$EIGENDA_PROXY_LOG_PATH`                                | Path to file where logs will be written |
+| `--log.path`                                | `""`                            | `$EIGENDA_PROXY_LOG_PATH`                                | Path to file where logs will be written |
 | `--memstore.enabled`                        | `false`                         | `$EIGENDA_PROXY_MEMSTORE_ENABLED`                        | Whether to use mem-store for DA logic.                                                                                                                                                                        |
 | `--memstore.expiration`                     | `25m0s`                         | `$EIGENDA_PROXY_MEMSTORE_EXPIRATION`                     | Duration that a mem-store blob/commitment pair are allowed to live.                                                                                                                                           |
 | `--memstore.put-latency`                    | `0`                             | `$EIGENDA_PROXY_MEMSTORE_PUT_LATENCY`                    | Artificial latency added for memstore backend to mimic EigenDA's dispersal latency.                                                                                                                           |
@@ -306,9 +305,8 @@ To quickly set up monitoring dashboard, add eigenda-proxy metrics endpoint to a 
 | `--redis.eviction`                          | `24h0m0s`                       | `$EIGENDA_PROXY_REDIS_EVICTION`                          | entry eviction/expiration time                                                                                                                                                                                |
 | `--help, -h`                                | `false`                         |                                                          | Show help.                                                                                                                                                                                                    |
 | `--version, -v`                             | `false`                         |                                                          | Print the version.                                                                                                                                                                                            |
-=======
+
 To get a list of exact flags and env vars available to configure a given version of eigenda-proxy, run `eigenda-proxy --help`.
->>>>>>> daf39e2c93ffebc997fb0a545167aea07367a8a0
 
 ## Resources
 

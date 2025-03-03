@@ -17,7 +17,7 @@ func FuzzProxyClientServerIntegration(f *testing.F) {
 		f.Skip("Skipping test as FUZZ env var not set")
 	}
 
-	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), useV2()))
+	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), runIntegrationTestsV2))
 	ts, kill := e2e.CreateTestSuite(tsConfig)
 
 	for r := rune(0); r <= unicode.MaxRune; r++ {
@@ -33,13 +33,14 @@ func FuzzProxyClientServerIntegration(f *testing.F) {
 	daClient := standard_client.New(cfg)
 
 	// seed and data are expected. `seed` value is seed: {rune} and data is the one with the random byte(s)
-	f.Fuzz(func(t *testing.T, data []byte) {
-		_, err := daClient.SetData(ts.Ctx, data)
-		assert.NoError(t, err)
-		if err != nil {
-			t.Errorf("Failed to set data: %v", err)
-		}
-	})
+	f.Fuzz(
+		func(t *testing.T, data []byte) {
+			_, err := daClient.SetData(ts.Ctx, data)
+			assert.NoError(t, err)
+			if err != nil {
+				t.Errorf("Failed to set data: %v", err)
+			}
+		})
 
 	f.Cleanup(kill)
 

@@ -14,18 +14,16 @@ import (
 // TODO: we should eventually move all of these flags into the eigenda repo
 
 var (
-	DisperserRPCFlagName             = withFlagPrefix("disperser-rpc")
-	ResponseTimeoutFlagName          = withFlagPrefix("response-timeout")
-	ConfirmationTimeoutFlagName      = withFlagPrefix("confirmation-timeout")
-	StatusQueryRetryIntervalFlagName = withFlagPrefix("status-query-retry-interval")
-	StatusQueryTimeoutFlagName       = withFlagPrefix("status-query-timeout")
-	DisableTLSFlagName               = withFlagPrefix("disable-tls")
-	CustomQuorumIDsFlagName          = withFlagPrefix("custom-quorum-ids")
-	SignerPrivateKeyHexFlagName      = withFlagPrefix("signer-private-key-hex")
-	// using put-blob for external/user facing flag name to avoid having to deprecate flag
+	DisperserRPCFlagName                 = withFlagPrefix("disperser-rpc")
+	ResponseTimeoutFlagName              = withFlagPrefix("response-timeout")
+	ConfirmationTimeoutFlagName          = withFlagPrefix("confirmation-timeout")
+	StatusQueryRetryIntervalFlagName     = withFlagPrefix("status-query-retry-interval")
+	StatusQueryTimeoutFlagName           = withFlagPrefix("status-query-timeout")
+	DisableTLSFlagName                   = withFlagPrefix("disable-tls")
+	CustomQuorumIDsFlagName              = withFlagPrefix("custom-quorum-ids")
+	SignerPrivateKeyHexFlagName          = withFlagPrefix("signer-private-key-hex")
 	PayloadEncodingVersionFlagName       = withFlagPrefix("put-blob-encoding-version")
 	DisablePointVerificationModeFlagName = withFlagPrefix("disable-point-verification-mode")
-	WaitForFinalizationFlagName          = withFlagPrefix("wait-for-finalization")
 	ConfirmationDepthFlagName            = withFlagPrefix("confirmation-depth")
 	EthRPCURLFlagName                    = withFlagPrefix("eth-rpc")
 	SvcManagerAddrFlagName               = withFlagPrefix("svc-manager-addr")
@@ -166,8 +164,6 @@ func ReadConfig(ctx *cli.Context) clients.EigenDAClientConfig {
 		DisableTLS:               ctx.Bool(DisableTLSFlagName),
 		CustomQuorumIDs:          ctx.UintSlice(CustomQuorumIDsFlagName),
 		SignerPrivateKeyHex:      ctx.String(SignerPrivateKeyHexFlagName),
-		// using put-blob for external/user facing flag name to avoid having to deprecate
-		// flag
 		// #nosec G115 - only overflow on incorrect user input
 		PutBlobEncodingVersion:       codecs.PayloadEncodingVersion(ctx.Uint(PayloadEncodingVersionFlagName)),
 		DisablePointVerificationMode: ctx.Bool(DisablePointVerificationModeFlagName),

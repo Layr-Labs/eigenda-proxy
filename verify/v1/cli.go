@@ -61,13 +61,13 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Value:    "resources/g1.point",
 			Category: category,
 		},
-		// &cli.StringFlag{
-		// 	Name:     G2PathFlagName,
-		// 	Usage:    "path to g2.point file.",
-		// 	EnvVars:  []string{withEnvPrefix(envPrefix, "TARGET_KZG_G2_PATH")},
-		// 	Value:    "resources/g2.point",
-		// 	Category: category,
-		// },
+		&cli.StringFlag{
+			Name:     G2PathFlagName,
+			Usage:    "path to g2.point file.",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "TARGET_KZG_G2_PATH")},
+			Value:    "resources/g2.point",
+			Category: category,
+		},
 		&cli.StringFlag{
 			Name:     G2PowerOf2PathFlagName,
 			Usage:    "path to g2.point.powerOf2 file. This resource is not currently used, but needed because of the shared eigenda KZG library that we use. We will eventually fix this.",
@@ -101,7 +101,9 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 					return fmt.Errorf("max blob length is 0")
 				}
 				if numBytes > MaxAllowedBlobSize {
-					return fmt.Errorf("excluding disperser constraints on max blob size, SRS points constrain the maxBlobLength configuration parameter to be less than than %d bytes", MaxAllowedBlobSize)
+					return fmt.Errorf(
+						"excluding disperser constraints on max blob size, SRS points constrain the maxBlobLength configuration parameter to be less than than %d bytes",
+						MaxAllowedBlobSize)
 				}
 				MaxBlobLengthBytes = numBytes
 				return nil

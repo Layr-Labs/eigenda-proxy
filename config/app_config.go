@@ -5,9 +5,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// AppConfig ... Highest order config. Stores
-// all relevant fields necessary for running both proxy
-// & metrics servers.
+// AppConfig ... Highest order config. Stores all relevant fields necessary for running both proxy & metrics servers.
 type AppConfig struct {
 	EigenDAConfig ProxyConfig
 	MetricsCfg    metrics.Config

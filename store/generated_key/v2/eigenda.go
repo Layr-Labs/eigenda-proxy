@@ -18,25 +18,19 @@ import (
 )
 
 type Config struct {
-	// cert verifier address used for verifying
-	// DA certificates
-	// TODO: Support dynamic client injection
-	// https://github.com/Layr-Labs/eigenda-proxy/issues/307
+	// cert verifier address used for verifying DA certificates
+	// TODO: Support dynamic client injection https://github.com/Layr-Labs/eigenda-proxy/issues/307
 	CertVerifierAddress string
 
-	// maximum allowed blob size for dispersal
-	// this is irrespective of the disperser's limits
-	// and could result in failed payload submissions if
-	// set incorrectly
+	// maximum allowed blob size for dispersal. this is irrespective of the disperser's limits and could result in
+	// failed payload submissions if set incorrectly
 	MaxBlobSizeBytes uint64
 
-	// number of times to retry an eigenda blob dispersal
-	// before yielding an error to the handler
+	// number of times to retry an eigenda blob dispersal before yielding an error to the handler
 	PutRetries uint
 }
 
-// Store does storage interactions and verifications for blobs with the
-// EigenDA V2 protocol.
+// Store does storage interactions and verifications for blobs with the EigenDA V2 protocol.
 type Store struct {
 	cfg *Config
 	log logging.Logger
@@ -82,15 +76,13 @@ func (e Store) Get(ctx context.Context, key []byte) ([]byte, error) {
 }
 
 // Put disperses a blob for some pre-image and returns the associated RLP encoded certificate commit.
-// TODO: Client polling for different status codes
-//
-//	Mapping status codes to 503 failover
+// TODO: Client polling for different status codes, Mapping status codes to 503 failover
 func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 	e.log.Debug("Dispersing payload to EigenDA V2 network")
 
 	// TODO: https://github.com/Layr-Labs/eigenda/issues/1271
 
-	// We attempt to disperse the blob to EigenDA up to 3 times, unless we get a 400 error on any attempt.
+	// We attempt to disperse the blob to EigenDA up to PutRetries times, unless we get a 400 error on any attempt.
 
 	payload := coretypes.NewPayload(value)
 
@@ -100,16 +92,15 @@ func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 		},
 		retry.RetryIf(
 			func(err error) bool {
-				st, isGRPCError := status.FromError(err)
+				grpcStatus, isGRPCError := status.FromError(err)
 				if !isGRPCError {
 					// api.ErrorFailover is returned, so we should retry
 					return true
 				}
 				//nolint:exhaustive // we only care about a few grpc error codes
-				switch st.Code() {
+				switch grpcStatus.Code() {
 				case codes.InvalidArgument:
-					// we don't retry 400 errors because there is no point,
-					// we are passing invalid data
+					// we don't retry 400 errors because there is no point, we are passing invalid data
 					return false
 				case codes.ResourceExhausted:
 					// we retry on 429s because *can* mean we are being rate limited
@@ -123,14 +114,13 @@ func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 				}
 			}),
 		// only return the last error. If it is an api.ErrorFailover, then the handler will convert
-		// it to an http 503 to signify to the client (batcher) to failover to ethda
-		// b/c eigenda is temporarily down.
+		// it to an http 503 to signify to the client (batcher) to failover to ethda b/c eigenda is temporarily down.
 		retry.LastErrorOnly(true),
 		retry.Attempts(e.cfg.PutRetries),
 	)
 	if err != nil {
-		// TODO: we will want to filter for errors here and return a 503 when needed
-		// ie when dispersal itself failed, or that we timed out waiting for batch to land onchain
+		// TODO: we will want to filter for errors here and return a 503 when needed, i.e. when dispersal itself failed,
+		//  or that we timed out waiting for batch to land onchain
 		return nil, err
 	}
 
@@ -142,15 +132,16 @@ func (e Store) BackendType() common.BackendType {
 	return common.EigenDAV2BackendType
 }
 
-// Key is used to recover certificate fields and that verifies blob
-// against commitment to ensure data is valid and non-tampered.
-// TODO: tap into actual verification
-func (e Store) Verify(ctx context.Context, key []byte, _ []byte) error {
-	var cert verification.EigenDACert
-	err := rlp.DecodeBytes(key, cert)
+// Verify verifies an EigenDACert by calling the verifyEigenDACertV2 view function
+//
+// Since v2 methods for fetching a payload are responsible for verifying the received bytes against the certificate,
+// this Verify method only needs to check the cert on chain. That is why the third parameter is ignored.
+func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte) error {
+	var eigenDACert verification.EigenDACert
+	err := rlp.DecodeBytes(certBytes, eigenDACert)
 	if err != nil {
 		return fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
 	}
 
-	return e.verifier.VerifyCertV2(ctx, e.cfg.CertVerifierAddress, &cert)
+	return e.verifier.VerifyCertV2(ctx, e.cfg.CertVerifierAddress, &eigenDACert)
 }

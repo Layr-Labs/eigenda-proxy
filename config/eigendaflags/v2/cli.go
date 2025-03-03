@@ -18,10 +18,8 @@ var (
 
 	DisperserFlagName               = withFlagPrefix("disperser-rpc")
 	DisableTLSFlagName              = withFlagPrefix("disable-tls")
-	CustomQuorumIDsFlagName         = withFlagPrefix("custom-quorum-ids")
 	BlobStatusPollIntervalFlagName  = withFlagPrefix("blob-status-poll-interval")
-	PayloadEncodingVersionFlagName  = withFlagPrefix("payload-encoding-version")
-	PointEvaluationDisabledFlagName = withFlagPrefix("polynomial-form")
+	PointEvaluationDisabledFlagName = withFlagPrefix("disable-point-evaluation")
 
 	PutRetriesFlagName              = withFlagPrefix("put-retries")
 	SignerPaymentKeyHexFlagName     = withFlagPrefix("signer-payment-key-hex")
@@ -65,30 +63,16 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			EnvVars:  []string{withEnvPrefix(envPrefix, "GRPC_DISABLE_TLS")},
 			Category: category,
 		},
-		&cli.UintSliceFlag{
-			Name:     CustomQuorumIDsFlagName,
-			Usage:    "Custom quorum IDs for writing blobs. Should not include default quorums 0 or 1.",
-			Value:    cli.NewUintSlice(),
-			EnvVars:  []string{withEnvPrefix(envPrefix, "CUSTOM_QUORUM_IDS")},
-			Category: category,
-		},
 		&cli.StringFlag{
 			Name:     SignerPaymentKeyHexFlagName,
 			Usage:    "Hex-encoded signer private key. Used for authorizing payments with EigenDA disperser. Should not be associated with an Ethereum address holding any funds.",
 			EnvVars:  []string{withEnvPrefix(envPrefix, "SIGNER_PRIVATE_KEY_HEX")},
 			Category: category,
 		},
-		&cli.UintFlag{
-			Name:     PayloadEncodingVersionFlagName,
-			Usage:    "Payload encoding version used for transforming payloads into an EigenDA blob representation. Currently only supports (0).",
-			EnvVars:  []string{withEnvPrefix(envPrefix, "PAYLOAD_ENCODING_VERSION")},
-			Value:    0,
-			Category: category,
-		},
 		&cli.BoolFlag{
 			Name:     PointEvaluationDisabledFlagName,
 			Usage:    "Disables IFFT transformation done during payload encoding. Using this mode results in blobs that can't be proven.",
-			EnvVars:  []string{withEnvPrefix(envPrefix, "COEFFICIENT_PAYLOAD_DISABLED")},
+			EnvVars:  []string{withEnvPrefix(envPrefix, "DISABLE_POINT_EVALUATION")},
 			Value:    false,
 			Category: category,
 		},
@@ -228,6 +212,7 @@ func readPayloadDisperserCfg(ctx *cli.Context) clients_v2.PayloadDisperserConfig
 		DisperseBlobTimeout:    ctx.Duration(DisperseBlobTimeoutFlagName),
 		BlobCertifiedTimeout:   ctx.Duration(BlobCertifiedTimeoutFlagName),
 		BlobStatusPollInterval: ctx.Duration(BlobStatusPollIntervalFlagName),
+		ContractCallTimeout:    ctx.Duration(ContractCallTimeoutFlagName),
 	}
 }
 

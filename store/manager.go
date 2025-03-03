@@ -22,8 +22,8 @@ type IManager interface {
 type Manager struct {
 	log logging.Logger
 
-	s3 common.PrecomputedKeyStore // OP commitment mode && keccak256 commitment type
-	// ALT DA commitment types for OP mode && std commitment mode for standard /client
+	s3 common.PrecomputedKeyStore // for op keccak256 commitment
+	// For op generic commitments & standard commitments
 	eigenda   common.GeneratedKeyStore // v0 da commitment version
 	eigendaV2 common.GeneratedKeyStore // v1 da commitment version
 	writeV2   bool                     // write blobs to EigenDAV2 backend
@@ -34,8 +34,13 @@ type Manager struct {
 
 // NewManager ... Init
 func NewManager(
-	eigenda common.GeneratedKeyStore, eigenDAV2 common.GeneratedKeyStore, s3 common.PrecomputedKeyStore,
-	l logging.Logger, secondary ISecondary, useV2 bool) (IManager, error) {
+	eigenda common.GeneratedKeyStore,
+	eigenDAV2 common.GeneratedKeyStore,
+	s3 common.PrecomputedKeyStore,
+	l logging.Logger,
+	secondary ISecondary,
+	useV2 bool,
+) (IManager, error) {
 	// 1 - Determine where to disperse blobs
 	var writeV2 = true
 	if eigenda != nil && !useV2 {
@@ -175,8 +180,12 @@ func (m *Manager) putEigenDAMode(ctx context.Context, value []byte) ([]byte, err
 	return m.eigendaV2.Put(ctx, value)
 }
 
-func (m *Manager) getEigenDAMode(ctx context.Context, v commitments.EigenDACommitmentType, key []byte) ([]byte, error) {
-	switch v {
+func (m *Manager) getEigenDAMode(
+	ctx context.Context,
+	commitmentType commitments.EigenDACommitmentType,
+	key []byte,
+) ([]byte, error) {
+	switch commitmentType {
 	case commitments.CertV0:
 		m.log.Debug("Reading blob from EigenDAV1 backend")
 		data, err := m.eigenda.Get(ctx, key)
@@ -192,21 +201,22 @@ func (m *Manager) getEigenDAMode(ctx context.Context, v commitments.EigenDACommi
 		return nil, err
 
 	case commitments.CertV1:
-		m.log.Debug("Reading blob from EigenDAV2 backend")
-		data, err := m.eigendaV2.Get(ctx, key)
-		if err == nil {
-			// verify v2 (payload, cert)
-			err = m.eigendaV2.Verify(ctx, key, data)
-			if err != nil {
-				return nil, err
-			}
-			return data, nil
+		// the cert must be verified before attempting to get the data, since the get logic assumes the cert is valid
+		// verify v2 doesn't require a value, the "key" is the full cert
+		err := m.eigendaV2.Verify(ctx, key, nil)
+		if err != nil {
+			return nil, fmt.Errorf("verify EigenDACert: %w", err)
 		}
 
-		return nil, err
+		m.log.Debug("Reading blob from EigenDAV2 backend")
+		data, err := m.eigendaV2.Get(ctx, key)
+		if err != nil {
+			return nil, fmt.Errorf("get data from V2 backend: %w", err)
+		}
 
+		return data, nil
 	default:
-		return nil, fmt.Errorf("commitment version unknown: %b", v)
+		return nil, fmt.Errorf("commitment version unknown: %b", commitmentType)
 	}
 }
 

@@ -32,7 +32,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-// Builder centralizes dependency initialization
+// Builder centralizes dependency initialization.
 // It ensures proper typing and avoids redundant logic scattered across functions.
 type Builder struct {
 	ctx     context.Context
@@ -41,7 +41,6 @@ type Builder struct {
 
 	memConfig *memconfig.SafeConfig
 
-	// configs
 	managerCfg     Config
 	v1VerifierCfg  verify.Config
 	v1EdaClientCfg clients.EigenDAClientConfig
@@ -56,7 +55,8 @@ func NewBuilder(
 	v2ClientCfg common.ClientConfigV2,
 	v2SecretCfg common.SecretConfigV2,
 	memConfig *memconfig.SafeConfig,
-	log logging.Logger, metrics metrics.Metricer,
+	log logging.Logger,
+	metrics metrics.Metricer,
 ) *Builder {
 	return &Builder{
 		ctx,
@@ -297,7 +297,8 @@ func (d *Builder) buildRelayPayloadRetriever(
 
 func (d *Builder) buildRelayClient(
 	ethClient common_eigenda.EthClient,
-	maxBlobSizeBytes uint) (clients_v2.RelayClient, error) {
+	maxBlobSizeBytes uint,
+) (clients_v2.RelayClient, error) {
 	reader, err := eigenda_eth.NewReader(d.log, ethClient, "0x0", d.v2ClientCfg.ServiceManagerAddress)
 	if err != nil {
 		return nil, fmt.Errorf("new eth reader: %w", err)

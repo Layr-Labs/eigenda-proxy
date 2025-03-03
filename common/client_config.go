@@ -9,12 +9,15 @@ import (
 
 // ClientConfigV2 contains all non-sensitive configuration to construct V2 clients
 type ClientConfigV2 struct {
-	Enabled                         bool
-	DisperserClientCfg              clients_v2.DisperserClientConfig
-	PayloadDisperserCfg             clients_v2.PayloadDisperserConfig
-	RelayPayloadRetrieverCfg        clients_v2.RelayPayloadRetrieverConfig
-	ServiceManagerAddress           string
-	PutRetries                      uint
+	// Enabled is true if using eigenDA v2, or false if using eigenDA v1
+	Enabled                  bool
+	DisperserClientCfg       clients_v2.DisperserClientConfig
+	PayloadDisperserCfg      clients_v2.PayloadDisperserConfig
+	RelayPayloadRetrieverCfg clients_v2.RelayPayloadRetrieverConfig
+	// hex address of the EigenDAServiceManager contract
+	ServiceManagerAddress string
+	PutRetries            uint
+	// interval at which the ethereum node is polled, while waiting to reach a given block number
 	BlockNumberPollIntervalDuration time.Duration
 }
 

@@ -18,10 +18,6 @@ func useMemory() bool {
 	return !runTestnetIntegrationTests
 }
 
-func useV2() bool {
-	return runIntegrationTestsV2
-}
-
 func TestOptimismClientWithKeccak256Commitment(t *testing.T) {
 	if !runIntegrationTests && !runTestnetIntegrationTests && !runIntegrationTestsV2 {
 		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
@@ -29,7 +25,7 @@ func TestOptimismClientWithKeccak256Commitment(t *testing.T) {
 
 	t.Parallel()
 
-	testCfg := e2e.TestConfig(useMemory(), useV2())
+	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
 	testCfg.UseKeccak256ModeS3 = true
 
 	tsConfig := e2e.TestSuiteConfig(testCfg)
@@ -51,7 +47,7 @@ func TestOptimismClientWithGenericCommitment(t *testing.T) {
 
 	t.Parallel()
 
-	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), useV2()))
+	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), runIntegrationTestsV2))
 	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 
@@ -69,7 +65,7 @@ func TestProxyClientServerIntegration(t *testing.T) {
 		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
 	}
 
-	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), useV2()))
+	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), runIntegrationTestsV2))
 	ts, kill := e2e.CreateTestSuite(tsConfig)
 	t.Cleanup(kill)
 
@@ -78,55 +74,63 @@ func TestProxyClientServerIntegration(t *testing.T) {
 	}
 	daClient := standard_client.New(cfg)
 
-	t.Run("single byte preimage set data case", func(t *testing.T) {
-		t.Parallel()
-		testPreimage := []byte{1} // single byte preimage
-		t.Log("Setting input data on proxy server...")
-		_, err := daClient.SetData(ts.Ctx, testPreimage)
-		require.NoError(t, err)
-	})
+	t.Run(
+		"single byte preimage set data case", func(t *testing.T) {
+			t.Parallel()
+			testPreimage := []byte{1} // single byte preimage
+			t.Log("Setting input data on proxy server...")
+			_, err := daClient.SetData(ts.Ctx, testPreimage)
+			require.NoError(t, err)
+		})
 
-	t.Run("unicode preimage set data case", func(t *testing.T) {
-		t.Parallel()
-		testPreimage := []byte("§§©ˆªªˆ˙√ç®∂§∞¶§ƒ¥√¨¥√¨¥ƒƒ©˙˜ø˜˜˜∫˙∫¥∫√†®®√ç¨ˆ¨˙ï") // many unicode characters
-		t.Log("Setting input data on proxy server...")
-		_, err := daClient.SetData(ts.Ctx, testPreimage)
-		require.NoError(t, err)
+	t.Run(
+		"unicode preimage set data case", func(t *testing.T) {
+			t.Parallel()
+			testPreimage := []byte("§§©ˆªªˆ˙√ç®∂§∞¶§ƒ¥√¨¥√¨¥ƒƒ©˙˜ø˜˜˜∫˙∫¥∫√†®®√ç¨ˆ¨˙ï") // many unicode characters
+			t.Log("Setting input data on proxy server...")
+			_, err := daClient.SetData(ts.Ctx, testPreimage)
+			require.NoError(t, err)
 
-		testPreimage = []byte("§") // single unicode character
-		t.Log("Setting input data on proxy server...")
-		_, err = daClient.SetData(ts.Ctx, testPreimage)
-		require.NoError(t, err)
+			testPreimage = []byte("§") // single unicode character
+			t.Log("Setting input data on proxy server...")
+			_, err = daClient.SetData(ts.Ctx, testPreimage)
+			require.NoError(t, err)
 
-	})
+		})
 
-	t.Run("empty preimage set data case", func(t *testing.T) {
-		t.Parallel()
-		testPreimage := []byte("") // Empty preimage
-		t.Log("Setting input data on proxy server...")
-		_, err := daClient.SetData(ts.Ctx, testPreimage)
-		require.NoError(t, err)
-	})
+	t.Run(
+		"empty preimage set data case", func(t *testing.T) {
+			t.Parallel()
+			testPreimage := []byte("") // Empty preimage
+			t.Log("Setting input data on proxy server...")
+			_, err := daClient.SetData(ts.Ctx, testPreimage)
+			require.NoError(t, err)
+		})
 
-	t.Run("get data edge cases", func(t *testing.T) {
-		t.Parallel()
-		testCert := []byte("")
-		_, err := daClient.GetData(ts.Ctx, testCert)
-		require.Error(t, err)
-		assert.True(t, strings.Contains(err.Error(),
-			"404") && !isNilPtrDerefPanic(err.Error()))
+	t.Run(
+		"get data edge cases", func(t *testing.T) {
+			t.Parallel()
+			testCert := []byte("")
+			_, err := daClient.GetData(ts.Ctx, testCert)
+			require.Error(t, err)
+			assert.True(
+				t, strings.Contains(
+					err.Error(),
+					"404") && !isNilPtrDerefPanic(err.Error()))
 
-		testCert = []byte{2}
-		_, err = daClient.GetData(ts.Ctx, testCert)
-		require.Error(t, err)
-		assert.True(t, strings.Contains(err.Error(),
-			"400") && !isNilPtrDerefPanic(err.Error()))
+			testCert = []byte{2}
+			_, err = daClient.GetData(ts.Ctx, testCert)
+			require.Error(t, err)
+			assert.True(
+				t, strings.Contains(
+					err.Error(),
+					"400") && !isNilPtrDerefPanic(err.Error()))
 
-		testCert = e2e.RandBytes(10000)
-		_, err = daClient.GetData(ts.Ctx, testCert)
-		require.Error(t, err)
-		assert.True(t, strings.Contains(err.Error(), "400") && !isNilPtrDerefPanic(err.Error()))
-	})
+			testCert = e2e.RandBytes(10000)
+			_, err = daClient.GetData(ts.Ctx, testCert)
+			require.Error(t, err)
+			assert.True(t, strings.Contains(err.Error(), "400") && !isNilPtrDerefPanic(err.Error()))
+		})
 
 }
 
@@ -138,7 +142,7 @@ func TestProxyClient(t *testing.T) {
 
 	t.Parallel()
 
-	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), useV2()))
+	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), runIntegrationTestsV2))
 	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 
@@ -166,7 +170,7 @@ func TestProxyClientWriteRead(t *testing.T) {
 
 	t.Parallel()
 
-	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), useV2()))
+	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), runIntegrationTestsV2))
 	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 
@@ -181,7 +185,7 @@ func TestProxyWithMaximumSizedBlob(t *testing.T) {
 
 	t.Parallel()
 
-	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), useV2()))
+	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), runIntegrationTestsV2))
 	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 
@@ -199,7 +203,7 @@ func TestProxyCaching(t *testing.T) {
 
 	t.Parallel()
 
-	testCfg := e2e.TestConfig(useMemory(), useV2())
+	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
 	testCfg.UseS3Caching = true
 
 	tsConfig := e2e.TestSuiteConfig(testCfg)
@@ -218,7 +222,7 @@ func TestProxyCachingWithRedis(t *testing.T) {
 
 	t.Parallel()
 
-	testCfg := e2e.TestConfig(useMemory(), useV2())
+	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
 	testCfg.UseRedisCaching = true
 
 	tsConfig := e2e.TestSuiteConfig(testCfg)
@@ -245,7 +249,7 @@ func TestProxyReadFallback(t *testing.T) {
 	t.Parallel()
 
 	// setup server with S3 as a fallback option
-	testCfg := e2e.TestConfig(useMemory(), useV2())
+	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
 	testCfg.UseS3Fallback = true
 	// ensure that blob memstore eviction times result in near immediate activation
 	testCfg.Expiration = time.Millisecond * 1
@@ -281,13 +285,14 @@ func TestProxyMemConfigClientCanGetAndPatch(t *testing.T) {
 	}
 	t.Parallel()
 
-	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), useV2()))
+	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), runIntegrationTestsV2))
 	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 
-	memClient := memconfig_client.New(&memconfig_client.Config{
-		URL: "http://" + ts.Server.Endpoint(),
-	})
+	memClient := memconfig_client.New(
+		&memconfig_client.Config{
+			URL: "http://" + ts.Server.Endpoint(),
+		})
 
 	// 1 - ensure cfg can be read from memconfig handlers
 	cfg, err := memClient.GetConfig(ts.Ctx)

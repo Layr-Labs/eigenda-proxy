@@ -27,7 +27,7 @@ func TestOpClientKeccak256MalformedInputs(t *testing.T) {
 	}
 
 	t.Parallel()
-	testCfg := e2e.TestConfig(useMemory(), useV2())
+	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
 	testCfg.UseKeccak256ModeS3 = true
 	tsConfig := e2e.TestSuiteConfig(testCfg)
 	ts, kill := e2e.CreateTestSuite(tsConfig)
@@ -45,23 +45,24 @@ func TestOpClientKeccak256MalformedInputs(t *testing.T) {
 
 	daClientPcFalse := altda.NewDAClient(ts.Address(), false, false)
 
-	t.Run("input bad data to SetInput & GetInput", func(t *testing.T) {
-		testPreimage := []byte("") // Empty preimage
-		_, err := daClientPcFalse.SetInput(ts.Ctx, testPreimage)
-		require.Error(t, err)
+	t.Run(
+		"input bad data to SetInput & GetInput", func(t *testing.T) {
+			testPreimage := []byte("") // Empty preimage
+			_, err := daClientPcFalse.SetInput(ts.Ctx, testPreimage)
+			require.Error(t, err)
 
-		// should fail with proper error message as is now, and cannot contain panics or nils
-		assert.True(t, strings.Contains(err.Error(), "invalid input") && !isNilPtrDerefPanic(err.Error()))
+			// should fail with proper error message as is now, and cannot contain panics or nils
+			assert.True(t, strings.Contains(err.Error(), "invalid input") && !isNilPtrDerefPanic(err.Error()))
 
-		// The below test panics silently.
-		input := altda.NewGenericCommitment([]byte(""))
-		_, err = daClientPcFalse.GetInput(ts.Ctx, input)
-		require.Error(t, err)
+			// The below test panics silently.
+			input := altda.NewGenericCommitment([]byte(""))
+			_, err = daClientPcFalse.GetInput(ts.Ctx, input)
+			require.Error(t, err)
 
-		// Should not fail on slice bounds out of range. This needs to be fixed by OP.
-		// Refer to issue: https://github.com/ethereum-optimism/optimism/issues/11987
-		// assert.False(t, strings.Contains(err.Error(), ": EOF") && !isPanic(err.Error()))
-	})
+			// Should not fail on slice bounds out of range. This needs to be fixed by OP.
+			// Refer to issue: https://github.com/ethereum-optimism/optimism/issues/11987
+			// assert.False(t, strings.Contains(err.Error(), ": EOF") && !isPanic(err.Error()))
+		})
 
 }
 
@@ -75,7 +76,7 @@ func TestProxyClientMalformedInputCases(t *testing.T) {
 
 	t.Parallel()
 
-	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), useV2()))
+	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), runIntegrationTestsV2))
 	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 
@@ -84,51 +85,59 @@ func TestProxyClientMalformedInputCases(t *testing.T) {
 	}
 	daClient := standard_client.New(cfg)
 
-	t.Run("single byte preimage set data case", func(t *testing.T) {
-		testPreimage := []byte{1} // single byte preimage
-		t.Log("Setting input data on proxy server...")
-		_, err := daClient.SetData(ts.Ctx, testPreimage)
-		require.NoError(t, err)
-	})
+	t.Run(
+		"single byte preimage set data case", func(t *testing.T) {
+			testPreimage := []byte{1} // single byte preimage
+			t.Log("Setting input data on proxy server...")
+			_, err := daClient.SetData(ts.Ctx, testPreimage)
+			require.NoError(t, err)
+		})
 
-	t.Run("unicode preimage set data case", func(t *testing.T) {
-		testPreimage := []byte("§§©ˆªªˆ˙√ç®∂§∞¶§ƒ¥√¨¥√¨¥ƒƒ©˙˜ø˜˜˜∫˙∫¥∫√†®®√ç¨ˆ¨˙ï") // many unicode characters
-		t.Log("Setting input data on proxy server...")
-		_, err := daClient.SetData(ts.Ctx, testPreimage)
-		require.NoError(t, err)
+	t.Run(
+		"unicode preimage set data case", func(t *testing.T) {
+			testPreimage := []byte("§§©ˆªªˆ˙√ç®∂§∞¶§ƒ¥√¨¥√¨¥ƒƒ©˙˜ø˜˜˜∫˙∫¥∫√†®®√ç¨ˆ¨˙ï") // many unicode characters
+			t.Log("Setting input data on proxy server...")
+			_, err := daClient.SetData(ts.Ctx, testPreimage)
+			require.NoError(t, err)
 
-		testPreimage = []byte("§") // single unicode character
-		t.Log("Setting input data on proxy server...")
-		_, err = daClient.SetData(ts.Ctx, testPreimage)
-		require.NoError(t, err)
+			testPreimage = []byte("§") // single unicode character
+			t.Log("Setting input data on proxy server...")
+			_, err = daClient.SetData(ts.Ctx, testPreimage)
+			require.NoError(t, err)
 
-	})
+		})
 
-	t.Run("empty preimage set data case", func(t *testing.T) {
-		testPreimage := []byte("") // Empty preimage
-		t.Log("Setting input data on proxy server...")
-		_, err := daClient.SetData(ts.Ctx, testPreimage)
-		require.NoError(t, err)
-	})
+	t.Run(
+		"empty preimage set data case", func(t *testing.T) {
+			testPreimage := []byte("") // Empty preimage
+			t.Log("Setting input data on proxy server...")
+			_, err := daClient.SetData(ts.Ctx, testPreimage)
+			require.NoError(t, err)
+		})
 
-	t.Run("get data edge cases - unsupported version byte 02", func(t *testing.T) {
-		testCert := []byte{2}
-		_, err := daClient.GetData(ts.Ctx, testCert)
-		require.Error(t, err)
-		assert.True(t,
-			strings.Contains(err.Error(), "unsupported version byte 02") && !isNilPtrDerefPanic(err.Error()))
-	})
+	t.Run(
+		"get data edge cases - unsupported version byte 02", func(t *testing.T) {
+			testCert := []byte{2}
+			_, err := daClient.GetData(ts.Ctx, testCert)
+			require.Error(t, err)
+			assert.True(
+				t,
+				strings.Contains(err.Error(), "unsupported version byte 02") && !isNilPtrDerefPanic(err.Error()))
+		})
 
-	t.Run("get data edge cases - huge cert", func(t *testing.T) {
-		// TODO: we need to add the 0 version byte at the beginning.
-		// should this not be done automatically by the std_commitment client?
-		testCert := append([]byte{0x0}, e2e.RandBytes(10000)...)
-		_, err := daClient.GetData(ts.Ctx, testCert)
-		require.Error(t, err)
-		assert.True(t, strings.Contains(err.Error(),
-			"payload not found for key") &&
-			!isNilPtrDerefPanic(err.Error()))
-	})
+	t.Run(
+		"get data edge cases - huge cert", func(t *testing.T) {
+			// TODO: we need to add the 0 version byte at the beginning.
+			// should this not be done automatically by the std_commitment client?
+			testCert := append([]byte{0x0}, e2e.RandBytes(10000)...)
+			_, err := daClient.GetData(ts.Ctx, testCert)
+			require.Error(t, err)
+			assert.True(
+				t, strings.Contains(
+					err.Error(),
+					"payload not found for key") &&
+					!isNilPtrDerefPanic(err.Error()))
+		})
 }
 
 // TestKeccak256CommitmentRequestErrorsWhenS3NotSet ensures that the proxy returns a client error in the event
@@ -141,7 +150,7 @@ func TestKeccak256CommitmentRequestErrorsWhenS3NotSet(t *testing.T) {
 
 	t.Parallel()
 
-	testCfg := e2e.TestConfig(useMemory(), useV2())
+	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
 	testCfg.UseKeccak256ModeS3 = true
 
 	tsConfig := e2e.TestSuiteConfig(testCfg)
@@ -165,7 +174,7 @@ func TestOversizedBlobRequestErrors(t *testing.T) {
 
 	t.Parallel()
 
-	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), useV2()))
+	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), runIntegrationTestsV2))
 	ts, kill := e2e.CreateTestSuite(tsConfig)
 	defer kill()
 

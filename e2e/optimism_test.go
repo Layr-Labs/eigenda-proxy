@@ -74,7 +74,11 @@ func NewL2AltDA(t actions.Testing, daHost string, altDA bool) *L2AltDA {
 		storage = altda.NewDAClient(daHost, false, false)
 	}
 
-	l1F, err := sources.NewL1Client(miner.RPCClient(), log, nil, sources.L1ClientDefaultConfig(sd.RollupCfg, false, sources.RPCKindBasic))
+	l1F, err := sources.NewL1Client(
+		miner.RPCClient(),
+		log,
+		nil,
+		sources.L1ClientDefaultConfig(sd.RollupCfg, false, sources.RPCKindBasic))
 	require.NoError(t, err)
 
 	altdaCfg, err := sd.RollupCfg.GetOPAltDAConfig()
@@ -95,7 +99,14 @@ func NewL2AltDA(t actions.Testing, daHost string, altDA bool) *L2AltDA {
 	miner.ActL1SetFeeRecipient(common.Address{'A'})
 	sequencer.ActL2PipelineFull(t)
 
-	batcher := actions.NewL2Batcher(log, sd.RollupCfg, actions.AltDABatcherCfg(dp, storage), sequencer.RollupClient(), l1Client, engine.EthClient(), engCl)
+	batcher := actions.NewL2Batcher(
+		log,
+		sd.RollupCfg,
+		actions.AltDABatcherCfg(dp, storage),
+		sequencer.RollupClient(),
+		l1Client,
+		engine.EthClient(),
+		engCl)
 
 	return &L2AltDA{
 		log:       log,
@@ -124,7 +135,7 @@ func TestOptimismKeccak256Commitment(gt *testing.T) {
 		gt.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
 	}
 
-	testCfg := e2e.TestConfig(useMemory(), useV2())
+	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
 	testCfg.UseKeccak256ModeS3 = true
 
 	tsConfig := e2e.TestSuiteConfig(testCfg)
@@ -177,7 +188,7 @@ func TestOptimismGenericCommitment(gt *testing.T) {
 		gt.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
 	}
 
-	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), useV2()))
+	tsConfig := e2e.TestSuiteConfig(e2e.TestConfig(useMemory(), runIntegrationTestsV2))
 	proxyTS, shutDown := e2e.CreateTestSuite(tsConfig)
 	defer shutDown()
 

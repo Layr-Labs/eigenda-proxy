@@ -6,10 +6,8 @@ import (
 	"strings"
 )
 
-// GlobalPrefix is the prefix used for CLI flags
 const GlobalPrefix = "EIGENDA_PROXY"
 
-// PrefixEnvVar accepts a prefix and a suffix string, and combines them with a `_` delimiter
 func PrefixEnvVar(prefix, suffix string) []string {
 	return []string{prefix + "_" + suffix}
 }
