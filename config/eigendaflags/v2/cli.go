@@ -213,9 +213,10 @@ func readPayloadDisperserCfg(ctx *cli.Context) clients_v2.PayloadDisperserConfig
 }
 
 func readDisperserCfg(ctx *cli.Context) (*clients_v2.DisperserClientConfig, error) {
-	hostStr, portStr, err := net.SplitHostPort(ctx.String(DisperserFlagName))
+	disperserAddressString := ctx.String(DisperserFlagName)
+	hostStr, portStr, err := net.SplitHostPort(disperserAddressString)
 	if err != nil {
-		return nil, fmt.Errorf("split host port '%s': %w", DisperserFlagName, err)
+		return nil, fmt.Errorf("split host port '%s': %w", disperserAddressString, err)
 	}
 
 	return &clients_v2.DisperserClientConfig{
