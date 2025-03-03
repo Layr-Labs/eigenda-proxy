@@ -21,7 +21,7 @@ func TestRouting(t *testing.T) {
 	mockRouter := mocks.NewMockIManager(ctrl)
 
 	m := metrics.NewMetrics("default")
-	server := NewServer("localhost", 8080, mockRouter, testLogger, m)
+	server := NewServer(&testCfg, mockRouter, testLogger, m)
 	r := mux.NewRouter()
 	err := server.Start(r)
 	require.NoError(t, err)
