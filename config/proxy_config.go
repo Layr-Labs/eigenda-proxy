@@ -59,7 +59,7 @@ func ReadProxyConfig(ctx *cli.Context) (*ProxyConfig, error) {
 			Port:       ctx.Int(PortFlagName),
 		},
 		EdaClientConfigV1:          edaClientV1Config,
-		EdaClientConfigV2:          *edaClientV2Config,
+		EdaClientConfigV2:          edaClientV2Config,
 		EdaVerifierConfigV1:        verify.ReadConfig(ctx, edaClientV1Config),
 		PutRetries:                 ctx.Uint(eigendaflags.PutRetriesFlagName),
 		MemstoreEnabled:            ctx.Bool(memstore.EnabledFlagName),

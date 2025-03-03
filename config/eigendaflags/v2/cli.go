@@ -161,14 +161,19 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 	}
 }
 
-func ReadClientConfigV2(ctx *cli.Context) (*common.ClientConfigV2, error) {
-	disperserConfig, err := readDisperserCfg(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("read disperser config: %w", err)
+func ReadClientConfigV2(ctx *cli.Context) (common.ClientConfigV2, error) {
+	v2Enabled := ctx.Bool(V2EnabledFlagName)
+	if !v2Enabled {
+		return common.ClientConfigV2{}, nil
 	}
 
-	return &common.ClientConfigV2{
-		Enabled:                         ctx.Bool(V2EnabledFlagName),
+	disperserConfig, err := readDisperserCfg(ctx)
+	if err != nil {
+		return common.ClientConfigV2{}, fmt.Errorf("read disperser config: %w", err)
+	}
+
+	return common.ClientConfigV2{
+		Enabled:                         v2Enabled,
 		ServiceManagerAddress:           ctx.String(SvcManagerAddrFlagName),
 		DisperserClientCfg:              *disperserConfig,
 		PayloadDisperserCfg:             readPayloadDisperserCfg(ctx),

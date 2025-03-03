@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/config"
 	eigendaflags_v2 "github.com/Layr-Labs/eigenda-proxy/config/eigendaflags/v2"
 
@@ -47,8 +48,14 @@ func StartProxySvr(cliCtx *cli.Context) error {
 		return fmt.Errorf("failed to pretty print config: %w", err)
 	}
 
-	// secret config is kept entirely separate from the other config values, which may be printed
-	secretConfig := eigendaflags_v2.ReadSecretConfigV2(cliCtx)
+	var secretConfig common.SecretConfigV2
+	if cfg.EigenDAConfig.EdaClientConfigV2.Enabled {
+		// secret config is kept entirely separate from the other config values, which may be printed
+		secretConfig = eigendaflags_v2.ReadSecretConfigV2(cliCtx)
+		if err := secretConfig.Check(); err != nil {
+			return err
+		}
+	}
 
 	m := metrics.NewMetrics("default")
 
