@@ -79,7 +79,6 @@ func StartProxySvr(cliCtx *cli.Context) error {
 		memConfig,
 		cfg.EigenDAConfig.EdaClientConfigV2.PutRetries,
 		cfg.EigenDAConfig.MaxBlobSizeBytes,
-		cfg.EigenDAConfig.EigenDACertVerifierAddress,
 	).Build(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create store: %w", err)

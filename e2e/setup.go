@@ -303,7 +303,6 @@ func CreateTestSuite(testSuiteCfg config.AppConfig, secretConfigV2 common.Secret
 		testSuiteCfg.EigenDAConfig.MemstoreConfig,
 		testSuiteCfg.EigenDAConfig.PutRetries,
 		testSuiteCfg.EigenDAConfig.MaxBlobSizeBytes,
-		testSuiteCfg.EigenDAConfig.EigenDACertVerifierAddress,
 	).Build(ctx)
 	if err != nil {
 		panic(err)

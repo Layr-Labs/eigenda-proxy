@@ -40,8 +40,6 @@ type ProxyConfig struct {
 
 	PutRetries       uint
 	MaxBlobSizeBytes uint
-
-	EigenDACertVerifierAddress string
 }
 
 // ReadProxyConfig ... parses the Config from the provided flags or environment variables.
@@ -58,16 +56,15 @@ func ReadProxyConfig(ctx *cli.Context) (ProxyConfig, error) {
 			Host:       ctx.String(ListenAddrFlagName),
 			Port:       ctx.Int(PortFlagName),
 		},
-		EdaClientConfigV1:          edaClientV1Config,
-		EdaClientConfigV2:          edaClientV2Config,
-		EdaVerifierConfigV1:        verify.ReadConfig(ctx, edaClientV1Config),
-		PutRetries:                 ctx.Uint(eigendaflags.PutRetriesFlagName),
-		MemstoreEnabled:            ctx.Bool(memstore.EnabledFlagName),
-		MemstoreConfig:             memstore.ReadConfig(ctx),
-		StorageConfig:              store.ReadConfig(ctx),
-		EigenDAV2Enabled:           edaClientV2Config.Enabled,
-		MaxBlobSizeBytes:           uint(verify.MaxBlobLengthBytes),
-		EigenDACertVerifierAddress: eigendaflags_v2.CertVerifierAddrFlagName,
+		EdaClientConfigV1:   edaClientV1Config,
+		EdaClientConfigV2:   edaClientV2Config,
+		EdaVerifierConfigV1: verify.ReadConfig(ctx, edaClientV1Config),
+		PutRetries:          ctx.Uint(eigendaflags.PutRetriesFlagName),
+		MemstoreEnabled:     ctx.Bool(memstore.EnabledFlagName),
+		MemstoreConfig:      memstore.ReadConfig(ctx),
+		StorageConfig:       store.ReadConfig(ctx),
+		EigenDAV2Enabled:    edaClientV2Config.Enabled,
+		MaxBlobSizeBytes:    uint(verify.MaxBlobLengthBytes),
 	}
 
 	return cfg, nil

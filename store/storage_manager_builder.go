@@ -46,9 +46,8 @@ type StorageManagerBuilder struct {
 	v2ClientCfg    common.ClientConfigV2
 	v2SecretCfg    common.SecretConfigV2
 
-	putRetries                 uint
-	maxBlobSizeBytes           uint
-	eigenDaCertVerifierAddress string
+	putRetries       uint
+	maxBlobSizeBytes uint
 }
 
 // NewStorageManagerBuilder creates a builder which knows how to build an IManager
@@ -64,7 +63,6 @@ func NewStorageManagerBuilder(
 	memConfig *memconfig.SafeConfig,
 	putRetries uint,
 	maxBlobSize uint,
-	eigenDaCertVerifierAddress string,
 ) *StorageManagerBuilder {
 	return &StorageManagerBuilder{
 		ctx,
@@ -78,7 +76,6 @@ func NewStorageManagerBuilder(
 		v2SecretCfg,
 		putRetries,
 		maxBlobSize,
-		eigenDaCertVerifierAddress,
 	}
 }
 
@@ -211,7 +208,7 @@ func (smb *StorageManagerBuilder) buildEigenDAV2Backend(ctx context.Context) (co
 	}
 
 	v2Config := eigenda_v2.Config{
-		CertVerifierAddress: smb.eigenDaCertVerifierAddress,
+		CertVerifierAddress: smb.v2ClientCfg.EigenDACertVerifierAddress,
 		MaxBlobSizeBytes:    uint64(smb.maxBlobSizeBytes),
 		PutRetries:          smb.v2ClientCfg.PutRetries,
 	}

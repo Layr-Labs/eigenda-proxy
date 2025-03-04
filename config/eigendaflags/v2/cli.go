@@ -180,6 +180,7 @@ func ReadClientConfigV2(ctx *cli.Context) (common.ClientConfigV2, error) {
 		RelayPayloadRetrieverCfg:        readRetrievalConfig(ctx),
 		PutRetries:                      ctx.Uint(PutRetriesFlagName),
 		BlockNumberPollIntervalDuration: ctx.Duration(BlockNumberPollIntervalFlagName),
+		EigenDACertVerifierAddress:      ctx.String(CertVerifierAddrFlagName),
 	}, nil
 }
 

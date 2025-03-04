@@ -56,12 +56,12 @@ func validCfg() ProxyConfig {
 				Port:              "9999",
 				UseSecureGrpcFlag: true,
 			},
-			ServiceManagerAddress: "0x1234567890abcdef",
+			ServiceManagerAddress:      "0x1234567890abcdef",
+			EigenDACertVerifierAddress: "0x0000000000032443134",
 		},
 		EigenDAV2Enabled: true,
 	}
 
-	proxyCfg.EigenDACertVerifierAddress = "0x0000000000032443134"
 	return proxyCfg
 }
 

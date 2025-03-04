@@ -19,6 +19,7 @@ type ClientConfigV2 struct {
 	PutRetries            uint
 	// interval at which the ethereum node is polled, while waiting to reach a given block number
 	BlockNumberPollIntervalDuration time.Duration
+	EigenDACertVerifierAddress      string
 }
 
 // Check checks config invariants, and returns an error if there is a problem with the config struct
@@ -29,6 +30,10 @@ func (cfg *ClientConfigV2) Check() error {
 
 	if cfg.DisperserClientCfg.Hostname == "" {
 		return fmt.Errorf("disperser hostname is required for using EigenDA V2 backend")
+	}
+
+	if cfg.EigenDACertVerifierAddress == "" {
+		return fmt.Errorf("cert verifier address is required for using EigenDA V2 backend")
 	}
 
 	return nil
