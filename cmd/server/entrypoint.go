@@ -15,7 +15,7 @@ import (
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/gorilla/mux"
 
-	"github.com/Layr-Labs/eigenda-proxy/metrics"
+	proxy_metrics "github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/server"
 	"github.com/urfave/cli/v2"
 
@@ -57,7 +57,7 @@ func StartProxySvr(cliCtx *cli.Context) error {
 		}
 	}
 
-	m := metrics.NewMetrics("default")
+	metrics := proxy_metrics.NewMetrics("default")
 
 	ctx, ctxCancel := context.WithCancel(cliCtx.Context)
 	defer ctxCancel()
@@ -67,26 +67,25 @@ func StartProxySvr(cliCtx *cli.Context) error {
 		memConfig = nil
 	}
 
-	sm, err := store.NewBuilder(
+	storageManager, err := store.NewStorageManagerBuilder(
 		ctx,
+		log,
+		metrics,
 		cfg.EigenDAConfig.StorageConfig,
 		cfg.EigenDAConfig.EdaVerifierConfigV1,
 		cfg.EigenDAConfig.EdaClientConfigV1,
 		cfg.EigenDAConfig.EdaClientConfigV2,
 		secretConfig,
 		memConfig,
-		log,
-		m,
-	).BuildManager(
-		ctx,
 		cfg.EigenDAConfig.EdaClientConfigV2.PutRetries,
 		cfg.EigenDAConfig.MaxBlobSizeBytes,
-		cfg.EigenDAConfig.EigenDACertVerifierAddress)
+		cfg.EigenDAConfig.EigenDACertVerifierAddress,
+	).Build(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create store: %w", err)
 	}
 
-	server := server.NewServer(cfg.EigenDAConfig.ServerConfig, sm, log, m)
+	server := server.NewServer(cfg.EigenDAConfig.ServerConfig, storageManager, log, metrics)
 	r := mux.NewRouter()
 	server.RegisterRoutes(r)
 	if cfg.EigenDAConfig.MemstoreEnabled {
@@ -109,7 +108,7 @@ func StartProxySvr(cliCtx *cli.Context) error {
 
 	if cfg.MetricsCfg.Enabled {
 		log.Debug("starting metrics server", "addr", cfg.MetricsCfg.Host, "port", cfg.MetricsCfg.Port)
-		svr, err := m.StartServer(cfg.MetricsCfg.Host, cfg.MetricsCfg.Port)
+		svr, err := metrics.StartServer(cfg.MetricsCfg.Host, cfg.MetricsCfg.Port)
 		if err != nil {
 			return fmt.Errorf("failed to start metrics server: %w", err)
 		}
@@ -119,7 +118,7 @@ func StartProxySvr(cliCtx *cli.Context) error {
 			}
 		}()
 		log.Info("started metrics server", "addr", svr.Addr())
-		m.RecordUp()
+		metrics.RecordUp()
 	}
 
 	return ctxinterrupt.Wait(cliCtx.Context)

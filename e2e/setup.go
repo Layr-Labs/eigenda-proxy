@@ -10,7 +10,7 @@ import (
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/config"
-	"github.com/Layr-Labs/eigenda-proxy/metrics"
+	proxy_metrics "github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/server"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
@@ -259,7 +259,7 @@ func TestSuiteConfig(testCfg Cfg) config.AppConfig {
 	default:
 		cfg = config.AppConfig{
 			EigenDAConfig: eigendaCfg,
-			MetricsCfg:    metrics.Config{},
+			MetricsCfg:    proxy_metrics.Config{},
 		}
 	}
 
@@ -282,35 +282,34 @@ type TestSuite struct {
 	Ctx     context.Context
 	Log     logging.Logger
 	Server  *server.Server
-	Metrics *metrics.EmulatedMetricer
+	Metrics *proxy_metrics.EmulatedMetricer
 }
 
 func CreateTestSuite(testSuiteCfg config.AppConfig, secretConfigV2 common.SecretConfigV2) (TestSuite, func()) {
 	log := logging.NewTextSLogger(os.Stdout, &logging.SLoggerOptions{})
 
-	m := metrics.NewEmulatedMetricer()
+	metrics := proxy_metrics.NewEmulatedMetricer()
 	ctx := context.Background()
 
-	sm, err := store.NewBuilder(
+	storageManager, err := store.NewStorageManagerBuilder(
 		ctx,
+		log,
+		metrics,
 		testSuiteCfg.EigenDAConfig.StorageConfig,
 		testSuiteCfg.EigenDAConfig.EdaVerifierConfigV1,
 		testSuiteCfg.EigenDAConfig.EdaClientConfigV1,
 		testSuiteCfg.EigenDAConfig.EdaClientConfigV2,
 		secretConfigV2,
 		testSuiteCfg.EigenDAConfig.MemstoreConfig,
-		log,
-		m,
-	).BuildManager(
-		ctx,
 		testSuiteCfg.EigenDAConfig.PutRetries,
 		testSuiteCfg.EigenDAConfig.MaxBlobSizeBytes,
-		testSuiteCfg.EigenDAConfig.EigenDACertVerifierAddress)
+		testSuiteCfg.EigenDAConfig.EigenDACertVerifierAddress,
+	).Build(ctx)
 	if err != nil {
 		panic(err)
 	}
 
-	proxySvr := server.NewServer(testSuiteCfg.EigenDAConfig.ServerConfig, sm, log, m)
+	proxySvr := server.NewServer(testSuiteCfg.EigenDAConfig.ServerConfig, storageManager, log, metrics)
 
 	log.Info("Starting proxy server...")
 	r := mux.NewRouter()
@@ -334,7 +333,7 @@ func CreateTestSuite(testSuiteCfg config.AppConfig, secretConfigV2 common.Secret
 		Ctx:     ctx,
 		Log:     log,
 		Server:  proxySvr,
-		Metrics: m,
+		Metrics: metrics,
 	}, kill
 }
 
