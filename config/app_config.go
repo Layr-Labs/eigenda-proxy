@@ -22,14 +22,14 @@ func (c AppConfig) Check() error {
 	return nil
 }
 
-func ReadCLIConfig(ctx *cli.Context) (*AppConfig, error) {
+func ReadCLIConfig(ctx *cli.Context) (AppConfig, error) {
 	proxyConfig, err := ReadProxyConfig(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("read proxy config: %w", err)
+		return AppConfig{}, fmt.Errorf("read proxy config: %w", err)
 	}
 
-	return &AppConfig{
-		EigenDAConfig: *proxyConfig,
+	return AppConfig{
+		EigenDAConfig: proxyConfig,
 		MetricsCfg:    metrics.ReadConfig(ctx),
 	}, nil
 }

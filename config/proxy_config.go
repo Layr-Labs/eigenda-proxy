@@ -45,14 +45,14 @@ type ProxyConfig struct {
 }
 
 // ReadProxyConfig ... parses the Config from the provided flags or environment variables.
-func ReadProxyConfig(ctx *cli.Context) (*ProxyConfig, error) {
+func ReadProxyConfig(ctx *cli.Context) (ProxyConfig, error) {
 	edaClientV1Config := eigendaflags.ReadConfig(ctx)
 	edaClientV2Config, err := eigendaflags_v2.ReadClientConfigV2(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("read client config v2: %w", err)
+		return ProxyConfig{}, fmt.Errorf("read client config v2: %w", err)
 	}
 
-	cfg := &ProxyConfig{
+	cfg := ProxyConfig{
 		ServerConfig: server.Config{
 			DisperseV2: edaClientV2Config.Enabled,
 			Host:       ctx.String(ListenAddrFlagName),

@@ -6,8 +6,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func validSecretConfig() *SecretConfigV2 {
-	secretConfig := &SecretConfigV2{
+func validSecretConfig() SecretConfigV2 {
+	secretConfig := SecretConfigV2{
 		SignerPaymentKey: "0x000000000000000",
 	}
 

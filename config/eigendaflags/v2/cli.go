@@ -175,7 +175,7 @@ func ReadClientConfigV2(ctx *cli.Context) (common.ClientConfigV2, error) {
 	return common.ClientConfigV2{
 		Enabled:                         v2Enabled,
 		ServiceManagerAddress:           ctx.String(SvcManagerAddrFlagName),
-		DisperserClientCfg:              *disperserConfig,
+		DisperserClientCfg:              disperserConfig,
 		PayloadDisperserCfg:             readPayloadDisperserCfg(ctx),
 		RelayPayloadRetrieverCfg:        readRetrievalConfig(ctx),
 		PutRetries:                      ctx.Uint(PutRetriesFlagName),
@@ -217,14 +217,14 @@ func readPayloadDisperserCfg(ctx *cli.Context) clients_v2.PayloadDisperserConfig
 	}
 }
 
-func readDisperserCfg(ctx *cli.Context) (*clients_v2.DisperserClientConfig, error) {
+func readDisperserCfg(ctx *cli.Context) (clients_v2.DisperserClientConfig, error) {
 	disperserAddressString := ctx.String(DisperserFlagName)
 	hostStr, portStr, err := net.SplitHostPort(disperserAddressString)
 	if err != nil {
-		return nil, fmt.Errorf("split host port '%s': %w", disperserAddressString, err)
+		return clients_v2.DisperserClientConfig{}, fmt.Errorf("split host port '%s': %w", disperserAddressString, err)
 	}
 
-	return &clients_v2.DisperserClientConfig{
+	return clients_v2.DisperserClientConfig{
 		Hostname:          hostStr,
 		Port:              portStr,
 		UseSecureGrpcFlag: !ctx.Bool(DisableTLSFlagName),

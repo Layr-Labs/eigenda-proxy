@@ -32,7 +32,7 @@ type Config struct {
 
 // Store does storage interactions and verifications for blobs with the EigenDA V2 protocol.
 type Store struct {
-	cfg *Config
+	cfg Config
 	log logging.Logger
 
 	disperser *clients.PayloadDisperser
@@ -44,7 +44,7 @@ var _ common.GeneratedKeyStore = (*Store)(nil)
 
 func NewStore(
 	log logging.Logger,
-	cfg *Config,
+	cfg Config,
 	disperser *clients.PayloadDisperser,
 	retriever clients.PayloadRetriever,
 	verifier verification.ICertVerifier,

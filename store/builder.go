@@ -139,7 +139,7 @@ func (d *Builder) buildEigenDAV2Backend(
 		return nil, fmt.Errorf("build payload disperser: %w", err)
 	}
 
-	v2Config := &eigenda_v2.Config{
+	v2Config := eigenda_v2.Config{
 		CertVerifierAddress: eigenDACertVerifierAddress,
 		MaxBlobSizeBytes:    uint64(maxBlobSizeBytes),
 		PutRetries:          d.v2ClientCfg.PutRetries,

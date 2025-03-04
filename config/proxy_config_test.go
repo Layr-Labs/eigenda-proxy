@@ -13,12 +13,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func validCfg() *ProxyConfig {
+func validCfg() ProxyConfig {
 	maxBlobLengthBytes, err := common.ParseBytesAmount("2MiB")
 	if err != nil {
 		panic(err)
 	}
-	proxyCfg := &ProxyConfig{
+	proxyCfg := ProxyConfig{
 		EdaClientConfigV1: clients.EigenDAClientConfig{
 			RPC:                          "http://localhost:8545",
 			StatusQueryRetryInterval:     5 * time.Second,

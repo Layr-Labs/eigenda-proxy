@@ -28,7 +28,7 @@ const (
 )
 
 type Server struct {
-	cfg        *Config
+	cfg        Config
 	log        logging.Logger
 	endpoint   string
 	sm         store.IManager
@@ -37,8 +37,12 @@ type Server struct {
 	listener   net.Listener
 }
 
-func NewServer(cfg *Config, sm store.IManager, log logging.Logger,
-	m metrics.Metricer) *Server {
+func NewServer(
+	cfg Config,
+	sm store.IManager,
+	log logging.Logger,
+	m metrics.Metricer,
+) *Server {
 	endpoint := net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))
 	return &Server{
 		cfg:      cfg,

@@ -118,8 +118,8 @@ type Cfg struct {
 	UseS3Fallback      bool
 }
 
-func TestConfig(useMemory bool, useV2 bool) *Cfg {
-	return &Cfg{
+func TestConfig(useMemory bool, useV2 bool) Cfg {
+	return Cfg{
 		UseV2:              useV2,
 		UseMemory:          useMemory,
 		Expiration:         14 * 24 * time.Hour,
@@ -162,7 +162,7 @@ func createS3Config(eigendaCfg config.ProxyConfig) config.AppConfig {
 	}
 }
 
-func TestSuiteConfig(testCfg *Cfg) config.AppConfig {
+func TestSuiteConfig(testCfg Cfg) config.AppConfig {
 	// load signer key from environment
 	pk := os.Getenv(privateKey)
 	if pk == "" && !testCfg.UseMemory {
@@ -266,7 +266,7 @@ func TestSuiteConfig(testCfg *Cfg) config.AppConfig {
 	return cfg
 }
 
-func TestSuiteSecretConfig(testCfg *Cfg) common.SecretConfigV2 {
+func TestSuiteSecretConfig(testCfg Cfg) common.SecretConfigV2 {
 	// load signer key from environment
 	signerPrivateKey := os.Getenv(privateKey)
 	if signerPrivateKey == "" && !testCfg.UseMemory {
@@ -310,7 +310,7 @@ func CreateTestSuite(testSuiteCfg config.AppConfig, secretConfigV2 common.Secret
 		panic(err)
 	}
 
-	proxySvr := server.NewServer(&testSuiteCfg.EigenDAConfig.ServerConfig, sm, log, m)
+	proxySvr := server.NewServer(testSuiteCfg.EigenDAConfig.ServerConfig, sm, log, m)
 
 	log.Info("Starting proxy server...")
 	r := mux.NewRouter()

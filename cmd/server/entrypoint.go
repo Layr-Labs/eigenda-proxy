@@ -86,7 +86,7 @@ func StartProxySvr(cliCtx *cli.Context) error {
 		return fmt.Errorf("failed to create store: %w", err)
 	}
 
-	server := server.NewServer(&cfg.EigenDAConfig.ServerConfig, sm, log, m)
+	server := server.NewServer(cfg.EigenDAConfig.ServerConfig, sm, log, m)
 	r := mux.NewRouter()
 	server.RegisterRoutes(r)
 	if cfg.EigenDAConfig.MemstoreEnabled {
