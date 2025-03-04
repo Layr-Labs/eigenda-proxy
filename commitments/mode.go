@@ -46,7 +46,7 @@ func EncodeCommitment(
 		altDACommit := NewGenericCommitment(svcCommit).Encode()
 		return altDACommit, nil
 
-	case Standard: // (i.e, Arbitrum)
+	case Standard:
 		return NewEigenDACommitment(bytes, commitmentType).Encode(), nil
 	}
 
