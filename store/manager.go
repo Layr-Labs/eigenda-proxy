@@ -40,7 +40,7 @@ func NewManager(
 	l logging.Logger,
 	secondary ISecondary,
 	useV2 bool,
-) (IManager, error) {
+) (*Manager, error) {
 	// 1 - Determine where to disperse blobs
 	var writeV2 = true
 	if eigenda != nil && !useV2 {

@@ -80,7 +80,7 @@ func NewStorageManagerBuilder(
 }
 
 // Build builds the storage manager object
-func (smb *StorageManagerBuilder) Build(ctx context.Context) (IManager, error) {
+func (smb *StorageManagerBuilder) Build(ctx context.Context) (*Manager, error) {
 	var err error
 	var s3Store *s3.Store
 	var redisStore *redis.Store
