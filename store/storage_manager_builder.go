@@ -47,7 +47,7 @@ type StorageManagerBuilder struct {
 	v2SecretCfg    common.SecretConfigV2
 
 	putRetries                 uint
-	maxBlobSize                uint
+	maxBlobSizeBytes           uint
 	eigenDaCertVerifierAddress string
 }
 
@@ -109,13 +109,13 @@ func (smb *StorageManagerBuilder) Build(ctx context.Context) (IManager, error) {
 
 	if smb.v2ClientCfg.Enabled {
 		smb.log.Debug("Using EigenDA V2 storage backend")
-		eigenDAV2Store, err = smb.buildEigenDAV2Backend(ctx, smb.maxBlobSize, smb.eigenDaCertVerifierAddress)
+		eigenDAV2Store, err = smb.buildEigenDAV2Backend(ctx)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	eigenDAV1Store, err = smb.buildEigenDAV1Backend(ctx, smb.putRetries, smb.maxBlobSize)
+	eigenDAV1Store, err = smb.buildEigenDAV1Backend(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -177,11 +177,7 @@ func (smb *StorageManagerBuilder) buildSecondaries(
 }
 
 // buildEigenDAV2Backend ... Builds EigenDA V2 storage backend
-func (smb *StorageManagerBuilder) buildEigenDAV2Backend(
-	ctx context.Context,
-	maxBlobSizeBytes uint,
-	eigenDACertVerifierAddress string,
-) (common.GeneratedKeyStore, error) {
+func (smb *StorageManagerBuilder) buildEigenDAV2Backend(ctx context.Context) (common.GeneratedKeyStore, error) {
 	// TODO: Figure out how to better manage the v1 verifier
 	//  may make sense to live in some global kzg config that's passed down across EigenDA versions
 	kzgProver, err := prover.NewProver(smb.v1VerifierCfg.KzgConfig, nil)
@@ -198,7 +194,7 @@ func (smb *StorageManagerBuilder) buildEigenDAV2Backend(
 		return nil, fmt.Errorf("build eth client: %w", err)
 	}
 
-	relayPayloadRetriever, err := smb.buildRelayPayloadRetriever(ethClient, maxBlobSizeBytes, kzgProver.Srs.G1)
+	relayPayloadRetriever, err := smb.buildRelayPayloadRetriever(ethClient, kzgProver.Srs.G1)
 	if err != nil {
 		return nil, fmt.Errorf("build relay payload retriever: %w", err)
 	}
@@ -215,8 +211,8 @@ func (smb *StorageManagerBuilder) buildEigenDAV2Backend(
 	}
 
 	v2Config := eigenda_v2.Config{
-		CertVerifierAddress: eigenDACertVerifierAddress,
-		MaxBlobSizeBytes:    uint64(maxBlobSizeBytes),
+		CertVerifierAddress: smb.eigenDaCertVerifierAddress,
+		MaxBlobSizeBytes:    uint64(smb.maxBlobSizeBytes),
 		PutRetries:          smb.v2ClientCfg.PutRetries,
 	}
 
@@ -224,10 +220,7 @@ func (smb *StorageManagerBuilder) buildEigenDAV2Backend(
 }
 
 // buildEigenDAV1Backend ... Builds EigenDA V1 storage backend
-func (smb *StorageManagerBuilder) buildEigenDAV1Backend(
-	ctx context.Context,
-	putRetries uint,
-	maxBlobSize uint) (common.GeneratedKeyStore, error) {
+func (smb *StorageManagerBuilder) buildEigenDAV1Backend(ctx context.Context) (common.GeneratedKeyStore, error) {
 	verifier, err := verify.NewVerifier(&smb.v1VerifierCfg, smb.log)
 	if err != nil {
 		return nil, fmt.Errorf("new verifier: %w", err)
@@ -256,10 +249,10 @@ func (smb *StorageManagerBuilder) buildEigenDAV1Backend(
 		verifier,
 		smb.log,
 		&eigenda.StoreConfig{
-			MaxBlobSizeBytes:     uint64(maxBlobSize),
+			MaxBlobSizeBytes:     uint64(smb.maxBlobSizeBytes),
 			EthConfirmationDepth: smb.v1VerifierCfg.EthConfirmationDepth,
 			StatusQueryTimeout:   smb.v1EdaClientCfg.StatusQueryTimeout,
-			PutRetries:           putRetries,
+			PutRetries:           smb.putRetries,
 		},
 	)
 }
@@ -279,10 +272,9 @@ func (smb *StorageManagerBuilder) buildEthClient() (common_eigenda.EthClient, er
 
 func (smb *StorageManagerBuilder) buildRelayPayloadRetriever(
 	ethClient common_eigenda.EthClient,
-	maxBlobSizeBytes uint,
 	g1Srs []bn254.G1Affine,
 ) (*clients_v2.RelayPayloadRetriever, error) {
-	relayClient, err := smb.buildRelayClient(ethClient, maxBlobSizeBytes)
+	relayClient, err := smb.buildRelayClient(ethClient)
 	if err != nil {
 		return nil, fmt.Errorf("build relay client: %w", err)
 	}
@@ -301,10 +293,7 @@ func (smb *StorageManagerBuilder) buildRelayPayloadRetriever(
 	return relayPayloadRetriever, nil
 }
 
-func (smb *StorageManagerBuilder) buildRelayClient(
-	ethClient common_eigenda.EthClient,
-	maxBlobSizeBytes uint,
-) (clients_v2.RelayClient, error) {
+func (smb *StorageManagerBuilder) buildRelayClient(ethClient common_eigenda.EthClient) (clients_v2.RelayClient, error) {
 	reader, err := eigenda_eth.NewReader(smb.log, ethClient, "0x0", smb.v2ClientCfg.ServiceManagerAddress)
 	if err != nil {
 		return nil, fmt.Errorf("new eth reader: %w", err)
@@ -319,7 +308,7 @@ func (smb *StorageManagerBuilder) buildRelayClient(
 		UseSecureGrpcFlag: smb.v2ClientCfg.DisperserClientCfg.UseSecureGrpcFlag,
 		// we should never expect a message greater than our allowed max blob size.
 		// 10% of max blob size is added for additional safety
-		MaxGRPCMessageSize: maxBlobSizeBytes + (maxBlobSizeBytes / 10),
+		MaxGRPCMessageSize: smb.maxBlobSizeBytes + (smb.maxBlobSizeBytes / 10),
 	}
 
 	relayClient, err := clients_v2.NewRelayClient(relayCfg, smb.log, relayURLProvider)
