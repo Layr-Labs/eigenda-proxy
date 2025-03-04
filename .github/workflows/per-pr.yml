@@ -65,7 +65,6 @@ jobs:
     outputs:
       COVERAGE: ${{ steps.unit.outputs.coverage }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30 # redundant with the makefile timeout, but good to have here too
     steps:
       - uses: actions/checkout@v3
         with:
