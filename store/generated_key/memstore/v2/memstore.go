@@ -112,7 +112,7 @@ func (e *MemStore) generateRandomCert(blobContents []byte) (*verification.EigenD
 					},
 					Commitment: g1CommitPoint,
 					// #nosec G115 - can never overflow on 16MiB blobs
-					Length: uint32(len(blobContents)),
+					Length: uint32(len(blobContents)) / BytesPerFieldElement,
 				},
 				PaymentHeaderHash: [32]byte(unsafeRandomBytes(32)),
 			},
