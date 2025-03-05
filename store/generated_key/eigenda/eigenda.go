@@ -138,7 +138,9 @@ func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 	err = e.verifier.VerifyCert(ctx, cert)
 	if err != nil {
 		if errors.Is(err, verify.ErrBatchMetadataHashMismatch) {
-			// TODO: we could try to update the cert's confirmation block number here,
+			// This error might have been caused by an L1 reorg.
+			// See https://github.com/Layr-Labs/eigenda-proxy/blob/main/docs/troubleshooting_v1.md#batch-hash-mismatch-error
+			// We could try to update the cert's confirmation block number here,
 			// but it's currently not possible because the client.PutBlob call doesn't return the
 			// request_id to be able to query the GetBlobStatus endpoint...
 			// V2 already solves this by using the blob_header_hash as the request_id,
@@ -187,11 +189,13 @@ func (e Store) Verify(ctx context.Context, key []byte, value []byte) error {
 	// verify DA certificate against EigenDA's batch metadata that's bridged to Ethereum
 	err = e.verifier.VerifyCert(ctx, &cert)
 	if errors.Is(err, verify.ErrBatchMetadataHashMismatch) {
-		// TODO: we could try to update the cert's confirmation block number here,
+		// This error might have been caused by an L1 reorg.
+		// See https://github.com/Layr-Labs/eigenda-proxy/blob/main/docs/troubleshooting_v1.md#batch-hash-mismatch-error
+		// We would want to update the cert's confirmation block number here,
 		// but it's currently not possible because the request_id to be able to query the GetBlobStatus endpoint
 		// is not stored in the v1 cert.... :(
 		//
-		// V2  solves this by using the blob_header_hash as the request_id,
+		// V2 solves this by using the blob_header_hash as the request_id,
 		// but also having moved verification to the client.
 		// V1 feels doomed..... maybe just accept this sad state of affairs
 		// and try to get people to migrate to V2 asap.
