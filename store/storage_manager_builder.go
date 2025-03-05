@@ -46,6 +46,7 @@ type StorageManagerBuilder struct {
 	v2ClientCfg    common.ClientConfigV2
 	v2SecretCfg    common.SecretConfigV2
 
+	// TODO: these values ought to be moved into configs, rather than being included individually
 	putRetries       uint
 	maxBlobSizeBytes uint
 }
