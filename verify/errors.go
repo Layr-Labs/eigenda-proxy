@@ -11,12 +11,13 @@ import "fmt"
 // See https://github.com/Layr-Labs/eigenda-proxy/blob/main/docs/troubleshooting_v1.md#batch-hash-mismatch-error
 // for more details.
 //
-// We define a structured error because this error is expected to be handled.
-// The proxy should query the disperser for the latest confirmation block number and
-// update the cert.
-// Note that this means that it is possible for the cert in the op's batcher inbox to be invalid.
-// However, to prevent an L2 reorg from happening, we prefer to update the cert's confirmation block number
-// to make it valid!
+// We originally defined this structured with goal to handle this error.
+// We thought the proxy could query the disperser for the latest confirmation block number and
+// update the cert retrieved from the batcher inbox.
+// However, the cert does not contain the request_id, which is needed to query the GetBlobStatus endpoint,
+// so this turns out to be impossible in the V1 model without a major refactor.
+// See https://github.com/Layr-Labs/eigenda/blob/af6d88552a13f452f365014ff80a52b2e3ec8e70/api/proto/disperser/disperser.proto#L101-L119
+// for more information.
 type BatchMetadataHashMismatchError struct {
 	// batch metadata hash that is stored in the EigenDAServiceManager
 	OnchainHash []byte
