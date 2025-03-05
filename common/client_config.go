@@ -32,6 +32,10 @@ func (cfg *ClientConfigV2) Check() error {
 		return fmt.Errorf("disperser hostname is required for using EigenDA V2 backend")
 	}
 
+	if cfg.DisperserClientCfg.Port == "" {
+		return fmt.Errorf("disperser port is required for using EigenDA V2 backend")
+	}
+
 	if cfg.EigenDACertVerifierAddress == "" {
 		return fmt.Errorf("cert verifier address is required for using EigenDA V2 backend")
 	}
