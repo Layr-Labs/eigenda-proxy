@@ -11,7 +11,7 @@ import "fmt"
 // See https://github.com/Layr-Labs/eigenda-proxy/blob/main/docs/troubleshooting_v1.md#batch-hash-mismatch-error
 // for more details.
 //
-// We originally defined this structured with goal to handle this error.
+// We originally defined this structured error with goal to handle it.
 // We thought the proxy could query the disperser for the latest confirmation block number and
 // update the cert retrieved from the batcher inbox.
 // However, the cert does not contain the request_id, which is needed to query the GetBlobStatus endpoint,
