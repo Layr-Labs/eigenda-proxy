@@ -32,13 +32,22 @@ clean:
 test-unit:
 	go test ./... -parallel 4
 
-# Local E2E tests, leveraging op-e2e framework. Also tests the standard client against the proxy.
+# Local V1/V2 E2E tests, leveraging op-e2e framework. Also tests the standard client against the proxy.
 test-e2e-local:
 	INTEGRATION=true go test -timeout 1m ./e2e -parallel 4
+	INTEGRATION_V2=true go test -timeout 1m ./e2e -parallel 4
 
 # E2E tests against holesky testnet
+# Holesky is currently broken after recent pectra hardfork.
+# This test is thus flaky depending on whether the testnet producing blocks or not
+# at the time it is run...
+# In good cases it runs in ~20 mins, so we set a timeout of 30 mins.
+# The test failing in CI is currently expected however, so expect to have to re-run it.
+# See https://dora.holesky.ethpandaops.io/epochs for block production status.
 test-e2e-holesky:
-	TESTNET=true go test -timeout 50m ./e2e  -parallel 4
+	# Add the -v flag to be able to observe logs as the run is happening on CI
+	# given that this test takes >20 mins to run. Good to have early feedback when needed.
+	TESTNET=true go test -v -timeout 30m ./e2e  -parallel 4
 
 # E2E test which fuzzes the proxy client server integration and op client keccak256 with malformed inputs
 test-e2e-fuzz:
