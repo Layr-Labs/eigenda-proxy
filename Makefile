@@ -71,7 +71,7 @@ format:
     	exit 1; \
 	fi
 	@go fmt ./...
-	@golines --write-output --shorten-comments --max-len 100 .
+	@golines --write-output --shorten-comments --max-len 120 .
 
 go-gen-mocks:
 	@echo "generating go mocks..."

@@ -63,7 +63,7 @@ linters-settings:
         skipRecvDeref: false
   lll:
     # Make sure `golines` formatter command in the Makefile matches this.
-    line-length: 100
+    line-length: 120
 
   # gomnd:
   #   # List of function regex patterns to exclude from analysis.
