@@ -1,8 +1,8 @@
 # EigenDA Proxy <!-- omit from toc -->
 
 A basic REST proxy server to interact with the EigenDA network:
-- POST routes: submit payloads (rollup txs, state-diffs, or anything really) that will be encoded into EigenDA blobs and submitted to the EigenDA disperser to make available for 2 weeks. A DA certificate of availability will be returned, which can be used to validate the availability and query the payload back.
-- GET routes: submit back the received DA Certificate to retrieve the blob from the EigenDA network, which will be decoded, validated, and returned as a response.
+- POST routes: submit a payload (rollup txs, state-diffs, or anything really) that will be encoded into an EigenDA blob and submitted to the EigenDA disperser to make available for 2 weeks. A DA certificate of availability will be returned, which can be used to validate the availability and query the payload back.
+- GET routes: submit a DA Certificate to retrieve its respective blob from the EigenDA network, which will be decoded, validated, and returned as a response.
 
 [![per-pr-ci](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/per-pr.yml/badge.svg)](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/per-pr.yml)
 [![push-image-ghcr](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/push-ghcr.yml/badge.svg)](https://github.com/Layr-Labs/eigenda-proxy/actions/workflows/push-ghcr.yml)
