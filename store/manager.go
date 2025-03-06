@@ -153,7 +153,8 @@ func (m *Manager) Put(ctx context.Context, cm commitments.CommitmentMode, key, v
 	}
 
 	// 2 - Put blob into secondary storage backends
-	if m.secondary.Enabled() && m.secondary.AsyncWriteEntry() { // publish put notification to secondary's subscription on PutNotify topic
+	if m.secondary.Enabled() &&
+		m.secondary.AsyncWriteEntry() { // publish put notification to secondary's subscription on PutNotify topic
 		m.log.Debug("Publishing data to async secondary stores")
 		m.secondary.Topic() <- PutNotify{
 			Commitment: commit,

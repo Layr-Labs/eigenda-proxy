@@ -98,7 +98,12 @@ func NewStore(cfg Config) (*Store, error) {
 }
 
 func (s *Store) Get(ctx context.Context, key []byte) ([]byte, error) {
-	result, err := s.client.GetObject(ctx, s.cfg.Bucket, path.Join(s.cfg.Path, hex.EncodeToString(key)), minio.GetObjectOptions{})
+	result, err := s.client.GetObject(
+		ctx,
+		s.cfg.Bucket,
+		path.Join(s.cfg.Path, hex.EncodeToString(key)),
+		minio.GetObjectOptions{},
+	)
 	if err != nil {
 		errResponse := minio.ToErrorResponse(err)
 		if errResponse.Code == "NoSuchKey" {
@@ -116,7 +121,14 @@ func (s *Store) Get(ctx context.Context, key []byte) ([]byte, error) {
 }
 
 func (s *Store) Put(ctx context.Context, key []byte, value []byte) error {
-	_, err := s.client.PutObject(ctx, s.cfg.Bucket, path.Join(s.cfg.Path, hex.EncodeToString(key)), bytes.NewReader(value), int64(len(value)), s.putObjectOptions)
+	_, err := s.client.PutObject(
+		ctx,
+		s.cfg.Bucket,
+		path.Join(s.cfg.Path, hex.EncodeToString(key)),
+		bytes.NewReader(value),
+		int64(len(value)),
+		s.putObjectOptions,
+	)
 	if err != nil {
 		return err
 	}
