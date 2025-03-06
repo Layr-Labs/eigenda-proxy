@@ -208,6 +208,12 @@ issues:
         - gocritic
         - unparam
 
+    # Allow certain patterns to be ignored by lll (long lines)
+    - source: '".{120,}"' # Ignores double-quoted strings longer than 120 chars
+      linters: [lll]
+    - source: '// https?://' # This pattern matches comments containing URLs
+      linters: [lll]
+
     - path: "_test\\.go"
       linters:
         - gocognit
