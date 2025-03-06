@@ -195,7 +195,8 @@ func (v *Verifier) verifySecurityParams(blobHeader BlobHeader, batchHeader *disp
 				blobHeader.QuorumBlobParams[i].QuorumNumber)
 		}
 
-		if blobHeader.QuorumBlobParams[i].AdversaryThresholdPercentage > blobHeader.QuorumBlobParams[i].ConfirmationThresholdPercentage {
+		if blobHeader.QuorumBlobParams[i].AdversaryThresholdPercentage >
+			blobHeader.QuorumBlobParams[i].ConfirmationThresholdPercentage {
 			return fmt.Errorf(
 				"adversary threshold percentage must be greater than or equal to confirmation threshold percentage",
 			)
@@ -211,12 +212,12 @@ func (v *Verifier) verifySecurityParams(blobHeader BlobHeader, batchHeader *disp
 				"quorumNumber",
 				blobHeader.QuorumBlobParams[i].QuorumNumber)
 		} else if blobHeader.QuorumBlobParams[i].AdversaryThresholdPercentage < quorumAdversaryThreshold {
-			return fmt.Errorf("adversary threshold percentage must be greater than or equal to quorum adversary threshold percentage")
+			return fmt.Errorf("adversary threshold percentage must be >= quorum adversary threshold percentage")
 		}
 
 		if batchHeader.QuorumSignedPercentages[i] < blobHeader.QuorumBlobParams[i].ConfirmationThresholdPercentage {
 			return fmt.Errorf(
-				"signed stake for quorum must be greater than or equal to confirmation threshold percentage",
+				"signed stake for quorum must be >= to confirmation threshold percentage",
 			)
 		}
 

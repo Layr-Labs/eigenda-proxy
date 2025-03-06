@@ -160,7 +160,8 @@ func (m *Manager) Put(ctx context.Context, cm commitments.CommitmentMode, key, v
 			Commitment: commit,
 			Value:      value,
 		}
-	} else if m.secondary.Enabled() && !m.secondary.AsyncWriteEntry() { // secondary is available only for synchronous writes
+		// secondary is available only for synchronous writes
+	} else if m.secondary.Enabled() && !m.secondary.AsyncWriteEntry() {
 		m.log.Debug("Publishing data to single threaded secondary stores")
 		err := m.secondary.HandleRedundantWrites(ctx, commit, value)
 		if err != nil {

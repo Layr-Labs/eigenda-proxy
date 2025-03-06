@@ -1,3 +1,4 @@
+//nolint:lll // long lines are expected in this file
 package server
 
 import (

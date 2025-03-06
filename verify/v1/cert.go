@@ -252,7 +252,8 @@ func getQuorumParametersAtLatestBlock(
 	}
 	var quorumAdversaryThresholds = make(map[uint8]uint8)
 	for quorumNum, threshold := range thresholds {
-		quorumAdversaryThresholds[uint8(quorumNum)] = threshold //nolint:gosec // disable G115 // We checked the length of thresholds above
+		//nolint:gosec // disable G115 // We checked the length of thresholds above
+		quorumAdversaryThresholds[uint8(quorumNum)] = threshold
 	}
 	// Sanity check: ensure that the required quorums are a subset of the quorums for which we have adversary thresholds
 	for _, quorum := range requiredQuorums {

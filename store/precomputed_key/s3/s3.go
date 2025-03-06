@@ -79,7 +79,8 @@ func isGoogleEndpoint(endpoint string) bool {
 func NewStore(cfg Config) (*Store, error) {
 	putObjectOptions := minio.PutObjectOptions{}
 	if isGoogleEndpoint(cfg.Endpoint) {
-		putObjectOptions.DisableContentSha256 = true // Avoid chunk signatures on GCS: https://github.com/minio/minio-go/issues/1922
+		// Avoid chunk signatures on GCS: https://github.com/minio/minio-go/issues/1922
+		putObjectOptions.DisableContentSha256 = true
 	}
 
 	client, err := minio.New(cfg.Endpoint, &minio.Options{
