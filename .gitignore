@@ -22,6 +22,10 @@ go.work
 
 /bin
 .env
+.direnv
+
+# From nix: https://github.com/cachix/git-hooks.nix?tab=readme-ov-file#flakes-support
+.pre-commit-config.yaml
 
 ## kzg caches
 resources/SRSTables/
