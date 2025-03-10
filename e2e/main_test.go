@@ -49,7 +49,7 @@ func (tfc *testFlagConfig) validate() {
 	}
 
 	fmt.Printf(
-		"runFuzzTests: %v, runIntegrationTests: %v, testnet_integration_tests: %v, enableV2: %v",
+		"runFuzzTests: %v, runIntegrationTests: %v, runTestnetIntegrationTests: %v, enableV2: %v\n",
 		tfc.runFuzzTests, tfc.runIntegrationTests, tfc.runTestnetIntegrationTests, tfc.enableV2,
 	)
 }
