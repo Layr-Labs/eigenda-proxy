@@ -48,11 +48,9 @@ func (tfc *testFlagConfig) validate() {
 		panic("only one of INTEGRATION=true or TESTNET=true env var can be set")
 	}
 
-	fmt.Print(
-		"runFuzzTests", tfc.runFuzzTests,
-		"runIntegrationTests", tfc.runIntegrationTests,
-		"testnet_integration_tests", tfc.runTestnetIntegrationTests,
-		"enableV2", tfc.enableV2,
+	fmt.Printf(
+		"runFuzzTests: %v, runIntegrationTests: %v, testnet_integration_tests: %v, enableV2: %v",
+		tfc.runFuzzTests, tfc.runIntegrationTests, tfc.runTestnetIntegrationTests, tfc.enableV2,
 	)
 }
 

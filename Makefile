@@ -48,7 +48,8 @@ test-e2e-holesky:
 
 # E2E test which fuzzes the proxy client server integration and op client keccak256 with malformed inputs
 test-e2e-fuzz:
-	FUZZ=true go test ./e2e -fuzz -v -fuzztime=5m
+	FUZZ=true ENABLE_V2=true  go test ./e2e -fuzz -v -fuzztime=5m
+	FUZZ=true ENABLE_V2=false go test ./e2e -fuzz -v -fuzztime=5m
 
 .PHONY: lint
 lint:
