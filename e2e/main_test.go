@@ -17,47 +17,96 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Integration tests are run against memstore whereas
-// testnet integration tests are run against eigenda backend talking to testnet disperser.
-// Some of the assertions in the tests are different based on the backend as well.
-// e.g, in TestProxyServerCaching we only assert to read metrics with EigenDA
-// when referencing memstore since we don't profile the eigenDAClient interactions
-var (
-	runTestnetIntegrationTests bool // holesky tests
-	runIntegrationTests        bool // memstore V1 tests
-	runIntegrationTestsV2      bool // memstore V2 tests
-	runFuzzTests               bool // fuzz tests
+// TestType is an enum describing various types of tests. This TestType is used to determine whether
+// a given test should run in the configured test environment.
+type TestType int
+
+const (
+	// StandardIntegration is a test that should run in any integration environment (local, or testnet)
+	StandardIntegration TestType = iota // 0
+	// LocalOnlyIntegration is a test that should run only in a local integration environment, NOT on testnet
+	LocalOnlyIntegration
+	// Fuzz is a fuzz test
+	Fuzz
 )
 
+var (
+	config testFlagConfig
+)
+
+// testFlagConfig contains the boolean flags used to configure test execution
+type testFlagConfig struct {
+	runTestnetIntegrationTests bool // holesky tests
+	runIntegrationTests        bool // memstore tests
+	runFuzzTests               bool // fuzz tests
+	enableV2                   bool
+}
+
+// validate checks that the values in testFlagConfig are sensical, and prints the configured values for convenience
+func (tfc *testFlagConfig) validate() {
+	if tfc.runIntegrationTests && tfc.runTestnetIntegrationTests {
+		panic("only one of INTEGRATION=true or TESTNET=true env var can be set")
+	}
+
+	fmt.Print(
+		"runFuzzTests", tfc.runFuzzTests,
+		"runIntegrationTests", tfc.runIntegrationTests,
+		"testnet_integration_tests", tfc.runTestnetIntegrationTests,
+		"enableV2", tfc.enableV2,
+	)
+}
+
+// flagActivated returns true if a given environment variable is active, otherwise false
 func flagActivated(envVar string) bool {
 	return os.Getenv(envVar) == "true" || os.Getenv(envVar) == "1"
+}
+
+// shouldRunTest accepts a parameter testType, which represents the type of test that is calling shouldRunTest. Based
+// on the testType, this method returns whether the test in question should run based on the configured values.
+func shouldRunTest(testType TestType) bool {
+	switch testType {
+	case StandardIntegration:
+		return config.runIntegrationTests || config.runTestnetIntegrationTests
+	case LocalOnlyIntegration:
+		return config.runIntegrationTests
+	case Fuzz:
+		return config.runFuzzTests
+	default:
+		panic("unknown test type")
+	}
+}
+
+// useMemory returns true if the test should use a memstore backend for local testing
+//
+// Local integration tests are run against memstore whereas testnet integration tests are run against eigenda backend,
+// talking to testnet disperser.
+func useMemory() bool {
+	return !config.runTestnetIntegrationTests
+}
+
+// v2Enabled returns whether v2 should be enabled in a test
+func v2Enabled() bool {
+	return config.enableV2
 }
 
 // ParseEnv ... reads testing cfg fields. Go test flags don't work for this library due to the dependency on Optimism's
 // E2E framework
 // which initializes test flags per init function which is called before an init in this package.
 func ParseEnv() {
-	runFuzzTests = flagActivated("FUZZ")
-	runIntegrationTestsV2 = flagActivated("INTEGRATION_V2")
-	runIntegrationTests = flagActivated("INTEGRATION")
-	runTestnetIntegrationTests = flagActivated("TESTNET")
-
-	if runIntegrationTests && runTestnetIntegrationTests {
-		panic("only one of INTEGRATION=true or TESTNET=true env var can be set")
+	config = testFlagConfig{
+		runTestnetIntegrationTests: flagActivated("TESTNET"),
+		runIntegrationTests:        flagActivated("INTEGRATION"),
+		enableV2:                   flagActivated("ENABLE_V2"),
+		runFuzzTests:               flagActivated("FUZZ"),
 	}
 
-	if runIntegrationTests && runIntegrationTestsV2 {
-		panic("only one of INTEGRATION=true or INTEGRATION_V2=true env var can be set")
-	}
-
-	fmt.Print("fuzz_tests", runFuzzTests, "integration_tests_v1", runIntegrationTests,
-		"integration_tests_v2", runIntegrationTestsV2, "testnet_integration_tests", runTestnetIntegrationTests,
-	)
+	config.validate()
 }
 
 // TestMain ... run main controller
 func TestMain(m *testing.M) {
 	ParseEnv()
+
 	code := m.Run()
 	os.Exit(code)
 }

@@ -22,12 +22,12 @@ func isNilPtrDerefPanic(err string) bool {
 // TestOpClientKeccak256MalformedInputs tests the NewDAClient from altda by setting and getting against []byte("")
 // preimage. It sets the precompute option to false on the NewDAClient.
 func TestOpClientKeccak256MalformedInputs(t *testing.T) {
-	if !runIntegrationTests || runTestnetIntegrationTests {
-		t.Skip("Skipping test as TESTNET env set or INTEGRATION var not set")
+	if !shouldRunTest(StandardIntegration) {
+		t.Skip()
 	}
 
 	t.Parallel()
-	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
+	testCfg := e2e.TestConfig(useMemory(), v2Enabled())
 	testCfg.UseKeccak256ModeS3 = true
 	tsConfig := e2e.TestSuiteConfig(testCfg)
 	tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
@@ -72,13 +72,13 @@ func TestOpClientKeccak256MalformedInputs(t *testing.T) {
 // many unicode characters, single unicode character and an empty preimage. It then tries to get the data from the
 // proxy server with empty byte, single byte and random string.
 func TestProxyClientMalformedInputCases(t *testing.T) {
-	if !runIntegrationTests && !runTestnetIntegrationTests && !runIntegrationTestsV2 {
-		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	if !shouldRunTest(StandardIntegration) {
+		t.Skip()
 	}
 
 	t.Parallel()
 
-	testConfig := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
+	testConfig := e2e.TestConfig(useMemory(), v2Enabled())
 
 	tsConfig := e2e.TestSuiteConfig(testConfig)
 	tsSecretConfig := e2e.TestSuiteSecretConfig(testConfig)
@@ -132,32 +132,33 @@ func TestProxyClientMalformedInputCases(t *testing.T) {
 
 	// TODO: what exactly is this test testing? What is the edge case?
 	// Error tested doesn't seem related to the cert being huge.
-	t.Run("get data edge cases - huge cert", func(t *testing.T) {
-		// TODO: we need to add the 0 version byte at the beginning.
-		// should this not be done automatically by the std_commitment client?
-		testCert := append([]byte{0}, e2e.RandBytes(10000)...)
-		_, err := daClient.GetData(ts.Ctx, testCert)
-		require.Error(t, err)
-		// Commenting as this error is not returned by memstore but this test is also run
-		// against memstore when running `make test-e2e-local`.
-		// assert.True(t, !isNilPtrDerefPanic(err.Error()) &&
-		// 	strings.Contains(err.Error(),
-		// 		"failed to decode DA cert to RLP format: rlp: expected input list for verify.Certificate"),
-		// 	"error: %s", err.Error())
-	})
+	t.Run(
+		"get data edge cases - huge cert", func(t *testing.T) {
+			// TODO: we need to add the 0 version byte at the beginning.
+			// should this not be done automatically by the std_commitment client?
+			testCert := append([]byte{0}, e2e.RandBytes(10000)...)
+			_, err := daClient.GetData(ts.Ctx, testCert)
+			require.Error(t, err)
+			// Commenting as this error is not returned by memstore but this test is also run
+			// against memstore when running `make test-e2e-local`.
+			// assert.True(t, !isNilPtrDerefPanic(err.Error()) &&
+			// 	strings.Contains(err.Error(),
+			// 		"failed to decode DA cert to RLP format: rlp: expected input list for verify.Certificate"),
+			// 	"error: %s", err.Error())
+		})
 }
 
 // TestKeccak256CommitmentRequestErrorsWhenS3NotSet ensures that the proxy returns a client error in the event
 //
 //	that an OP Keccak commitment mode is provided when S3 is non-configured server side
 func TestKeccak256CommitmentRequestErrorsWhenS3NotSet(t *testing.T) {
-	if !runIntegrationTests && !runTestnetIntegrationTests && !runIntegrationTestsV2 {
-		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	if !shouldRunTest(StandardIntegration) {
+		t.Skip()
 	}
 
 	t.Parallel()
 
-	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
+	testCfg := e2e.TestConfig(useMemory(), v2Enabled())
 	testCfg.UseKeccak256ModeS3 = true
 
 	tsConfig := e2e.TestSuiteConfig(testCfg)
@@ -176,13 +177,13 @@ func TestKeccak256CommitmentRequestErrorsWhenS3NotSet(t *testing.T) {
 }
 
 func TestOversizedBlobRequestErrors(t *testing.T) {
-	if !runIntegrationTests && !runTestnetIntegrationTests && !runIntegrationTestsV2 {
-		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	if !shouldRunTest(StandardIntegration) {
+		t.Skip()
 	}
 
 	t.Parallel()
 
-	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
+	testCfg := e2e.TestConfig(useMemory(), v2Enabled())
 
 	tsConfig := e2e.TestSuiteConfig(testCfg)
 	tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)

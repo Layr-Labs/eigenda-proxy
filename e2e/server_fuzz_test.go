@@ -13,11 +13,11 @@ import (
 // FuzzProxyClientServerIntegrationAndOpClientKeccak256MalformedInputs will fuzz the proxy client server integration
 // and op client keccak256 with malformed inputs. This is never meant to be fuzzed with EigenDA.
 func FuzzProxyClientServerIntegration(f *testing.F) {
-	if !runFuzzTests {
-		f.Skip("Skipping test as FUZZ env var not set")
+	if !shouldRunTest(Fuzz) {
+		f.Skip()
 	}
 
-	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
+	testCfg := e2e.TestConfig(useMemory(), v2Enabled())
 
 	tsConfig := e2e.TestSuiteConfig(testCfg)
 	tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)

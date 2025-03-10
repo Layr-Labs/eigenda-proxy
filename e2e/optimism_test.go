@@ -6,7 +6,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/e2e"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
-	"github.com/ethereum-optimism/optimism/op-e2e/config"
+	e2econfig "github.com/ethereum-optimism/optimism/op-e2e/config"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils"
 	"github.com/ethereum-optimism/optimism/op-service/sources"
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
@@ -48,7 +48,7 @@ func NewL2AltDA(t actions.Testing, daHost string, altDA bool) *L2AltDA {
 		ChannelTimeout:      120,
 		L1BlockTime:         12,
 		UseAltDA:            true,
-		AllocType:           config.AllocTypeAltDA,
+		AllocType:           e2econfig.AllocTypeAltDA,
 	}
 
 	log := testlog.Logger(t, log.LvlDebug)
@@ -131,11 +131,11 @@ func (a *L2AltDA) ActL1Finalized(t actions.Testing) {
 }
 
 func TestOptimismKeccak256Commitment(gt *testing.T) {
-	if !runIntegrationTests && !runTestnetIntegrationTests && !runIntegrationTestsV2 {
-		gt.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	if !shouldRunTest(StandardIntegration) {
+		gt.Skip()
 	}
 
-	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
+	testCfg := e2e.TestConfig(useMemory(), v2Enabled())
 	testCfg.UseKeccak256ModeS3 = true
 
 	tsConfig := e2e.TestSuiteConfig(testCfg)
@@ -185,11 +185,11 @@ func TestOptimismKeccak256Commitment(gt *testing.T) {
 }
 
 func TestOptimismGenericCommitment(gt *testing.T) {
-	if !runIntegrationTests && !runTestnetIntegrationTests && !runIntegrationTestsV2 {
-		gt.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	if !shouldRunTest(StandardIntegration) {
+		gt.Skip()
 	}
 
-	testConfig := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
+	testConfig := e2e.TestConfig(useMemory(), v2Enabled())
 
 	tsConfig := e2e.TestSuiteConfig(testConfig)
 	tsSecretConfig := e2e.TestSuiteSecretConfig(testConfig)

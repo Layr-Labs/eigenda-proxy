@@ -14,18 +14,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func useMemory() bool {
-	return !runTestnetIntegrationTests
-}
-
 func TestOptimismClientWithKeccak256Commitment(t *testing.T) {
-	if !runIntegrationTests && !runTestnetIntegrationTests && !runIntegrationTestsV2 {
-		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	if !shouldRunTest(StandardIntegration) {
+		t.Skip()
 	}
 
 	t.Parallel()
 
-	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
+	testCfg := e2e.TestConfig(useMemory(), v2Enabled())
 	testCfg.UseKeccak256ModeS3 = true
 
 	tsConfig := e2e.TestSuiteConfig(testCfg)
@@ -41,14 +37,13 @@ this test asserts that the data can be posted/read to EigenDA
 with a concurrent S3 backend configured
 */
 func TestOptimismClientWithGenericCommitment(t *testing.T) {
-
-	if !runIntegrationTests && !runTestnetIntegrationTests && !runIntegrationTestsV2 {
-		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	if !shouldRunTest(StandardIntegration) {
+		t.Skip()
 	}
 
 	t.Parallel()
 
-	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
+	testCfg := e2e.TestConfig(useMemory(), v2Enabled())
 
 	tsConfig := e2e.TestSuiteConfig(testCfg)
 	tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
@@ -65,11 +60,11 @@ func TestOptimismClientWithGenericCommitment(t *testing.T) {
 func TestProxyClientServerIntegration(t *testing.T) {
 	t.Parallel()
 
-	if !runIntegrationTests && !runTestnetIntegrationTests && !runIntegrationTestsV2 {
-		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	if !shouldRunTest(StandardIntegration) {
+		t.Skip()
 	}
 
-	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
+	testCfg := e2e.TestConfig(useMemory(), v2Enabled())
 
 	tsConfig := e2e.TestSuiteConfig(testCfg)
 	tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
@@ -142,14 +137,13 @@ func TestProxyClientServerIntegration(t *testing.T) {
 }
 
 func TestProxyClient(t *testing.T) {
-	t.Log(runIntegrationTests)
-	if !runIntegrationTests && !runTestnetIntegrationTests && !runIntegrationTestsV2 {
-		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	if !shouldRunTest(StandardIntegration) {
+		t.Skip()
 	}
 
 	t.Parallel()
 
-	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
+	testCfg := e2e.TestConfig(useMemory(), v2Enabled())
 
 	tsConfig := e2e.TestSuiteConfig(testCfg)
 	tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
@@ -174,13 +168,13 @@ func TestProxyClient(t *testing.T) {
 }
 
 func TestProxyClientWriteRead(t *testing.T) {
-	if !runIntegrationTests && !runTestnetIntegrationTests && !runIntegrationTestsV2 {
-		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	if !shouldRunTest(StandardIntegration) {
+		t.Skip()
 	}
 
 	t.Parallel()
 
-	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
+	testCfg := e2e.TestConfig(useMemory(), v2Enabled())
 
 	tsConfig := e2e.TestSuiteConfig(testCfg)
 	tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
@@ -192,13 +186,13 @@ func TestProxyClientWriteRead(t *testing.T) {
 }
 
 func TestProxyWithMaximumSizedBlob(t *testing.T) {
-	if !runIntegrationTests && !runTestnetIntegrationTests && !runIntegrationTestsV2 {
-		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	if !shouldRunTest(StandardIntegration) {
+		t.Skip()
 	}
 
 	t.Parallel()
 
-	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
+	testCfg := e2e.TestConfig(useMemory(), v2Enabled())
 
 	tsConfig := e2e.TestSuiteConfig(testCfg)
 	tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
@@ -213,13 +207,13 @@ func TestProxyWithMaximumSizedBlob(t *testing.T) {
 Ensure that proxy is able to write/read from a cache backend when enabled
 */
 func TestProxyCaching(t *testing.T) {
-	if !runIntegrationTests && !runTestnetIntegrationTests && !runIntegrationTestsV2 {
-		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	if !shouldRunTest(StandardIntegration) {
+		t.Skip()
 	}
 
 	t.Parallel()
 
-	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
+	testCfg := e2e.TestConfig(useMemory(), v2Enabled())
 	testCfg.UseS3Caching = true
 
 	tsConfig := e2e.TestSuiteConfig(testCfg)
@@ -233,13 +227,13 @@ func TestProxyCaching(t *testing.T) {
 }
 
 func TestProxyCachingWithRedis(t *testing.T) {
-	if !runIntegrationTests && !runTestnetIntegrationTests && !runIntegrationTestsV2 {
-		t.Skip("Skipping test as INTEGRATION or TESTNET env var not set")
+	if !shouldRunTest(StandardIntegration) {
+		t.Skip()
 	}
 
 	t.Parallel()
 
-	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
+	testCfg := e2e.TestConfig(useMemory(), v2Enabled())
 	testCfg.UseRedisCaching = true
 
 	tsConfig := e2e.TestSuiteConfig(testCfg)
@@ -259,15 +253,15 @@ func TestProxyCachingWithRedis(t *testing.T) {
 */
 
 func TestProxyReadFallback(t *testing.T) {
-	// test can't be ran against holesky since read failure case can't be manually triggered
-	if !runIntegrationTests || runTestnetIntegrationTests {
-		t.Skip("Skipping test as INTEGRATION env var not set")
+	// test can't be run against holesky since read failure case can't be manually triggered
+	if !shouldRunTest(LocalOnlyIntegration) {
+		t.Skip()
 	}
 
 	t.Parallel()
 
 	// setup server with S3 as a fallback option
-	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
+	testCfg := e2e.TestConfig(useMemory(), v2Enabled())
 	testCfg.UseS3Fallback = true
 	// ensure that blob memstore eviction times result in near immediate activation
 	testCfg.Expiration = time.Millisecond * 1
@@ -298,13 +292,14 @@ func TestProxyReadFallback(t *testing.T) {
 }
 
 func TestProxyMemConfigClientCanGetAndPatch(t *testing.T) {
-	// test can't be ran against holesky since its specific to memstore
-	if !runIntegrationTests || runTestnetIntegrationTests {
-		t.Skip("Skipping test as INTEGRATION env var not set")
+	// test can't be run against holesky since read failure case can't be manually triggered
+	if !shouldRunTest(LocalOnlyIntegration) {
+		t.Skip()
 	}
+
 	t.Parallel()
 
-	testCfg := e2e.TestConfig(useMemory(), runIntegrationTestsV2)
+	testCfg := e2e.TestConfig(useMemory(), v2Enabled())
 
 	tsConfig := e2e.TestSuiteConfig(testCfg)
 	tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
