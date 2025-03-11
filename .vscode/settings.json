@@ -1,7 +1,7 @@
 {
   "go.testEnvVars": {
-    // Only one of INTEGRATION or TESTNET should be true.
-    "INTEGRATION": "true",
+    // Only one of LOCAL or TESTNET should be true.
+    "LOCAL": "true",
     "TESTNET": "false",
     // To test against TESTNET, set SIGNER_PRIVATE_KEY and ETHEREUM_RPC.
     "SIGNER_PRIVATE_KEY": "",

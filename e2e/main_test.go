@@ -23,7 +23,7 @@ type TestType int
 
 const (
 	// StandardIntegration is a test that should run in any integration environment (local, or testnet)
-	StandardIntegration TestType = iota // 0
+	StandardIntegration TestType = iota
 	// LocalOnlyIntegration is a test that should run only in a local integration environment, NOT on testnet
 	LocalOnlyIntegration
 	// Fuzz is a fuzz test
@@ -37,20 +37,20 @@ var (
 // testFlagConfig contains the boolean flags used to configure test execution
 type testFlagConfig struct {
 	runTestnetIntegrationTests bool // holesky tests
-	runIntegrationTests        bool // memstore tests
+	runLocalIntegrationTests   bool // memstore tests
 	runFuzzTests               bool // fuzz tests
 	enableV2                   bool
 }
 
 // validate checks that the values in testFlagConfig are sensical, and prints the configured values for convenience
 func (tfc *testFlagConfig) validate() {
-	if tfc.runIntegrationTests && tfc.runTestnetIntegrationTests {
-		panic("only one of INTEGRATION=true or TESTNET=true env var can be set")
+	if tfc.runLocalIntegrationTests && tfc.runTestnetIntegrationTests {
+		panic("only one of LOCAL=true or TESTNET=true env var can be set")
 	}
 
 	fmt.Printf(
-		"runFuzzTests: %v, runIntegrationTests: %v, runTestnetIntegrationTests: %v, enableV2: %v\n",
-		tfc.runFuzzTests, tfc.runIntegrationTests, tfc.runTestnetIntegrationTests, tfc.enableV2,
+		"runFuzzTests: %v, runLocalIntegrationTests: %v, runTestnetIntegrationTests: %v, enableV2: %v\n",
+		tfc.runFuzzTests, tfc.runLocalIntegrationTests, tfc.runTestnetIntegrationTests, tfc.enableV2,
 	)
 }
 
@@ -64,9 +64,9 @@ func flagActivated(envVar string) bool {
 func shouldRunTest(testType TestType) bool {
 	switch testType {
 	case StandardIntegration:
-		return config.runIntegrationTests || config.runTestnetIntegrationTests
+		return config.runLocalIntegrationTests || config.runTestnetIntegrationTests
 	case LocalOnlyIntegration:
-		return config.runIntegrationTests
+		return config.runLocalIntegrationTests
 	case Fuzz:
 		return config.runFuzzTests
 	default:
@@ -93,7 +93,7 @@ func v2Enabled() bool {
 func ParseEnv() {
 	config = testFlagConfig{
 		runTestnetIntegrationTests: flagActivated("TESTNET"),
-		runIntegrationTests:        flagActivated("INTEGRATION"),
+		runLocalIntegrationTests:   flagActivated("LOCAL"),
 		enableV2:                   flagActivated("ENABLE_V2"),
 		runFuzzTests:               flagActivated("FUZZ"),
 	}
