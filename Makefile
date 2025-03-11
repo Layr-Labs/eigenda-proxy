@@ -29,6 +29,7 @@ test-unit:
 	go test ./... -parallel 4
 
 # Local V1/V2 E2E tests, leveraging op-e2e framework. Also tests the standard client against the proxy.
+# The -count=1 flag forces these tests to ignore cached test runs, and always execute.
 test-e2e-local:
 	INTEGRATION=true ENABLE_V2=true  go test -timeout 1m ./e2e -parallel 4 -count=1
 	INTEGRATION=true ENABLE_V2=false go test -timeout 1m ./e2e -parallel 4 -count=1
