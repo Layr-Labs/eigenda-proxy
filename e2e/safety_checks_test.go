@@ -22,7 +22,7 @@ func isNilPtrDerefPanic(err string) bool {
 // TestOpClientKeccak256MalformedInputs tests the NewDAClient from altda by setting and getting against []byte("")
 // preimage. It sets the precompute option to false on the NewDAClient.
 func TestOpClientKeccak256MalformedInputs(t *testing.T) {
-	if !shouldRunTest(StandardIntegration) {
+	if !shouldRunTest(LocalOnlyIntegration) {
 		t.Skip()
 	}
 
