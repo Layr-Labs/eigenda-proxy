@@ -32,17 +32,22 @@
             pkgs = import nixpkgs { inherit system; };
           }
         );
-      # FIXME: this currently doesn't work, with vendor issues that I don't understand.
-      # Could https://www.tweag.io/blog/2021-03-04-gomod2nix/ be helpful?
-      buildEigenDAProxy = pkgs: pkgs.buildGoModule {
-        pname = "eigenda-proxy";
-        version = "v0.1.0";
-        src = ./.;
-        vendorHash = null;
-        subPackages = [
-          "cmd/server"
-        ];
-      };
+      # TODO: might want to use https://www.tweag.io/blog/2021-03-04-gomod2nix/ instead
+      # See https://jameswillia.ms/posts/go-nix-containers.html
+      buildEigenDAProxy =
+        pkgs:
+        pkgs.buildGoModule {
+          pname = "eigenda-proxy";
+          version = "v0.1.0";
+          src = ./.;
+          # This hash will need to change when go files are changed.
+          # Also, make sure to stage the changes in git before running nix flake commands;
+          # see https://github.com/NixOS/nix/issues/7107
+          vendorHash = "sha256-WcTqUdamYOTb70Hi7kFRh3hEzI3LYr70eN+PlpRtlcY=";
+          subPackages = [
+            "cmd/server"
+          ];
+        };
     in
     {
       # Schemas tell Nix about the structure of your flake's outputs
@@ -53,14 +58,13 @@
       # See https://github.com/NixOS/nixfmt?tab=readme-ov-file#nix-fmt
       formatter = forEachSupportedSystem ({ pkgs }: pkgs.nixfmt-rfc-style);
 
-      # FIXME: buildEigenDAProxy doesn't work right now because of some go vendoring issues...
-      #        Not sure how to fix it yet, so commenting out for now.
-      # packages = forEachSupportedSystem ({ pkgs }:
-      #   rec {
-      #     eigendaProxy = buildEigenDAProxy pkgs; 
-      #     default = eigendaProxy;
-      #   }
-      # );
+      packages = forEachSupportedSystem (
+        { pkgs }:
+        rec {
+          eigendaProxy = buildEigenDAProxy pkgs;
+          default = eigendaProxy;
+        }
+      );
 
       # Development environments
       devShells = forEachSupportedSystem (
