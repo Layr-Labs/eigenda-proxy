@@ -7,14 +7,16 @@
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/*";
     flake-schemas.url = "https://flakehub.com/f/DeterminateSystems/flake-schemas/*";
     pre-commit-hooks.url = "github:cachix/pre-commit-hooks.nix";
+    treefmt-nix.url = "github:numtide/treefmt-nix";
   };
 
   outputs =
-    { self
-    , flake-schemas
-    , nixpkgs
-    , pre-commit-hooks
-    ,
+    {
+      self,
+      flake-schemas,
+      nixpkgs,
+      pre-commit-hooks,
+      treefmt-nix,
     }:
     let
       # Helpers for producing system-specific outputs
@@ -32,6 +34,11 @@
             pkgs = import nixpkgs { inherit system; };
           }
         );
+
+      # From https://github.com/numtide/treefmt-nix?tab=readme-ov-file#flakes
+      # Eval the treefmt modules from ./treefmt.nix
+      treefmtEval = forEachSupportedSystem ({ pkgs }: treefmt-nix.lib.evalModule pkgs ./treefmt.nix);
+
       # TODO: might want to use https://www.tweag.io/blog/2021-03-04-gomod2nix/ instead
       # See https://jameswillia.ms/posts/go-nix-containers.html
       buildEigenDAProxy =
@@ -54,9 +61,8 @@
       # See # See https://determinate.systems/posts/flake-schemas/
       schemas = flake-schemas.schemas;
 
-      # Used to format this very flake.nix file using `nix fmt .`
-      # See https://github.com/NixOS/nixfmt?tab=readme-ov-file#nix-fmt
-      formatter = forEachSupportedSystem ({ pkgs }: pkgs.nixfmt-rfc-style);
+      # for `nix fmt`; See https://github.com/numtide/treefmt-nix?tab=readme-ov-file#flakes
+      formatter = forEachSupportedSystem ({ pkgs }: treefmtEval.${pkgs.system}.config.build.wrapper);
 
       packages = forEachSupportedSystem (
         { pkgs }:
@@ -77,7 +83,7 @@
               pre-commit-check = pre-commit-hooks.lib.${pkgs.system}.run {
                 src = ./.;
                 hooks = {
-                  nixpkgs-fmt.enable = true;
+                  # TODO: replace to use treefmt instead of random linters/fmters
                   golangci-lint.enable = true;
                 };
               };
