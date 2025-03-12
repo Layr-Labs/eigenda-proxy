@@ -289,7 +289,7 @@ submission and state derivation. Tests are run both in a local environment, and 
 
 These tests also assert E2E client <-> server interactions using simple/op clients.
 
-#### E2E Fuzz
+#### Fuzz
 
-This E2E test will fuzz the proxy client server integration and op client keccak256 with malformed inputs. This is
+Fuzz tests exercise the proxy client server integration and op client keccak256 with malformed inputs. This is
 never meant to be fuzzed with EigenDA. Run with `make test-fuzz`.
