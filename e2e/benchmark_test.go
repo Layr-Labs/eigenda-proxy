@@ -8,23 +8,21 @@ import (
 	"testing"
 
 	"github.com/Layr-Labs/eigenda-proxy/clients/standard_client"
-	"github.com/Layr-Labs/eigenda-proxy/testmatrix"
-	"github.com/stretchr/testify/require"
+	"github.com/Layr-Labs/eigenda-proxy/testutils"
+	"github.com/Layr-Labs/eigenda-proxy/testutils/testmatrix"
 )
 
 // BenchmarkPutsWithSecondary  ... Takes in an async worker count and profiles blob insertions using
 // constant blob sizes in parallel
 func BenchmarkPutsWithSecondary(b *testing.B) {
 	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(V2Enabled, []any{true, false}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local}))
 
-	for _, testConfiguration := range testMatrix.GenerateTestConfigurations() {
+	for _, configurationSet := range testMatrix.GenerateConfigurationSets() {
 		b.Run(
-			testConfiguration.ToString(), func(b *testing.B) {
-				v2Enabled, ok := testConfiguration.GetValue(V2Enabled).(bool)
-				require.True(b, ok)
-
-				testCfg := NewTestConfig(true, v2Enabled)
+			configurationSet.ToString(), func(b *testing.B) {
+				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 				testCfg.UseS3Caching = true
 				writeThreadCount := os.Getenv("WRITE_THREAD_COUNT")
 				threadInt, err := strconv.Atoi(writeThreadCount)
@@ -33,9 +31,9 @@ func BenchmarkPutsWithSecondary(b *testing.B) {
 				}
 				testCfg.WriteThreadCount = threadInt
 
-				tsConfig := BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := TestSuiteSecretConfig(testCfg)
-				ts, kill := CreateTestSuite(tsConfig, tsSecretConfig)
+				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+				ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
 				defer kill()
 
 				cfg := &standard_client.Config{

@@ -1,4 +1,4 @@
-package e2e_test
+package e2e
 
 import (
 	"net/http"
@@ -10,10 +10,10 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/clients/standard_client"
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/common"
-	"github.com/Layr-Labs/eigenda-proxy/e2e"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/store"
-	"github.com/Layr-Labs/eigenda-proxy/testmatrix"
+	"github.com/Layr-Labs/eigenda-proxy/testutils"
+	"github.com/Layr-Labs/eigenda-proxy/testutils/testmatrix"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -42,7 +42,7 @@ func requireWriteReadSecondary(t *testing.T, cm *metrics.CountMap, bt common.Bac
 }
 
 // requireStandardClientSetGet ... ensures that std proxy client can disperse and read a blob
-func requireStandardClientSetGet(t *testing.T, ts e2e.TestSuite, blob []byte) {
+func requireStandardClientSetGet(t *testing.T, ts testutils.TestSuite, blob []byte) {
 	cfg := &standard_client.Config{
 		URL: ts.Address(),
 	}
@@ -60,7 +60,7 @@ func requireStandardClientSetGet(t *testing.T, ts e2e.TestSuite, blob []byte) {
 }
 
 // requireOPClientSetGet ... ensures that alt-da client can disperse and read a blob
-func requireOPClientSetGet(t *testing.T, ts e2e.TestSuite, blob []byte, precompute bool) {
+func requireOPClientSetGet(t *testing.T, ts testutils.TestSuite, blob []byte, precompute bool) {
 	daClient := altda.NewDAClient(ts.Address(), false, precompute)
 
 	commit, err := daClient.SetInput(ts.Ctx, blob)
@@ -75,30 +75,24 @@ func TestOptimismClientWithKeccak256Commitment(t *testing.T) {
 	t.Parallel()
 
 	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.Environment, []any{e2e.Local, e2e.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
 
-	testConfigurations := testMatrix.GenerateTestConfigurations()
-	for _, testConfiguration := range testConfigurations {
+	configurationSets := testMatrix.GenerateConfigurationSets()
+	for _, configurationSet := range configurationSets {
 		t.Run(
-			testConfiguration.ToString(), func(t *testing.T) {
+			configurationSet.ToString(), func(t *testing.T) {
 				t.Parallel()
 
-				v2Enabled, ok := testConfiguration.GetValue(e2e.V2Enabled).(bool)
-				require.True(t, ok)
-
-				environment, ok := testConfiguration.GetValue(e2e.Environment).(e2e.TestEnvironment)
-				require.True(t, ok)
-
-				testCfg := e2e.NewTestConfig(e2e.UseMemstore(environment), v2Enabled)
+				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 				testCfg.UseKeccak256ModeS3 = true
 
-				tsConfig := e2e.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
-				ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
+				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+				ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
 				defer kill()
 
-				requireOPClientSetGet(t, ts, e2e.RandBytes(100), true)
+				requireOPClientSetGet(t, ts, testutils.RandBytes(100), true)
 			})
 	}
 }
@@ -111,29 +105,23 @@ func TestOptimismClientWithGenericCommitment(t *testing.T) {
 	t.Parallel()
 
 	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.Environment, []any{e2e.Local, e2e.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
 
-	testConfigurations := testMatrix.GenerateTestConfigurations()
-	for _, testConfiguration := range testConfigurations {
+	configurationSets := testMatrix.GenerateConfigurationSets()
+	for _, configurationSet := range configurationSets {
 		t.Run(
-			testConfiguration.ToString(), func(t *testing.T) {
+			configurationSet.ToString(), func(t *testing.T) {
 				t.Parallel()
 
-				v2Enabled, ok := testConfiguration.GetValue(e2e.V2Enabled).(bool)
-				require.True(t, ok)
+				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 
-				environment, ok := testConfiguration.GetValue(e2e.Environment).(e2e.TestEnvironment)
-				require.True(t, ok)
-
-				testCfg := e2e.NewTestConfig(e2e.UseMemstore(environment), v2Enabled)
-
-				tsConfig := e2e.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
-				ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
+				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+				ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
 				defer kill()
 
-				requireOPClientSetGet(t, ts, e2e.RandBytes(100), false)
+				requireOPClientSetGet(t, ts, testutils.RandBytes(100), false)
 				requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.OptimismGeneric)
 			})
 	}
@@ -146,26 +134,20 @@ func TestProxyClientServerIntegration(t *testing.T) {
 	t.Parallel()
 
 	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.Environment, []any{e2e.Local, e2e.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
 
-	testConfigurations := testMatrix.GenerateTestConfigurations()
-	for _, testConfiguration := range testConfigurations {
+	configurationSets := testMatrix.GenerateConfigurationSets()
+	for _, configurationSet := range configurationSets {
 		t.Run(
-			testConfiguration.ToString(), func(t *testing.T) {
+			configurationSet.ToString(), func(t *testing.T) {
 				t.Parallel()
 
-				v2Enabled, ok := testConfiguration.GetValue(e2e.V2Enabled).(bool)
-				require.True(t, ok)
+				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 
-				environment, ok := testConfiguration.GetValue(e2e.Environment).(e2e.TestEnvironment)
-				require.True(t, ok)
-
-				testCfg := e2e.NewTestConfig(e2e.UseMemstore(environment), v2Enabled)
-
-				tsConfig := e2e.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
-				ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
+				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+				ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
 				t.Cleanup(kill)
 
 				cfg := &standard_client.Config{
@@ -225,7 +207,7 @@ func TestProxyClientServerIntegration(t *testing.T) {
 								err.Error(),
 								"400") && !isNilPtrDerefPanic(err.Error()))
 
-						testCert = e2e.RandBytes(10000)
+						testCert = testutils.RandBytes(10000)
 						_, err = daClient.GetData(ts.Ctx, testCert)
 						require.Error(t, err)
 						assert.True(t, strings.Contains(err.Error(), "400") && !isNilPtrDerefPanic(err.Error()))
@@ -238,26 +220,20 @@ func TestProxyClient(t *testing.T) {
 	t.Parallel()
 
 	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.Environment, []any{e2e.Local, e2e.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
 
-	testConfigurations := testMatrix.GenerateTestConfigurations()
-	for _, testConfiguration := range testConfigurations {
+	configurationSets := testMatrix.GenerateConfigurationSets()
+	for _, configurationSet := range configurationSets {
 		t.Run(
-			testConfiguration.ToString(), func(t *testing.T) {
+			configurationSet.ToString(), func(t *testing.T) {
 				t.Parallel()
 
-				v2Enabled, ok := testConfiguration.GetValue(e2e.V2Enabled).(bool)
-				require.True(t, ok)
+				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 
-				environment, ok := testConfiguration.GetValue(e2e.Environment).(e2e.TestEnvironment)
-				require.True(t, ok)
-
-				testCfg := e2e.NewTestConfig(e2e.UseMemstore(environment), v2Enabled)
-
-				tsConfig := e2e.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
-				ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
+				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+				ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
 				defer kill()
 
 				cfg := &standard_client.Config{
@@ -265,7 +241,7 @@ func TestProxyClient(t *testing.T) {
 				}
 				daClient := standard_client.New(cfg)
 
-				testPreimage := e2e.RandBytes(100)
+				testPreimage := testutils.RandBytes(100)
 
 				t.Log("Setting input data on proxy server...")
 				daCommitment, err := daClient.SetData(ts.Ctx, testPreimage)
@@ -283,29 +259,23 @@ func TestProxyClientWriteRead(t *testing.T) {
 	t.Parallel()
 
 	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.Environment, []any{e2e.Local, e2e.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
 
-	testConfigurations := testMatrix.GenerateTestConfigurations()
-	for _, testConfiguration := range testConfigurations {
+	configurationSets := testMatrix.GenerateConfigurationSets()
+	for _, configurationSet := range configurationSets {
 		t.Run(
-			testConfiguration.ToString(), func(t *testing.T) {
+			configurationSet.ToString(), func(t *testing.T) {
 				t.Parallel()
 
-				v2Enabled, ok := testConfiguration.GetValue(e2e.V2Enabled).(bool)
-				require.True(t, ok)
+				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 
-				environment, ok := testConfiguration.GetValue(e2e.Environment).(e2e.TestEnvironment)
-				require.True(t, ok)
-
-				testCfg := e2e.NewTestConfig(e2e.UseMemstore(environment), v2Enabled)
-
-				tsConfig := e2e.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
-				ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
+				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+				ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
 				defer kill()
 
-				requireStandardClientSetGet(t, ts, e2e.RandBytes(100))
+				requireStandardClientSetGet(t, ts, testutils.RandBytes(100))
 				requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
 			})
 	}
@@ -315,29 +285,23 @@ func TestProxyWithMaximumSizedBlob(t *testing.T) {
 	t.Parallel()
 
 	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.Environment, []any{e2e.Local, e2e.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
 
-	testConfigurations := testMatrix.GenerateTestConfigurations()
-	for _, testConfiguration := range testConfigurations {
+	configurationSets := testMatrix.GenerateConfigurationSets()
+	for _, configurationSet := range configurationSets {
 		t.Run(
-			testConfiguration.ToString(), func(t *testing.T) {
+			configurationSet.ToString(), func(t *testing.T) {
 				t.Parallel()
 
-				v2Enabled, ok := testConfiguration.GetValue(e2e.V2Enabled).(bool)
-				require.True(t, ok)
+				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 
-				environment, ok := testConfiguration.GetValue(e2e.Environment).(e2e.TestEnvironment)
-				require.True(t, ok)
-
-				testCfg := e2e.NewTestConfig(e2e.UseMemstore(environment), v2Enabled)
-
-				tsConfig := e2e.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
-				ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
+				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+				ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
 				defer kill()
 
-				requireStandardClientSetGet(t, ts, e2e.RandBytes(16_000_000))
+				requireStandardClientSetGet(t, ts, testutils.RandBytes(16_000_000))
 				requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
 			})
 	}
@@ -350,30 +314,24 @@ func TestProxyCaching(t *testing.T) {
 	t.Parallel()
 
 	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.Environment, []any{e2e.Local, e2e.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
 
-	testConfigurations := testMatrix.GenerateTestConfigurations()
-	for _, testConfiguration := range testConfigurations {
+	configurationSets := testMatrix.GenerateConfigurationSets()
+	for _, configurationSet := range configurationSets {
 		t.Run(
-			testConfiguration.ToString(), func(t *testing.T) {
+			configurationSet.ToString(), func(t *testing.T) {
 				t.Parallel()
 
-				v2Enabled, ok := testConfiguration.GetValue(e2e.V2Enabled).(bool)
-				require.True(t, ok)
-
-				environment, ok := testConfiguration.GetValue(e2e.Environment).(e2e.TestEnvironment)
-				require.True(t, ok)
-
-				testCfg := e2e.NewTestConfig(e2e.UseMemstore(environment), v2Enabled)
+				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 				testCfg.UseS3Caching = true
 
-				tsConfig := e2e.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
-				ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
+				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+				ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
 				defer kill()
 
-				requireStandardClientSetGet(t, ts, e2e.RandBytes(1_000_000))
+				requireStandardClientSetGet(t, ts, testutils.RandBytes(1_000_000))
 				requireWriteReadSecondary(t, ts.Metrics.SecondaryRequestsTotal, common.S3BackendType)
 				requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
 			})
@@ -384,30 +342,24 @@ func TestProxyCachingWithRedis(t *testing.T) {
 	t.Parallel()
 
 	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.Environment, []any{e2e.Local, e2e.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
 
-	testConfigurations := testMatrix.GenerateTestConfigurations()
-	for _, testConfiguration := range testConfigurations {
+	configurationSets := testMatrix.GenerateConfigurationSets()
+	for _, configurationSet := range configurationSets {
 		t.Run(
-			testConfiguration.ToString(), func(t *testing.T) {
+			configurationSet.ToString(), func(t *testing.T) {
 				t.Parallel()
 
-				v2Enabled, ok := testConfiguration.GetValue(e2e.V2Enabled).(bool)
-				require.True(t, ok)
-
-				environment, ok := testConfiguration.GetValue(e2e.Environment).(e2e.TestEnvironment)
-				require.True(t, ok)
-
-				testCfg := e2e.NewTestConfig(e2e.UseMemstore(environment), v2Enabled)
+				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 				testCfg.UseRedisCaching = true
 
-				tsConfig := e2e.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
-				ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
+				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+				ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
 				defer kill()
 
-				requireStandardClientSetGet(t, ts, e2e.RandBytes(1_000_000))
+				requireStandardClientSetGet(t, ts, testutils.RandBytes(1_000_000))
 				requireWriteReadSecondary(t, ts.Metrics.SecondaryRequestsTotal, common.RedisBackendType)
 				requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
 			})
@@ -424,36 +376,30 @@ func TestProxyReadFallback(t *testing.T) {
 	t.Parallel()
 
 	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.Environment, []any{e2e.Local, e2e.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
 
-	testConfigurations := testMatrix.GenerateTestConfigurations()
-	for _, testConfiguration := range testConfigurations {
+	configurationSets := testMatrix.GenerateConfigurationSets()
+	for _, configurationSet := range configurationSets {
 		t.Run(
-			testConfiguration.ToString(), func(t *testing.T) {
+			configurationSet.ToString(), func(t *testing.T) {
 				t.Parallel()
 
-				v2Enabled, ok := testConfiguration.GetValue(e2e.V2Enabled).(bool)
-				require.True(t, ok)
-
-				environment, ok := testConfiguration.GetValue(e2e.Environment).(e2e.TestEnvironment)
-				require.True(t, ok)
-
-				testCfg := e2e.NewTestConfig(e2e.UseMemstore(environment), v2Enabled)
+				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 				testCfg.UseS3Fallback = true
 				// ensure that blob memstore eviction times result in near immediate activation
 				testCfg.Expiration = time.Millisecond * 1
 
-				tsConfig := e2e.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
-				ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
+				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+				ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
 				defer kill()
 
 				cfg := &standard_client.Config{
 					URL: ts.Address(),
 				}
 				daClient := standard_client.New(cfg)
-				expectedBlob := e2e.RandBytes(1_000_000)
+				expectedBlob := testutils.RandBytes(1_000_000)
 				t.Log("Setting input data on proxy server...")
 				blobInfo, err := daClient.SetData(ts.Ctx, expectedBlob)
 				require.NoError(t, err)
@@ -464,7 +410,7 @@ func TestProxyReadFallback(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, expectedBlob, actualBlob)
 
-				requireStandardClientSetGet(t, ts, e2e.RandBytes(1_000_000))
+				requireStandardClientSetGet(t, ts, testutils.RandBytes(1_000_000))
 				requireWriteReadSecondary(t, ts.Metrics.SecondaryRequestsTotal, common.S3BackendType)
 				requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
 			})
@@ -475,24 +421,21 @@ func TestProxyMemConfigClientCanGetAndPatch(t *testing.T) {
 	t.Parallel()
 
 	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.V2Enabled, []any{true, false}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
+	// test can't be run against holesky since read failure case can't be manually triggered, so only use local backend
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local}))
 
-	testConfigurations := testMatrix.GenerateTestConfigurations()
-	for _, testConfiguration := range testConfigurations {
+	configurationSets := testMatrix.GenerateConfigurationSets()
+	for _, configurationSet := range configurationSets {
 		t.Run(
-			testConfiguration.ToString(), func(t *testing.T) {
+			configurationSet.ToString(), func(t *testing.T) {
 				t.Parallel()
 
-				v2Enabled, ok := testConfiguration.GetValue(e2e.V2Enabled).(bool)
-				require.True(t, ok)
+				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 
-				// test can't be run against holesky since read failure case can't be manually triggered, so always
-				// use memstore
-				testCfg := e2e.NewTestConfig(true, v2Enabled)
-
-				tsConfig := e2e.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
-				ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
+				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+				ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
 				defer kill()
 
 				memClient := memconfig_client.New(

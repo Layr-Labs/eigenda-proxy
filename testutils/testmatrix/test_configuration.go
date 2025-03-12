@@ -5,9 +5,9 @@ import (
 	"strings"
 )
 
-// TestConfiguration defines a specific set of configuration values for a test.
-type TestConfiguration struct {
-	// configKeyValues contains the values of the config fields for the test configuration
+// ConfigurationSet defines a specific set of configuration values for a test.
+type ConfigurationSet struct {
+	// configKeyValues contains the values of the config fields for the configuration set
 	configKeyValues []ConfigKeyValue
 	// configMap maps config key to index where the value exists in configKeyValues. we maintain both a map and a slice,
 	// since we want to maintain consistent ordering with config key value pairs
@@ -30,16 +30,16 @@ func NewConfigKeyValue(key string, value any) ConfigKeyValue {
 	}
 }
 
-// NewTestConfiguration creates a new empty test configuration
-func NewTestConfiguration() TestConfiguration {
-	return TestConfiguration{
+// NewConfigurationSet creates a new empty configuration set
+func NewConfigurationSet() ConfigurationSet {
+	return ConfigurationSet{
 		make([]ConfigKeyValue, 0),
 		make(map[string]int),
 	}
 }
 
 // AddKeyValue adds a new ConfigKeyValue to the TestConfiguration
-func (tc *TestConfiguration) AddKeyValue(configKeyValue ConfigKeyValue) {
+func (tc *ConfigurationSet) AddKeyValue(configKeyValue ConfigKeyValue) {
 	tc.configMap[configKeyValue.key] = len(tc.configKeyValues)
 	tc.configKeyValues = append(tc.configKeyValues, configKeyValue)
 }
@@ -47,18 +47,18 @@ func (tc *TestConfiguration) AddKeyValue(configKeyValue ConfigKeyValue) {
 // GetValue returns the value defined in the TestConfiguration for the input config key
 //
 // This method will panic if the requested key isn't found in the TestConfiguration
-func (tc *TestConfiguration) GetValue(key string) any {
+func (tc *ConfigurationSet) GetValue(key string) any {
 	index, ok := tc.configMap[key]
 	if !ok {
-		panicMessage := fmt.Sprintf("key %s not found in test configuration", key)
+		panicMessage := fmt.Sprintf("key %s not found in configuration set", key)
 		panic(panicMessage)
 	}
 	return tc.configKeyValues[index].value
 }
 
-// Copy creates a copy of the TestConfiguration
-func (tc *TestConfiguration) Copy() TestConfiguration {
-	configCopy := NewTestConfiguration()
+// Copy creates a copy of the ConfigurationSet
+func (tc *ConfigurationSet) Copy() ConfigurationSet {
+	configCopy := NewConfigurationSet()
 	for _, configKeyValue := range tc.configKeyValues {
 		configCopy.AddKeyValue(configKeyValue)
 	}
@@ -66,8 +66,8 @@ func (tc *TestConfiguration) Copy() TestConfiguration {
 	return configCopy
 }
 
-// ToString returns a multiline string representation of the TestConfiguration
-func (tc *TestConfiguration) ToString() string {
+// ToString returns a multiline string representation of the ConfigurationSet
+func (tc *ConfigurationSet) ToString() string {
 	stringBuilder := strings.Builder{}
 
 	stringBuilder.WriteString("\t{")
@@ -82,8 +82,8 @@ func (tc *TestConfiguration) ToString() string {
 	return stringBuilder.String()
 }
 
-// TestConfigurationsToString produces a multiline string representing a list of test configurations
-func TestConfigurationsToString(testConfigurations []TestConfiguration) string {
+// ConfigurationSetsToString produces a multiline string representing a list of configuration sets
+func ConfigurationSetsToString(testConfigurations []ConfigurationSet) string {
 	stringBuilder := strings.Builder{}
 	stringBuilder.WriteString("[\n")
 	for _, config := range testConfigurations {

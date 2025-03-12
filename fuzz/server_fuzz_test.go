@@ -1,7 +1,7 @@
 package fuzz_test
 
 import (
-	"github.com/Layr-Labs/eigenda-proxy/e2e"
+	"github.com/Layr-Labs/eigenda-proxy/testutils"
 	"github.com/stretchr/testify/assert"
 
 	"testing"
@@ -13,19 +13,19 @@ import (
 // FuzzProxyClientServerV1 will fuzz the proxy client server integration
 // and op client keccak256 with malformed inputs. This is never meant to be fuzzed with EigenDA.
 func FuzzProxyClientServerV1(f *testing.F) {
-	testCfg := e2e.NewTestConfig(true, false)
+	testCfg := testutils.NewTestConfig(true, false)
 	fuzzProxyClientServer(f, testCfg)
 }
 
 func FuzzProxyClientServerV2(f *testing.F) {
-	testCfg := e2e.NewTestConfig(true, true)
+	testCfg := testutils.NewTestConfig(true, true)
 	fuzzProxyClientServer(f, testCfg)
 }
 
-func fuzzProxyClientServer(f *testing.F, testCfg e2e.TestConfig) {
-	tsConfig := e2e.BuildTestSuiteConfig(testCfg)
-	tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
-	ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
+func fuzzProxyClientServer(f *testing.F, testCfg testutils.TestConfig) {
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
 
 	for r := rune(0); r <= unicode.MaxRune; r++ {
 		if unicode.IsPrint(r) {

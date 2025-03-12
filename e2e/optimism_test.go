@@ -1,11 +1,11 @@
-package e2e_test
+package e2e
 
 import (
 	"testing"
 
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
-	"github.com/Layr-Labs/eigenda-proxy/e2e"
-	"github.com/Layr-Labs/eigenda-proxy/testmatrix"
+	"github.com/Layr-Labs/eigenda-proxy/testutils"
+	"github.com/Layr-Labs/eigenda-proxy/testutils/testmatrix"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	e2econfig "github.com/ethereum-optimism/optimism/op-e2e/config"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils"
@@ -133,25 +133,19 @@ func (a *L2AltDA) ActL1Finalized(t actions.Testing) {
 
 func TestOptimismKeccak256Commitment(t *testing.T) {
 	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.Environment, []any{e2e.Local, e2e.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
 
-	testConfigurations := testMatrix.GenerateTestConfigurations()
-	for _, testConfiguration := range testConfigurations {
+	configurationSets := testMatrix.GenerateConfigurationSets()
+	for _, configurationSet := range configurationSets {
 		t.Run(
-			testConfiguration.ToString(), func(t *testing.T) {
-				v2Enabled, ok := testConfiguration.GetValue(e2e.V2Enabled).(bool)
-				require.True(t, ok)
-
-				environment, ok := testConfiguration.GetValue(e2e.Environment).(e2e.TestEnvironment)
-				require.True(t, ok)
-
-				testCfg := e2e.NewTestConfig(e2e.UseMemstore(environment), v2Enabled)
+			configurationSet.ToString(), func(t *testing.T) {
+				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 				testCfg.UseKeccak256ModeS3 = true
 
-				tsConfig := e2e.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
-				proxyTS, shutDown := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
+				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+				proxyTS, shutDown := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
 				defer shutDown()
 
 				ot := actions.NewDefaultTesting(t)
@@ -202,24 +196,18 @@ func TestOptimismKeccak256Commitment(t *testing.T) {
 
 func TestOptimismGenericCommitment(t *testing.T) {
 	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.Environment, []any{e2e.Local, e2e.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
 
-	testConfigurations := testMatrix.GenerateTestConfigurations()
-	for _, testConfiguration := range testConfigurations {
+	configurationSets := testMatrix.GenerateConfigurationSets()
+	for _, configurationSet := range configurationSets {
 		t.Run(
-			testConfiguration.ToString(), func(t *testing.T) {
-				v2Enabled, ok := testConfiguration.GetValue(e2e.V2Enabled).(bool)
-				require.True(t, ok)
+			configurationSet.ToString(), func(t *testing.T) {
+				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 
-				environment, ok := testConfiguration.GetValue(e2e.Environment).(e2e.TestEnvironment)
-				require.True(t, ok)
-
-				testCfg := e2e.NewTestConfig(e2e.UseMemstore(environment), v2Enabled)
-
-				tsConfig := e2e.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
-				proxyTS, shutDown := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
+				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+				proxyTS, shutDown := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
 				defer shutDown()
 
 				ot := actions.NewDefaultTesting(t)

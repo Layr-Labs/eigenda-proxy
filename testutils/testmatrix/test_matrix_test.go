@@ -18,9 +18,9 @@ func TestTestMatrix(t *testing.T) {
 	testMatrix.AddDimension(dimensionB)
 	testMatrix.AddDimension(dimensionC)
 
-	testConfigurations := testMatrix.GenerateTestConfigurations()
+	configurationSets := testMatrix.GenerateConfigurationSets()
 
-	require.Equal(t, 6, len(testConfigurations))
+	require.Equal(t, 6, len(configurationSets))
 
-	fmt.Print(TestConfigurationsToString(testConfigurations))
+	fmt.Print(ConfigurationSetsToString(configurationSets))
 }

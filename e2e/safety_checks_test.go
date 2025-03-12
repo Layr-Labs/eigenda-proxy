@@ -1,4 +1,4 @@
-package e2e_test
+package e2e
 
 import (
 	"fmt"
@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Layr-Labs/eigenda-proxy/e2e"
-	"github.com/Layr-Labs/eigenda-proxy/testmatrix"
+	"github.com/Layr-Labs/eigenda-proxy/testutils"
+	"github.com/Layr-Labs/eigenda-proxy/testutils/testmatrix"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/stretchr/testify/assert"
 
@@ -26,26 +26,20 @@ func TestOpClientKeccak256MalformedInputs(t *testing.T) {
 	t.Parallel()
 
 	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.Environment, []any{e2e.Local, e2e.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
 
-	testConfigurations := testMatrix.GenerateTestConfigurations()
-	for _, testConfiguration := range testConfigurations {
+	configurationSets := testMatrix.GenerateConfigurationSets()
+	for _, configurationSet := range configurationSets {
 		t.Run(
-			testConfiguration.ToString(), func(t *testing.T) {
+			configurationSet.ToString(), func(t *testing.T) {
 				t.Parallel()
 
-				v2Enabled, ok := testConfiguration.GetValue(e2e.V2Enabled).(bool)
-				require.True(t, ok)
-
-				environment, ok := testConfiguration.GetValue(e2e.Environment).(e2e.TestEnvironment)
-				require.True(t, ok)
-
-				testCfg := e2e.NewTestConfig(e2e.UseMemstore(environment), v2Enabled)
+				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 				testCfg.UseKeccak256ModeS3 = true
-				tsConfig := e2e.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
-				ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
+				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+				ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
 				defer kill()
 
 				// nil commitment. Should return an error but currently is not. This needs to be fixed by OP
@@ -94,26 +88,20 @@ func TestProxyClientMalformedInputCases(t *testing.T) {
 	t.Parallel()
 
 	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.Environment, []any{e2e.Local, e2e.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
 
-	testConfigurations := testMatrix.GenerateTestConfigurations()
-	for _, testConfiguration := range testConfigurations {
+	configurationSets := testMatrix.GenerateConfigurationSets()
+	for _, configurationSet := range configurationSets {
 		t.Run(
-			testConfiguration.ToString(), func(t *testing.T) {
+			configurationSet.ToString(), func(t *testing.T) {
 				t.Parallel()
 
-				v2Enabled, ok := testConfiguration.GetValue(e2e.V2Enabled).(bool)
-				require.True(t, ok)
+				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 
-				environment, ok := testConfiguration.GetValue(e2e.Environment).(e2e.TestEnvironment)
-				require.True(t, ok)
-
-				testCfg := e2e.NewTestConfig(e2e.UseMemstore(environment), v2Enabled)
-
-				tsConfig := e2e.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
-				ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
+				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+				ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
 				defer kill()
 
 				cfg := &standard_client.Config{
@@ -169,7 +157,7 @@ func TestProxyClientMalformedInputCases(t *testing.T) {
 					"get data edge cases - huge cert", func(t *testing.T) {
 						// TODO: we need to add the 0 version byte at the beginning.
 						// should this not be done automatically by the std_commitment client?
-						testCert := append([]byte{0}, e2e.RandBytes(10000)...)
+						testCert := append([]byte{0}, testutils.RandBytes(10000)...)
 						_, err := daClient.GetData(ts.Ctx, testCert)
 						require.Error(t, err)
 						// Commenting as this error is not returned by memstore but this test is also run
@@ -189,33 +177,27 @@ func TestKeccak256CommitmentRequestErrorsWhenS3NotSet(t *testing.T) {
 	t.Parallel()
 
 	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.Environment, []any{e2e.Local, e2e.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
 
-	testConfigurations := testMatrix.GenerateTestConfigurations()
-	for _, testConfiguration := range testConfigurations {
+	configurationSets := testMatrix.GenerateConfigurationSets()
+	for _, configurationSet := range configurationSets {
 		t.Run(
-			testConfiguration.ToString(), func(t *testing.T) {
+			configurationSet.ToString(), func(t *testing.T) {
 				t.Parallel()
 
-				v2Enabled, ok := testConfiguration.GetValue(e2e.V2Enabled).(bool)
-				require.True(t, ok)
-
-				environment, ok := testConfiguration.GetValue(e2e.Environment).(e2e.TestEnvironment)
-				require.True(t, ok)
-
-				testCfg := e2e.NewTestConfig(e2e.UseMemstore(environment), v2Enabled)
+				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 				testCfg.UseKeccak256ModeS3 = true
 
-				tsConfig := e2e.BuildTestSuiteConfig(testCfg)
+				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 				tsConfig.EigenDAConfig.StorageConfig.S3Config.Endpoint = "localhost:1234"
-				tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
-				ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
+				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+				ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
 				defer kill()
 
 				daClient := altda.NewDAClient(ts.Address(), false, true)
 
-				testPreimage := e2e.RandBytes(100)
+				testPreimage := testutils.RandBytes(100)
 
 				_, err := daClient.SetInput(ts.Ctx, testPreimage)
 				// TODO: the server currently returns an internal server error. Should it return a 400 instead?
@@ -228,26 +210,20 @@ func TestOversizedBlobRequestErrors(t *testing.T) {
 	t.Parallel()
 
 	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(e2e.Environment, []any{e2e.Local, e2e.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
 
-	testConfigurations := testMatrix.GenerateTestConfigurations()
-	for _, testConfiguration := range testConfigurations {
+	configurationSets := testMatrix.GenerateConfigurationSets()
+	for _, configurationSet := range configurationSets {
 		t.Run(
-			testConfiguration.ToString(), func(t *testing.T) {
+			configurationSet.ToString(), func(t *testing.T) {
 				t.Parallel()
 
-				v2Enabled, ok := testConfiguration.GetValue(e2e.V2Enabled).(bool)
-				require.True(t, ok)
+				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 
-				environment, ok := testConfiguration.GetValue(e2e.Environment).(e2e.TestEnvironment)
-				require.True(t, ok)
-
-				testCfg := e2e.NewTestConfig(e2e.UseMemstore(environment), v2Enabled)
-
-				tsConfig := e2e.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
-				ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
+				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+				ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
 				defer kill()
 
 				cfg := &standard_client.Config{
@@ -255,7 +231,7 @@ func TestOversizedBlobRequestErrors(t *testing.T) {
 				}
 				daClient := standard_client.New(cfg)
 				//  17MB blob
-				testPreimage := e2e.RandBytes(17_000_0000)
+				testPreimage := testutils.RandBytes(17_000_0000)
 
 				t.Log("Setting input data on proxy server...")
 				blobInfo, err := daClient.SetData(ts.Ctx, testPreimage)

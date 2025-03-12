@@ -34,14 +34,14 @@ func (tm *TestMatrix) AddDimension(dimension Dimension) {
 	tm.dimensions = append(tm.dimensions, dimension)
 }
 
-// GenerateTestConfigurations produces a list of test configurations based on the defined TestMatrix dimensions.
-func (tm *TestMatrix) GenerateTestConfigurations() []TestConfiguration {
+// GenerateConfigurationSets produces a list of test configurations based on the defined TestMatrix dimensions.
+func (tm *TestMatrix) GenerateConfigurationSets() []ConfigurationSet {
 	if len(tm.dimensions) == 0 {
 		return nil
 	}
 
 	// start with a single empty test configuration
-	configs := []TestConfiguration{NewTestConfiguration()}
+	configs := []ConfigurationSet{NewConfigurationSet()}
 
 	// for each defined dimension, we will multiply the existing list of configurations by the number of possible values
 	// for the new dimension
@@ -50,7 +50,7 @@ func (tm *TestMatrix) GenerateTestConfigurations() []TestConfiguration {
 			continue
 		}
 
-		var expandedConfigs []TestConfiguration
+		var expandedConfigs []ConfigurationSet
 		for _, existingConfig := range configs {
 			for _, dimensionValue := range dimension.values {
 				newConfig := existingConfig.Copy()
