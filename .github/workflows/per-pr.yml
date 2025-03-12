@@ -37,7 +37,7 @@ jobs:
       - name: Run flag test
         run: ${{ github.workspace }}/scripts/test-proxy-startup-with-env-vars.sh
 
-  test-local:
+  unit-tests:
     outputs:
       COVERAGE: ${{ steps.unit.outputs.coverage }}
     runs-on: ubuntu-latest
@@ -49,13 +49,24 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
       - run: go mod download
-
-      # These tests are all pretty fast (<2mins each), so we run them sequentially.
-      # If ever they become slow we could parallelize them by using a matrix strategy.
       - run: make test-unit
-      - run: make test-e2e
 
-  fuzz:
+  e2e-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - run: go mod download
+      - run: make test-e2e
+        env:
+          SIGNER_PRIVATE_KEY: ${{ secrets.SIGNER_PRIVATE_KEY }}
+          ETHEREUM_RPC: ${{ secrets.ETHEREUM_RPC }}
+
+  fuzz-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
