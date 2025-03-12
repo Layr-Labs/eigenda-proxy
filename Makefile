@@ -25,32 +25,20 @@ disperse-test-blob:
 clean:
 	rm bin/eigenda-proxy
 
+# Runs all tests, excluding e2e and fuzz tests
 test-unit:
-	go test ./... -parallel 4
+	go test `go list ./... | grep -v ./e2e | grep -v ./fuzz` -parallel 4
 
-# Local V1/V2 E2E tests, leveraging op-e2e framework. Also tests the standard client against the proxy.
-# The -count=1 flag forces these tests to ignore cached test runs, and always execute.
-test-e2e-local:
-	LOCAL=true ENABLE_V2=true  go test -timeout 1m ./e2e -parallel 4 -count=1
-	LOCAL=true ENABLE_V2=false go test -timeout 1m ./e2e -parallel 4 -count=1
-
-# E2E tests against holesky testnet
-# Holesky is currently broken after recent pectra hardfork.
-# This test is thus flaky depending on whether the testnet producing blocks or not
-# at the time it is run...
-# In good cases it runs in ~20 mins, so we set a timeout of 30 mins.
-# The test failing in CI is currently expected however, so expect to have to re-run it.
-# See https://dora.holesky.ethpandaops.io/epochs for block production status.
-test-e2e-holesky:
+# E2E tests, leveraging op-e2e framework. Also tests the standard client against the proxy.
+# If holesky tests are failing, consider checking https://dora.holesky.ethpandaops.io/epochs for block production status.
+test-e2e:
 	# Add the -v flag to be able to observe logs as the run is happening on CI
 	# given that this test takes >20 mins to run. Good to have early feedback when needed.
-	TESTNET=true ENABLE_V2=true  go test -v -timeout 30m ./e2e  -parallel 4 -count=1
-	TESTNET=true ENABLE_V2=false go test -v -timeout 30m ./e2e  -parallel 4 -count=1
+	go test -v -timeout 30m ./e2e -parallel 4
 
 # E2E test which fuzzes the proxy client server integration and op client keccak256 with malformed inputs
-test-e2e-fuzz:
-	FUZZ=true ENABLE_V2=true  go test ./e2e -fuzz -v -fuzztime=5m
-	FUZZ=true ENABLE_V2=false go test ./e2e -fuzz -v -fuzztime=5m
+test-fuzz:
+	go test ./fuzz -fuzz -v -fuzztime=5m
 
 .PHONY: lint
 lint:

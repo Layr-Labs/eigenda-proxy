@@ -5,6 +5,7 @@ import (
 
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/e2e"
+	"github.com/Layr-Labs/eigenda-proxy/testmatrix"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	e2econfig "github.com/ethereum-optimism/optimism/op-e2e/config"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils"
@@ -130,109 +131,139 @@ func (a *L2AltDA) ActL1Finalized(t actions.Testing) {
 	a.sequencer.ActL1FinalizedSignal(t)
 }
 
-func TestOptimismKeccak256Commitment(gt *testing.T) {
-	if !shouldRunTest(StandardIntegration) {
-		gt.Skip()
+func TestOptimismKeccak256Commitment(t *testing.T) {
+	testMatrix := testmatrix.NewTestMatrix()
+	testMatrix.AddDimension(testmatrix.NewDimension(e2e.V2Enabled, []any{true, false}))
+	testMatrix.AddDimension(testmatrix.NewDimension(e2e.Environment, []any{e2e.Local, e2e.Testnet}))
+
+	testConfigurations := testMatrix.GenerateTestConfigurations()
+	for _, testConfiguration := range testConfigurations {
+		t.Run(
+			testConfiguration.ToString(), func(t *testing.T) {
+				v2Enabled, ok := testConfiguration.GetValue(e2e.V2Enabled).(bool)
+				require.True(t, ok)
+
+				environment, ok := testConfiguration.GetValue(e2e.Environment).(e2e.TestEnvironment)
+				require.True(t, ok)
+
+				testCfg := e2e.NewTestConfig(e2e.UseMemstore(environment), v2Enabled)
+				testCfg.UseKeccak256ModeS3 = true
+
+				tsConfig := e2e.BuildTestSuiteConfig(testCfg)
+				tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
+				proxyTS, shutDown := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
+				defer shutDown()
+
+				ot := actions.NewDefaultTesting(t)
+
+				optimism := NewL2AltDA(ot, proxyTS.Address(), false)
+
+				// build L1 block #1
+				optimism.ActL1Blocks(ot, 1)
+				optimism.miner.ActL1SafeNext(ot)
+
+				// Fill with l2 blocks up to the L1 head
+				optimism.sequencer.ActL1HeadSignal(ot)
+				optimism.sequencer.ActBuildToL1Head(ot)
+
+				optimism.sequencer.ActL2PipelineFull(ot)
+				optimism.sequencer.ActL1SafeSignal(ot)
+				require.Equal(ot, uint64(1), optimism.sequencer.SyncStatus().SafeL1.Number)
+
+				// add L1 block #2
+				optimism.ActL1Blocks(ot, 1)
+				optimism.miner.ActL1SafeNext(ot)
+				optimism.miner.ActL1FinalizeNext(ot)
+				optimism.sequencer.ActL1HeadSignal(ot)
+				optimism.sequencer.ActBuildToL1Head(ot)
+
+				// Catch up derivation
+				optimism.sequencer.ActL2PipelineFull(ot)
+				optimism.sequencer.ActL1FinalizedSignal(ot)
+				optimism.sequencer.ActL1SafeSignal(ot)
+
+				// commit all the l2 blocks to L1
+				optimism.batcher.ActSubmitAll(ot)
+				optimism.miner.ActL1StartBlock(12)(ot)
+				optimism.miner.ActL1IncludeTx(optimism.dp.Addresses.Batcher)(ot)
+				optimism.miner.ActL1EndBlock(ot)
+
+				// verify
+				optimism.sequencer.ActL2PipelineFull(ot)
+				optimism.ActL1Finalized(ot)
+
+				requireDispersalRetrievalEigenDA(
+					t,
+					proxyTS.Metrics.HTTPServerRequestsTotal,
+					commitments.OptimismKeccak)
+			})
 	}
-
-	testCfg := e2e.TestConfig(useMemory(), v2Enabled())
-	testCfg.UseKeccak256ModeS3 = true
-
-	tsConfig := e2e.TestSuiteConfig(testCfg)
-	tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
-	proxyTS, shutDown := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
-	defer shutDown()
-
-	t := actions.NewDefaultTesting(gt)
-
-	optimism := NewL2AltDA(t, proxyTS.Address(), false)
-
-	// build L1 block #1
-	optimism.ActL1Blocks(t, 1)
-	optimism.miner.ActL1SafeNext(t)
-
-	// Fill with l2 blocks up to the L1 head
-	optimism.sequencer.ActL1HeadSignal(t)
-	optimism.sequencer.ActBuildToL1Head(t)
-
-	optimism.sequencer.ActL2PipelineFull(t)
-	optimism.sequencer.ActL1SafeSignal(t)
-	require.Equal(t, uint64(1), optimism.sequencer.SyncStatus().SafeL1.Number)
-
-	// add L1 block #2
-	optimism.ActL1Blocks(t, 1)
-	optimism.miner.ActL1SafeNext(t)
-	optimism.miner.ActL1FinalizeNext(t)
-	optimism.sequencer.ActL1HeadSignal(t)
-	optimism.sequencer.ActBuildToL1Head(t)
-
-	// Catch up derivation
-	optimism.sequencer.ActL2PipelineFull(t)
-	optimism.sequencer.ActL1FinalizedSignal(t)
-	optimism.sequencer.ActL1SafeSignal(t)
-
-	// commit all the l2 blocks to L1
-	optimism.batcher.ActSubmitAll(t)
-	optimism.miner.ActL1StartBlock(12)(t)
-	optimism.miner.ActL1IncludeTx(optimism.dp.Addresses.Batcher)(t)
-	optimism.miner.ActL1EndBlock(t)
-
-	// verify
-	optimism.sequencer.ActL2PipelineFull(t)
-	optimism.ActL1Finalized(t)
-
-	requireDispersalRetrievalEigenDA(gt, proxyTS.Metrics.HTTPServerRequestsTotal, commitments.OptimismKeccak)
 }
 
-func TestOptimismGenericCommitment(gt *testing.T) {
-	if !shouldRunTest(StandardIntegration) {
-		gt.Skip()
+func TestOptimismGenericCommitment(t *testing.T) {
+	testMatrix := testmatrix.NewTestMatrix()
+	testMatrix.AddDimension(testmatrix.NewDimension(e2e.V2Enabled, []any{true, false}))
+	testMatrix.AddDimension(testmatrix.NewDimension(e2e.Environment, []any{e2e.Local, e2e.Testnet}))
+
+	testConfigurations := testMatrix.GenerateTestConfigurations()
+	for _, testConfiguration := range testConfigurations {
+		t.Run(
+			testConfiguration.ToString(), func(t *testing.T) {
+				v2Enabled, ok := testConfiguration.GetValue(e2e.V2Enabled).(bool)
+				require.True(t, ok)
+
+				environment, ok := testConfiguration.GetValue(e2e.Environment).(e2e.TestEnvironment)
+				require.True(t, ok)
+
+				testCfg := e2e.NewTestConfig(e2e.UseMemstore(environment), v2Enabled)
+
+				tsConfig := e2e.BuildTestSuiteConfig(testCfg)
+				tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
+				proxyTS, shutDown := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
+				defer shutDown()
+
+				ot := actions.NewDefaultTesting(t)
+
+				optimism := NewL2AltDA(ot, proxyTS.Address(), true)
+
+				// build L1 block #1
+				optimism.ActL1Blocks(ot, 1)
+				optimism.miner.ActL1SafeNext(ot)
+
+				// Fill with l2 blocks up to the L1 head
+				optimism.sequencer.ActL1HeadSignal(ot)
+				optimism.sequencer.ActBuildToL1Head(ot)
+
+				optimism.sequencer.ActL2PipelineFull(ot)
+				optimism.sequencer.ActL1SafeSignal(ot)
+				require.Equal(t, uint64(1), optimism.sequencer.SyncStatus().SafeL1.Number)
+
+				// add L1 block #2
+				optimism.ActL1Blocks(ot, 1)
+				optimism.miner.ActL1SafeNext(ot)
+				optimism.miner.ActL1FinalizeNext(ot)
+				optimism.sequencer.ActL1HeadSignal(ot)
+				optimism.sequencer.ActBuildToL1Head(ot)
+
+				// Catch up derivation
+				optimism.sequencer.ActL2PipelineFull(ot)
+				optimism.sequencer.ActL1FinalizedSignal(ot)
+				optimism.sequencer.ActL1SafeSignal(ot)
+
+				// commit all the l2 blocks to L1
+				optimism.batcher.ActSubmitAll(ot)
+				optimism.miner.ActL1StartBlock(12)(ot)
+				optimism.miner.ActL1IncludeTx(optimism.dp.Addresses.Batcher)(ot)
+				optimism.miner.ActL1EndBlock(ot)
+
+				// verify
+				optimism.sequencer.ActL2PipelineFull(ot)
+				optimism.ActL1Finalized(ot)
+
+				requireDispersalRetrievalEigenDA(
+					t,
+					proxyTS.Metrics.HTTPServerRequestsTotal,
+					commitments.OptimismGeneric)
+			})
 	}
-
-	testConfig := e2e.TestConfig(useMemory(), v2Enabled())
-
-	tsConfig := e2e.TestSuiteConfig(testConfig)
-	tsSecretConfig := e2e.TestSuiteSecretConfig(testConfig)
-	proxyTS, shutDown := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
-	defer shutDown()
-
-	t := actions.NewDefaultTesting(gt)
-
-	optimism := NewL2AltDA(t, proxyTS.Address(), true)
-
-	// build L1 block #1
-	optimism.ActL1Blocks(t, 1)
-	optimism.miner.ActL1SafeNext(t)
-
-	// Fill with l2 blocks up to the L1 head
-	optimism.sequencer.ActL1HeadSignal(t)
-	optimism.sequencer.ActBuildToL1Head(t)
-
-	optimism.sequencer.ActL2PipelineFull(t)
-	optimism.sequencer.ActL1SafeSignal(t)
-	require.Equal(t, uint64(1), optimism.sequencer.SyncStatus().SafeL1.Number)
-
-	// add L1 block #2
-	optimism.ActL1Blocks(t, 1)
-	optimism.miner.ActL1SafeNext(t)
-	optimism.miner.ActL1FinalizeNext(t)
-	optimism.sequencer.ActL1HeadSignal(t)
-	optimism.sequencer.ActBuildToL1Head(t)
-
-	// Catch up derivation
-	optimism.sequencer.ActL2PipelineFull(t)
-	optimism.sequencer.ActL1FinalizedSignal(t)
-	optimism.sequencer.ActL1SafeSignal(t)
-
-	// commit all the l2 blocks to L1
-	optimism.batcher.ActSubmitAll(t)
-	optimism.miner.ActL1StartBlock(12)(t)
-	optimism.miner.ActL1IncludeTx(optimism.dp.Addresses.Batcher)(t)
-	optimism.miner.ActL1EndBlock(t)
-
-	// verify
-	optimism.sequencer.ActL2PipelineFull(t)
-	optimism.ActL1Finalized(t)
-
-	requireDispersalRetrievalEigenDA(gt, proxyTS.Metrics.HTTPServerRequestsTotal, commitments.OptimismGeneric)
 }

@@ -106,7 +106,7 @@ func startRedisContainer() error {
 	return nil
 }
 
-type Cfg struct {
+type TestConfig struct {
 	UseV2            bool
 	UseMemory        bool
 	Expiration       time.Duration
@@ -118,8 +118,8 @@ type Cfg struct {
 	UseS3Fallback      bool
 }
 
-func TestConfig(useMemory bool, useV2 bool) Cfg {
-	return Cfg{
+func NewTestConfig(useMemory bool, useV2 bool) TestConfig {
+	return TestConfig{
 		UseV2:              useV2,
 		UseMemory:          useMemory,
 		Expiration:         14 * 24 * time.Hour,
@@ -162,7 +162,7 @@ func createS3Config(eigendaCfg config.ProxyConfig) config.AppConfig {
 	}
 }
 
-func TestSuiteConfig(testCfg Cfg) config.AppConfig {
+func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 	// load signer key from environment
 	pk := os.Getenv(privateKey)
 	if pk == "" && !testCfg.UseMemory {
@@ -266,7 +266,7 @@ func TestSuiteConfig(testCfg Cfg) config.AppConfig {
 	return cfg
 }
 
-func TestSuiteSecretConfig(testCfg Cfg) common.SecretConfigV2 {
+func TestSuiteSecretConfig(testCfg TestConfig) common.SecretConfigV2 {
 	// load signer key from environment
 	signerPrivateKey := os.Getenv(privateKey)
 	if signerPrivateKey == "" && !testCfg.UseMemory {

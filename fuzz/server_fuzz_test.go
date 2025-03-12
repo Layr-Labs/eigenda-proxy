@@ -1,25 +1,29 @@
-package e2e_test
+package fuzz_test
 
 import (
+	"github.com/Layr-Labs/eigenda-proxy/e2e"
 	"github.com/stretchr/testify/assert"
 
 	"testing"
 	"unicode"
 
 	"github.com/Layr-Labs/eigenda-proxy/clients/standard_client"
-	"github.com/Layr-Labs/eigenda-proxy/e2e"
 )
 
-// FuzzProxyClientServerIntegrationAndOpClientKeccak256MalformedInputs will fuzz the proxy client server integration
+// FuzzProxyClientServerV1 will fuzz the proxy client server integration
 // and op client keccak256 with malformed inputs. This is never meant to be fuzzed with EigenDA.
-func FuzzProxyClientServerIntegration(f *testing.F) {
-	if !shouldRunTest(Fuzz) {
-		f.Skip()
-	}
+func FuzzProxyClientServerV1(f *testing.F) {
+	testCfg := e2e.NewTestConfig(true, false)
+	fuzzProxyClientServer(f, testCfg)
+}
 
-	testCfg := e2e.TestConfig(useMemory(), v2Enabled())
+func FuzzProxyClientServerV2(f *testing.F) {
+	testCfg := e2e.NewTestConfig(true, true)
+	fuzzProxyClientServer(f, testCfg)
+}
 
-	tsConfig := e2e.TestSuiteConfig(testCfg)
+func fuzzProxyClientServer(f *testing.F, testCfg e2e.TestConfig) {
+	tsConfig := e2e.BuildTestSuiteConfig(testCfg)
 	tsSecretConfig := e2e.TestSuiteSecretConfig(testCfg)
 	ts, kill := e2e.CreateTestSuite(tsConfig, tsSecretConfig)
 
@@ -46,5 +50,4 @@ func FuzzProxyClientServerIntegration(f *testing.F) {
 		})
 
 	f.Cleanup(kill)
-
 }
