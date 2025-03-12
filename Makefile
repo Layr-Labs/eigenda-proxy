@@ -25,9 +25,9 @@ disperse-test-blob:
 clean:
 	rm bin/eigenda-proxy
 
-# Runs all tests, excluding e2e and fuzz tests
+# Runs all tests, excluding e2e
 test-unit:
-	go test `go list ./... | grep -v ./e2e | grep -v ./fuzz` -parallel 4
+	go test `go list ./... | grep -v ./e2e` -parallel 4
 
 # E2E tests, leveraging op-e2e framework. Also tests the standard client against the proxy.
 # If holesky tests are failing, consider checking https://dora.holesky.ethpandaops.io/epochs for block production status.
