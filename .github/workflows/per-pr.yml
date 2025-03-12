@@ -38,8 +38,6 @@ jobs:
         run: ${{ github.workspace }}/scripts/test-proxy-startup-with-env-vars.sh
 
   unit-tests:
-    outputs:
-      COVERAGE: ${{ steps.unit.outputs.coverage }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
