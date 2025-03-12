@@ -1,43 +1,28 @@
 package testutils
 
 import (
-	"fmt"
-
 	"github.com/Layr-Labs/eigenda-proxy/testutils/testmatrix"
 )
 
-type TestEnvironment int
+type TestBackend int
 
 const (
-	// Local environment uses a local memstore analog for the actual eigenDA network
-	Local TestEnvironment = iota + 1
+	// Memstore uses a local memstore analog in place of an actual eigenDA network
+	Memstore TestBackend = iota + 1
 	// Testnet runs tests against holesky testnet
 	Testnet
 )
 
 var V2Enabled = "v2Enabled"
-var Environment = "environment"
-
-// UseMemstore returns whether a test should use a local memstore, based on the test environment
-func UseMemstore(environment TestEnvironment) bool {
-	switch environment {
-	case Local:
-		return true
-	case Testnet:
-		return false
-	default:
-		panic(fmt.Sprintf("unknown test environment: %d", environment))
-	}
-}
+var Backend = "backend"
 
 // TestConfigFromConfigurationSet is a helper method which accepts a ConfigurationSet, and returns a TestConfig
 //
-// This method expects that the input configurationSet has `V2Enabled` and `Environment` fields configured. If either
+// This method expects that the input configurationSet has `V2Enabled` and `Backend` fields configured. If either
 // of these fields isn't configured, this method will panic.
 func TestConfigFromConfigurationSet(configurationSet testmatrix.ConfigurationSet) TestConfig {
+	backend, _ := configurationSet.GetValue(Backend).(TestBackend)
 	v2Enabled, _ := configurationSet.GetValue(V2Enabled).(bool)
-	backend, _ := configurationSet.GetValue(Environment).(TestEnvironment)
-	useMemstore := UseMemstore(backend)
 
-	return NewTestConfig(v2Enabled, useMemstore)
+	return NewTestConfig(backend == Memstore, v2Enabled)
 }

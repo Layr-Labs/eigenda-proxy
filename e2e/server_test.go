@@ -76,7 +76,7 @@ func TestOptimismClientWithKeccak256Commitment(t *testing.T) {
 
 	testMatrix := testmatrix.NewTestMatrix()
 	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
 
 	configurationSets := testMatrix.GenerateConfigurationSets()
 	for _, configurationSet := range configurationSets {
@@ -106,7 +106,7 @@ func TestOptimismClientWithGenericCommitment(t *testing.T) {
 
 	testMatrix := testmatrix.NewTestMatrix()
 	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
 
 	configurationSets := testMatrix.GenerateConfigurationSets()
 	for _, configurationSet := range configurationSets {
@@ -135,7 +135,7 @@ func TestProxyClientServerIntegration(t *testing.T) {
 
 	testMatrix := testmatrix.NewTestMatrix()
 	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
 
 	configurationSets := testMatrix.GenerateConfigurationSets()
 	for _, configurationSet := range configurationSets {
@@ -221,7 +221,7 @@ func TestProxyClient(t *testing.T) {
 
 	testMatrix := testmatrix.NewTestMatrix()
 	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
 
 	configurationSets := testMatrix.GenerateConfigurationSets()
 	for _, configurationSet := range configurationSets {
@@ -260,7 +260,7 @@ func TestProxyClientWriteRead(t *testing.T) {
 
 	testMatrix := testmatrix.NewTestMatrix()
 	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
 
 	configurationSets := testMatrix.GenerateConfigurationSets()
 	for _, configurationSet := range configurationSets {
@@ -286,7 +286,7 @@ func TestProxyWithMaximumSizedBlob(t *testing.T) {
 
 	testMatrix := testmatrix.NewTestMatrix()
 	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
 
 	configurationSets := testMatrix.GenerateConfigurationSets()
 	for _, configurationSet := range configurationSets {
@@ -315,7 +315,7 @@ func TestProxyCaching(t *testing.T) {
 
 	testMatrix := testmatrix.NewTestMatrix()
 	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
 
 	configurationSets := testMatrix.GenerateConfigurationSets()
 	for _, configurationSet := range configurationSets {
@@ -343,7 +343,7 @@ func TestProxyCachingWithRedis(t *testing.T) {
 
 	testMatrix := testmatrix.NewTestMatrix()
 	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
 
 	configurationSets := testMatrix.GenerateConfigurationSets()
 	for _, configurationSet := range configurationSets {
@@ -377,7 +377,7 @@ func TestProxyReadFallback(t *testing.T) {
 
 	testMatrix := testmatrix.NewTestMatrix()
 	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
 
 	configurationSets := testMatrix.GenerateConfigurationSets()
 	for _, configurationSet := range configurationSets {
@@ -423,7 +423,7 @@ func TestProxyMemConfigClientCanGetAndPatch(t *testing.T) {
 	testMatrix := testmatrix.NewTestMatrix()
 	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
 	// test can't be run against holesky since read failure case can't be manually triggered, so only use local backend
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore}))
 
 	configurationSets := testMatrix.GenerateConfigurationSets()
 	for _, configurationSet := range configurationSets {

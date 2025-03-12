@@ -134,7 +134,7 @@ func (a *L2AltDA) ActL1Finalized(t actions.Testing) {
 func TestOptimismKeccak256Commitment(t *testing.T) {
 	testMatrix := testmatrix.NewTestMatrix()
 	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
 
 	configurationSets := testMatrix.GenerateConfigurationSets()
 	for _, configurationSet := range configurationSets {
@@ -197,7 +197,7 @@ func TestOptimismKeccak256Commitment(t *testing.T) {
 func TestOptimismGenericCommitment(t *testing.T) {
 	testMatrix := testmatrix.NewTestMatrix()
 	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local, testutils.Testnet}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
 
 	configurationSets := testMatrix.GenerateConfigurationSets()
 	for _, configurationSet := range configurationSets {

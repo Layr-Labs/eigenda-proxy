@@ -17,7 +17,7 @@ import (
 func BenchmarkPutsWithSecondary(b *testing.B) {
 	testMatrix := testmatrix.NewTestMatrix()
 	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Environment, []any{testutils.Local}))
+	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore}))
 
 	for _, configurationSet := range testMatrix.GenerateConfigurationSets() {
 		b.Run(
