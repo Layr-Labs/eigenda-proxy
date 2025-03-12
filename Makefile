@@ -32,9 +32,9 @@ test-unit:
 # E2E tests, leveraging op-e2e framework. Also tests the standard client against the proxy.
 # If holesky tests are failing, consider checking https://dora.holesky.ethpandaops.io/epochs for block production status.
 test-e2e:
-	# Add the -v flag to be able to observe logs as the run is happening on CI
-	# given that this test takes >20 mins to run. Good to have early feedback when needed.
-	go test -v -timeout 30m ./e2e -parallel 4
+	# Add the -v flag to observe logs as the run is happening on CI, given that this test takes ~5 minutes to run.
+	# Good to have early feedback when needed.
+	go test -v -timeout 10m ./e2e -parallel 4
 
 # E2E test which fuzzes the proxy client server integration and op client keccak256 with malformed inputs
 test-fuzz:
