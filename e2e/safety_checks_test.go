@@ -89,7 +89,6 @@ func TestProxyClientMalformedInputCasesV2(t *testing.T) {
 // many unicode characters, single unicode character and an empty preimage. It then tries to get the data from the
 // proxy server with empty byte, single byte and random string.
 func testProxyClientMalformedInputCases(t *testing.T, v2Enabled bool) {
-	t.Parallel()
 	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
 
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
@@ -104,7 +103,6 @@ func testProxyClientMalformedInputCases(t *testing.T, v2Enabled bool) {
 
 	t.Run(
 		"single byte preimage set data case", func(t *testing.T) {
-			t.Parallel()
 			testPreimage := []byte{1} // single byte preimage
 			t.Log("Setting input data on proxy server...")
 			_, err := daClient.SetData(ts.Ctx, testPreimage)
@@ -113,7 +111,6 @@ func testProxyClientMalformedInputCases(t *testing.T, v2Enabled bool) {
 
 	t.Run(
 		"unicode preimage set data case", func(t *testing.T) {
-			t.Parallel()
 			testPreimage := []byte("§§©ˆªªˆ˙√ç®∂§∞¶§ƒ¥√¨¥√¨¥ƒƒ©˙˜ø˜˜˜∫˙∫¥∫√†®®√ç¨ˆ¨˙ï") // many unicode characters
 			t.Log("Setting input data on proxy server...")
 			_, err := daClient.SetData(ts.Ctx, testPreimage)
@@ -127,7 +124,6 @@ func testProxyClientMalformedInputCases(t *testing.T, v2Enabled bool) {
 
 	t.Run(
 		"empty preimage set data case", func(t *testing.T) {
-			t.Parallel()
 			testPreimage := []byte("") // Empty preimage
 			t.Log("Setting input data on proxy server...")
 			_, err := daClient.SetData(ts.Ctx, testPreimage)
@@ -136,7 +132,6 @@ func testProxyClientMalformedInputCases(t *testing.T, v2Enabled bool) {
 
 	t.Run(
 		"get data edge cases - unsupported version byte 02", func(t *testing.T) {
-			t.Parallel()
 			testCert := []byte{2}
 			_, err := daClient.GetData(ts.Ctx, testCert)
 			require.Error(t, err)
@@ -151,7 +146,6 @@ func testProxyClientMalformedInputCases(t *testing.T, v2Enabled bool) {
 	// Error tested doesn't seem related to the cert being huge.
 	t.Run(
 		"get data edge cases - huge cert", func(t *testing.T) {
-			t.Parallel()
 			// TODO: we need to add the 0 version byte at the beginning.
 			// should this not be done automatically by the std_commitment client?
 			testCert := append([]byte{0}, testutils.RandBytes(10000)...)
