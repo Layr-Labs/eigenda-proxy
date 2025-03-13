@@ -130,116 +130,122 @@ func (a *L2AltDA) ActL1Finalized(t actions.Testing) {
 	a.sequencer.ActL1FinalizedSignal(t)
 }
 
-func TestOptimismKeccak256Commitment(t *testing.T) {
-	testCfgs := testutils.GetBackendAndVersionTestConfigs()
-	for _, testCfg := range testCfgs {
-		t.Run(
-			testutils.TestConfigString(testCfg), func(t *testing.T) {
-				testCfg.UseKeccak256ModeS3 = true
-
-				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-				proxyTS, shutDown := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
-				defer shutDown()
-
-				ot := actions.NewDefaultTesting(t)
-
-				optimism := NewL2AltDA(ot, proxyTS.Address(), false)
-
-				// build L1 block #1
-				optimism.ActL1Blocks(ot, 1)
-				optimism.miner.ActL1SafeNext(ot)
-
-				// Fill with l2 blocks up to the L1 head
-				optimism.sequencer.ActL1HeadSignal(ot)
-				optimism.sequencer.ActBuildToL1Head(ot)
-
-				optimism.sequencer.ActL2PipelineFull(ot)
-				optimism.sequencer.ActL1SafeSignal(ot)
-				require.Equal(ot, uint64(1), optimism.sequencer.SyncStatus().SafeL1.Number)
-
-				// add L1 block #2
-				optimism.ActL1Blocks(ot, 1)
-				optimism.miner.ActL1SafeNext(ot)
-				optimism.miner.ActL1FinalizeNext(ot)
-				optimism.sequencer.ActL1HeadSignal(ot)
-				optimism.sequencer.ActBuildToL1Head(ot)
-
-				// Catch up derivation
-				optimism.sequencer.ActL2PipelineFull(ot)
-				optimism.sequencer.ActL1FinalizedSignal(ot)
-				optimism.sequencer.ActL1SafeSignal(ot)
-
-				// commit all the l2 blocks to L1
-				optimism.batcher.ActSubmitAll(ot)
-				optimism.miner.ActL1StartBlock(12)(ot)
-				optimism.miner.ActL1IncludeTx(optimism.dp.Addresses.Batcher)(ot)
-				optimism.miner.ActL1EndBlock(ot)
-
-				// verify
-				optimism.sequencer.ActL2PipelineFull(ot)
-				optimism.ActL1Finalized(ot)
-
-				requireDispersalRetrievalEigenDA(
-					t,
-					proxyTS.Metrics.HTTPServerRequestsTotal,
-					commitments.OptimismKeccak)
-			})
-	}
+func TestOptimismKeccak256CommitmentV1(t *testing.T) {
+	testOptimismKeccak256Commitment(t, false)
 }
 
-func TestOptimismGenericCommitment(t *testing.T) {
-	testCfgs := testutils.GetBackendAndVersionTestConfigs()
-	for _, testCfg := range testCfgs {
-		t.Run(
-			testutils.TestConfigString(testCfg), func(t *testing.T) {
-				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-				proxyTS, shutDown := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
-				defer shutDown()
+func TestOptimismKeccak256CommitmentV2(t *testing.T) {
+	testOptimismKeccak256Commitment(t, true)
+}
 
-				ot := actions.NewDefaultTesting(t)
+func testOptimismKeccak256Commitment(t *testing.T, v2Enabled bool) {
+	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
+	testCfg.UseKeccak256ModeS3 = true
 
-				optimism := NewL2AltDA(ot, proxyTS.Address(), true)
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+	proxyTS, shutDown := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	defer shutDown()
 
-				// build L1 block #1
-				optimism.ActL1Blocks(ot, 1)
-				optimism.miner.ActL1SafeNext(ot)
+	ot := actions.NewDefaultTesting(t)
 
-				// Fill with l2 blocks up to the L1 head
-				optimism.sequencer.ActL1HeadSignal(ot)
-				optimism.sequencer.ActBuildToL1Head(ot)
+	optimism := NewL2AltDA(ot, proxyTS.Address(), false)
 
-				optimism.sequencer.ActL2PipelineFull(ot)
-				optimism.sequencer.ActL1SafeSignal(ot)
-				require.Equal(t, uint64(1), optimism.sequencer.SyncStatus().SafeL1.Number)
+	// build L1 block #1
+	optimism.ActL1Blocks(ot, 1)
+	optimism.miner.ActL1SafeNext(ot)
 
-				// add L1 block #2
-				optimism.ActL1Blocks(ot, 1)
-				optimism.miner.ActL1SafeNext(ot)
-				optimism.miner.ActL1FinalizeNext(ot)
-				optimism.sequencer.ActL1HeadSignal(ot)
-				optimism.sequencer.ActBuildToL1Head(ot)
+	// Fill with l2 blocks up to the L1 head
+	optimism.sequencer.ActL1HeadSignal(ot)
+	optimism.sequencer.ActBuildToL1Head(ot)
 
-				// Catch up derivation
-				optimism.sequencer.ActL2PipelineFull(ot)
-				optimism.sequencer.ActL1FinalizedSignal(ot)
-				optimism.sequencer.ActL1SafeSignal(ot)
+	optimism.sequencer.ActL2PipelineFull(ot)
+	optimism.sequencer.ActL1SafeSignal(ot)
+	require.Equal(ot, uint64(1), optimism.sequencer.SyncStatus().SafeL1.Number)
 
-				// commit all the l2 blocks to L1
-				optimism.batcher.ActSubmitAll(ot)
-				optimism.miner.ActL1StartBlock(12)(ot)
-				optimism.miner.ActL1IncludeTx(optimism.dp.Addresses.Batcher)(ot)
-				optimism.miner.ActL1EndBlock(ot)
+	// add L1 block #2
+	optimism.ActL1Blocks(ot, 1)
+	optimism.miner.ActL1SafeNext(ot)
+	optimism.miner.ActL1FinalizeNext(ot)
+	optimism.sequencer.ActL1HeadSignal(ot)
+	optimism.sequencer.ActBuildToL1Head(ot)
 
-				// verify
-				optimism.sequencer.ActL2PipelineFull(ot)
-				optimism.ActL1Finalized(ot)
+	// Catch up derivation
+	optimism.sequencer.ActL2PipelineFull(ot)
+	optimism.sequencer.ActL1FinalizedSignal(ot)
+	optimism.sequencer.ActL1SafeSignal(ot)
 
-				requireDispersalRetrievalEigenDA(
-					t,
-					proxyTS.Metrics.HTTPServerRequestsTotal,
-					commitments.OptimismGeneric)
-			})
-	}
+	// commit all the l2 blocks to L1
+	optimism.batcher.ActSubmitAll(ot)
+	optimism.miner.ActL1StartBlock(12)(ot)
+	optimism.miner.ActL1IncludeTx(optimism.dp.Addresses.Batcher)(ot)
+	optimism.miner.ActL1EndBlock(ot)
+
+	// verify
+	optimism.sequencer.ActL2PipelineFull(ot)
+	optimism.ActL1Finalized(ot)
+
+	requireDispersalRetrievalEigenDA(
+		t,
+		proxyTS.Metrics.HTTPServerRequestsTotal,
+		commitments.OptimismKeccak)
+}
+
+func TestOptimismGenericCommitmentV1(t *testing.T) {
+	testOptimismGenericCommitment(t, false)
+}
+
+func TestOptimismGenericCommitmentV2(t *testing.T) {
+	testOptimismGenericCommitment(t, true)
+}
+
+func testOptimismGenericCommitment(t *testing.T, v2Enabled bool) {
+	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+	proxyTS, shutDown := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	defer shutDown()
+
+	ot := actions.NewDefaultTesting(t)
+
+	optimism := NewL2AltDA(ot, proxyTS.Address(), true)
+
+	// build L1 block #1
+	optimism.ActL1Blocks(ot, 1)
+	optimism.miner.ActL1SafeNext(ot)
+
+	// Fill with l2 blocks up to the L1 head
+	optimism.sequencer.ActL1HeadSignal(ot)
+	optimism.sequencer.ActBuildToL1Head(ot)
+
+	optimism.sequencer.ActL2PipelineFull(ot)
+	optimism.sequencer.ActL1SafeSignal(ot)
+	require.Equal(t, uint64(1), optimism.sequencer.SyncStatus().SafeL1.Number)
+
+	// add L1 block #2
+	optimism.ActL1Blocks(ot, 1)
+	optimism.miner.ActL1SafeNext(ot)
+	optimism.miner.ActL1FinalizeNext(ot)
+	optimism.sequencer.ActL1HeadSignal(ot)
+	optimism.sequencer.ActBuildToL1Head(ot)
+
+	// Catch up derivation
+	optimism.sequencer.ActL2PipelineFull(ot)
+	optimism.sequencer.ActL1FinalizedSignal(ot)
+	optimism.sequencer.ActL1SafeSignal(ot)
+
+	// commit all the l2 blocks to L1
+	optimism.batcher.ActSubmitAll(ot)
+	optimism.miner.ActL1StartBlock(12)(ot)
+	optimism.miner.ActL1IncludeTx(optimism.dp.Addresses.Batcher)(ot)
+	optimism.miner.ActL1EndBlock(ot)
+
+	// verify
+	optimism.sequencer.ActL2PipelineFull(ot)
+	optimism.ActL1Finalized(ot)
+
+	requireDispersalRetrievalEigenDA(
+		t,
+		proxyTS.Metrics.HTTPServerRequestsTotal,
+		commitments.OptimismGeneric)
 }

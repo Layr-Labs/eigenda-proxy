@@ -70,340 +70,358 @@ func requireOPClientSetGet(t *testing.T, ts testutils.TestSuite, blob []byte, pr
 	require.Equal(t, blob, preimage)
 }
 
-func TestOptimismClientWithKeccak256Commitment(t *testing.T) {
+func TestOptimismClientWithKeccak256CommitmentV1(t *testing.T) {
+	testOptimismClientWithKeccak256Commitment(t, false)
+}
+
+func TestOptimismClientWithKeccak256CommitmentV2(t *testing.T) {
+	testOptimismClientWithKeccak256Commitment(t, true)
+}
+
+func testOptimismClientWithKeccak256Commitment(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	testCfgs := testutils.GetBackendAndVersionTestConfigs()
-	for _, testCfg := range testCfgs {
-		t.Run(
-			testutils.TestConfigString(testCfg), func(t *testing.T) {
-				t.Parallel()
+	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
+	testCfg.UseKeccak256ModeS3 = true
 
-				testCfg.UseKeccak256ModeS3 = true
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	defer kill()
 
-				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-				ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
-				defer kill()
+	requireOPClientSetGet(t, ts, testutils.RandBytes(100), true)
+}
 
-				requireOPClientSetGet(t, ts, testutils.RandBytes(100), true)
-			})
-	}
+func TestOptimismClientWithGenericCommitmentV1(t *testing.T) {
+	testOptimismClientWithGenericCommitment(t, false)
+}
+
+func TestOptimismClientWithGenericCommitmentV2(t *testing.T) {
+	testOptimismClientWithGenericCommitment(t, true)
 }
 
 /*
 this test asserts that the data can be posted/read to EigenDA
 with a concurrent S3 backend configured
 */
-func TestOptimismClientWithGenericCommitment(t *testing.T) {
+func testOptimismClientWithGenericCommitment(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	testCfgs := testutils.GetBackendAndVersionTestConfigs()
-	for _, testCfg := range testCfgs {
-		t.Run(
-			testutils.TestConfigString(testCfg), func(t *testing.T) {
-				t.Parallel()
+	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
 
-				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-				ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
-				defer kill()
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	defer kill()
 
-				requireOPClientSetGet(t, ts, testutils.RandBytes(100), false)
-				requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.OptimismGeneric)
-			})
-	}
+	requireOPClientSetGet(t, ts, testutils.RandBytes(100), false)
+	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.OptimismGeneric)
+}
+
+func TestProxyClientServerIntegrationV1(t *testing.T) {
+	testProxyClientServerIntegration(t, false)
+}
+
+func TestProxyClientServerIntegrationV2(t *testing.T) {
+	testProxyClientServerIntegration(t, true)
 }
 
 // TestProxyClientServerIntegration tests the proxy client and server integration by setting the data as a single byte,
 // many unicode characters, single unicode character and an empty preimage. It then tries to get the data from the
 // proxy server with empty byte, single byte and random string.
-func TestProxyClientServerIntegration(t *testing.T) {
+func testProxyClientServerIntegration(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	testCfgs := testutils.GetBackendAndVersionTestConfigs()
-	for _, testCfg := range testCfgs {
-		t.Run(
-			testutils.TestConfigString(testCfg), func(t *testing.T) {
-				t.Parallel()
+	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
 
-				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-				ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
-				t.Cleanup(kill)
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	t.Cleanup(kill)
 
-				cfg := &standard_client.Config{
-					URL: ts.Address(),
-				}
-				daClient := standard_client.New(cfg)
-
-				t.Run(
-					"single byte preimage set data case", func(t *testing.T) {
-						t.Parallel()
-						testPreimage := []byte{1} // single byte preimage
-						t.Log("Setting input data on proxy server...")
-						_, err := daClient.SetData(ts.Ctx, testPreimage)
-						require.NoError(t, err)
-					})
-
-				t.Run(
-					"unicode preimage set data case", func(t *testing.T) {
-						t.Parallel()
-						testPreimage := []byte("§§©ˆªªˆ˙√ç®∂§∞¶§ƒ¥√¨¥√¨¥ƒƒ©˙˜ø˜˜˜∫˙∫¥∫√†®®√ç¨ˆ¨˙ï") // many unicode characters
-						t.Log("Setting input data on proxy server...")
-						_, err := daClient.SetData(ts.Ctx, testPreimage)
-						require.NoError(t, err)
-
-						testPreimage = []byte("§") // single unicode character
-						t.Log("Setting input data on proxy server...")
-						_, err = daClient.SetData(ts.Ctx, testPreimage)
-						require.NoError(t, err)
-
-					})
-
-				t.Run(
-					"empty preimage set data case", func(t *testing.T) {
-						t.Parallel()
-						testPreimage := []byte("") // Empty preimage
-						t.Log("Setting input data on proxy server...")
-						_, err := daClient.SetData(ts.Ctx, testPreimage)
-						require.NoError(t, err)
-					})
-
-				t.Run(
-					"get data edge cases", func(t *testing.T) {
-						t.Parallel()
-						testCert := []byte("")
-						_, err := daClient.GetData(ts.Ctx, testCert)
-						require.Error(t, err)
-						assert.True(
-							t, strings.Contains(
-								err.Error(),
-								"404") && !isNilPtrDerefPanic(err.Error()))
-
-						testCert = []byte{2}
-						_, err = daClient.GetData(ts.Ctx, testCert)
-						require.Error(t, err)
-						assert.True(
-							t, strings.Contains(
-								err.Error(),
-								"400") && !isNilPtrDerefPanic(err.Error()))
-
-						testCert = testutils.RandBytes(10000)
-						_, err = daClient.GetData(ts.Ctx, testCert)
-						require.Error(t, err)
-						assert.True(t, strings.Contains(err.Error(), "400") && !isNilPtrDerefPanic(err.Error()))
-					})
-			})
+	cfg := &standard_client.Config{
+		URL: ts.Address(),
 	}
+	daClient := standard_client.New(cfg)
+
+	t.Run(
+		"single byte preimage set data case", func(t *testing.T) {
+			t.Parallel()
+			testPreimage := []byte{1} // single byte preimage
+			t.Log("Setting input data on proxy server...")
+			_, err := daClient.SetData(ts.Ctx, testPreimage)
+			require.NoError(t, err)
+		})
+
+	t.Run(
+		"unicode preimage set data case", func(t *testing.T) {
+			t.Parallel()
+			testPreimage := []byte("§§©ˆªªˆ˙√ç®∂§∞¶§ƒ¥√¨¥√¨¥ƒƒ©˙˜ø˜˜˜∫˙∫¥∫√†®®√ç¨ˆ¨˙ï") // many unicode characters
+			t.Log("Setting input data on proxy server...")
+			_, err := daClient.SetData(ts.Ctx, testPreimage)
+			require.NoError(t, err)
+
+			testPreimage = []byte("§") // single unicode character
+			t.Log("Setting input data on proxy server...")
+			_, err = daClient.SetData(ts.Ctx, testPreimage)
+			require.NoError(t, err)
+
+		})
+
+	t.Run(
+		"empty preimage set data case", func(t *testing.T) {
+			t.Parallel()
+			testPreimage := []byte("") // Empty preimage
+			t.Log("Setting input data on proxy server...")
+			_, err := daClient.SetData(ts.Ctx, testPreimage)
+			require.NoError(t, err)
+		})
+
+	t.Run(
+		"get data edge cases", func(t *testing.T) {
+			t.Parallel()
+			testCert := []byte("")
+			_, err := daClient.GetData(ts.Ctx, testCert)
+			require.Error(t, err)
+			assert.True(
+				t, strings.Contains(
+					err.Error(),
+					"404") && !isNilPtrDerefPanic(err.Error()))
+
+			testCert = []byte{2}
+			_, err = daClient.GetData(ts.Ctx, testCert)
+			require.Error(t, err)
+			assert.True(
+				t, strings.Contains(
+					err.Error(),
+					"400") && !isNilPtrDerefPanic(err.Error()))
+
+			testCert = testutils.RandBytes(10000)
+			_, err = daClient.GetData(ts.Ctx, testCert)
+			require.Error(t, err)
+			assert.True(t, strings.Contains(err.Error(), "400") && !isNilPtrDerefPanic(err.Error()))
+		})
 }
 
-func TestProxyClient(t *testing.T) {
-	t.Parallel()
-
-	testCfgs := testutils.GetBackendAndVersionTestConfigs()
-	for _, testCfg := range testCfgs {
-		t.Run(
-			testutils.TestConfigString(testCfg), func(t *testing.T) {
-				t.Parallel()
-
-				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-				ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
-				defer kill()
-
-				cfg := &standard_client.Config{
-					URL: ts.Address(),
-				}
-				daClient := standard_client.New(cfg)
-
-				testPreimage := testutils.RandBytes(100)
-
-				t.Log("Setting input data on proxy server...")
-				daCommitment, err := daClient.SetData(ts.Ctx, testPreimage)
-				require.NoError(t, err)
-
-				t.Log("Getting input data from proxy server...")
-				preimage, err := daClient.GetData(ts.Ctx, daCommitment)
-				require.NoError(t, err)
-				require.Equal(t, testPreimage, preimage)
-			})
-	}
+func TestProxyClientV1(t *testing.T) {
+	testProxyClient(t, false)
 }
 
-func TestProxyClientWriteRead(t *testing.T) {
-	t.Parallel()
-
-	testCfgs := testutils.GetBackendAndVersionTestConfigs()
-	for _, testCfg := range testCfgs {
-		t.Run(
-			testutils.TestConfigString(testCfg), func(t *testing.T) {
-				t.Parallel()
-
-				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-				ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
-				defer kill()
-
-				requireStandardClientSetGet(t, ts, testutils.RandBytes(100))
-				requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
-			})
-	}
+func TestProxyClientV2(t *testing.T) {
+	testProxyClient(t, true)
 }
 
-func TestProxyWithMaximumSizedBlob(t *testing.T) {
+func testProxyClient(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	testCfgs := testutils.GetBackendAndVersionTestConfigs()
-	for _, testCfg := range testCfgs {
-		t.Run(
-			testutils.TestConfigString(testCfg), func(t *testing.T) {
-				t.Parallel()
+	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
 
-				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-				ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
-				defer kill()
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	defer kill()
 
-				requireStandardClientSetGet(t, ts, testutils.RandBytes(16_000_000))
-				requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
-			})
+	cfg := &standard_client.Config{
+		URL: ts.Address(),
 	}
+	daClient := standard_client.New(cfg)
+
+	testPreimage := testutils.RandBytes(100)
+
+	t.Log("Setting input data on proxy server...")
+	daCommitment, err := daClient.SetData(ts.Ctx, testPreimage)
+	require.NoError(t, err)
+
+	t.Log("Getting input data from proxy server...")
+	preimage, err := daClient.GetData(ts.Ctx, daCommitment)
+	require.NoError(t, err)
+	require.Equal(t, testPreimage, preimage)
+}
+
+func TestProxyClientWriteReadV1(t *testing.T) {
+	testProxyClientWriteRead(t, false)
+}
+
+func TestProxyClientWriteReadV2(t *testing.T) {
+	testProxyClientWriteRead(t, true)
+}
+
+func testProxyClientWriteRead(t *testing.T, v2Enabled bool) {
+	t.Parallel()
+
+	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
+
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	defer kill()
+
+	requireStandardClientSetGet(t, ts, testutils.RandBytes(100))
+	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
+}
+
+func TestProxyWithMaximumSizedBlobV1(t *testing.T) {
+	testProxyWithMaximumSizedBlob(t, false)
+}
+
+func TestProxyWithMaximumSizedBlobV2(t *testing.T) {
+	testProxyWithMaximumSizedBlob(t, true)
+}
+
+func testProxyWithMaximumSizedBlob(t *testing.T, v2Enabled bool) {
+	t.Parallel()
+
+	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
+
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	defer kill()
+
+	requireStandardClientSetGet(t, ts, testutils.RandBytes(16_000_000))
+	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
+}
+
+func TestProxyCachingV1(t *testing.T) {
+	testProxyCaching(t, false)
+}
+
+func TestProxyCachingV2(t *testing.T) {
+	testProxyCaching(t, true)
 }
 
 /*
 Ensure that proxy is able to write/read from a cache backend when enabled
 */
-func TestProxyCaching(t *testing.T) {
+func testProxyCaching(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	testCfgs := testutils.GetBackendAndVersionTestConfigs()
-	for _, testCfg := range testCfgs {
-		t.Run(
-			testutils.TestConfigString(testCfg), func(t *testing.T) {
-				t.Parallel()
+	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
+	testCfg.UseS3Caching = true
 
-				testCfg.UseS3Caching = true
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	defer kill()
 
-				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-				ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
-				defer kill()
-
-				requireStandardClientSetGet(t, ts, testutils.RandBytes(1_000_000))
-				requireWriteReadSecondary(t, ts.Metrics.SecondaryRequestsTotal, common.S3BackendType)
-				requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
-			})
-	}
+	requireStandardClientSetGet(t, ts, testutils.RandBytes(1_000_000))
+	requireWriteReadSecondary(t, ts.Metrics.SecondaryRequestsTotal, common.S3BackendType)
+	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
 }
 
-func TestProxyCachingWithRedis(t *testing.T) {
+func TestProxyCachingWithRedisV1(t *testing.T) {
+	testProxyCachingWithRedis(t, false)
+}
+
+func TestProxyCachingWithRedisV2(t *testing.T) {
+	testProxyCachingWithRedis(t, true)
+}
+
+func testProxyCachingWithRedis(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	testCfgs := testutils.GetBackendAndVersionTestConfigs()
-	for _, testCfg := range testCfgs {
-		t.Run(
-			testutils.TestConfigString(testCfg), func(t *testing.T) {
-				t.Parallel()
+	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
+	testCfg.UseRedisCaching = true
 
-				testCfg.UseRedisCaching = true
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	defer kill()
 
-				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-				ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
-				defer kill()
+	requireStandardClientSetGet(t, ts, testutils.RandBytes(1_000_000))
+	requireWriteReadSecondary(t, ts.Metrics.SecondaryRequestsTotal, common.RedisBackendType)
+	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
+}
 
-				requireStandardClientSetGet(t, ts, testutils.RandBytes(1_000_000))
-				requireWriteReadSecondary(t, ts.Metrics.SecondaryRequestsTotal, common.RedisBackendType)
-				requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
-			})
-	}
+func TestProxyReadFallbackV1(t *testing.T) {
+	testProxyReadFallback(t, false)
+}
+
+func TestProxyReadFallbackV2(t *testing.T) {
+	testProxyReadFallback(t, true)
 }
 
 /*
-	Ensure that fallback location is read from when EigenDA blob is not available.
-	This is done by setting the memstore expiration time to 1ms and waiting for the blob to expire
-	before attempting to read it.
+Ensure that fallback location is read from when EigenDA blob is not available.
+This is done by setting the memstore expiration time to 1ms and waiting for the blob to expire
+before attempting to read it.
 */
-
-func TestProxyReadFallback(t *testing.T) {
+func testProxyReadFallback(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	testCfgs := testutils.GetBackendAndVersionTestConfigs()
-	for _, testCfg := range testCfgs {
-		t.Run(
-			testutils.TestConfigString(testCfg), func(t *testing.T) {
-				t.Parallel()
+	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
+	testCfg.UseS3Fallback = true
+	// ensure that blob memstore eviction times result in near immediate activation
+	testCfg.Expiration = time.Millisecond * 1
 
-				testCfg.UseS3Fallback = true
-				// ensure that blob memstore eviction times result in near immediate activation
-				testCfg.Expiration = time.Millisecond * 1
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	defer kill()
 
-				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-				ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
-				defer kill()
-
-				cfg := &standard_client.Config{
-					URL: ts.Address(),
-				}
-				daClient := standard_client.New(cfg)
-				expectedBlob := testutils.RandBytes(1_000_000)
-				t.Log("Setting input data on proxy server...")
-				blobInfo, err := daClient.SetData(ts.Ctx, expectedBlob)
-				require.NoError(t, err)
-
-				time.Sleep(1 * time.Second)
-				t.Log("Getting input data from proxy server...")
-				actualBlob, err := daClient.GetData(ts.Ctx, blobInfo)
-				require.NoError(t, err)
-				require.Equal(t, expectedBlob, actualBlob)
-
-				requireStandardClientSetGet(t, ts, testutils.RandBytes(1_000_000))
-				requireWriteReadSecondary(t, ts.Metrics.SecondaryRequestsTotal, common.S3BackendType)
-				requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
-			})
+	cfg := &standard_client.Config{
+		URL: ts.Address(),
 	}
+	daClient := standard_client.New(cfg)
+	expectedBlob := testutils.RandBytes(1_000_000)
+	t.Log("Setting input data on proxy server...")
+	blobInfo, err := daClient.SetData(ts.Ctx, expectedBlob)
+	require.NoError(t, err)
+
+	time.Sleep(1 * time.Second)
+	t.Log("Getting input data from proxy server...")
+	actualBlob, err := daClient.GetData(ts.Ctx, blobInfo)
+	require.NoError(t, err)
+	require.Equal(t, expectedBlob, actualBlob)
+
+	requireStandardClientSetGet(t, ts, testutils.RandBytes(1_000_000))
+	requireWriteReadSecondary(t, ts.Metrics.SecondaryRequestsTotal, common.S3BackendType)
+	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
 }
 
-func TestProxyMemConfigClientCanGetAndPatch(t *testing.T) {
+func TestProxyMemConfigClientCanGetAndPatchV1(t *testing.T) {
+	testProxyMemConfigClientCanGetAndPatch(t, false)
+}
+
+func TestProxyMemConfigClientCanGetAndPatchV2(t *testing.T) {
+	testProxyMemConfigClientCanGetAndPatch(t, true)
+}
+
+func testProxyMemConfigClientCanGetAndPatch(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	// test can't be run against holesky since read failure case can't be manually triggered, so only use local backend
-	testCfgs := testutils.GetLocalOnlyTestConfigs()
-	for _, testCfg := range testCfgs {
-		t.Run(
-			testutils.TestConfigString(testCfg), func(t *testing.T) {
-				t.Parallel()
-
-				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-				ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
-				defer kill()
-
-				memClient := memconfig_client.New(
-					&memconfig_client.Config{
-						URL: "http://" + ts.Server.Endpoint(),
-					})
-
-				// 1 - ensure cfg can be read from memconfig handlers
-				cfg, err := memClient.GetConfig(ts.Ctx)
-				require.NoError(t, err)
-
-				// 2 - update PutLatency field && ensure that newly fetched config reflects change
-				expectedChange := time.Second * 420
-				cfg.PutLatency = expectedChange
-
-				cfg, err = memClient.UpdateConfig(ts.Ctx, cfg)
-				require.NoError(t, err)
-
-				require.Equal(t, cfg.PutLatency, expectedChange)
-
-				// 3 - get cfg again to verify that memconfig state update is now reflected on server
-				cfg, err = memClient.GetConfig(ts.Ctx)
-
-				require.NoError(t, err)
-				require.Equal(t, cfg.PutLatency, expectedChange)
-			})
+	useMemstore := testutils.UseMemstore()
+	if !useMemstore {
+		t.Skip("test can't be run against holesky since read failure case can't be manually triggered")
 	}
+
+	testCfg := testutils.NewTestConfig(useMemstore, v2Enabled)
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	defer kill()
+
+	memClient := memconfig_client.New(
+		&memconfig_client.Config{
+			URL: "http://" + ts.Server.Endpoint(),
+		})
+
+	// 1 - ensure cfg can be read from memconfig handlers
+	cfg, err := memClient.GetConfig(ts.Ctx)
+	require.NoError(t, err)
+
+	// 2 - update PutLatency field && ensure that newly fetched config reflects change
+	expectedChange := time.Second * 420
+	cfg.PutLatency = expectedChange
+
+	cfg, err = memClient.UpdateConfig(ts.Ctx, cfg)
+	require.NoError(t, err)
+
+	require.Equal(t, cfg.PutLatency, expectedChange)
+
+	// 3 - get cfg again to verify that memconfig state update is now reflected on server
+	cfg, err = memClient.GetConfig(ts.Ctx)
+
+	require.NoError(t, err)
+	require.Equal(t, cfg.PutLatency, expectedChange)
 }

@@ -34,7 +34,6 @@ const (
 	privateKey         = "SIGNER_PRIVATE_KEY"
 	ethRPC             = "ETHEREUM_RPC"
 	transport          = "http"
-	svcName            = "eigenda_proxy"
 	host               = "127.0.0.1"
 	v1DisperserHolesky = "disperser-holesky.eigenda.xyz:443"
 )
@@ -104,6 +103,11 @@ func startRedisContainer() error {
 	}
 	redisEndpoint = endpoint
 	return nil
+}
+
+func UseMemstore() bool {
+	envVar := "MEMSTORE"
+	return os.Getenv(envVar) == "true" || os.Getenv(envVar) == "1"
 }
 
 type TestConfig struct {

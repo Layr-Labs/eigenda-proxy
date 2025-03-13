@@ -29,12 +29,18 @@ clean:
 test-unit:
 	go test `go list ./... | grep -v ./e2e` -parallel 4
 
-# E2E tests, leveraging op-e2e framework. Also tests the standard client against the proxy.
-# If holesky tests are failing, consider checking https://dora.holesky.ethpandaops.io/epochs for block production status.
-test-e2e:
+# E2E tests using local memstore, leveraging op-e2e framework. Also tests the standard client against the proxy.
+test-e2e-local:
 	# Add the -v flag to observe logs as the run is happening on CI, given that this test takes ~5 minutes to run.
 	# Good to have early feedback when needed.
-	go test -v -timeout 10m ./e2e -parallel 4
+	MEMSTORE=true go test -v -timeout 10m ./e2e -parallel 4
+
+# E2E tests using holesky backend, leveraging op-e2e framework. Also tests the standard client against the proxy.
+# If holesky tests are failing, consider checking https://dora.holesky.ethpandaops.io/epochs for block production status.
+test-e2e-holesky:
+	# Add the -v flag to observe logs as the run is happening on CI, given that this test takes ~5 minutes to run.
+	# Good to have early feedback when needed.
+	MEMSTORE=false go test -v -timeout 10m ./e2e -parallel 4
 
 # E2E test which fuzzes the proxy client server integration and op client keccak256 with malformed inputs
 test-fuzz:
@@ -73,7 +79,7 @@ op-devnet-allocs:
 	@./scripts/op-devnet-allocs.sh
 
 benchmark:
-	go test -benchmem -run=^$ -bench . ./e2e -test.parallel 4
+	go test -benchmem -run=^$ -bench . ./benchmark -test.parallel 4
 
 .PHONY: \
 	clean \

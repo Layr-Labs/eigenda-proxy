@@ -49,7 +49,7 @@ jobs:
       - run: go mod download
       - run: make test-unit
 
-  e2e-tests:
+  e2e-tests-local:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -59,12 +59,24 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
       - run: go mod download
-      - run: make test-e2e
+      - run: make test-e2e-local
+
+  e2e-tests-holesky:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - run: go mod download
+      - run: make test-e2e-holesky
         env:
           SIGNER_PRIVATE_KEY: ${{ secrets.SIGNER_PRIVATE_KEY }}
           ETHEREUM_RPC: ${{ secrets.ETHEREUM_RPC }}
 
-  fuzz-tests:
+  fuzz:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
