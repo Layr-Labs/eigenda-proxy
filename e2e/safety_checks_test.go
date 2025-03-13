@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/Layr-Labs/eigenda-proxy/testutils"
-	"github.com/Layr-Labs/eigenda-proxy/testutils/testmatrix"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/stretchr/testify/assert"
 
@@ -25,17 +24,12 @@ func isNilPtrDerefPanic(err string) bool {
 func TestOpClientKeccak256MalformedInputs(t *testing.T) {
 	t.Parallel()
 
-	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
-
-	configurationSets := testMatrix.GenerateConfigurationSets()
-	for _, configurationSet := range configurationSets {
+	testCfgs := testutils.GetBackendAndVersionTestConfigs()
+	for _, testCfg := range testCfgs {
 		t.Run(
-			configurationSet.ToString(), func(t *testing.T) {
+			testutils.TestConfigString(testCfg), func(t *testing.T) {
 				t.Parallel()
 
-				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 				testCfg.UseKeccak256ModeS3 = true
 				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
@@ -87,17 +81,11 @@ func TestOpClientKeccak256MalformedInputs(t *testing.T) {
 func TestProxyClientMalformedInputCases(t *testing.T) {
 	t.Parallel()
 
-	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
-
-	configurationSets := testMatrix.GenerateConfigurationSets()
-	for _, configurationSet := range configurationSets {
+	testCfgs := testutils.GetBackendAndVersionTestConfigs()
+	for _, testCfg := range testCfgs {
 		t.Run(
-			configurationSet.ToString(), func(t *testing.T) {
+			testutils.TestConfigString(testCfg), func(t *testing.T) {
 				t.Parallel()
-
-				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 
 				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
@@ -176,17 +164,12 @@ func TestProxyClientMalformedInputCases(t *testing.T) {
 func TestKeccak256CommitmentRequestErrorsWhenS3NotSet(t *testing.T) {
 	t.Parallel()
 
-	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
-
-	configurationSets := testMatrix.GenerateConfigurationSets()
-	for _, configurationSet := range configurationSets {
+	testCfgs := testutils.GetBackendAndVersionTestConfigs()
+	for _, testCfg := range testCfgs {
 		t.Run(
-			configurationSet.ToString(), func(t *testing.T) {
+			testutils.TestConfigString(testCfg), func(t *testing.T) {
 				t.Parallel()
 
-				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 				testCfg.UseKeccak256ModeS3 = true
 
 				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
@@ -209,17 +192,11 @@ func TestKeccak256CommitmentRequestErrorsWhenS3NotSet(t *testing.T) {
 func TestOversizedBlobRequestErrors(t *testing.T) {
 	t.Parallel()
 
-	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
-
-	configurationSets := testMatrix.GenerateConfigurationSets()
-	for _, configurationSet := range configurationSets {
+	testCfgs := testutils.GetBackendAndVersionTestConfigs()
+	for _, testCfg := range testCfgs {
 		t.Run(
-			configurationSet.ToString(), func(t *testing.T) {
+			testutils.TestConfigString(testCfg), func(t *testing.T) {
 				t.Parallel()
-
-				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 
 				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)

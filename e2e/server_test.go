@@ -13,7 +13,6 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/testutils"
-	"github.com/Layr-Labs/eigenda-proxy/testutils/testmatrix"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -74,17 +73,12 @@ func requireOPClientSetGet(t *testing.T, ts testutils.TestSuite, blob []byte, pr
 func TestOptimismClientWithKeccak256Commitment(t *testing.T) {
 	t.Parallel()
 
-	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
-
-	configurationSets := testMatrix.GenerateConfigurationSets()
-	for _, configurationSet := range configurationSets {
+	testCfgs := testutils.GetBackendAndVersionTestConfigs()
+	for _, testCfg := range testCfgs {
 		t.Run(
-			configurationSet.ToString(), func(t *testing.T) {
+			testutils.TestConfigString(testCfg), func(t *testing.T) {
 				t.Parallel()
 
-				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 				testCfg.UseKeccak256ModeS3 = true
 
 				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
@@ -104,17 +98,11 @@ with a concurrent S3 backend configured
 func TestOptimismClientWithGenericCommitment(t *testing.T) {
 	t.Parallel()
 
-	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
-
-	configurationSets := testMatrix.GenerateConfigurationSets()
-	for _, configurationSet := range configurationSets {
+	testCfgs := testutils.GetBackendAndVersionTestConfigs()
+	for _, testCfg := range testCfgs {
 		t.Run(
-			configurationSet.ToString(), func(t *testing.T) {
+			testutils.TestConfigString(testCfg), func(t *testing.T) {
 				t.Parallel()
-
-				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 
 				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
@@ -133,17 +121,11 @@ func TestOptimismClientWithGenericCommitment(t *testing.T) {
 func TestProxyClientServerIntegration(t *testing.T) {
 	t.Parallel()
 
-	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
-
-	configurationSets := testMatrix.GenerateConfigurationSets()
-	for _, configurationSet := range configurationSets {
+	testCfgs := testutils.GetBackendAndVersionTestConfigs()
+	for _, testCfg := range testCfgs {
 		t.Run(
-			configurationSet.ToString(), func(t *testing.T) {
+			testutils.TestConfigString(testCfg), func(t *testing.T) {
 				t.Parallel()
-
-				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 
 				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
@@ -219,17 +201,11 @@ func TestProxyClientServerIntegration(t *testing.T) {
 func TestProxyClient(t *testing.T) {
 	t.Parallel()
 
-	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
-
-	configurationSets := testMatrix.GenerateConfigurationSets()
-	for _, configurationSet := range configurationSets {
+	testCfgs := testutils.GetBackendAndVersionTestConfigs()
+	for _, testCfg := range testCfgs {
 		t.Run(
-			configurationSet.ToString(), func(t *testing.T) {
+			testutils.TestConfigString(testCfg), func(t *testing.T) {
 				t.Parallel()
-
-				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 
 				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
@@ -258,17 +234,11 @@ func TestProxyClient(t *testing.T) {
 func TestProxyClientWriteRead(t *testing.T) {
 	t.Parallel()
 
-	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
-
-	configurationSets := testMatrix.GenerateConfigurationSets()
-	for _, configurationSet := range configurationSets {
+	testCfgs := testutils.GetBackendAndVersionTestConfigs()
+	for _, testCfg := range testCfgs {
 		t.Run(
-			configurationSet.ToString(), func(t *testing.T) {
+			testutils.TestConfigString(testCfg), func(t *testing.T) {
 				t.Parallel()
-
-				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 
 				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
@@ -284,17 +254,11 @@ func TestProxyClientWriteRead(t *testing.T) {
 func TestProxyWithMaximumSizedBlob(t *testing.T) {
 	t.Parallel()
 
-	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
-
-	configurationSets := testMatrix.GenerateConfigurationSets()
-	for _, configurationSet := range configurationSets {
+	testCfgs := testutils.GetBackendAndVersionTestConfigs()
+	for _, testCfg := range testCfgs {
 		t.Run(
-			configurationSet.ToString(), func(t *testing.T) {
+			testutils.TestConfigString(testCfg), func(t *testing.T) {
 				t.Parallel()
-
-				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 
 				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
@@ -313,17 +277,12 @@ Ensure that proxy is able to write/read from a cache backend when enabled
 func TestProxyCaching(t *testing.T) {
 	t.Parallel()
 
-	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
-
-	configurationSets := testMatrix.GenerateConfigurationSets()
-	for _, configurationSet := range configurationSets {
+	testCfgs := testutils.GetBackendAndVersionTestConfigs()
+	for _, testCfg := range testCfgs {
 		t.Run(
-			configurationSet.ToString(), func(t *testing.T) {
+			testutils.TestConfigString(testCfg), func(t *testing.T) {
 				t.Parallel()
 
-				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 				testCfg.UseS3Caching = true
 
 				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
@@ -341,17 +300,12 @@ func TestProxyCaching(t *testing.T) {
 func TestProxyCachingWithRedis(t *testing.T) {
 	t.Parallel()
 
-	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
-
-	configurationSets := testMatrix.GenerateConfigurationSets()
-	for _, configurationSet := range configurationSets {
+	testCfgs := testutils.GetBackendAndVersionTestConfigs()
+	for _, testCfg := range testCfgs {
 		t.Run(
-			configurationSet.ToString(), func(t *testing.T) {
+			testutils.TestConfigString(testCfg), func(t *testing.T) {
 				t.Parallel()
 
-				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 				testCfg.UseRedisCaching = true
 
 				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
@@ -375,17 +329,12 @@ func TestProxyCachingWithRedis(t *testing.T) {
 func TestProxyReadFallback(t *testing.T) {
 	t.Parallel()
 
-	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
-
-	configurationSets := testMatrix.GenerateConfigurationSets()
-	for _, configurationSet := range configurationSets {
+	testCfgs := testutils.GetBackendAndVersionTestConfigs()
+	for _, testCfg := range testCfgs {
 		t.Run(
-			configurationSet.ToString(), func(t *testing.T) {
+			testutils.TestConfigString(testCfg), func(t *testing.T) {
 				t.Parallel()
 
-				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 				testCfg.UseS3Fallback = true
 				// ensure that blob memstore eviction times result in near immediate activation
 				testCfg.Expiration = time.Millisecond * 1
@@ -420,18 +369,12 @@ func TestProxyReadFallback(t *testing.T) {
 func TestProxyMemConfigClientCanGetAndPatch(t *testing.T) {
 	t.Parallel()
 
-	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
 	// test can't be run against holesky since read failure case can't be manually triggered, so only use local backend
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore}))
-
-	configurationSets := testMatrix.GenerateConfigurationSets()
-	for _, configurationSet := range configurationSets {
+	testCfgs := testutils.GetLocalOnlyTestConfigs()
+	for _, testCfg := range testCfgs {
 		t.Run(
-			configurationSet.ToString(), func(t *testing.T) {
+			testutils.TestConfigString(testCfg), func(t *testing.T) {
 				t.Parallel()
-
-				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
 
 				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)

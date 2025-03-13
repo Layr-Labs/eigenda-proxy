@@ -9,20 +9,15 @@ import (
 
 	"github.com/Layr-Labs/eigenda-proxy/clients/standard_client"
 	"github.com/Layr-Labs/eigenda-proxy/testutils"
-	"github.com/Layr-Labs/eigenda-proxy/testutils/testmatrix"
 )
 
 // BenchmarkPutsWithSecondary  ... Takes in an async worker count and profiles blob insertions using
 // constant blob sizes in parallel
 func BenchmarkPutsWithSecondary(b *testing.B) {
-	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore}))
-
-	for _, configurationSet := range testMatrix.GenerateConfigurationSets() {
+	testCfgs := testutils.GetLocalOnlyTestConfigs()
+	for _, testCfg := range testCfgs {
 		b.Run(
-			configurationSet.ToString(), func(b *testing.B) {
-				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
+			testutils.TestConfigString(testCfg), func(b *testing.B) {
 				testCfg.UseS3Caching = true
 				writeThreadCount := os.Getenv("WRITE_THREAD_COUNT")
 				threadInt, err := strconv.Atoi(writeThreadCount)

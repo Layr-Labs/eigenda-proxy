@@ -5,7 +5,6 @@ import (
 
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/testutils"
-	"github.com/Layr-Labs/eigenda-proxy/testutils/testmatrix"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	e2econfig "github.com/ethereum-optimism/optimism/op-e2e/config"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils"
@@ -132,15 +131,10 @@ func (a *L2AltDA) ActL1Finalized(t actions.Testing) {
 }
 
 func TestOptimismKeccak256Commitment(t *testing.T) {
-	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
-
-	configurationSets := testMatrix.GenerateConfigurationSets()
-	for _, configurationSet := range configurationSets {
+	testCfgs := testutils.GetBackendAndVersionTestConfigs()
+	for _, testCfg := range testCfgs {
 		t.Run(
-			configurationSet.ToString(), func(t *testing.T) {
-				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
+			testutils.TestConfigString(testCfg), func(t *testing.T) {
 				testCfg.UseKeccak256ModeS3 = true
 
 				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
@@ -195,16 +189,10 @@ func TestOptimismKeccak256Commitment(t *testing.T) {
 }
 
 func TestOptimismGenericCommitment(t *testing.T) {
-	testMatrix := testmatrix.NewTestMatrix()
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.V2Enabled, []any{true, false}))
-	testMatrix.AddDimension(testmatrix.NewDimension(testutils.Backend, []any{testutils.Memstore, testutils.Testnet}))
-
-	configurationSets := testMatrix.GenerateConfigurationSets()
-	for _, configurationSet := range configurationSets {
+	testCfgs := testutils.GetBackendAndVersionTestConfigs()
+	for _, testCfg := range testCfgs {
 		t.Run(
-			configurationSet.ToString(), func(t *testing.T) {
-				testCfg := testutils.TestConfigFromConfigurationSet(configurationSet)
-
+			testutils.TestConfigString(testCfg), func(t *testing.T) {
 				tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 				tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
 				proxyTS, shutDown := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
