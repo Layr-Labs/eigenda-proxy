@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
+	"github.com/Layr-Labs/eigenda-proxy/config/eigendaflags"
 	"github.com/Layr-Labs/eigenda/api/clients/codecs"
 	clients_v2 "github.com/Layr-Labs/eigenda/api/clients/v2"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/payloaddispersal"
@@ -23,18 +24,17 @@ var (
 	BlobStatusPollIntervalFlagName  = withFlagPrefix("blob-status-poll-interval")
 	PointEvaluationDisabledFlagName = withFlagPrefix("disable-point-evaluation")
 
-	PutRetriesFlagName              = withFlagPrefix("put-retries")
-	SignerPaymentKeyHexFlagName     = withFlagPrefix("signer-payment-key-hex")
-	DisperseBlobTimeoutFlagName     = withFlagPrefix("disperse-blob-timeout")
-	BlobCertifiedTimeoutFlagName    = withFlagPrefix("blob-certified-timeout")
-	CertVerifierAddrFlagName        = withFlagPrefix("cert-verifier-addr")
-	RelayTimeoutFlagName            = withFlagPrefix("relay-timeout")
-	ContractCallTimeoutFlagName     = withFlagPrefix("contract-call-timeout")
-	BlobParamsVersionFlagName       = withFlagPrefix("blob-version")
-	BlockNumberPollIntervalFlagName = withFlagPrefix("block-number-poll-interval-duration")
-	SvcManagerAddrFlagName          = withFlagPrefix("svc-manager-addr")
-	EthRPCURLFlagName               = withFlagPrefix("eth-rpc")
-	MaxBlobLengthFlagName           = withFlagPrefix("max-blob-length")
+	PutRetriesFlagName           = withFlagPrefix("put-retries")
+	SignerPaymentKeyHexFlagName  = withFlagPrefix("signer-payment-key-hex")
+	DisperseBlobTimeoutFlagName  = withFlagPrefix("disperse-blob-timeout")
+	BlobCertifiedTimeoutFlagName = withFlagPrefix("blob-certified-timeout")
+	CertVerifierAddrFlagName     = withFlagPrefix("cert-verifier-addr")
+	RelayTimeoutFlagName         = withFlagPrefix("relay-timeout")
+	ContractCallTimeoutFlagName  = withFlagPrefix("contract-call-timeout")
+	BlobParamsVersionFlagName    = withFlagPrefix("blob-version")
+	SvcManagerAddrFlagName       = withFlagPrefix("svc-manager-addr")
+	EthRPCURLFlagName            = withFlagPrefix("eth-rpc")
+	MaxBlobLengthFlagName        = withFlagPrefix("max-blob-length")
 )
 
 func withFlagPrefix(s string) string {
@@ -162,24 +162,13 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Value:    uint(0),
 			Required: false,
 		},
-		&cli.UintFlag{
-			Name: BlockNumberPollIntervalFlagName,
-			Usage: `Polling interval used for querying latest block from ETH RPC provider.
-					   Latest blocks are queried as a precondition to ensure the node is up-to-date
-					   or >= reference block number that the EigenDA disperser accredited the certificate.`,
-			EnvVars:  []string{withEnvPrefix(envPrefix, "BLOCK_NUMBER_POLL_INTERVAL")},
-			Category: category,
-			Value:    uint(0),
-			Required: false,
-		},
-		// TODO: can we use a genericFlag for this, and automatically parse the string into a uint64?
 		&cli.StringFlag{
-			Name:    MaxBlobLengthFlagName,
-			Usage:   "Maximum blob length to be written or read from EigenDA. Determines the number of SRS points loaded into memory for KZG commitments. Example units: '30MiB', '4Kb', '30MB'. Maximum size slightly exceeds 1GB.",
-			EnvVars: []string{withEnvPrefix(envPrefix, "MAX_BLOB_LENGTH")},
-			Value:   "16MiB",
-			// we also use this flag for memstore.
-			// should we duplicate the flag? Or is there a better way to handle this?
+			Name: MaxBlobLengthFlagName,
+			Usage: `Maximum blob length to be written or read from EigenDA. Determines the number of SRS points
+						loaded into memory for KZG commitments. Example units: '30MiB', '4Kb', '30MB'. Maximum size
+						slightly exceeds 1GB.`,
+			EnvVars:  []string{withEnvPrefix(envPrefix, "MAX_BLOB_LENGTH")},
+			Value:    "16MiB",
 			Category: category,
 		},
 	}
@@ -196,15 +185,22 @@ func ReadClientConfigV2(ctx *cli.Context) (common.ClientConfigV2, error) {
 		return common.ClientConfigV2{}, fmt.Errorf("read disperser config: %w", err)
 	}
 
+	maxBlobLengthFlagContents := ctx.String(MaxBlobLengthFlagName)
+	maxBlobLengthBytes, err := eigendaflags.ParseMaxBlobLength(maxBlobLengthFlagContents)
+	if err != nil {
+		return common.ClientConfigV2{}, fmt.Errorf(
+			"parse max blob length flag \"%v\": %w", maxBlobLengthFlagContents, err)
+	}
+
 	return common.ClientConfigV2{
-		Enabled:                         v2Enabled,
-		ServiceManagerAddress:           ctx.String(SvcManagerAddrFlagName),
-		DisperserClientCfg:              disperserConfig,
-		PayloadDisperserCfg:             readPayloadDisperserCfg(ctx),
-		RelayPayloadRetrieverCfg:        readRetrievalConfig(ctx),
-		PutRetries:                      ctx.Uint(PutRetriesFlagName),
-		BlockNumberPollIntervalDuration: ctx.Duration(BlockNumberPollIntervalFlagName),
-		EigenDACertVerifierAddress:      ctx.String(CertVerifierAddrFlagName),
+		Enabled:                    v2Enabled,
+		ServiceManagerAddress:      ctx.String(SvcManagerAddrFlagName),
+		DisperserClientCfg:         disperserConfig,
+		PayloadDisperserCfg:        readPayloadDisperserCfg(ctx),
+		RelayPayloadRetrieverCfg:   readRetrievalConfig(ctx),
+		PutRetries:                 ctx.Uint(PutRetriesFlagName),
+		MaxBlobSizeBytes:           maxBlobLengthBytes,
+		EigenDACertVerifierAddress: ctx.String(CertVerifierAddrFlagName),
 	}, nil
 }
 

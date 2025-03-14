@@ -151,7 +151,6 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Required: false,
 		},
 		// Flags that are proxy specific, and not used by the eigenda-client
-		// TODO: should we move this to a more specific category, like EIGENDA_STORE?
 		&cli.UintFlag{
 			Name:     PutRetriesFlagName,
 			Usage:    "Number of times to retry blob dispersals.",
@@ -159,14 +158,13 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			EnvVars:  []string{withEnvPrefix(envPrefix, "PUT_RETRIES")},
 			Category: category,
 		},
-		// TODO: can we use a genericFlag for this, and automatically parse the string into a uint64?
 		&cli.StringFlag{
-			Name:    MaxBlobLengthFlagName,
-			Usage:   "Maximum blob length to be written or read from EigenDA. Determines the number of SRS points loaded into memory for KZG commitments. Example units: '30MiB', '4Kb', '30MB'. Maximum size slightly exceeds 1GB.",
-			EnvVars: []string{withEnvPrefix(envPrefix, "MAX_BLOB_LENGTH")},
-			Value:   "16MiB",
-			// we also use this flag for memstore.
-			// should we duplicate the flag? Or is there a better way to handle this?
+			Name: MaxBlobLengthFlagName,
+			Usage: `Maximum blob length to be written or read from EigenDA. Determines the number of SRS points
+						loaded into memory for KZG commitments. Example units: '30MiB', '4Kb', '30MB'. Maximum size
+						slightly exceeds 1GB.`,
+			EnvVars:  []string{withEnvPrefix(envPrefix, "MAX_BLOB_LENGTH")},
+			Value:    "16MiB",
 			Category: category,
 		},
 	}
@@ -206,10 +204,11 @@ func ParseMaxBlobLength(input string) (uint64, error) {
 func ReadClientConfigV1(ctx *cli.Context) (common.ClientConfigV1, error) {
 	eigenDAClientConfig := readEigenDAClientConfig(ctx)
 
-	flagContents := ctx.String(MaxBlobLengthFlagName)
-	maxBlobLengthBytes, err := ParseMaxBlobLength(flagContents)
+	maxBlobLengthFlagContents := ctx.String(MaxBlobLengthFlagName)
+	maxBlobLengthBytes, err := ParseMaxBlobLength(maxBlobLengthFlagContents)
 	if err != nil {
-		return common.ClientConfigV1{}, fmt.Errorf("parse max blob length flag \"%v\": %w", flagContents, err)
+		return common.ClientConfigV1{}, fmt.Errorf(
+			"parse max blob length flag \"%v\": %w", maxBlobLengthFlagContents, err)
 	}
 
 	return common.ClientConfigV1{
