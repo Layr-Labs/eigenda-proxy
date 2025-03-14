@@ -285,15 +285,35 @@ func TestSuiteSecretConfig(testCfg TestConfig) common.SecretConfigV2 {
 type TestSuite struct {
 	Ctx     context.Context
 	Log     logging.Logger
-	Server  *server.Server
 	Metrics *proxy_metrics.EmulatedMetricer
+	Server  *server.Server
 }
 
-func CreateTestSuite(testSuiteCfg config.AppConfig, secretConfigV2 common.SecretConfigV2) (TestSuite, func()) {
-	log := logging.NewTextSLogger(os.Stdout, &logging.SLoggerOptions{})
+func TestSuiteWithLogger(log logging.Logger) func(*TestSuite) {
+	return func(ts *TestSuite) {
+		ts.Log = log
+	}
+}
 
-	metrics := proxy_metrics.NewEmulatedMetricer()
-	ctx := context.Background()
+func TestSuiteWithContext(ctx context.Context) func(*TestSuite) {
+	return func(ts *TestSuite) {
+		ts.Ctx = ctx
+	}
+}
+
+func CreateTestSuite(
+	testSuiteCfg config.AppConfig, secretConfigV2 common.SecretConfigV2, options ...func(*TestSuite),
+) (TestSuite, func()) {
+	ts := &TestSuite{
+		Ctx:     context.Background(),
+		Log:     logging.NewTextSLogger(os.Stdout, &logging.SLoggerOptions{}),
+		Metrics: proxy_metrics.NewEmulatedMetricer(),
+	}
+	// Override the defaults with the provided options, if present.
+	for _, option := range options {
+		option(ts)
+	}
+	ctx, log, metrics := ts.Ctx, ts.Log, ts.Metrics
 
 	storageManager, err := store.NewStorageManagerBuilder(
 		ctx,
@@ -311,7 +331,6 @@ func CreateTestSuite(testSuiteCfg config.AppConfig, secretConfigV2 common.Secret
 	if err != nil {
 		panic(err)
 	}
-
 	proxySvr := server.NewServer(testSuiteCfg.EigenDAConfig.ServerConfig, storageManager, log, metrics)
 
 	log.Info("Starting proxy server...")
@@ -335,8 +354,8 @@ func CreateTestSuite(testSuiteCfg config.AppConfig, secretConfigV2 common.Secret
 	return TestSuite{
 		Ctx:     ctx,
 		Log:     log,
-		Server:  proxySvr,
 		Metrics: metrics,
+		Server:  proxySvr,
 	}, kill
 }
 

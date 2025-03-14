@@ -42,9 +42,11 @@ test-e2e-holesky:
 	# Good to have early feedback when needed.
 	MEMSTORE=false go test -v -timeout 10m ./e2e -parallel 4
 
-# E2E test which fuzzes the proxy client server integration and op client keccak256 with malformed inputs
+# Very simple fuzzer which generates random bytes arrays and sends them to the proxy using the standard client.
+# To clean the cached corpus, run `go clean -fuzzcache` before running this.
 test-fuzz:
-	go test ./fuzz -fuzz -v -fuzztime=5m
+	go test ./fuzz -fuzz=FuzzProxyClientServerV1 -fuzztime=1m
+	go test ./fuzz -fuzz=FuzzProxyClientServerV2 -fuzztime=1m
 
 .PHONY: lint
 lint:

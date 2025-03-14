@@ -1,11 +1,14 @@
 package fuzz_test
 
 import (
+	"log/slog"
+	"os"
+
 	"github.com/Layr-Labs/eigenda-proxy/testutils"
-	"github.com/stretchr/testify/assert"
+	"github.com/Layr-Labs/eigensdk-go/logging"
+	"github.com/stretchr/testify/require"
 
 	"testing"
-	"unicode"
 
 	"github.com/Layr-Labs/eigenda-proxy/clients/standard_client"
 )
@@ -25,13 +28,16 @@ func FuzzProxyClientServerV2(f *testing.F) {
 func fuzzProxyClientServer(f *testing.F, testCfg testutils.TestConfig) {
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	// We want a silent logger for fuzzing because we need to see the output of the fuzzer itself,
+	// which tells us each new interesting inputs it finds.
+	logger := logging.NewTextSLogger(os.Stdout, &logging.SLoggerOptions{Level: slog.LevelError})
+	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig, testutils.TestSuiteWithLogger(logger))
+	f.Cleanup(kill)
 
-	for r := rune(0); r <= unicode.MaxRune; r++ {
-		if unicode.IsPrint(r) {
-			f.Add([]byte(string(r))) // Add each printable Unicode character as a seed
-		}
-	}
+	f.Add([]byte{})
+	f.Add([]byte("a"))
+	b := make([]byte, 1<<20)
+	f.Add(b)
 
 	cfg := &standard_client.Config{
 		URL: ts.Address(),
@@ -43,11 +49,6 @@ func fuzzProxyClientServer(f *testing.F, testCfg testutils.TestConfig) {
 	f.Fuzz(
 		func(t *testing.T, data []byte) {
 			_, err := daClient.SetData(ts.Ctx, data)
-			assert.NoError(t, err)
-			if err != nil {
-				t.Errorf("Failed to set data: %v", err)
-			}
+			require.NoError(t, err)
 		})
-
-	f.Cleanup(kill)
 }
