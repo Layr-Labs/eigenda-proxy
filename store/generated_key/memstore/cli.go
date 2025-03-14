@@ -43,7 +43,8 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Category: category,
 			Action: func(ctx *cli.Context, enabled bool) error {
 				if _, ok := os.LookupEnv(withDeprecatedEnvPrefix(envPrefix, "ENABLED")); ok {
-					return fmt.Errorf("env var %s is deprecated for flag %s, use %s instead",
+					return fmt.Errorf(
+						"env var %s is deprecated for flag %s, use %s instead",
 						withDeprecatedEnvPrefix(envPrefix, "ENABLED"),
 						EnabledFlagName,
 						withEnvPrefix(envPrefix, "ENABLED"))
@@ -70,7 +71,8 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Category: category,
 			Action: func(_ *cli.Context, _ time.Duration) error {
 				if _, ok := os.LookupEnv(withDeprecatedEnvPrefix(envPrefix, "EXPIRATION")); ok {
-					return fmt.Errorf("env var %s is deprecated for flag %s, use %s instead",
+					return fmt.Errorf(
+						"env var %s is deprecated for flag %s, use %s instead",
 						withDeprecatedEnvPrefix(envPrefix, "EXPIRATION"),
 						ExpirationFlagName,
 						withEnvPrefix(envPrefix, "EXPIRATION"))
@@ -105,17 +107,14 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 	}
 }
 
-func ReadConfig(ctx *cli.Context) *memconfig.SafeConfig {
+func ReadConfig(ctx *cli.Context, maxBlobSizeBytes uint64) (*memconfig.SafeConfig, error) {
 	return memconfig.NewSafeConfig(
 		memconfig.Config{
-			// TODO: there has to be a better way to get MaxBlobLengthBytes
-			// right now we get it from the verifier cli, but there's probably a way to share flags more nicely?
-			// maybe use a duplicate but hidden flag in memstore category, and set it using the action by reading
-			// from the other flag?
-			MaxBlobSizeBytes:        verify.MaxBlobLengthBytes,
+			MaxBlobSizeBytes:        maxBlobSizeBytes,
 			BlobExpiration:          ctx.Duration(ExpirationFlagName),
 			PutLatency:              ctx.Duration(PutLatencyFlagName),
 			GetLatency:              ctx.Duration(GetLatencyFlagName),
 			PutReturnsFailoverError: ctx.Bool(PutReturnsFailoverErrorFlagName),
-		})
+			Enabled:                 ctx.Bool(EnabledFlagName),
+		}), nil
 }

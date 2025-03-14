@@ -27,6 +27,7 @@ import (
 	auth "github.com/Layr-Labs/eigenda/core/auth/v2"
 	eigenda_eth "github.com/Layr-Labs/eigenda/core/eth"
 	core_v2 "github.com/Layr-Labs/eigenda/core/v2"
+	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	"github.com/Layr-Labs/eigenda/encoding/kzg/prover"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/consensys/gnark-crypto/ecc/bn254"
@@ -41,16 +42,13 @@ type StorageManagerBuilder struct {
 	log     logging.Logger
 	metrics metrics.Metricer
 
-	managerCfg     Config
-	memConfig      *memconfig.SafeConfig
-	v1VerifierCfg  verify.Config
-	v1EdaClientCfg clients.EigenDAClientConfig
-	v2ClientCfg    common.ClientConfigV2
-	v2SecretCfg    common.SecretConfigV2
-
-	// TODO: these values ought to be moved into configs, rather than being included individually
-	putRetries       uint
-	maxBlobSizeBytes uint
+	managerCfg    Config
+	memConfig     *memconfig.SafeConfig
+	v1VerifierCfg verify.Config
+	kzgConfig     kzg.KzgConfig
+	v1ClientCfg   common.ClientConfigV1
+	v2ClientCfg   common.ClientConfigV2
+	v2SecretCfg   common.SecretConfigV2
 }
 
 // NewStorageManagerBuilder creates a builder which knows how to build an IManager
@@ -60,12 +58,11 @@ func NewStorageManagerBuilder(
 	metrics metrics.Metricer,
 	managerConfig Config,
 	v1VerifierCfg verify.Config,
-	v1EdaClientCfg clients.EigenDAClientConfig,
+	kzgConfig kzg.KzgConfig,
+	v1ClientCfg common.ClientConfigV1,
 	v2ClientCfg common.ClientConfigV2,
 	v2SecretCfg common.SecretConfigV2,
 	memConfig *memconfig.SafeConfig,
-	putRetries uint,
-	maxBlobSize uint,
 ) *StorageManagerBuilder {
 	return &StorageManagerBuilder{
 		ctx,
@@ -74,11 +71,10 @@ func NewStorageManagerBuilder(
 		managerConfig,
 		memConfig,
 		v1VerifierCfg,
-		v1EdaClientCfg,
+		kzgConfig,
+		v1ClientCfg,
 		v2ClientCfg,
 		v2SecretCfg,
-		putRetries,
-		maxBlobSize,
 	}
 }
 
@@ -178,12 +174,12 @@ func (smb *StorageManagerBuilder) buildSecondaries(
 func (smb *StorageManagerBuilder) buildEigenDAV2Backend(ctx context.Context) (common.GeneratedKeyStore, error) {
 	// TODO: Figure out how to better manage the v1 verifier
 	//  may make sense to live in some global kzg config that's passed down across EigenDA versions
-	kzgProver, err := prover.NewProver(smb.v1VerifierCfg.KzgConfig, nil)
+	kzgProver, err := prover.NewProver(&smb.kzgConfig, nil)
 	if err != nil {
 		return nil, fmt.Errorf("new KZG prover: %w", err)
 	}
 
-	if smb.memConfig != nil {
+	if smb.memConfig.Enabled() {
 		return memstore_v2.New(smb.ctx, smb.log, smb.memConfig, kzgProver.Srs.G1)
 	}
 
@@ -211,18 +207,17 @@ func (smb *StorageManagerBuilder) buildEigenDAV2Backend(ctx context.Context) (co
 		return nil, fmt.Errorf("build payload disperser: %w", err)
 	}
 
-	v2Config := eigenda_v2.Config{
-		CertVerifierAddress: smb.v2ClientCfg.EigenDACertVerifierAddress,
-		MaxBlobSizeBytes:    uint64(smb.maxBlobSizeBytes),
-		PutRetries:          smb.v2ClientCfg.PutRetries,
-	}
-
-	return eigenda_v2.NewStore(smb.log, v2Config, payloadDisperser, relayPayloadRetriever, certVerifier)
+	return eigenda_v2.NewStore(
+		smb.log,
+		smb.v2ClientCfg.PutRetries,
+		payloadDisperser,
+		relayPayloadRetriever,
+		certVerifier)
 }
 
 // buildEigenDAV1Backend ... Builds EigenDA V1 storage backend
 func (smb *StorageManagerBuilder) buildEigenDAV1Backend(ctx context.Context) (common.GeneratedKeyStore, error) {
-	verifier, err := verify.NewVerifier(&smb.v1VerifierCfg, smb.log)
+	verifier, err := verify.NewVerifier(&smb.v1VerifierCfg, smb.kzgConfig, smb.log)
 	if err != nil {
 		return nil, fmt.Errorf("new verifier: %w", err)
 	}
@@ -233,14 +228,14 @@ func (smb *StorageManagerBuilder) buildEigenDAV1Backend(ctx context.Context) (co
 		smb.log.Warn("Certificate verification disabled. This can result in invalid EigenDA certificates being accredited.")
 	}
 
-	if smb.memConfig != nil {
+	if smb.memConfig.Enabled() {
 		smb.log.Info("Using memstore backend for EigenDA V1")
 		return memstore.New(ctx, verifier, smb.log, smb.memConfig)
 	}
 	// EigenDAV1 backend dependency injection
 	var client *clients.EigenDAClient
 	smb.log.Warn("Using EigenDA backend.. This backend type will be deprecated soon. Please migrate to V2.")
-	client, err = clients.NewEigenDAClient(smb.log, smb.v1EdaClientCfg)
+	client, err = clients.NewEigenDAClient(smb.log, smb.v1ClientCfg.EdaClientCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -250,17 +245,17 @@ func (smb *StorageManagerBuilder) buildEigenDAV1Backend(ctx context.Context) (co
 		verifier,
 		smb.log,
 		&eigenda.StoreConfig{
-			MaxBlobSizeBytes:     uint64(smb.maxBlobSizeBytes),
+			MaxBlobSizeBytes:     smb.v1ClientCfg.MaxBlobSizeBytes,
 			EthConfirmationDepth: smb.v1VerifierCfg.EthConfirmationDepth,
-			StatusQueryTimeout:   smb.v1EdaClientCfg.StatusQueryTimeout,
-			PutRetries:           smb.putRetries,
+			StatusQueryTimeout:   smb.v1ClientCfg.EdaClientCfg.StatusQueryTimeout,
+			PutRetries:           smb.v1ClientCfg.PutRetries,
 		},
 	)
 }
 
 func (smb *StorageManagerBuilder) buildEthClient() (common_eigenda.EthClient, error) {
 	gethCfg := geth.EthClientConfig{
-		RPCURLs: []string{smb.v1EdaClientCfg.EthRpcUrl},
+		RPCURLs: []string{smb.v2SecretCfg.EthRPCURL},
 	}
 
 	ethClient, err := geth.NewClient(gethCfg, geth_common.Address{}, 0, smb.log)
@@ -309,7 +304,7 @@ func (smb *StorageManagerBuilder) buildRelayClient(ethClient common_eigenda.EthC
 		UseSecureGrpcFlag: smb.v2ClientCfg.DisperserClientCfg.UseSecureGrpcFlag,
 		// we should never expect a message greater than our allowed max blob size.
 		// 10% of max blob size is added for additional safety
-		MaxGRPCMessageSize: smb.maxBlobSizeBytes + (smb.maxBlobSizeBytes / 10),
+		MaxGRPCMessageSize: uint(smb.v2ClientCfg.MaxBlobSizeBytes + (smb.v2ClientCfg.MaxBlobSizeBytes / 10)),
 	}
 
 	relayClient, err := clients_v2.NewRelayClient(relayCfg, smb.log, relayURLProvider)

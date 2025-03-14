@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/ecc/bn254"
@@ -15,7 +16,6 @@ import (
 	"github.com/Layr-Labs/eigenda/api/grpc/common"
 	"github.com/Layr-Labs/eigenda/api/grpc/disperser"
 	"github.com/Layr-Labs/eigenda/encoding"
-	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	kzgverifier "github.com/Layr-Labs/eigenda/encoding/kzg/verifier"
 	"github.com/Layr-Labs/eigenda/encoding/rs"
 )
@@ -25,13 +25,13 @@ const (
 )
 
 type Config struct {
-	KzgConfig   *kzg.KzgConfig
 	VerifyCerts bool
 	// below fields are only required if VerifyCerts is true
 	RPCURL               string
 	SvcManagerAddr       string
 	EthConfirmationDepth uint64
 	WaitForFinalization  bool
+	MaxBlobSizeBytes     uint64
 }
 
 // Custom MarshalJSON function to control what gets included in the JSON output
@@ -56,7 +56,7 @@ type Verifier struct {
 	holesky bool
 }
 
-func NewVerifier(cfg *Config, l logging.Logger) (*Verifier, error) {
+func NewVerifier(cfg *Config, kzgConfig kzg.KzgConfig, l logging.Logger) (*Verifier, error) {
 	var cv *CertVerifier
 	var err error
 
@@ -74,7 +74,7 @@ func NewVerifier(cfg *Config, l logging.Logger) (*Verifier, error) {
 	}
 
 	log.Info("Creating blob KZG verifier")
-	kzgVerifier, err := kzgverifier.NewVerifier(cfg.KzgConfig, encoding.DefaultConfig())
+	kzgVerifier, err := kzgverifier.NewVerifier(&kzgConfig, encoding.DefaultConfig())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create kzg verifier: %w", err)
 	}

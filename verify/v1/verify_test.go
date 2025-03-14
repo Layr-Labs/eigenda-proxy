@@ -30,7 +30,7 @@ func TestCommitmentVerification(t *testing.T) {
 		Y: y,
 	}
 
-	kzgConfig := &kzg.KzgConfig{
+	kzgConfig := kzg.KzgConfig{
 		G1Path:          "../../resources/g1.point",
 		G2PowerOf2Path:  "../../resources/g2.point.powerOf2",
 		CacheDir:        "../../resources/SRSTables",
@@ -41,10 +41,9 @@ func TestCommitmentVerification(t *testing.T) {
 
 	cfg := &Config{
 		VerifyCerts: false,
-		KzgConfig:   kzgConfig,
 	}
 
-	v, err := NewVerifier(cfg, nil)
+	v, err := NewVerifier(cfg, kzgConfig, nil)
 	require.NoError(t, err)
 
 	// Happy path verification
@@ -68,7 +67,7 @@ func TestCommitmentWithTooLargeBlob(t *testing.T) {
 	require.NoError(t, err)
 	data := dataRand[:]
 
-	kzgConfig := &kzg.KzgConfig{
+	kzgConfig := kzg.KzgConfig{
 		G1Path:          "../../resources/g1.point",
 		G2PowerOf2Path:  "../../resources/g2.point.powerOf2",
 		CacheDir:        "../../resources/SRSTables",
@@ -79,10 +78,9 @@ func TestCommitmentWithTooLargeBlob(t *testing.T) {
 
 	cfg := &Config{
 		VerifyCerts: false,
-		KzgConfig:   kzgConfig,
 	}
 
-	v, err := NewVerifier(cfg, nil)
+	v, err := NewVerifier(cfg, kzgConfig, nil)
 	require.NoError(t, err)
 
 	// Some wrong commitment just to pass in function

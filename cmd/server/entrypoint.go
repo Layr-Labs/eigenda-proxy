@@ -49,7 +49,7 @@ func StartProxySvr(cliCtx *cli.Context) error {
 	}
 
 	var secretConfig common.SecretConfigV2
-	if cfg.EigenDAConfig.EdaClientConfigV2.Enabled {
+	if cfg.EigenDAConfig.ClientConfigV2.Enabled {
 		// secret config is kept entirely separate from the other config values, which may be printed
 		secretConfig = eigendaflags_v2.ReadSecretConfigV2(cliCtx)
 		if err := secretConfig.Check(); err != nil {
@@ -62,23 +62,17 @@ func StartProxySvr(cliCtx *cli.Context) error {
 	ctx, ctxCancel := context.WithCancel(cliCtx.Context)
 	defer ctxCancel()
 
-	memConfig := cfg.EigenDAConfig.MemstoreConfig
-	if !cfg.EigenDAConfig.MemstoreEnabled {
-		memConfig = nil
-	}
-
 	storageManager, err := store.NewStorageManagerBuilder(
 		ctx,
 		log,
 		metrics,
 		cfg.EigenDAConfig.StorageConfig,
-		cfg.EigenDAConfig.EdaVerifierConfigV1,
-		cfg.EigenDAConfig.EdaClientConfigV1,
-		cfg.EigenDAConfig.EdaClientConfigV2,
+		cfg.EigenDAConfig.VerifierConfigV1,
+		cfg.EigenDAConfig.KzgConfig,
+		cfg.EigenDAConfig.ClientConfigV1,
+		cfg.EigenDAConfig.ClientConfigV2,
 		secretConfig,
-		memConfig,
-		cfg.EigenDAConfig.EdaClientConfigV2.PutRetries,
-		cfg.EigenDAConfig.MaxBlobSizeBytes,
+		cfg.EigenDAConfig.MemstoreConfig,
 	).Build(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to create store: %w", err)
@@ -87,7 +81,7 @@ func StartProxySvr(cliCtx *cli.Context) error {
 	server := server.NewServer(cfg.EigenDAConfig.ServerConfig, storageManager, log, metrics)
 	r := mux.NewRouter()
 	server.RegisterRoutes(r)
-	if cfg.EigenDAConfig.MemstoreEnabled {
+	if cfg.EigenDAConfig.MemstoreConfig.Enabled() {
 		memconfig.NewHandlerHTTP(log, cfg.EigenDAConfig.MemstoreConfig).RegisterMemstoreConfigHandlers(r)
 	}
 
@@ -132,13 +126,13 @@ func prettyPrintConfig(cliCtx *cli.Context, log logging.Logger) error {
 	if err != nil {
 		return fmt.Errorf("read cli config: %w", err)
 	}
-	if cfg.EigenDAConfig.EdaClientConfigV1.SignerPrivateKeyHex != "" {
+	if cfg.EigenDAConfig.ClientConfigV1.EdaClientCfg.SignerPrivateKeyHex != "" {
 		// marshaling defined in client config
-		cfg.EigenDAConfig.EdaClientConfigV1.SignerPrivateKeyHex = redacted
+		cfg.EigenDAConfig.ClientConfigV1.EdaClientCfg.SignerPrivateKeyHex = redacted
 	}
-	if cfg.EigenDAConfig.EdaClientConfigV1.EthRpcUrl != "" {
+	if cfg.EigenDAConfig.ClientConfigV1.EdaClientCfg.EthRpcUrl != "" {
 		// hiding as RPC providers typically use sensitive API keys within
-		cfg.EigenDAConfig.EdaClientConfigV1.EthRpcUrl = redacted
+		cfg.EigenDAConfig.ClientConfigV1.EdaClientCfg.EthRpcUrl = redacted
 	}
 	if cfg.EigenDAConfig.StorageConfig.RedisConfig.Password != "" {
 		cfg.EigenDAConfig.StorageConfig.RedisConfig.Password = redacted // masking Redis password

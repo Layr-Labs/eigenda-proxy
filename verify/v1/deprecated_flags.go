@@ -3,7 +3,7 @@ package verify
 import (
 	"fmt"
 
-	"github.com/Layr-Labs/eigenda-proxy/config/eigendaflags"
+	"github.com/Layr-Labs/eigenda-proxy/config/eigendaflags/v2"
 	"github.com/urfave/cli/v2"
 )
 
@@ -40,9 +40,10 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 			Usage:   "JSON RPC node endpoint for the Ethereum network used for finalizing DA blobs. See available list here: https://docs.eigenlayer.xyz/eigenda/networks/",
 			EnvVars: []string{withDeprecatedEnvPrefix(envPrefix, "ETH_RPC")},
 			Action: func(_ *cli.Context, _ string) error {
-				return fmt.Errorf("flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
+				return fmt.Errorf(
+					"flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
 					DeprecatedEthRPCFlagName, withDeprecatedEnvPrefix(envPrefix, "ETH_RPC"),
-					eigendaflags.EthRPCURLFlagName, withEnvPrefix(envPrefix, "ETH_RPC"))
+					"eigendaflags.EthRPCURLFlagName", withEnvPrefix(envPrefix, "ETH_RPC"))
 			},
 			Category: category,
 		},
@@ -51,9 +52,10 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 			Usage:   "The deployed EigenDA service manager address. The list can be found here: https://github.com/Layr-Labs/eigenlayer-middleware/?tab=readme-ov-file#current-mainnet-deployment",
 			EnvVars: []string{withDeprecatedEnvPrefix(envPrefix, "SERVICE_MANAGER_ADDR")},
 			Action: func(_ *cli.Context, _ string) error {
-				return fmt.Errorf("flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
+				return fmt.Errorf(
+					"flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
 					DeprecatedSvcManagerAddrFlagName, withDeprecatedEnvPrefix(envPrefix, "SERVICE_MANAGER_ADDR"),
-					eigendaflags.SvcManagerAddrFlagName, withEnvPrefix(envPrefix, "SERVICE_MANAGER_ADDR"))
+					"eigendaflags.SvcManagerAddrFlagName", withEnvPrefix(envPrefix, "SERVICE_MANAGER_ADDR"))
 			},
 			Category: category,
 		},
@@ -67,7 +69,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 					"flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
 					DeprecatedEthConfirmationDepthFlagName,
 					withDeprecatedEnvPrefix(envPrefix, "ETH_CONFIRMATION_DEPTH"),
-					eigendaflags.ConfirmationDepthFlagName,
+					"eigendaflags.ConfirmationDepthFlagName",
 					withEnvPrefix(envPrefix, "CONFIRMATION_DEPTH"),
 				)
 			},
@@ -83,7 +85,8 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 			// of the container
 			Value: "resources/g1.point",
 			Action: func(_ *cli.Context, _ string) error {
-				return fmt.Errorf("flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
+				return fmt.Errorf(
+					"flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
 					DeprecatedG1PathFlagName, withDeprecatedEnvPrefix(envPrefix, "TARGET_KZG_G1_PATH"),
 					G1PathFlagName, withEnvPrefix(envPrefix, "TARGET_KZG_G1_PATH"))
 			},
@@ -98,7 +101,8 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 			// of the container
 			Value: "resources/g2.point.powerOf2",
 			Action: func(_ *cli.Context, _ string) error {
-				return fmt.Errorf("flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
+				return fmt.Errorf(
+					"flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
 					DeprecatedG2TauFlagName, withDeprecatedEnvPrefix(envPrefix, "TARGET_G2_TAU_PATH"),
 					G2PowerOf2PathFlagName, withEnvPrefix(envPrefix, "TARGET_KZG_G2_POWER_OF_2_PATH"))
 			},
@@ -113,7 +117,8 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 			// of the container
 			Value: "resources/SRSTables/",
 			Action: func(_ *cli.Context, _ string) error {
-				return fmt.Errorf("flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
+				return fmt.Errorf(
+					"flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
 					DeprecatedCachePathFlagName, withDeprecatedEnvPrefix(envPrefix, "TARGET_CACHE_PATH"),
 					CachePathFlagName, withEnvPrefix(envPrefix, "TARGET_CACHE_PATH"))
 			},
@@ -126,9 +131,10 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 			EnvVars: []string{withDeprecatedEnvPrefix(envPrefix, "MAX_BLOB_LENGTH")},
 			Value:   "16MiB",
 			Action: func(_ *cli.Context, _ string) error {
-				return fmt.Errorf("flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
+				return fmt.Errorf(
+					"flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
 					DeprecatedMaxBlobLengthFlagName, withDeprecatedEnvPrefix(envPrefix, "MAX_BLOB_LENGTH"),
-					MaxBlobLengthFlagName, withEnvPrefix(envPrefix, "MAX_BLOB_LENGTH"))
+					eigendaflags.MaxBlobLengthFlagName, withEnvPrefix(envPrefix, "MAX_BLOB_LENGTH"))
 			},
 			// we also use this flag for memstore.
 			// should we duplicate the flag? Or is there a better way to handle this?

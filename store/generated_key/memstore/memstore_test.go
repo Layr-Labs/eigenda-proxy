@@ -22,33 +22,33 @@ const (
 )
 
 func getDefaultMemStoreTestConfig() *memconfig.SafeConfig {
-	return memconfig.NewSafeConfig(memconfig.Config{
-		MaxBlobSizeBytes: 1024 * 1024,
-		BlobExpiration:   0,
-		PutLatency:       0,
-		GetLatency:       0,
-	})
-}
-
-func getDefaultVerifierTestConfig() *verify.Config {
-	return &verify.Config{
-		VerifyCerts: false,
-		KzgConfig: &kzg.KzgConfig{
-			G1Path:          "../../../resources/g1.point",
-			G2PowerOf2Path:  "../../../resources/g2.point.powerOf2",
-			CacheDir:        "../../../resources/SRSTables",
-			SRSOrder:        3000,
-			SRSNumberToLoad: 3000,
-			NumWorker:       uint64(runtime.GOMAXPROCS(0)),
-		},
-	}
+	return memconfig.NewSafeConfig(
+		memconfig.Config{
+			MaxBlobSizeBytes: 1024 * 1024,
+			BlobExpiration:   0,
+			PutLatency:       0,
+			GetLatency:       0,
+		})
 }
 
 func TestGetSet(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	verifier, err := verify.NewVerifier(getDefaultVerifierTestConfig(), nil)
+	verifierConfig := &verify.Config{
+		VerifyCerts: false,
+	}
+
+	kzgConfig := kzg.KzgConfig{
+		G1Path:          "../../../resources/g1.point",
+		G2PowerOf2Path:  "../../../resources/g2.point.powerOf2",
+		CacheDir:        "../../../resources/SRSTables",
+		SRSOrder:        3000,
+		SRSNumberToLoad: 3000,
+		NumWorker:       uint64(runtime.GOMAXPROCS(0)),
+	}
+
+	verifier, err := verify.NewVerifier(verifierConfig, kzgConfig, nil)
 	require.NoError(t, err)
 
 	ms, err := New(

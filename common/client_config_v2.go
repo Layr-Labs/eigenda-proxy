@@ -19,6 +19,7 @@ type ClientConfigV2 struct {
 	// hex address of the EigenDAServiceManager contract
 	ServiceManagerAddress string
 	PutRetries            uint
+	MaxBlobSizeBytes      uint64
 	// interval at which the ethereum node is polled, while waiting to reach a given block number
 	BlockNumberPollIntervalDuration time.Duration
 	EigenDACertVerifierAddress      string

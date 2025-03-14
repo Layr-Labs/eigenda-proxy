@@ -2,16 +2,24 @@ package eigendaflags
 
 import (
 	"fmt"
+	"runtime"
 	"strconv"
 	"time"
 
+	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/common/consts"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/Layr-Labs/eigenda/api/clients/codecs"
+	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	"github.com/urfave/cli/v2"
 )
 
-// TODO: we should eventually move all of these flags into the eigenda repo
+const (
+	BytesPerSymbol     = 31
+	MaxCodingRatio     = 8
+	SrsOrder           = 1 << 28 // 2^28
+	MaxAllowedBlobSize = uint64(SrsOrder * BytesPerSymbol / MaxCodingRatio)
+)
 
 var (
 	DisperserRPCFlagName                 = withFlagPrefix("disperser-rpc")
@@ -28,7 +36,8 @@ var (
 	EthRPCURLFlagName                    = withFlagPrefix("eth-rpc")
 	SvcManagerAddrFlagName               = withFlagPrefix("svc-manager-addr")
 	// Flags that are proxy specific, and not used by the eigenda-client
-	PutRetriesFlagName = withFlagPrefix("put-retries")
+	PutRetriesFlagName    = withFlagPrefix("put-retries")
+	MaxBlobLengthFlagName = withFlagPrefix("max-blob-length")
 )
 
 func withFlagPrefix(s string) string {
@@ -150,10 +159,67 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			EnvVars:  []string{withEnvPrefix(envPrefix, "PUT_RETRIES")},
 			Category: category,
 		},
+		// TODO: can we use a genericFlag for this, and automatically parse the string into a uint64?
+		&cli.StringFlag{
+			Name:    MaxBlobLengthFlagName,
+			Usage:   "Maximum blob length to be written or read from EigenDA. Determines the number of SRS points loaded into memory for KZG commitments. Example units: '30MiB', '4Kb', '30MB'. Maximum size slightly exceeds 1GB.",
+			EnvVars: []string{withEnvPrefix(envPrefix, "MAX_BLOB_LENGTH")},
+			Value:   "16MiB",
+			// we also use this flag for memstore.
+			// should we duplicate the flag? Or is there a better way to handle this?
+			Category: category,
+		},
 	}
 }
 
-func ReadConfig(ctx *cli.Context) clients.EigenDAClientConfig {
+func ReadKzgConfig(ctx *cli.Context, maxBlobSizeBytes uint64) kzg.KzgConfig {
+	return kzg.KzgConfig{
+		G1Path:          ctx.String(kzg.G1PathFlagName),
+		G2PowerOf2Path:  ctx.String(kzg.G2PowerOf2PathFlagName),
+		CacheDir:        ctx.String(kzg.CachePathFlagName),
+		SRSOrder:        SrsOrder,
+		SRSNumberToLoad: maxBlobSizeBytes / 32,         // # of fr.Elements
+		NumWorker:       uint64(runtime.GOMAXPROCS(0)), // #nosec G115
+	}
+}
+
+// ParseMaxBlobLength parses a string which represents the max blob length
+func ParseMaxBlobLength(input string) (uint64, error) {
+	numBytes, err := common.ParseBytesAmount(input)
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse max blob length flag: %w", err)
+	}
+	if numBytes == 0 {
+		return 0, fmt.Errorf("max blob length is 0")
+	}
+	if numBytes > MaxAllowedBlobSize {
+		return 0, fmt.Errorf(
+			`excluding disperser constraints on max blob size, SRS points constrain the maxBlobLength 
+					configuration parameter to be less than than %d bytes`,
+			MaxAllowedBlobSize,
+		)
+	}
+
+	return numBytes, nil
+}
+
+func ReadClientConfigV1(ctx *cli.Context) (common.ClientConfigV1, error) {
+	eigenDAClientConfig := readEigenDAClientConfig(ctx)
+
+	flagContents := ctx.String(MaxBlobLengthFlagName)
+	maxBlobLengthBytes, err := ParseMaxBlobLength(flagContents)
+	if err != nil {
+		return common.ClientConfigV1{}, fmt.Errorf("parse max blob length flag \"%v\": %w", flagContents, err)
+	}
+
+	return common.ClientConfigV1{
+		EdaClientCfg:     eigenDAClientConfig,
+		MaxBlobSizeBytes: maxBlobLengthBytes,
+		PutRetries:       ctx.Uint(PutRetriesFlagName),
+	}, nil
+}
+
+func readEigenDAClientConfig(ctx *cli.Context) clients.EigenDAClientConfig {
 	waitForFinalization, confirmationDepth := parseConfirmationFlag(ctx.String(ConfirmationDepthFlagName))
 	return clients.EigenDAClientConfig{
 		RPC:                      ctx.String(DisperserRPCFlagName),

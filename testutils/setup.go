@@ -198,49 +198,50 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 			Host:       host,
 			Port:       0,
 		},
-		EdaClientConfigV1: clients.EigenDAClientConfig{
-			RPC:                      v1DisperserHolesky,
-			StatusQueryTimeout:       time.Minute * 45,
-			StatusQueryRetryInterval: pollInterval,
-			DisableTLS:               false,
-			SignerPrivateKeyHex:      pk,
-			EthRpcUrl:                ethRPC,
-			SvcManagerAddr:           svcManagerAddr,
+		ClientConfigV1: common.ClientConfigV1{
+			EdaClientCfg: clients.EigenDAClientConfig{
+				RPC:                      v1DisperserHolesky,
+				StatusQueryTimeout:       time.Minute * 45,
+				StatusQueryRetryInterval: pollInterval,
+				DisableTLS:               false,
+				SignerPrivateKeyHex:      pk,
+				EthRpcUrl:                ethRPC,
+				SvcManagerAddr:           svcManagerAddr,
+			},
 		},
-		EdaVerifierConfigV1: verify.Config{
+		VerifierConfigV1: verify.Config{
 			VerifyCerts:          false,
 			RPCURL:               ethRPC,
 			SvcManagerAddr:       svcManagerAddr,
 			EthConfirmationDepth: 1,
-			KzgConfig: &kzg.KzgConfig{
-				G1Path:          "../resources/g1.point",
-				G2PowerOf2Path:  "../resources/g2.point.powerOf2",
-				CacheDir:        "../resources/SRSTables",
-				SRSOrder:        268435456,
-				SRSNumberToLoad: maxBlobLengthBytes / 32,
-				NumWorker:       uint64(runtime.GOMAXPROCS(0)), // #nosec G115
-			},
-			WaitForFinalization: false,
+			WaitForFinalization:  false,
 		},
-		MemstoreEnabled: testCfg.UseMemory,
+		KzgConfig: kzg.KzgConfig{
+			G1Path:          "../resources/g1.point",
+			G2PowerOf2Path:  "../resources/g2.point.powerOf2",
+			CacheDir:        "../resources/SRSTables",
+			SRSOrder:        268435456,
+			SRSNumberToLoad: maxBlobLengthBytes / 32,
+			NumWorker:       uint64(runtime.GOMAXPROCS(0)), // #nosec G115
+		},
 		MemstoreConfig: memconfig.NewSafeConfig(
 			memconfig.Config{
 				BlobExpiration:   testCfg.Expiration,
 				MaxBlobSizeBytes: maxBlobLengthBytes,
+				Enabled:          testCfg.UseMemory,
 			}),
 
-		EdaClientConfigV2: common.ClientConfigV2{
+		ClientConfigV2: common.ClientConfigV2{
 			Enabled: testCfg.UseV2,
 		},
 		StorageConfig: store.Config{
 			AsyncPutWorkers: testCfg.WriteThreadCount,
 		},
-
-		EigenDAV2Enabled: testCfg.UseV2,
 	}
 
 	if testCfg.UseMemory {
-		eigendaCfg.EdaClientConfigV1.SignerPrivateKeyHex = "0000000000000000000100000000000000000000000000000000000000000000"
+		eigendaCfg.ClientConfigV1.EdaClientCfg.SignerPrivateKeyHex =
+			"0000000000000000000100000000000000000000000000000000000000000000"
 	}
 
 	var cfg config.AppConfig
@@ -320,13 +321,12 @@ func CreateTestSuite(
 		log,
 		metrics,
 		testSuiteCfg.EigenDAConfig.StorageConfig,
-		testSuiteCfg.EigenDAConfig.EdaVerifierConfigV1,
-		testSuiteCfg.EigenDAConfig.EdaClientConfigV1,
-		testSuiteCfg.EigenDAConfig.EdaClientConfigV2,
+		testSuiteCfg.EigenDAConfig.VerifierConfigV1,
+		testSuiteCfg.EigenDAConfig.KzgConfig,
+		testSuiteCfg.EigenDAConfig.ClientConfigV1,
+		testSuiteCfg.EigenDAConfig.ClientConfigV2,
 		secretConfigV2,
 		testSuiteCfg.EigenDAConfig.MemstoreConfig,
-		testSuiteCfg.EigenDAConfig.PutRetries,
-		testSuiteCfg.EigenDAConfig.MaxBlobSizeBytes,
 	).Build(ctx)
 	if err != nil {
 		panic(err)
@@ -341,7 +341,7 @@ func CreateTestSuite(
 		panic(err)
 	}
 
-	if testSuiteCfg.EigenDAConfig.MemstoreEnabled {
+	if testSuiteCfg.EigenDAConfig.MemstoreConfig.Enabled() {
 		memconfig.NewHandlerHTTP(log, testSuiteCfg.EigenDAConfig.MemstoreConfig).RegisterMemstoreConfigHandlers(r)
 	}
 

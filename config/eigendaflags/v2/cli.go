@@ -33,6 +33,8 @@ var (
 	BlobParamsVersionFlagName       = withFlagPrefix("blob-version")
 	BlockNumberPollIntervalFlagName = withFlagPrefix("block-number-poll-interval-duration")
 	SvcManagerAddrFlagName          = withFlagPrefix("svc-manager-addr")
+	EthRPCURLFlagName               = withFlagPrefix("eth-rpc")
+	MaxBlobLengthFlagName           = withFlagPrefix("max-blob-length")
 )
 
 func withFlagPrefix(s string) string {
@@ -84,6 +86,13 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 				"Required for initializing onchain system context and reading relay states from registry. " +
 				"See https://github.com/Layr-Labs/eigenlayer-middleware/?tab=readme-ov-file#current-mainnet-deployment",
 			EnvVars:  []string{withEnvPrefix(envPrefix, "SERVICE_MANAGER_ADDR")},
+			Category: category,
+			Required: false,
+		},
+		&cli.StringFlag{
+			Name:     EthRPCURLFlagName,
+			Usage:    "URL of the Ethereum RPC endpoint. Needed to confirm blobs landed onchain.",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "ETH_RPC")},
 			Category: category,
 			Required: false,
 		},
@@ -163,6 +172,16 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Value:    uint(0),
 			Required: false,
 		},
+		// TODO: can we use a genericFlag for this, and automatically parse the string into a uint64?
+		&cli.StringFlag{
+			Name:    MaxBlobLengthFlagName,
+			Usage:   "Maximum blob length to be written or read from EigenDA. Determines the number of SRS points loaded into memory for KZG commitments. Example units: '30MiB', '4Kb', '30MB'. Maximum size slightly exceeds 1GB.",
+			EnvVars: []string{withEnvPrefix(envPrefix, "MAX_BLOB_LENGTH")},
+			Value:   "16MiB",
+			// we also use this flag for memstore.
+			// should we duplicate the flag? Or is there a better way to handle this?
+			Category: category,
+		},
 	}
 }
 
@@ -192,6 +211,7 @@ func ReadClientConfigV2(ctx *cli.Context) (common.ClientConfigV2, error) {
 func ReadSecretConfigV2(ctx *cli.Context) common.SecretConfigV2 {
 	return common.SecretConfigV2{
 		SignerPaymentKey: ctx.String(SignerPaymentKeyHexFlagName),
+		EthRPCURL:        ctx.String(EthRPCURLFlagName),
 	}
 }
 
