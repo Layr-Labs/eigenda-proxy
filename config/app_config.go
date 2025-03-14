@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 
+	"github.com/Layr-Labs/eigenda-proxy/common"
+	"github.com/Layr-Labs/eigenda-proxy/config/eigendaflags/v2"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/urfave/cli/v2"
 )
@@ -10,6 +12,7 @@ import (
 // AppConfig ... Highest order config. Stores all relevant fields necessary for running both proxy & metrics servers.
 type AppConfig struct {
 	EigenDAConfig ProxyConfig
+	SecretConfig  common.SecretConfigV2
 	MetricsCfg    metrics.Config
 }
 
@@ -17,8 +20,14 @@ type AppConfig struct {
 func (c AppConfig) Check() error {
 	err := c.EigenDAConfig.Check()
 	if err != nil {
-		return err
+		return fmt.Errorf("check eigenDAConfig: %w", err)
 	}
+
+	err = c.SecretConfig.Check()
+	if err != nil {
+		return fmt.Errorf("check secret config: %w", err)
+	}
+
 	return nil
 }
 
@@ -28,8 +37,11 @@ func ReadCLIConfig(ctx *cli.Context) (AppConfig, error) {
 		return AppConfig{}, fmt.Errorf("read proxy config: %w", err)
 	}
 
+	secretConfig := eigendaflags.ReadSecretConfigV2(ctx)
+
 	return AppConfig{
 		EigenDAConfig: proxyConfig,
+		SecretConfig:  secretConfig,
 		MetricsCfg:    metrics.ReadConfig(ctx),
 	}, nil
 }

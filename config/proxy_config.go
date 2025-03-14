@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
@@ -117,4 +118,27 @@ func (cfg *ProxyConfig) Check() error {
 	}
 
 	return cfg.StorageConfig.Check()
+}
+
+func (cfg *ProxyConfig) ToString() (string, error) {
+	redacted := "******"
+
+	if cfg.ClientConfigV1.EdaClientCfg.SignerPrivateKeyHex != "" {
+		// marshaling defined in client config
+		cfg.ClientConfigV1.EdaClientCfg.SignerPrivateKeyHex = redacted
+	}
+	if cfg.ClientConfigV1.EdaClientCfg.EthRpcUrl != "" {
+		// hiding as RPC providers typically use sensitive API keys within
+		cfg.ClientConfigV1.EdaClientCfg.EthRpcUrl = redacted
+	}
+	if cfg.StorageConfig.RedisConfig.Password != "" {
+		cfg.StorageConfig.RedisConfig.Password = redacted // masking Redis password
+	}
+
+	configJSON, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	return string(configJSON), nil
 }

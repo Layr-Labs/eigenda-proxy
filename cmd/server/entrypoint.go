@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
@@ -12,7 +11,6 @@ import (
 	proxy_logging "github.com/Layr-Labs/eigenda-proxy/logging"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
-	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/gorilla/mux"
 
 	proxy_metrics "github.com/Layr-Labs/eigenda-proxy/metrics"
@@ -43,10 +41,12 @@ func StartProxySvr(cliCtx *cli.Context) error {
 	if err := cfg.Check(); err != nil {
 		return err
 	}
-	err = prettyPrintConfig(cliCtx, log)
+	configString, err := cfg.EigenDAConfig.ToString()
 	if err != nil {
-		return fmt.Errorf("failed to pretty print config: %w", err)
+		return fmt.Errorf("convert config string to json: %w", err)
 	}
+
+	log.Infof("Initializing EigenDA proxy server with config (\"*****\" fields are hidden): %v", configString)
 
 	var secretConfig common.SecretConfigV2
 	if cfg.EigenDAConfig.ClientConfigV2.Enabled {
@@ -115,37 +115,4 @@ func StartProxySvr(cliCtx *cli.Context) error {
 	}
 
 	return ctxinterrupt.Wait(cliCtx.Context)
-}
-
-// TODO: we should probably just change EdaClientConfig struct definition in eigenda-client
-func prettyPrintConfig(cliCtx *cli.Context, log logging.Logger) error {
-	redacted := "******"
-
-	// we read a new config which we modify to hide private info in order to log the rest
-	cfg, err := config.ReadCLIConfig(cliCtx)
-	if err != nil {
-		return fmt.Errorf("read cli config: %w", err)
-	}
-	if cfg.EigenDAConfig.ClientConfigV1.EdaClientCfg.SignerPrivateKeyHex != "" {
-		// marshaling defined in client config
-		cfg.EigenDAConfig.ClientConfigV1.EdaClientCfg.SignerPrivateKeyHex = redacted
-	}
-	if cfg.EigenDAConfig.ClientConfigV1.EdaClientCfg.EthRpcUrl != "" {
-		// hiding as RPC providers typically use sensitive API keys within
-		cfg.EigenDAConfig.ClientConfigV1.EdaClientCfg.EthRpcUrl = redacted
-	}
-	if cfg.EigenDAConfig.StorageConfig.RedisConfig.Password != "" {
-		cfg.EigenDAConfig.StorageConfig.RedisConfig.Password = redacted // masking Redis password
-	}
-
-	configJSON, err := json.MarshalIndent(cfg, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal config: %w", err)
-	}
-	log.Info(
-		fmt.Sprintf(
-			"Initializing EigenDA proxy server with config (\"*****\" fields are hidden): %v",
-			string(configJSON)))
-
-	return nil
 }

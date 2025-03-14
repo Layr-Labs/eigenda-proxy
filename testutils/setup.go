@@ -174,8 +174,8 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 	}
 
 	// load node url from environment
-	ethRPC := os.Getenv(ethRPC)
-	if ethRPC == "" && !testCfg.UseMemory {
+	ethRPCURL := os.Getenv(ethRPC)
+	if ethRPCURL == "" && !testCfg.UseMemory {
 		panic("ETHEREUM_RPC environment variable is not set")
 	}
 
@@ -205,13 +205,13 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 				StatusQueryRetryInterval: pollInterval,
 				DisableTLS:               false,
 				SignerPrivateKeyHex:      pk,
-				EthRpcUrl:                ethRPC,
+				EthRpcUrl:                ethRPCURL,
 				SvcManagerAddr:           svcManagerAddr,
 			},
 		},
 		VerifierConfigV1: verify.Config{
 			VerifyCerts:          false,
-			RPCURL:               ethRPC,
+			RPCURL:               ethRPCURL,
 			SvcManagerAddr:       svcManagerAddr,
 			EthConfirmationDepth: 1,
 			WaitForFinalization:  false,
@@ -239,6 +239,11 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 		},
 	}
 
+	secretConfig := common.SecretConfigV2{
+		SignerPaymentKey: pk,
+		EthRPCURL:        ethRPCURL,
+	}
+
 	if testCfg.UseMemory {
 		eigendaCfg.ClientConfigV1.EdaClientCfg.SignerPrivateKeyHex =
 			"0000000000000000000100000000000000000000000000000000000000000000"
@@ -264,6 +269,7 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 	default:
 		cfg = config.AppConfig{
 			EigenDAConfig: eigendaCfg,
+			SecretConfig:  secretConfig,
 			MetricsCfg:    proxy_metrics.Config{},
 		}
 	}
@@ -278,8 +284,14 @@ func TestSuiteSecretConfig(testCfg TestConfig) common.SecretConfigV2 {
 		panic("SIGNER_PRIVATE_KEY environment variable not set")
 	}
 
+	ethRPCURL := os.Getenv(ethRPC)
+	if ethRPCURL == "" {
+		panic("ETH_RPC environment variable not set")
+	}
+
 	return common.SecretConfigV2{
 		SignerPaymentKey: signerPrivateKey,
+		EthRPCURL:        ethRPCURL,
 	}
 }
 
