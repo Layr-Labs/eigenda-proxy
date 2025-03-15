@@ -15,13 +15,11 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/server"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
-	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/gorilla/mux"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/urfave/cli/v2"
@@ -316,7 +314,6 @@ func buildTestAppConfig(testCfg TestConfig) config.AppConfig {
 	return appConfig
 }
 
-// TODO: find as much overlap as possible with the real version of this method
 func CreateTestSuite(testCfg TestConfig, options ...func(*TestSuite)) (TestSuite, func()) {
 	appConfig := buildTestAppConfig(testCfg)
 
@@ -329,48 +326,24 @@ func CreateTestSuite(testCfg TestConfig, options ...func(*TestSuite)) (TestSuite
 	for _, option := range options {
 		option(ts)
 	}
-	ctx, log, metrics := ts.Ctx, ts.Log, ts.Metrics
+	ctx, logger, metrics := ts.Ctx, ts.Log, ts.Metrics
 
-	storageManager, err := store.NewStorageManagerBuilder(
-		ctx,
-		log,
-		metrics,
-		appConfig.EigenDAConfig.StorageConfig,
-		appConfig.EigenDAConfig.VerifierConfigV1,
-		appConfig.EigenDAConfig.KzgConfig,
-		appConfig.EigenDAConfig.ClientConfigV1,
-		appConfig.EigenDAConfig.ClientConfigV2,
-		appConfig.SecretConfig,
-		appConfig.EigenDAConfig.MemstoreConfig,
-	).Build(ctx)
+	proxyServer, err := server.BuildAndStartProxyServer(ctx, logger, metrics, appConfig)
 	if err != nil {
-		panic(err)
-	}
-	proxySvr := server.NewServer(appConfig.EigenDAConfig.ServerConfig, storageManager, log, metrics)
-
-	log.Info("Starting proxy server...")
-	r := mux.NewRouter()
-	proxySvr.RegisterRoutes(r)
-	err = proxySvr.Start(r)
-	if err != nil {
-		panic(err)
-	}
-
-	if appConfig.EigenDAConfig.MemstoreConfig.Enabled() {
-		memconfig.NewHandlerHTTP(log, appConfig.EigenDAConfig.MemstoreConfig).RegisterMemstoreConfigHandlers(r)
+		panic(fmt.Errorf("build and start proxy server: %w", err))
 	}
 
 	kill := func() {
-		if err := proxySvr.Stop(); err != nil {
+		if err := proxyServer.Stop(); err != nil {
 			log.Error("failed to stop proxy server", "err", err)
 		}
 	}
 
 	return TestSuite{
 		Ctx:     ctx,
-		Log:     log,
+		Log:     logger,
 		Metrics: metrics,
-		Server:  proxySvr,
+		Server:  proxyServer,
 	}, kill
 }
 

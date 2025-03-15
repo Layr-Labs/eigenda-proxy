@@ -6,10 +6,6 @@ import (
 
 	"github.com/Layr-Labs/eigenda-proxy/config"
 	proxy_logging "github.com/Layr-Labs/eigenda-proxy/logging"
-	"github.com/Layr-Labs/eigenda-proxy/store"
-	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
-	"github.com/gorilla/mux"
-
 	proxy_metrics "github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/server"
 	"github.com/urfave/cli/v2"
@@ -50,37 +46,13 @@ func StartProxySvr(cliCtx *cli.Context) error {
 	ctx, ctxCancel := context.WithCancel(cliCtx.Context)
 	defer ctxCancel()
 
-	storageManager, err := store.NewStorageManagerBuilder(
-		ctx,
-		log,
-		metrics,
-		cfg.EigenDAConfig.StorageConfig,
-		cfg.EigenDAConfig.VerifierConfigV1,
-		cfg.EigenDAConfig.KzgConfig,
-		cfg.EigenDAConfig.ClientConfigV1,
-		cfg.EigenDAConfig.ClientConfigV2,
-		cfg.SecretConfig,
-		cfg.EigenDAConfig.MemstoreConfig,
-	).Build(ctx)
+	proxyServer, err := server.BuildAndStartProxyServer(ctx, log, metrics, cfg)
 	if err != nil {
-		return fmt.Errorf("failed to create store: %w", err)
+		return fmt.Errorf("build proxy server: %w", err)
 	}
-
-	server := server.NewServer(cfg.EigenDAConfig.ServerConfig, storageManager, log, metrics)
-	r := mux.NewRouter()
-	server.RegisterRoutes(r)
-	if cfg.EigenDAConfig.MemstoreConfig.Enabled() {
-		memconfig.NewHandlerHTTP(log, cfg.EigenDAConfig.MemstoreConfig).RegisterMemstoreConfigHandlers(r)
-	}
-
-	if err := server.Start(r); err != nil {
-		return fmt.Errorf("failed to start the DA server: %w", err)
-	}
-
-	log.Info("Started EigenDA proxy server")
 
 	defer func() {
-		if err := server.Stop(); err != nil {
+		if err := proxyServer.Stop(); err != nil {
 			log.Error("failed to stop DA server", "err", err)
 		}
 

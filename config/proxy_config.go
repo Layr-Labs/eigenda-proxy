@@ -7,7 +7,6 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/config/eigendaflags"
 	eigendaflags_v2 "github.com/Layr-Labs/eigenda-proxy/config/v2/eigendaflags"
-	"github.com/Layr-Labs/eigenda-proxy/server"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
@@ -19,7 +18,7 @@ import (
 // ProxyConfig ... Higher order config which bundles all configs for orchestrating
 // the proxy server with necessary client context
 type ProxyConfig struct {
-	ServerConfig     server.Config
+	ServerConfig     ServerConfig
 	ClientConfigV1   common.ClientConfigV1
 	VerifierConfigV1 verify.Config
 	KzgConfig        kzg.KzgConfig
@@ -58,7 +57,7 @@ func ReadProxyConfig(ctx *cli.Context) (ProxyConfig, error) {
 	}
 
 	cfg := ProxyConfig{
-		ServerConfig: server.Config{
+		ServerConfig: ServerConfig{
 			DisperseV2: clientConfigV2.Enabled,
 			Host:       ctx.String(ListenAddrFlagName),
 			Port:       ctx.Int(PortFlagName),
