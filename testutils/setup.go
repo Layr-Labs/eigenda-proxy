@@ -41,6 +41,8 @@ const (
 
 var (
 	// set by startMinioContainer
+	bucketName = ""
+	// set by startMinioContainer
 	minioEndpoint = ""
 
 	// set by startRedisContainer
@@ -83,6 +85,11 @@ func startMinIOContainer() error {
 	}
 
 	minioEndpoint = strings.TrimPrefix(endpoint, "http://")
+
+	// generate random string
+	bucketName = "eigenda-proxy-test-" + RandStr(10)
+	createS3Bucket(bucketName)
+
 	return nil
 }
 
@@ -137,7 +144,11 @@ func NewTestConfig(useMemory bool, useV2 bool) TestConfig {
 	}
 }
 
-func GetTestEnvVars(testCfg TestConfig) map[string]string {
+// getTestEnvVars build a map from env var flag name to the default value used in tests
+//
+// Env vars are used to configure tests, since that's how it's done in production. We want to exercise as many prod
+// code pathways as possible in e2e tests.
+func getTestEnvVars(testCfg TestConfig) map[string]string {
 	signingKey := os.Getenv(privateKey)
 	ethRPCURL := os.Getenv(ethRPC)
 	maxBlobLengthString := "16mib"
@@ -227,11 +238,6 @@ func setKZGEnvVars(envVars map[string]string) {
 }
 
 func setS3EnvVars(envVars map[string]string) {
-	// generate random string
-	bucketName := "eigenda-proxy-test-" + RandStr(10)
-	// TODO: maybe put this elsewhere?
-	createS3Bucket(bucketName)
-
 	envVars[s3.EnableTLSFlagName] = fmt.Sprintf("%v", false)
 	envVars[s3.CredentialTypeFlagName] = string(s3.CredentialTypeStatic)
 	envVars[s3.AccessKeyIDFlagName] = minioAdmin
@@ -249,7 +255,9 @@ func setRedisEnvVars(envVars map[string]string) {
 	envVars[store.CacheTargetsFlagName] = "redis"
 }
 
-func ConfigureContextFromEnvMap(envMap map[string]string, flags []cli.Flag) (*cli.Context, error) {
+// configureContextFromEnvMap accepts a map from env flag name, to flag value, as well as a list of all cli flags in
+// the system. It creates a new cli.Context, with the input env flags set to the desired values.
+func configureContextFromEnvMap(envMap map[string]string, flags []cli.Flag) (*cli.Context, error) {
 	// Create an app with the provided flags
 	app := &cli.App{
 		Flags: flags,
@@ -263,7 +271,6 @@ func ConfigureContextFromEnvMap(envMap map[string]string, flags []cli.Flag) (*cl
 		}
 	}
 
-	// Create the context
 	ctx := cli.NewContext(app, set, nil)
 
 	// Set values from the env map
@@ -290,9 +297,9 @@ func TestSuiteWithLogger(log logging.Logger) func(*TestSuite) {
 }
 
 func buildTestAppConfig(testCfg TestConfig) config.AppConfig {
-	envVars := GetTestEnvVars(testCfg)
+	envVars := getTestEnvVars(testCfg)
 	cliFlags := config.CreateCLIFlags()
-	cliContext, err := ConfigureContextFromEnvMap(envVars, cliFlags)
+	cliContext, err := configureContextFromEnvMap(envVars, cliFlags)
 	if err != nil {
 		panic(fmt.Errorf("configure context from env map: %w", err))
 	}
