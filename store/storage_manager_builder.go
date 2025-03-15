@@ -196,8 +196,11 @@ func (smb *StorageManagerBuilder) buildEigenDAV2Backend(ctx context.Context) (co
 		return nil, fmt.Errorf("new cert verifier: %w", err)
 	}
 
-	// TODO: use cert verifier to get relay registry address here
-	relayPayloadRetriever, err := smb.buildRelayPayloadRetriever(ethClient, kzgProver.Srs.G1, geth_common.Address{})
+	relayRegistryAddress, err := certVerifier.GetRelayRegistryAddress(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get relay registry address: %w", err)
+	}
+	relayPayloadRetriever, err := smb.buildRelayPayloadRetriever(ethClient, kzgProver.Srs.G1, *relayRegistryAddress)
 	if err != nil {
 		return nil, fmt.Errorf("build relay payload retriever: %w", err)
 	}

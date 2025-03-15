@@ -124,8 +124,7 @@ func (cfg *ProxyConfig) ToString() (string, error) {
 	redacted := "******"
 
 	// create a copy, otherwise the original values being redacted will be lost
-	var configCopy ProxyConfig
-	configCopy = *cfg
+	configCopy := *cfg
 
 	if configCopy.ClientConfigV1.EdaClientCfg.SignerPrivateKeyHex != "" {
 		// marshaling defined in client config
