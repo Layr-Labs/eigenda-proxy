@@ -34,8 +34,7 @@ func putsWithSecondary(b *testing.B, testCfg testutils.TestConfig) {
 	}
 	testCfg.WriteThreadCount = threadInt
 
-	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig)
+	ts, kill := testutils.CreateTestSuite(testCfg)
 	defer kill()
 
 	cfg := &standard_client.Config{

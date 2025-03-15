@@ -2,7 +2,6 @@ package eigendaflags
 
 import (
 	"fmt"
-	"runtime"
 	"strconv"
 	"time"
 
@@ -10,7 +9,6 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/common/consts"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/Layr-Labs/eigenda/api/clients/codecs"
-	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	"github.com/urfave/cli/v2"
 )
 
@@ -167,17 +165,6 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Value:    "16MiB",
 			Category: category,
 		},
-	}
-}
-
-func ReadKzgConfig(ctx *cli.Context, maxBlobSizeBytes uint64) kzg.KzgConfig {
-	return kzg.KzgConfig{
-		G1Path:          ctx.String(kzg.G1PathFlagName),
-		G2PowerOf2Path:  ctx.String(kzg.G2PowerOf2PathFlagName),
-		CacheDir:        ctx.String(kzg.CachePathFlagName),
-		SRSOrder:        SrsOrder,
-		SRSNumberToLoad: maxBlobSizeBytes / 32,         // # of fr.Elements
-		NumWorker:       uint64(runtime.GOMAXPROCS(0)), // #nosec G115
 	}
 }
 

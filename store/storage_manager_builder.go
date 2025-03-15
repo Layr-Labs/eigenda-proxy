@@ -15,7 +15,7 @@ import (
 	eigenda_v2 "github.com/Layr-Labs/eigenda-proxy/store/generated_key/v2"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
-	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
+	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	clients_v2 "github.com/Layr-Labs/eigenda/api/clients/v2"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/payloaddispersal"

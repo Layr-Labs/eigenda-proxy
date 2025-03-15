@@ -6,7 +6,7 @@ import (
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
-	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
+	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	v2_clients "github.com/Layr-Labs/eigenda/api/clients/v2"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"

@@ -2,15 +2,15 @@ package config
 
 import (
 	"github.com/Layr-Labs/eigenda-proxy/config/eigendaflags"
-	eigenda_v2_flags "github.com/Layr-Labs/eigenda-proxy/config/eigendaflags/v2"
+	eigenda_v2_flags "github.com/Layr-Labs/eigenda-proxy/config/v2/eigendaflags"
 	"github.com/Layr-Labs/eigenda-proxy/store"
+	"github.com/Layr-Labs/eigenda-proxy/verify"
 
 	"github.com/Layr-Labs/eigenda-proxy/logging"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
-	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
 	"github.com/urfave/cli/v2"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
@@ -57,14 +57,20 @@ func CLIFlags() []cli.Flag {
 var Flags = []cli.Flag{}
 
 func init() {
-	Flags = CLIFlags()
-	Flags = append(Flags, logging.CLIFlags(common.GlobalPrefix, LoggingFlagsCategory)...)
-	Flags = append(Flags, metrics.CLIFlags(common.GlobalPrefix, MetricsFlagCategory)...)
-	Flags = append(Flags, eigendaflags.CLIFlags(common.GlobalPrefix, EigenDAClientCategory)...)
-	Flags = append(Flags, eigenda_v2_flags.CLIFlags(common.GlobalPrefix, EigenDAV2ClientCategory)...)
-	Flags = append(Flags, store.CLIFlags(common.GlobalPrefix, StorageFlagsCategory)...)
-	Flags = append(Flags, redis.CLIFlags(common.GlobalPrefix, RedisCategory)...)
-	Flags = append(Flags, s3.CLIFlags(common.GlobalPrefix, S3Category)...)
-	Flags = append(Flags, memstore.CLIFlags(common.GlobalPrefix, MemstoreFlagsCategory)...)
-	Flags = append(Flags, verify.CLIFlags(common.GlobalPrefix, VerifierCategory)...)
+	Flags = CreateCLIFlags()
+}
+
+func CreateCLIFlags() []cli.Flag {
+	flags := CLIFlags()
+	flags = append(flags, logging.CLIFlags(common.GlobalPrefix, LoggingFlagsCategory)...)
+	flags = append(flags, metrics.CLIFlags(common.GlobalPrefix, MetricsFlagCategory)...)
+	flags = append(flags, eigendaflags.CLIFlags(common.GlobalPrefix, EigenDAClientCategory)...)
+	flags = append(flags, eigenda_v2_flags.CLIFlags(common.GlobalPrefix, EigenDAV2ClientCategory)...)
+	flags = append(flags, store.CLIFlags(common.GlobalPrefix, StorageFlagsCategory)...)
+	flags = append(flags, redis.CLIFlags(common.GlobalPrefix, RedisCategory)...)
+	flags = append(flags, s3.CLIFlags(common.GlobalPrefix, S3Category)...)
+	flags = append(flags, memstore.CLIFlags(common.GlobalPrefix, MemstoreFlagsCategory)...)
+	flags = append(flags, verify.CLIFlags(common.GlobalPrefix, VerifierCategory)...)
+
+	return flags
 }

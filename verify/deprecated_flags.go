@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	eigendaflagsv1 "github.com/Layr-Labs/eigenda-proxy/config/eigendaflags"
-	eigendaflagsv2 "github.com/Layr-Labs/eigenda-proxy/config/eigendaflags/v2"
+	eigendaflagsv2 "github.com/Layr-Labs/eigenda-proxy/config/v2/eigendaflags"
 	"github.com/urfave/cli/v2"
 )
 

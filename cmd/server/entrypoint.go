@@ -4,10 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/config"
-	eigendaflags_v2 "github.com/Layr-Labs/eigenda-proxy/config/eigendaflags/v2"
-
 	proxy_logging "github.com/Layr-Labs/eigenda-proxy/logging"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
@@ -48,15 +45,6 @@ func StartProxySvr(cliCtx *cli.Context) error {
 
 	log.Infof("Initializing EigenDA proxy server with config (\"*****\" fields are hidden): %v", configString)
 
-	var secretConfig common.SecretConfigV2
-	if cfg.EigenDAConfig.ClientConfigV2.Enabled {
-		// secret config is kept entirely separate from the other config values, which may be printed
-		secretConfig = eigendaflags_v2.ReadSecretConfigV2(cliCtx)
-		if err := secretConfig.Check(); err != nil {
-			return err
-		}
-	}
-
 	metrics := proxy_metrics.NewMetrics("default")
 
 	ctx, ctxCancel := context.WithCancel(cliCtx.Context)
@@ -71,7 +59,7 @@ func StartProxySvr(cliCtx *cli.Context) error {
 		cfg.EigenDAConfig.KzgConfig,
 		cfg.EigenDAConfig.ClientConfigV1,
 		cfg.EigenDAConfig.ClientConfigV2,
-		secretConfig,
+		cfg.SecretConfig,
 		cfg.EigenDAConfig.MemstoreConfig,
 	).Build(ctx)
 	if err != nil {

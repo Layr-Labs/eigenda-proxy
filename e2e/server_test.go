@@ -84,8 +84,7 @@ func testOptimismClientWithKeccak256Commitment(t *testing.T, v2Enabled bool) {
 	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
 	testCfg.UseKeccak256ModeS3 = true
 
-	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig)
+	ts, kill := testutils.CreateTestSuite(testCfg)
 	defer kill()
 
 	requireOPClientSetGet(t, ts, testutils.RandBytes(100), true)
@@ -107,9 +106,7 @@ func testOptimismClientWithGenericCommitment(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
 	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
-
-	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig)
+	ts, kill := testutils.CreateTestSuite(testCfg)
 	defer kill()
 
 	requireOPClientSetGet(t, ts, testutils.RandBytes(100), false)
@@ -131,9 +128,7 @@ func testProxyClientServerIntegration(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
 	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
-
-	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig)
+	ts, kill := testutils.CreateTestSuite(testCfg)
 	t.Cleanup(kill)
 
 	cfg := &standard_client.Config{
@@ -212,9 +207,7 @@ func testProxyClient(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
 	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
-
-	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig)
+	ts, kill := testutils.CreateTestSuite(testCfg)
 	defer kill()
 
 	cfg := &standard_client.Config{
@@ -246,9 +239,7 @@ func testProxyClientWriteRead(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
 	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
-
-	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig)
+	ts, kill := testutils.CreateTestSuite(testCfg)
 	defer kill()
 
 	requireStandardClientSetGet(t, ts, testutils.RandBytes(100))
@@ -267,9 +258,7 @@ func testProxyWithMaximumSizedBlob(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
 	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
-
-	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig)
+	ts, kill := testutils.CreateTestSuite(testCfg)
 	defer kill()
 
 	requireStandardClientSetGet(t, ts, testutils.RandBytes(16_000_000))
@@ -293,8 +282,7 @@ func testProxyCaching(t *testing.T, v2Enabled bool) {
 	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
 	testCfg.UseS3Caching = true
 
-	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig)
+	ts, kill := testutils.CreateTestSuite(testCfg)
 	defer kill()
 
 	requireStandardClientSetGet(t, ts, testutils.RandBytes(1_000_000))
@@ -316,8 +304,7 @@ func testProxyCachingWithRedis(t *testing.T, v2Enabled bool) {
 	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
 	testCfg.UseRedisCaching = true
 
-	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig)
+	ts, kill := testutils.CreateTestSuite(testCfg)
 	defer kill()
 
 	requireStandardClientSetGet(t, ts, testutils.RandBytes(1_000_000))
@@ -346,8 +333,7 @@ func testProxyReadFallback(t *testing.T, v2Enabled bool) {
 	// ensure that blob memstore eviction times result in near immediate activation
 	testCfg.Expiration = time.Millisecond * 1
 
-	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig)
+	ts, kill := testutils.CreateTestSuite(testCfg)
 	defer kill()
 
 	cfg := &standard_client.Config{
@@ -387,8 +373,7 @@ func testProxyMemConfigClientCanGetAndPatch(t *testing.T, v2Enabled bool) {
 	}
 
 	testCfg := testutils.NewTestConfig(useMemstore, v2Enabled)
-	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig)
+	ts, kill := testutils.CreateTestSuite(testCfg)
 	defer kill()
 
 	memClient := memconfig_client.New(

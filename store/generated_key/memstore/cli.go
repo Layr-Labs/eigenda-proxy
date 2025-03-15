@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
-	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
+	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/urfave/cli/v2"
 )
 

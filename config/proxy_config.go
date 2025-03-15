@@ -6,12 +6,12 @@ import (
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/config/eigendaflags"
-	eigendaflags_v2 "github.com/Layr-Labs/eigenda-proxy/config/eigendaflags/v2"
+	eigendaflags_v2 "github.com/Layr-Labs/eigenda-proxy/config/v2/eigendaflags"
 	"github.com/Layr-Labs/eigenda-proxy/server"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
-	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
+	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	"github.com/urfave/cli/v2"
 )
@@ -50,7 +50,7 @@ func ReadProxyConfig(ctx *cli.Context) (ProxyConfig, error) {
 		maxBlobSizeBytes = clientConfigV1.MaxBlobSizeBytes
 	}
 
-	kzgConfig := eigendaflags.ReadKzgConfig(ctx, maxBlobSizeBytes)
+	kzgConfig := verify.ReadKzgConfig(ctx, maxBlobSizeBytes)
 
 	memstoreConfig, err := memstore.ReadConfig(ctx, maxBlobSizeBytes)
 	if err != nil {
@@ -123,19 +123,23 @@ func (cfg *ProxyConfig) Check() error {
 func (cfg *ProxyConfig) ToString() (string, error) {
 	redacted := "******"
 
-	if cfg.ClientConfigV1.EdaClientCfg.SignerPrivateKeyHex != "" {
+	// create a copy, otherwise the original values being redacted will be lost
+	var configCopy ProxyConfig
+	configCopy = *cfg
+
+	if configCopy.ClientConfigV1.EdaClientCfg.SignerPrivateKeyHex != "" {
 		// marshaling defined in client config
-		cfg.ClientConfigV1.EdaClientCfg.SignerPrivateKeyHex = redacted
+		configCopy.ClientConfigV1.EdaClientCfg.SignerPrivateKeyHex = redacted
 	}
-	if cfg.ClientConfigV1.EdaClientCfg.EthRpcUrl != "" {
+	if configCopy.ClientConfigV1.EdaClientCfg.EthRpcUrl != "" {
 		// hiding as RPC providers typically use sensitive API keys within
-		cfg.ClientConfigV1.EdaClientCfg.EthRpcUrl = redacted
+		configCopy.ClientConfigV1.EdaClientCfg.EthRpcUrl = redacted
 	}
-	if cfg.StorageConfig.RedisConfig.Password != "" {
-		cfg.StorageConfig.RedisConfig.Password = redacted // masking Redis password
+	if configCopy.StorageConfig.RedisConfig.Password != "" {
+		configCopy.StorageConfig.RedisConfig.Password = redacted // masking Redis password
 	}
 
-	configJSON, err := json.MarshalIndent(cfg, "", "  ")
+	configJSON, err := json.MarshalIndent(configCopy, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal config: %w", err)
 	}
