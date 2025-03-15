@@ -23,9 +23,11 @@ func (c AppConfig) Check() error {
 		return fmt.Errorf("check eigenDAConfig: %w", err)
 	}
 
-	err = c.SecretConfig.Check()
-	if err != nil {
-		return fmt.Errorf("check secret config: %w", err)
+	if c.EigenDAConfig.ClientConfigV2.Enabled && !c.EigenDAConfig.MemstoreConfig.Enabled() {
+		err = c.SecretConfig.Check()
+		if err != nil {
+			return fmt.Errorf("check secret config: %w", err)
+		}
 	}
 
 	return nil
