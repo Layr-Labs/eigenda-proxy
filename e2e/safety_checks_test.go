@@ -36,8 +36,7 @@ func testOpClientKeccak256MalformedInputs(t *testing.T, v2Enabled bool) {
 
 	testCfg.UseKeccak256ModeS3 = true
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
 
 	// nil commitment. Should return an error but currently is not. This needs to be fixed by OP
@@ -92,8 +91,7 @@ func testProxyClientMalformedInputCases(t *testing.T, v2Enabled bool) {
 	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
 
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
 
 	cfg := &standard_client.Config{
@@ -178,8 +176,7 @@ func testKeccak256CommitmentRequestErrorsWhenS3NotSet(t *testing.T, v2Enabled bo
 
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 	tsConfig.EigenDAConfig.StorageConfig.S3Config.Endpoint = "localhost:1234"
-	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
 
 	daClient := altda.NewDAClient(ts.Address(), false, true)
@@ -205,8 +202,7 @@ func testOversizedBlobRequestErrors(t *testing.T, v2Enabled bool) {
 	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
 
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
 
 	cfg := &standard_client.Config{

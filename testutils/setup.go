@@ -18,6 +18,10 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
 	"github.com/Layr-Labs/eigenda/api/clients"
+	"github.com/Layr-Labs/eigenda/api/clients/codecs"
+	clients2 "github.com/Layr-Labs/eigenda/api/clients/v2"
+	"github.com/Layr-Labs/eigenda/api/clients/v2/payloaddispersal"
+	"github.com/Layr-Labs/eigenda/api/clients/v2/payloadretrieval"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/ethereum/go-ethereum/log"
@@ -31,11 +35,12 @@ import (
 )
 
 const (
-	privateKey         = "SIGNER_PRIVATE_KEY"
-	ethRPC             = "ETHEREUM_RPC"
-	transport          = "http"
-	host               = "127.0.0.1"
-	v1DisperserHolesky = "disperser-holesky.eigenda.xyz:443"
+	privateKey               = "SIGNER_PRIVATE_KEY"
+	ethRPC                   = "ETHEREUM_RPC"
+	transport                = "http"
+	host                     = "127.0.0.1"
+	holeskyDisperserHostname = "disperser-holesky.eigenda.xyz"
+	holeskyDisperserPort     = "443"
 )
 
 var (
@@ -135,23 +140,22 @@ func NewTestConfig(useMemory bool, useV2 bool) TestConfig {
 	}
 }
 
-func createRedisConfig(eigendaCfg config.ProxyConfig) config.AppConfig {
+func createRedisConfig(eigendaCfg config.ProxyConfig) {
+	eigendaCfg.StorageConfig.CacheTargets = []string{"redis"}
 	eigendaCfg.StorageConfig.RedisConfig = redis.Config{
 		Endpoint: redisEndpoint,
 		Password: "",
 		DB:       0,
 		Eviction: 10 * time.Minute,
 	}
-	return config.AppConfig{
-		EigenDAConfig: eigendaCfg,
-	}
 }
 
-func createS3Config(eigendaCfg config.ProxyConfig) config.AppConfig {
+func createS3Config(eigendaCfg config.ProxyConfig) {
 	// generate random string
 	bucketName := "eigenda-proxy-test-" + RandStr(10)
 	createS3Bucket(bucketName)
 
+	eigendaCfg.StorageConfig.CacheTargets = []string{"S3"}
 	eigendaCfg.StorageConfig.S3Config = s3.Config{
 		Bucket:          bucketName,
 		Path:            "",
@@ -160,9 +164,6 @@ func createS3Config(eigendaCfg config.ProxyConfig) config.AppConfig {
 		AccessKeySecret: "minioadmin",
 		AccessKeyID:     "minioadmin",
 		CredentialType:  s3.CredentialTypeStatic,
-	}
-	return config.AppConfig{
-		EigenDAConfig: eigendaCfg,
 	}
 }
 
@@ -191,7 +192,14 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 		panic(err)
 	}
 
-	svcManagerAddr := "0xD4A7E1Bd8015057293f0D0A557088c286942e84b" // holesky testnet
+	payloadClientConfig := clients2.PayloadClientConfig{
+		PayloadPolynomialForm: codecs.PolynomialFormEval,
+		BlobVersion:           0,
+	}
+
+	certVerifierAddress := "0xFe52fE1940858DCb6e12153E2104aD0fDFbE1162" // holesky testnet
+	svcManagerAddr := "0xD4A7E1Bd8015057293f0D0A557088c286942e84b"      // holesky testnet
+
 	eigendaCfg := config.ProxyConfig{
 		ServerConfig: server.Config{
 			DisperseV2: testCfg.UseV2,
@@ -200,7 +208,7 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 		},
 		ClientConfigV1: common.ClientConfigV1{
 			EdaClientCfg: clients.EigenDAClientConfig{
-				RPC:                      v1DisperserHolesky,
+				RPC:                      holeskyDisperserHostname + ":" + holeskyDisperserPort,
 				StatusQueryTimeout:       time.Minute * 45,
 				StatusQueryRetryInterval: pollInterval,
 				DisableTLS:               false,
@@ -230,9 +238,27 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 				MaxBlobSizeBytes: maxBlobLengthBytes,
 				Enabled:          testCfg.UseMemory,
 			}),
-
 		ClientConfigV2: common.ClientConfigV2{
 			Enabled: testCfg.UseV2,
+			DisperserClientCfg: clients2.DisperserClientConfig{
+				Hostname:          holeskyDisperserHostname,
+				Port:              holeskyDisperserPort,
+				UseSecureGrpcFlag: true,
+			},
+			PayloadDisperserCfg: payloaddispersal.PayloadDisperserConfig{
+				PayloadClientConfig:    payloadClientConfig,
+				DisperseBlobTimeout:    2 * time.Minute,
+				BlobCertifiedTimeout:   2 * time.Minute,
+				BlobStatusPollInterval: 1 * time.Second,
+				ContractCallTimeout:    5 * time.Second,
+			},
+			RelayPayloadRetrieverCfg: payloadretrieval.RelayPayloadRetrieverConfig{
+				PayloadClientConfig: payloadClientConfig,
+				RelayTimeout:        5 * time.Second,
+			},
+			PutRetries:                 1,
+			MaxBlobSizeBytes:           maxBlobLengthBytes,
+			EigenDACertVerifierAddress: certVerifierAddress,
 		},
 		StorageConfig: store.Config{
 			AsyncPutWorkers: testCfg.WriteThreadCount,
@@ -249,49 +275,21 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 			"0000000000000000000100000000000000000000000000000000000000000000"
 	}
 
-	var cfg config.AppConfig
 	switch {
 	case testCfg.UseKeccak256ModeS3:
-		cfg = createS3Config(eigendaCfg)
-
+		createS3Config(eigendaCfg)
 	case testCfg.UseS3Caching:
-		eigendaCfg.StorageConfig.CacheTargets = []string{"S3"}
-		cfg = createS3Config(eigendaCfg)
-
+		createS3Config(eigendaCfg)
 	case testCfg.UseS3Fallback:
-		eigendaCfg.StorageConfig.FallbackTargets = []string{"S3"}
-		cfg = createS3Config(eigendaCfg)
-
+		createS3Config(eigendaCfg)
 	case testCfg.UseRedisCaching:
-		eigendaCfg.StorageConfig.CacheTargets = []string{"redis"}
-		cfg = createRedisConfig(eigendaCfg)
-
-	default:
-		cfg = config.AppConfig{
-			EigenDAConfig: eigendaCfg,
-			SecretConfig:  secretConfig,
-			MetricsCfg:    proxy_metrics.Config{},
-		}
+		createRedisConfig(eigendaCfg)
 	}
 
-	return cfg
-}
-
-func TestSuiteSecretConfig(testCfg TestConfig) common.SecretConfigV2 {
-	// load signer key from environment
-	signerPrivateKey := os.Getenv(privateKey)
-	if signerPrivateKey == "" && !testCfg.UseMemory {
-		panic("SIGNER_PRIVATE_KEY environment variable not set")
-	}
-
-	ethRPCURL := os.Getenv(ethRPC)
-	if ethRPCURL == "" {
-		panic("ETH_RPC environment variable not set")
-	}
-
-	return common.SecretConfigV2{
-		SignerPaymentKey: signerPrivateKey,
-		EthRPCURL:        ethRPCURL,
+	return config.AppConfig{
+		EigenDAConfig: eigendaCfg,
+		SecretConfig:  secretConfig,
+		MetricsCfg:    proxy_metrics.Config{},
 	}
 }
 
@@ -314,9 +312,7 @@ func TestSuiteWithContext(ctx context.Context) func(*TestSuite) {
 	}
 }
 
-func CreateTestSuite(
-	testSuiteCfg config.AppConfig, secretConfigV2 common.SecretConfigV2, options ...func(*TestSuite),
-) (TestSuite, func()) {
+func CreateTestSuite(testSuiteCfg config.AppConfig, options ...func(*TestSuite)) (TestSuite, func()) {
 	ts := &TestSuite{
 		Ctx:     context.Background(),
 		Log:     logging.NewTextSLogger(os.Stdout, &logging.SLoggerOptions{}),
@@ -337,7 +333,7 @@ func CreateTestSuite(
 		testSuiteCfg.EigenDAConfig.KzgConfig,
 		testSuiteCfg.EigenDAConfig.ClientConfigV1,
 		testSuiteCfg.EigenDAConfig.ClientConfigV2,
-		secretConfigV2,
+		testSuiteCfg.SecretConfig,
 		testSuiteCfg.EigenDAConfig.MemstoreConfig,
 	).Build(ctx)
 	if err != nil {

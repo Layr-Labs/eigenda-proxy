@@ -32,7 +32,6 @@ var (
 	RelayTimeoutFlagName         = withFlagPrefix("relay-timeout")
 	ContractCallTimeoutFlagName  = withFlagPrefix("contract-call-timeout")
 	BlobParamsVersionFlagName    = withFlagPrefix("blob-version")
-	SvcManagerAddrFlagName       = withFlagPrefix("svc-manager-addr")
 	EthRPCURLFlagName            = withFlagPrefix("eth-rpc")
 	MaxBlobLengthFlagName        = withFlagPrefix("max-blob-length")
 )
@@ -79,15 +78,6 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			EnvVars:  []string{withEnvPrefix(envPrefix, "DISABLE_POINT_EVALUATION")},
 			Value:    false,
 			Category: category,
-		},
-		&cli.StringFlag{
-			Name: SvcManagerAddrFlagName,
-			Usage: "Address of the EigenDAServiceManager contract. " +
-				"Required for initializing onchain system context and reading relay states from registry. " +
-				"See https://github.com/Layr-Labs/eigenlayer-middleware/?tab=readme-ov-file#current-mainnet-deployment",
-			EnvVars:  []string{withEnvPrefix(envPrefix, "SERVICE_MANAGER_ADDR")},
-			Category: category,
-			Required: false,
 		},
 		&cli.StringFlag{
 			Name:     EthRPCURLFlagName,
@@ -194,7 +184,6 @@ func ReadClientConfigV2(ctx *cli.Context) (common.ClientConfigV2, error) {
 
 	return common.ClientConfigV2{
 		Enabled:                    v2Enabled,
-		ServiceManagerAddress:      ctx.String(SvcManagerAddrFlagName),
 		DisperserClientCfg:         disperserConfig,
 		PayloadDisperserCfg:        readPayloadDisperserCfg(ctx),
 		RelayPayloadRetrieverCfg:   readRetrievalConfig(ctx),

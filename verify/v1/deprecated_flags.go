@@ -56,7 +56,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 				return fmt.Errorf(
 					"flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
 					DeprecatedSvcManagerAddrFlagName, withDeprecatedEnvPrefix(envPrefix, "SERVICE_MANAGER_ADDR"),
-					eigendaflagsv2.SvcManagerAddrFlagName, withEnvPrefix(envPrefix, "SERVICE_MANAGER_ADDR"))
+					eigendaflagsv1.SvcManagerAddrFlagName, withEnvPrefix(envPrefix, "SERVICE_MANAGER_ADDR"))
 			},
 			Category: category,
 		},

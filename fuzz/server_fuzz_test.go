@@ -27,11 +27,10 @@ func FuzzProxyClientServerV2(f *testing.F) {
 
 func fuzzProxyClientServer(f *testing.F, testCfg testutils.TestConfig) {
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
 	// We want a silent logger for fuzzing because we need to see the output of the fuzzer itself,
 	// which tells us each new interesting inputs it finds.
 	logger := logging.NewTextSLogger(os.Stdout, &logging.SLoggerOptions{Level: slog.LevelError})
-	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig, testutils.TestSuiteWithLogger(logger))
+	ts, kill := testutils.CreateTestSuite(tsConfig, testutils.TestSuiteWithLogger(logger))
 	f.Cleanup(kill)
 
 	f.Add([]byte{})

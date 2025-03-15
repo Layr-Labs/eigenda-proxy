@@ -25,7 +25,6 @@ import (
 	common_eigenda "github.com/Layr-Labs/eigenda/common"
 	"github.com/Layr-Labs/eigenda/common/geth"
 	auth "github.com/Layr-Labs/eigenda/core/auth/v2"
-	eigenda_eth "github.com/Layr-Labs/eigenda/core/eth"
 	core_v2 "github.com/Layr-Labs/eigenda/core/v2"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	"github.com/Layr-Labs/eigenda/encoding/kzg/prover"
@@ -188,11 +187,6 @@ func (smb *StorageManagerBuilder) buildEigenDAV2Backend(ctx context.Context) (co
 		return nil, fmt.Errorf("build eth client: %w", err)
 	}
 
-	relayPayloadRetriever, err := smb.buildRelayPayloadRetriever(ethClient, kzgProver.Srs.G1)
-	if err != nil {
-		return nil, fmt.Errorf("build relay payload retriever: %w", err)
-	}
-
 	certVerifierAddressProvider := verification.NewStaticCertVerifierAddressProvider(
 		geth_common.HexToAddress(smb.v2ClientCfg.EigenDACertVerifierAddress))
 
@@ -200,6 +194,12 @@ func (smb *StorageManagerBuilder) buildEigenDAV2Backend(ctx context.Context) (co
 		smb.log, ethClient, certVerifierAddressProvider)
 	if err != nil {
 		return nil, fmt.Errorf("new cert verifier: %w", err)
+	}
+
+	// TODO: use cert verifier to get relay registry address here
+	relayPayloadRetriever, err := smb.buildRelayPayloadRetriever(ethClient, kzgProver.Srs.G1, geth_common.Address{})
+	if err != nil {
+		return nil, fmt.Errorf("build relay payload retriever: %w", err)
 	}
 
 	payloadDisperser, err := smb.buildPayloadDisperser(ctx, ethClient, kzgProver, certVerifier)
@@ -269,8 +269,9 @@ func (smb *StorageManagerBuilder) buildEthClient() (common_eigenda.EthClient, er
 func (smb *StorageManagerBuilder) buildRelayPayloadRetriever(
 	ethClient common_eigenda.EthClient,
 	g1Srs []bn254.G1Affine,
+	relayRegistryAddress geth_common.Address,
 ) (*payloadretrieval.RelayPayloadRetriever, error) {
-	relayClient, err := smb.buildRelayClient(ethClient)
+	relayClient, err := smb.buildRelayClient(ethClient, relayRegistryAddress)
 	if err != nil {
 		return nil, fmt.Errorf("build relay client: %w", err)
 	}
@@ -289,13 +290,11 @@ func (smb *StorageManagerBuilder) buildRelayPayloadRetriever(
 	return relayPayloadRetriever, nil
 }
 
-func (smb *StorageManagerBuilder) buildRelayClient(ethClient common_eigenda.EthClient) (clients_v2.RelayClient, error) {
-	reader, err := eigenda_eth.NewReader(smb.log, ethClient, "0x0", smb.v2ClientCfg.ServiceManagerAddress)
-	if err != nil {
-		return nil, fmt.Errorf("new eth reader: %w", err)
-	}
-
-	relayURLProvider, err := relay.NewRelayUrlProvider(ethClient, reader.GetRelayRegistryAddress())
+func (smb *StorageManagerBuilder) buildRelayClient(
+	ethClient common_eigenda.EthClient,
+	relayRegistryAddress geth_common.Address,
+) (clients_v2.RelayClient, error) {
+	relayURLProvider, err := relay.NewRelayUrlProvider(ethClient, relayRegistryAddress)
 	if err != nil {
 		return nil, fmt.Errorf("new relay url provider: %w", err)
 	}

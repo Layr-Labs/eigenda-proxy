@@ -11,12 +11,10 @@ import (
 // ClientConfigV2 contains all non-sensitive configuration to construct V2 clients
 type ClientConfigV2 struct {
 	// Enabled is true if using eigenDA v2, or false if using eigenDA v1
-	Enabled                  bool
-	DisperserClientCfg       clients_v2.DisperserClientConfig
-	PayloadDisperserCfg      payloaddispersal.PayloadDisperserConfig
-	RelayPayloadRetrieverCfg payloadretrieval.RelayPayloadRetrieverConfig
-	// hex address of the EigenDAServiceManager contract
-	ServiceManagerAddress      string
+	Enabled                    bool
+	DisperserClientCfg         clients_v2.DisperserClientConfig
+	PayloadDisperserCfg        payloaddispersal.PayloadDisperserConfig
+	RelayPayloadRetrieverCfg   payloadretrieval.RelayPayloadRetrieverConfig
 	PutRetries                 uint
 	MaxBlobSizeBytes           uint64
 	EigenDACertVerifierAddress string
@@ -24,10 +22,6 @@ type ClientConfigV2 struct {
 
 // Check checks config invariants, and returns an error if there is a problem with the config struct
 func (cfg *ClientConfigV2) Check() error {
-	if cfg.ServiceManagerAddress == "" {
-		return fmt.Errorf("service manager address is required for using EigenDA V2 backend")
-	}
-
 	if cfg.DisperserClientCfg.Hostname == "" {
 		return fmt.Errorf("disperser hostname is required for using EigenDA V2 backend")
 	}

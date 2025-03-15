@@ -85,8 +85,7 @@ func testOptimismClientWithKeccak256Commitment(t *testing.T, v2Enabled bool) {
 	testCfg.UseKeccak256ModeS3 = true
 
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
 
 	requireOPClientSetGet(t, ts, testutils.RandBytes(100), true)
@@ -110,8 +109,7 @@ func testOptimismClientWithGenericCommitment(t *testing.T, v2Enabled bool) {
 	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
 
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
 
 	requireOPClientSetGet(t, ts, testutils.RandBytes(100), false)
@@ -135,8 +133,7 @@ func testProxyClientServerIntegration(t *testing.T, v2Enabled bool) {
 	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
 
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	ts, kill := testutils.CreateTestSuite(tsConfig)
 	t.Cleanup(kill)
 
 	cfg := &standard_client.Config{
@@ -217,8 +214,7 @@ func testProxyClient(t *testing.T, v2Enabled bool) {
 	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
 
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
 
 	cfg := &standard_client.Config{
@@ -252,8 +248,7 @@ func testProxyClientWriteRead(t *testing.T, v2Enabled bool) {
 	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
 
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
 
 	requireStandardClientSetGet(t, ts, testutils.RandBytes(100))
@@ -274,8 +269,7 @@ func testProxyWithMaximumSizedBlob(t *testing.T, v2Enabled bool) {
 	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
 
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
 
 	requireStandardClientSetGet(t, ts, testutils.RandBytes(16_000_000))
@@ -300,8 +294,7 @@ func testProxyCaching(t *testing.T, v2Enabled bool) {
 	testCfg.UseS3Caching = true
 
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
 
 	requireStandardClientSetGet(t, ts, testutils.RandBytes(1_000_000))
@@ -324,8 +317,7 @@ func testProxyCachingWithRedis(t *testing.T, v2Enabled bool) {
 	testCfg.UseRedisCaching = true
 
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
 
 	requireStandardClientSetGet(t, ts, testutils.RandBytes(1_000_000))
@@ -355,8 +347,7 @@ func testProxyReadFallback(t *testing.T, v2Enabled bool) {
 	testCfg.Expiration = time.Millisecond * 1
 
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
 
 	cfg := &standard_client.Config{
@@ -397,8 +388,7 @@ func testProxyMemConfigClientCanGetAndPatch(t *testing.T, v2Enabled bool) {
 
 	testCfg := testutils.NewTestConfig(useMemstore, v2Enabled)
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
-	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig)
+	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
 
 	memClient := memconfig_client.New(
