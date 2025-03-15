@@ -13,8 +13,8 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION}}
       # TODO: fix the local/ci drift... locally we use `make lint`.
@@ -30,22 +30,20 @@ jobs:
   flags:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION}}
       - name: Run flag test
         run: ${{ github.workspace }}/scripts/test-proxy-startup-with-env-vars.sh
 
   test-local:
-    outputs:
-      COVERAGE: ${{ steps.unit.outputs.coverage }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: true
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
       - run: go mod download
@@ -62,14 +60,12 @@ jobs:
   # The test failing in CI is currently expected however, so expect to have to re-run it.
   # See https://dora.holesky.ethpandaops.io/epochs for block production status.
   test-holesky:
-    outputs:
-      COVERAGE: ${{ steps.unit.outputs.coverage }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: true
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
       - run: go mod download
@@ -81,10 +77,10 @@ jobs:
   fuzz:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           submodules: true
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
       - run: go mod download
@@ -93,8 +89,8 @@ jobs:
   build-binary:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
       - run: make eigenda-proxy
@@ -102,7 +98,7 @@ jobs:
   build-docker:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: docker/build-push-action@v5
         with:
           push: false
