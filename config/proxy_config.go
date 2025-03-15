@@ -126,7 +126,6 @@ func (cfg *ProxyConfig) ToString() (string, error) {
 	configCopy := *cfg
 
 	if configCopy.ClientConfigV1.EdaClientCfg.SignerPrivateKeyHex != "" {
-		// marshaling defined in client config
 		configCopy.ClientConfigV1.EdaClientCfg.SignerPrivateKeyHex = redacted
 	}
 	if configCopy.ClientConfigV1.EdaClientCfg.EthRpcUrl != "" {
@@ -134,7 +133,13 @@ func (cfg *ProxyConfig) ToString() (string, error) {
 		configCopy.ClientConfigV1.EdaClientCfg.EthRpcUrl = redacted
 	}
 	if configCopy.StorageConfig.RedisConfig.Password != "" {
-		configCopy.StorageConfig.RedisConfig.Password = redacted // masking Redis password
+		configCopy.StorageConfig.RedisConfig.Password = redacted
+	}
+	if configCopy.StorageConfig.S3Config.AccessKeySecret != "" {
+		configCopy.StorageConfig.S3Config.AccessKeySecret = redacted
+	}
+	if configCopy.StorageConfig.S3Config.AccessKeyID != "" {
+		configCopy.StorageConfig.S3Config.AccessKeyID = redacted
 	}
 
 	configJSON, err := json.MarshalIndent(configCopy, "", "  ")
