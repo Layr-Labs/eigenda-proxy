@@ -164,7 +164,7 @@ func getTestEnvVars(testCfg TestConfig) map[string]string {
 	outputMap[memstore.ExpirationFlagName] = testCfg.Expiration.String()
 
 	// Verifier flags
-	outputMap[verify.CertVerificationDisabledFlagName] = fmt.Sprintf("%v", false)
+	outputMap[verify.CertVerificationDisabledFlagName] = fmt.Sprintf("%t", testCfg.UseMemory)
 
 	// Server flags
 	outputMap[config.ListenAddrFlagName] = host
