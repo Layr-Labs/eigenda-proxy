@@ -17,6 +17,22 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const (
+	privateKey    = "SIGNER_PRIVATE_KEY"
+	ethRPC        = "ETHEREUM_RPC"
+	transport     = "http"
+	host          = "127.0.0.1"
+	disperserPort = "443"
+
+	disperserPreprodHostname   = "disperser-preprod-holesky.eigenda.xyz"
+	preprodCertVerifierAddress = "0xd973fA62E22BC2779F8489258F040C0344B03C21"
+	preprodSvcManagerAddress   = "0x54A03db2784E3D0aCC08344D05385d0b62d4F432"
+
+	disperserTestnetHostname   = "disperser-testnet-holesky.eigenda.xyz"
+	testnetCertVerifierAddress = "0xFe52fE1940858DCb6e12153E2104aD0fDFbE1162"
+	testnetSvcManagerAddress   = "0xD4A7E1Bd8015057293f0D0A557088c286942e84b"
+)
+
 // EnvVar represents an individual env var configuration, with a flag name and value
 type EnvVar struct {
 	Name  string
@@ -55,7 +71,7 @@ func configureContextFromEnvVars(envVars []EnvVar, flags []cli.Flag) (*cli.Conte
 //
 // Env vars are used to configure tests, since that's how it's done in production. We want to exercise as many prod
 // code pathways as possible in e2e tests.
-func getDefaultTestEnvVars(useMemory bool, useV2 bool) []EnvVar {
+func getDefaultTestEnvVars(backend Backend, useV2 bool) []EnvVar {
 	signingKey := os.Getenv(privateKey)
 	ethRPCURL := os.Getenv(ethRPC)
 	maxBlobLengthString := "16mib"
@@ -63,16 +79,18 @@ func getDefaultTestEnvVars(useMemory bool, useV2 bool) []EnvVar {
 	writeThreadCount := 0
 
 	outputVars := make([]EnvVar, 0)
-	outputVars = append(outputVars, getV1EnvVars(useMemory, signingKey, ethRPCURL, maxBlobLengthString)...)
-	outputVars = append(outputVars, getV2EnvVars(useV2, signingKey, ethRPCURL, maxBlobLengthString)...)
+	outputVars = append(outputVars, getV1EnvVars(backend, signingKey, ethRPCURL, maxBlobLengthString)...)
+	outputVars = append(outputVars, getV2EnvVars(backend, useV2, signingKey, ethRPCURL, maxBlobLengthString)...)
 	outputVars = append(outputVars, getKZGEnvVars()...)
 
 	// Memstore flags
-	outputVars = append(outputVars, EnvVar{memstore.EnabledFlagName, fmt.Sprintf("%t", useMemory)})
+	outputVars = append(outputVars, EnvVar{memstore.EnabledFlagName, fmt.Sprintf("%t", backend == MemstoreBackend)})
 	outputVars = append(outputVars, EnvVar{memstore.ExpirationFlagName, expiration.String()})
 
 	// Verifier flags
-	outputVars = append(outputVars, EnvVar{verify.CertVerificationDisabledFlagName, fmt.Sprintf("%t", useMemory)})
+	outputVars = append(
+		outputVars,
+		EnvVar{verify.CertVerificationDisabledFlagName, fmt.Sprintf("%t", backend == MemstoreBackend)})
 
 	// Server flags
 	outputVars = append(outputVars, EnvVar{config.ListenAddrFlagName, host})
@@ -85,26 +103,42 @@ func getDefaultTestEnvVars(useMemory bool, useV2 bool) []EnvVar {
 }
 
 func getV1EnvVars(
-	useMemstore bool,
+	backend Backend,
 	signingKey string,
 	ethRPCURL string,
 	maxBlobLengthString string,
 ) []EnvVar {
 	var pollInterval time.Duration
-	if useMemstore {
+	if backend == MemstoreBackend {
 		pollInterval = time.Second * 1
 	} else {
 		pollInterval = time.Minute * 1
 	}
 
+	var disperserHostname string
+	var svcManagerAddress string
+	switch backend {
+	case MemstoreBackend:
+		// no need to set these fields for local tests
+		break
+	case PreprodBackend:
+		disperserHostname = disperserPreprodHostname
+		svcManagerAddress = preprodSvcManagerAddress
+	case TestnetBackend:
+		disperserHostname = disperserTestnetHostname
+		svcManagerAddress = testnetSvcManagerAddress
+	default:
+		panic("Unsupported backend")
+	}
+
 	envVars := []EnvVar{
 		{eigendaflags.SignerPrivateKeyHexFlagName, signingKey},
 		{eigendaflags.EthRPCURLFlagName, ethRPCURL},
-		{eigendaflags.DisperserRPCFlagName, holeskyDisperserHostname + ":" + holeskyDisperserPort},
+		{eigendaflags.DisperserRPCFlagName, disperserHostname + ":" + disperserPort},
 		{eigendaflags.StatusQueryRetryIntervalFlagName, pollInterval.String()},
 		{eigendaflags.DisableTLSFlagName, fmt.Sprintf("%v", false)},
 		{eigendaflags.ConfirmationDepthFlagName, "1"},
-		{eigendaflags.SvcManagerAddrFlagName, "0xD4A7E1Bd8015057293f0D0A557088c286942e84b"}, // holesky testnet
+		{eigendaflags.SvcManagerAddrFlagName, svcManagerAddress},
 		{eigendaflags.MaxBlobLengthFlagName, maxBlobLengthString},
 		{eigendaflags.StatusQueryTimeoutFlagName, "45m"},
 	}
@@ -113,22 +147,39 @@ func getV1EnvVars(
 }
 
 func getV2EnvVars(
+	backend Backend,
 	useV2 bool,
 	signingKey string,
 	ethRPCURL string,
 	maxBlobLengthString string,
 ) []EnvVar {
+	var disperserHostname string
+	var certVerifierAddress string
+	switch backend {
+	case MemstoreBackend:
+		// no need to set these fields for local tests
+		break
+	case PreprodBackend:
+		disperserHostname = disperserPreprodHostname
+		certVerifierAddress = preprodCertVerifierAddress
+	case TestnetBackend:
+		disperserHostname = disperserTestnetHostname
+		certVerifierAddress = testnetCertVerifierAddress
+	default:
+		panic("Unsupported backend")
+	}
+
 	envVars := []EnvVar{
 		{eigendaflagsv2.SignerPaymentKeyHexFlagName, signingKey},
 		{eigendaflagsv2.EthRPCURLFlagName, ethRPCURL},
 		{eigendaflagsv2.V2EnabledFlagName, fmt.Sprintf("%t", useV2)},
-		{eigendaflagsv2.DisperserFlagName, holeskyDisperserHostname + ":" + holeskyDisperserPort},
+		{eigendaflagsv2.DisperserFlagName, disperserHostname + ":" + disperserPort},
 		{eigendaflagsv2.DisableTLSFlagName, fmt.Sprintf("%v", false)},
 		{eigendaflagsv2.BlobStatusPollIntervalFlagName, "1s"},
 		{eigendaflagsv2.PutRetriesFlagName, "1"},
 		{eigendaflagsv2.DisperseBlobTimeoutFlagName, "2m"},
 		{eigendaflagsv2.BlobCertifiedTimeoutFlagName, "2m"},
-		{eigendaflagsv2.CertVerifierAddrFlagName, "0xFe52fE1940858DCb6e12153E2104aD0fDFbE1162"}, // holesky testnet
+		{eigendaflagsv2.CertVerifierAddrFlagName, certVerifierAddress}, // holesky testnet
 		{eigendaflagsv2.RelayTimeoutFlagName, "5s"},
 		{eigendaflagsv2.ContractCallTimeoutFlagName, "5s"},
 		{eigendaflagsv2.BlobParamsVersionFlagName, "0"},

@@ -34,7 +34,7 @@ func testOpClientKeccak256MalformedInputs(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
 	ts, kill := testutils.CreateTestSuite(
-		testutils.UseMemstore(),
+		testutils.GetBackend(),
 		v2Enabled,
 		testutils.TestSuiteWithOverriddenEnvVars(testutils.GetS3EnvVars()...))
 	defer kill()
@@ -87,7 +87,7 @@ func TestProxyClientMalformedInputCasesV2(t *testing.T) {
 // byte, many unicode characters, single unicode character and an empty preimage. It then tries to get the data from the
 // proxy server with empty byte, single byte and random string.
 func testProxyClientMalformedInputCases(t *testing.T, v2Enabled bool) {
-	ts, kill := testutils.CreateTestSuite(testutils.UseMemstore(), v2Enabled)
+	ts, kill := testutils.CreateTestSuite(testutils.GetBackend(), v2Enabled)
 	defer kill()
 
 	cfg := &standard_client.Config{
@@ -171,7 +171,7 @@ func testKeccak256CommitmentRequestErrorsWhenS3NotSet(t *testing.T, v2Enabled bo
 	envVarsToOverride = append(envVarsToOverride, testutils.EnvVar{Name: s3.EndpointFlagName, Value: "localhost:1234"})
 
 	ts, kill := testutils.CreateTestSuite(
-		testutils.UseMemstore(),
+		testutils.GetBackend(),
 		v2Enabled,
 		testutils.TestSuiteWithOverriddenEnvVars(envVarsToOverride...))
 	defer kill()
@@ -196,7 +196,7 @@ func TestOversizedBlobRequestErrorsV2(t *testing.T) {
 func testOversizedBlobRequestErrors(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	ts, kill := testutils.CreateTestSuite(testutils.UseMemstore(), v2Enabled)
+	ts, kill := testutils.CreateTestSuite(testutils.GetBackend(), v2Enabled)
 	defer kill()
 
 	cfg := &standard_client.Config{

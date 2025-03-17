@@ -40,7 +40,7 @@ func TestSuiteWithOverriddenEnvVars(envVars ...EnvVar) func(*TestSuite) {
 // It accepts flags indicating whether memstore and/or v2 should be enabled.
 // It also accepts a variadic options parameter, which contains functions that operate on a TestSuite object.
 // These options allow for configuration control over the TestSuite.
-func CreateTestSuite(useMemory bool, useV2 bool, options ...func(*TestSuite)) (TestSuite, func()) {
+func CreateTestSuite(backend Backend, useV2 bool, options ...func(*TestSuite)) (TestSuite, func()) {
 	ts := &TestSuite{
 		Ctx:     context.Background(),
 		Log:     logging.NewTextSLogger(os.Stdout, &logging.SLoggerOptions{}),
@@ -51,7 +51,7 @@ func CreateTestSuite(useMemory bool, useV2 bool, options ...func(*TestSuite)) (T
 		option(ts)
 	}
 
-	appConfig := buildTestAppConfig(useMemory, useV2, ts.OverriddenEnvVars)
+	appConfig := buildTestAppConfig(backend, useV2, ts.OverriddenEnvVars)
 
 	ctx, logger, metrics := ts.Ctx, ts.Log, ts.Metrics
 

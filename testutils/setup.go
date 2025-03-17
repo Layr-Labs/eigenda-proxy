@@ -18,14 +18,31 @@ import (
 )
 
 const (
-	privateKey               = "SIGNER_PRIVATE_KEY"
-	ethRPC                   = "ETHEREUM_RPC"
-	transport                = "http"
-	host                     = "127.0.0.1"
-	holeskyDisperserHostname = "disperser-holesky.eigenda.xyz"
-	holeskyDisperserPort     = "443"
-	minioAdmin               = "minioadmin"
+	minioAdmin    = "minioadmin"
+	backendEnvVar = "BACKEND"
 )
+
+type Backend int
+
+const (
+	TestnetBackend Backend = iota + 1
+	PreprodBackend
+	MemstoreBackend
+)
+
+// ParseBackend converts a string to a Backend enum (case insensitive)
+func ParseBackend(inputString string) (Backend, error) {
+	switch strings.ToLower(inputString) {
+	case "testnet":
+		return TestnetBackend, nil
+	case "preprod":
+		return PreprodBackend, nil
+	case "memstore":
+		return MemstoreBackend, nil
+	default:
+		return 0, fmt.Errorf("invalid backend: %s", inputString)
+	}
+}
 
 var (
 	// set by startMinioContainer
@@ -102,15 +119,18 @@ func startRedisContainer() error {
 	return nil
 }
 
-func UseMemstore() bool {
-	envVar := "MEMSTORE"
-	return os.Getenv(envVar) == fmt.Sprintf("%v", true) || os.Getenv(envVar) == "1"
+func GetBackend() Backend {
+	backend, err := ParseBackend(os.Getenv(backendEnvVar))
+	if err != nil {
+		panic("parse backend error")
+	}
+	return backend
 }
 
-func buildTestAppConfig(useMemory bool, useV2 bool, overriddenVars []EnvVar) config.AppConfig {
+func buildTestAppConfig(backend Backend, useV2 bool, overriddenVars []EnvVar) config.AppConfig {
 	cliFlags := config.CreateCLIFlags()
 
-	envVars := getDefaultTestEnvVars(useMemory, useV2)
+	envVars := getDefaultTestEnvVars(backend, useV2)
 	envVars = append(envVars, overriddenVars...)
 
 	cliContext, err := configureContextFromEnvVars(envVars, cliFlags)

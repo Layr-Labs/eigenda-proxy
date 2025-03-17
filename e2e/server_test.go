@@ -84,7 +84,7 @@ func testOptimismClientWithKeccak256Commitment(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
 	ts, kill := testutils.CreateTestSuite(
-		testutils.UseMemstore(),
+		testutils.GetBackend(),
 		v2Enabled,
 		testutils.TestSuiteWithOverriddenEnvVars(testutils.GetS3EnvVars()...))
 	defer kill()
@@ -107,7 +107,7 @@ with a concurrent S3 backend configured
 func testOptimismClientWithGenericCommitment(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	ts, kill := testutils.CreateTestSuite(testutils.UseMemstore(), v2Enabled)
+	ts, kill := testutils.CreateTestSuite(testutils.GetBackend(), v2Enabled)
 	defer kill()
 
 	requireOPClientSetGet(t, ts, testutils.RandBytes(100), false)
@@ -128,7 +128,7 @@ func TestProxyClientServerIntegrationV2(t *testing.T) {
 func testProxyClientServerIntegration(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	ts, kill := testutils.CreateTestSuite(testutils.UseMemstore(), v2Enabled)
+	ts, kill := testutils.CreateTestSuite(testutils.GetBackend(), v2Enabled)
 	t.Cleanup(kill)
 
 	cfg := &standard_client.Config{
@@ -206,7 +206,7 @@ func TestProxyClientV2(t *testing.T) {
 func testProxyClient(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	ts, kill := testutils.CreateTestSuite(testutils.UseMemstore(), v2Enabled)
+	ts, kill := testutils.CreateTestSuite(testutils.GetBackend(), v2Enabled)
 	defer kill()
 
 	cfg := &standard_client.Config{
@@ -237,7 +237,7 @@ func TestProxyClientWriteReadV2(t *testing.T) {
 func testProxyClientWriteRead(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	ts, kill := testutils.CreateTestSuite(testutils.UseMemstore(), v2Enabled)
+	ts, kill := testutils.CreateTestSuite(testutils.GetBackend(), v2Enabled)
 	defer kill()
 
 	requireStandardClientSetGet(t, ts, testutils.RandBytes(100))
@@ -255,7 +255,7 @@ func TestProxyWithMaximumSizedBlobV2(t *testing.T) {
 func testProxyWithMaximumSizedBlob(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	ts, kill := testutils.CreateTestSuite(testutils.UseMemstore(), v2Enabled)
+	ts, kill := testutils.CreateTestSuite(testutils.GetBackend(), v2Enabled)
 	defer kill()
 
 	requireStandardClientSetGet(t, ts, testutils.RandBytes(16_000_000))
@@ -277,7 +277,7 @@ func testProxyCaching(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
 	ts, kill := testutils.CreateTestSuite(
-		testutils.UseMemstore(),
+		testutils.GetBackend(),
 		v2Enabled,
 		testutils.TestSuiteWithOverriddenEnvVars(testutils.GetS3EnvVars()...))
 	defer kill()
@@ -299,7 +299,7 @@ func testProxyCachingWithRedis(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
 	ts, kill := testutils.CreateTestSuite(
-		testutils.UseMemstore(),
+		testutils.GetBackend(),
 		v2Enabled,
 		testutils.TestSuiteWithOverriddenEnvVars(testutils.GetRedisEnvVars()...))
 	defer kill()
@@ -332,7 +332,7 @@ func testProxyReadFallback(t *testing.T, v2Enabled bool) {
 		testutils.EnvVar{Name: memstore.ExpirationFlagName, Value: fmt.Sprintf("%v", time.Millisecond*1)})
 
 	ts, kill := testutils.CreateTestSuite(
-		testutils.UseMemstore(),
+		testutils.GetBackend(),
 		v2Enabled,
 		testutils.TestSuiteWithOverriddenEnvVars(overriddenTestVars...))
 	defer kill()
@@ -368,12 +368,12 @@ func TestProxyMemConfigClientCanGetAndPatchV2(t *testing.T) {
 func testProxyMemConfigClientCanGetAndPatch(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	useMemstore := testutils.UseMemstore()
+	useMemstore := testutils.GetBackend() == testutils.MemstoreBackend
 	if !useMemstore {
 		t.Skip("test can't be run against holesky since read failure case can't be manually triggered")
 	}
 
-	ts, kill := testutils.CreateTestSuite(useMemstore, v2Enabled)
+	ts, kill := testutils.CreateTestSuite(testutils.GetBackend(), v2Enabled)
 	defer kill()
 
 	memClient := memconfig_client.New(

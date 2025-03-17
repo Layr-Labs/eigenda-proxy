@@ -34,7 +34,7 @@ func putsWithSecondary(b *testing.B, useV2 bool) {
 	}
 
 	ts, kill := testutils.CreateTestSuite(
-		true,
+		testutils.MemstoreBackend,
 		useV2,
 		testutils.TestSuiteWithOverriddenEnvVars(envVarsToOverride...))
 	defer kill()
