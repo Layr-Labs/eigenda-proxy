@@ -31,7 +31,7 @@ test-unit:
 
 # E2E tests using local memstore, leveraging op-e2e framework. Also tests the standard client against the proxy.
 test-e2e-local:
-	# Add the -v flag to observe logs as the run is happening on CI, given that this test takes ~5 minutes to run.
+	# Add the -v flag to observe logs as the run is happening on CI, given that this test takes ~3 minutes to run.
 	# Good to have early feedback when needed.
 	MEMSTORE=true go test -v -timeout 10m ./e2e -parallel 4
 
