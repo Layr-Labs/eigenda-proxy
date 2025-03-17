@@ -36,7 +36,7 @@ func validCfg() ProxyConfig {
 		},
 		VerifierConfigV1: verify.Config{
 			VerifyCerts:          false,
-			SvcManagerAddr:       "0x1234567890abcdef",
+			SvcManagerAddr:       "0x00000000069",
 			RPCURL:               "http://localhost:8545",
 			EthConfirmationDepth: 12,
 		},
@@ -59,6 +59,7 @@ func validCfg() ProxyConfig {
 				UseSecureGrpcFlag: true,
 			},
 			EigenDACertVerifierAddress: "0x0000000000032443134",
+			MaxBlobSizeBytes:           maxBlobLengthBytes,
 		},
 	}
 

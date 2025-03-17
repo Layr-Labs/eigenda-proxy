@@ -81,7 +81,7 @@ func (cfg *ProxyConfig) Check() error {
 		cfg.VerifierConfigV1.SvcManagerAddr = "0x0000000000000000000000000000000000000000"
 		cfg.ClientConfigV1.EdaClientCfg.EthRpcUrl = "http://0.0.0.0:666"
 	} else {
-		if cfg.ClientConfigV1.EdaClientCfg.SvcManagerAddr == "" {
+		if cfg.ClientConfigV1.EdaClientCfg.SvcManagerAddr == "" || cfg.VerifierConfigV1.SvcManagerAddr == "" {
 			return fmt.Errorf("service manager address is required for communication with EigenDA")
 		}
 		if cfg.ClientConfigV1.EdaClientCfg.EthRpcUrl == "" {
@@ -103,7 +103,7 @@ func (cfg *ProxyConfig) Check() error {
 		if cfg.VerifierConfigV1.RPCURL == "" {
 			return fmt.Errorf("cert verification enabled but eth rpc is not set")
 		}
-		if cfg.ClientConfigV1.EdaClientCfg.SvcManagerAddr == "" {
+		if cfg.ClientConfigV1.EdaClientCfg.SvcManagerAddr == "" || cfg.VerifierConfigV1.SvcManagerAddr == "" {
 			return fmt.Errorf("cert verification enabled but svc manager address is not set")
 		}
 	}
