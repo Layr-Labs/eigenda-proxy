@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/Layr-Labs/eigenda-proxy/testutils"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/stretchr/testify/assert"
@@ -164,24 +165,24 @@ func TestKeccak256CommitmentRequestErrorsWhenS3NotSetV2(t *testing.T) {
 // TestKeccak256CommitmentRequestErrorsWhenS3NotSet ensures that the proxy returns a client error in the event
 // that an OP Keccak commitment mode is provided when S3 is non-configured server side
 func testKeccak256CommitmentRequestErrorsWhenS3NotSet(t *testing.T, v2Enabled bool) {
-	// TODO: fix this test
-	// t.Parallel()
-	//
-	// testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
-	// testCfg.UseKeccak256ModeS3 = true
-	//
-	// tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	// tsConfig.EigenDAConfig.StorageConfig.S3Config.Endpoint = "localhost:1234"
-	// ts, kill := testutils.CreateTestSuite(tsConfig)
-	// defer kill()
-	//
-	// daClient := altda.NewDAClient(ts.Address(), false, true)
-	//
-	// testPreimage := testutils.RandBytes(100)
-	//
-	// _, err := daClient.SetInput(ts.Ctx, testPreimage)
-	// // TODO: the server currently returns an internal server error. Should it return a 400 instead?
-	// require.Error(t, err)
+	t.Parallel()
+
+	envVarsToOverride := testutils.GetS3EnvVars()
+	envVarsToOverride = append(envVarsToOverride, testutils.EnvVar{Name: s3.EndpointFlagName, Value: "localhost:1234"})
+
+	ts, kill := testutils.CreateTestSuite(
+		testutils.UseMemstore(),
+		v2Enabled,
+		testutils.TestSuiteWithOverriddenEnvVars(envVarsToOverride...))
+	defer kill()
+
+	daClient := altda.NewDAClient(ts.Address(), false, true)
+
+	testPreimage := testutils.RandBytes(100)
+
+	_, err := daClient.SetInput(ts.Ctx, testPreimage)
+	// TODO: the server currently returns an internal server error. Should it return a 400 instead?
+	require.Error(t, err)
 }
 
 func TestOversizedBlobRequestErrorsV1(t *testing.T) {
