@@ -36,6 +36,7 @@ const (
 	transport          = "http"
 	host               = "127.0.0.1"
 	v1DisperserHolesky = "disperser-holesky.eigenda.xyz:443"
+	memstoreEnvVar     = "MEMSTORE"
 )
 
 var (
@@ -106,8 +107,7 @@ func startRedisContainer() error {
 }
 
 func UseMemstore() bool {
-	envVar := "MEMSTORE"
-	return os.Getenv(envVar) == "true" || os.Getenv(envVar) == "1"
+	return os.Getenv(memstoreEnvVar) == "true" || os.Getenv(memstoreEnvVar) == "1"
 }
 
 type TestConfig struct {
