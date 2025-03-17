@@ -3,8 +3,7 @@ package verify
 import (
 	"fmt"
 
-	eigendaflagsv1 "github.com/Layr-Labs/eigenda-proxy/config/eigendaflags"
-	eigendaflagsv2 "github.com/Layr-Labs/eigenda-proxy/config/v2/eigendaflags"
+	"github.com/Layr-Labs/eigenda-proxy/config/eigendaflags"
 	"github.com/urfave/cli/v2"
 )
 
@@ -44,7 +43,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 				return fmt.Errorf(
 					"flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
 					DeprecatedEthRPCFlagName, withDeprecatedEnvPrefix(envPrefix, "ETH_RPC"),
-					eigendaflagsv2.EthRPCURLFlagName, withEnvPrefix(envPrefix, "ETH_RPC"))
+					eigendaflags.EthRPCURLFlagName, withEnvPrefix(envPrefix, "ETH_RPC"))
 			},
 			Category: category,
 		},
@@ -56,7 +55,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 				return fmt.Errorf(
 					"flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
 					DeprecatedSvcManagerAddrFlagName, withDeprecatedEnvPrefix(envPrefix, "SERVICE_MANAGER_ADDR"),
-					eigendaflagsv1.SvcManagerAddrFlagName, withEnvPrefix(envPrefix, "SERVICE_MANAGER_ADDR"))
+					eigendaflags.SvcManagerAddrFlagName, withEnvPrefix(envPrefix, "SERVICE_MANAGER_ADDR"))
 			},
 			Category: category,
 		},
@@ -70,7 +69,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 					"flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
 					DeprecatedEthConfirmationDepthFlagName,
 					withDeprecatedEnvPrefix(envPrefix, "ETH_CONFIRMATION_DEPTH"),
-					eigendaflagsv1.ConfirmationDepthFlagName,
+					eigendaflags.ConfirmationDepthFlagName,
 					withEnvPrefix(envPrefix, "CONFIRMATION_DEPTH"),
 				)
 			},
@@ -135,7 +134,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 				return fmt.Errorf(
 					"flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
 					DeprecatedMaxBlobLengthFlagName, withDeprecatedEnvPrefix(envPrefix, "MAX_BLOB_LENGTH"),
-					eigendaflagsv2.MaxBlobLengthFlagName, withEnvPrefix(envPrefix, "MAX_BLOB_LENGTH"))
+					eigendaflags.MaxBlobLengthFlagName, withEnvPrefix(envPrefix, "MAX_BLOB_LENGTH"))
 			},
 			// we also use this flag for memstore.
 			// should we duplicate the flag? Or is there a better way to handle this?

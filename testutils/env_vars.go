@@ -67,7 +67,7 @@ func configureContextFromEnvVars(envVars []EnvVar, flags []cli.Flag) (*cli.Conte
 	return ctx, nil
 }
 
-// getDefaultTestEnvVars build a slice of default env var definitions
+// getDefaultTestEnvVars builds a slice of default env var definitions
 //
 // Env vars are used to configure tests, since that's how it's done in production. We want to exercise as many prod
 // code pathways as possible in e2e tests.
@@ -115,32 +115,32 @@ func getV1EnvVars(
 		pollInterval = time.Minute * 1
 	}
 
-	var disperserHostname string
-	var svcManagerAddress string
+	envVars := []EnvVar{
+		{eigendaflags.SignerPrivateKeyHexFlagName, signingKey},
+		{eigendaflags.EthRPCURLFlagName, ethRPCURL},
+		{eigendaflags.StatusQueryRetryIntervalFlagName, pollInterval.String()},
+		{eigendaflags.DisableTLSFlagName, fmt.Sprintf("%v", false)},
+		{eigendaflags.ConfirmationDepthFlagName, "1"},
+		{eigendaflags.MaxBlobLengthFlagName, maxBlobLengthString},
+		{eigendaflags.StatusQueryTimeoutFlagName, "45m"},
+	}
+
 	switch backend {
 	case MemstoreBackend:
 		// no need to set these fields for local tests
 		break
 	case PreprodBackend:
-		disperserHostname = disperserPreprodHostname
-		svcManagerAddress = preprodSvcManagerAddress
+		envVars = append(
+			envVars,
+			EnvVar{eigendaflags.DisperserRPCFlagName, disperserPreprodHostname + ":" + disperserPort})
+		envVars = append(envVars, EnvVar{eigendaflags.SvcManagerAddrFlagName, preprodSvcManagerAddress})
 	case TestnetBackend:
-		disperserHostname = disperserTestnetHostname
-		svcManagerAddress = testnetSvcManagerAddress
+		envVars = append(
+			envVars,
+			EnvVar{eigendaflags.DisperserRPCFlagName, disperserTestnetHostname + ":" + disperserPort})
+		envVars = append(envVars, EnvVar{eigendaflags.SvcManagerAddrFlagName, testnetSvcManagerAddress})
 	default:
 		panic("Unsupported backend")
-	}
-
-	envVars := []EnvVar{
-		{eigendaflags.SignerPrivateKeyHexFlagName, signingKey},
-		{eigendaflags.EthRPCURLFlagName, ethRPCURL},
-		{eigendaflags.DisperserRPCFlagName, disperserHostname + ":" + disperserPort},
-		{eigendaflags.StatusQueryRetryIntervalFlagName, pollInterval.String()},
-		{eigendaflags.DisableTLSFlagName, fmt.Sprintf("%v", false)},
-		{eigendaflags.ConfirmationDepthFlagName, "1"},
-		{eigendaflags.SvcManagerAddrFlagName, svcManagerAddress},
-		{eigendaflags.MaxBlobLengthFlagName, maxBlobLengthString},
-		{eigendaflags.StatusQueryTimeoutFlagName, "45m"},
 	}
 
 	return envVars
@@ -153,37 +153,39 @@ func getV2EnvVars(
 	ethRPCURL string,
 	maxBlobLengthString string,
 ) []EnvVar {
-	var disperserHostname string
-	var certVerifierAddress string
-	switch backend {
-	case MemstoreBackend:
-		// no need to set these fields for local tests
-		break
-	case PreprodBackend:
-		disperserHostname = disperserPreprodHostname
-		certVerifierAddress = preprodCertVerifierAddress
-	case TestnetBackend:
-		disperserHostname = disperserTestnetHostname
-		certVerifierAddress = testnetCertVerifierAddress
-	default:
-		panic("Unsupported backend")
-	}
-
 	envVars := []EnvVar{
 		{eigendaflagsv2.SignerPaymentKeyHexFlagName, signingKey},
 		{eigendaflagsv2.EthRPCURLFlagName, ethRPCURL},
 		{eigendaflagsv2.V2EnabledFlagName, fmt.Sprintf("%t", useV2)},
-		{eigendaflagsv2.DisperserFlagName, disperserHostname + ":" + disperserPort},
+
 		{eigendaflagsv2.DisableTLSFlagName, fmt.Sprintf("%v", false)},
 		{eigendaflagsv2.BlobStatusPollIntervalFlagName, "1s"},
 		{eigendaflagsv2.PutRetriesFlagName, "1"},
 		{eigendaflagsv2.DisperseBlobTimeoutFlagName, "2m"},
 		{eigendaflagsv2.BlobCertifiedTimeoutFlagName, "2m"},
-		{eigendaflagsv2.CertVerifierAddrFlagName, certVerifierAddress}, // holesky testnet
+
 		{eigendaflagsv2.RelayTimeoutFlagName, "5s"},
 		{eigendaflagsv2.ContractCallTimeoutFlagName, "5s"},
 		{eigendaflagsv2.BlobParamsVersionFlagName, "0"},
 		{eigendaflagsv2.MaxBlobLengthFlagName, maxBlobLengthString},
+	}
+
+	switch backend {
+	case MemstoreBackend:
+		// no need to set these fields for local tests
+		break
+	case PreprodBackend:
+		envVars = append(
+			envVars,
+			EnvVar{eigendaflagsv2.DisperserFlagName, disperserPreprodHostname + ":" + disperserPort})
+		envVars = append(envVars, EnvVar{eigendaflagsv2.CertVerifierAddrFlagName, preprodCertVerifierAddress})
+	case TestnetBackend:
+		envVars = append(
+			envVars,
+			EnvVar{eigendaflagsv2.DisperserFlagName, disperserTestnetHostname + ":" + disperserPort})
+		envVars = append(envVars, EnvVar{eigendaflagsv2.CertVerifierAddrFlagName, testnetCertVerifierAddress})
+	default:
+		panic("Unsupported backend")
 	}
 
 	return envVars
