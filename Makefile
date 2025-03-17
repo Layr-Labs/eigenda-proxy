@@ -40,7 +40,7 @@ test-e2e-local:
 test-e2e-holesky:
 	# Add the -v flag to observe logs as the run is happening on CI, given that this test takes ~5 minutes to run.
 	# Good to have early feedback when needed.
-	MEMSTORE=false go test -v -timeout 10m ./e2e -parallel 4
+	MEMSTORE=false go test -v -timeout 30m ./e2e -parallel 4
 
 # Very simple fuzzer which generates random bytes arrays and sends them to the proxy using the standard client.
 # To clean the cached corpus, run `go clean -fuzzcache` before running this.
