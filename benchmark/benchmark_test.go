@@ -2,39 +2,41 @@ package benchmark
 
 import (
 	"context"
-	"fmt"
 	"os"
-	"strconv"
 	"testing"
 
 	"github.com/Layr-Labs/eigenda-proxy/clients/standard_client"
+	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/testutils"
 )
 
 // BenchmarkPutsWithSecondaryV1  ... Takes in an async worker count and profiles blob insertions using
 // constant blob sizes in parallel. Exercises V1 code pathways
 func BenchmarkPutsWithSecondaryV1(b *testing.B) {
-	testCfg := testutils.NewTestConfig(true, false)
-	putsWithSecondary(b, testCfg)
+	putsWithSecondary(b, false)
 }
 
 // BenchmarkPutsWithSecondaryV2  ... Takes in an async worker count and profiles blob insertions using
 // constant blob sizes in parallel. Exercises V2 code pathways
 func BenchmarkPutsWithSecondaryV2(b *testing.B) {
-	testCfg := testutils.NewTestConfig(true, true)
-	putsWithSecondary(b, testCfg)
+	putsWithSecondary(b, true)
 }
 
-func putsWithSecondary(b *testing.B, testCfg testutils.TestConfig) {
-	testCfg.UseS3Caching = true
+func putsWithSecondary(b *testing.B, useV2 bool) {
+	envVarsToOverride := testutils.GetS3EnvVars()
 	writeThreadCount := os.Getenv("WRITE_THREAD_COUNT")
-	threadInt, err := strconv.Atoi(writeThreadCount)
-	if err != nil {
-		panic(fmt.Errorf("Could not parse WRITE_THREAD_COUNT field %w", err))
+	if writeThreadCount != "" {
+		envVarsToOverride = append(
+			envVarsToOverride,
+			testutils.EnvVar{
+				Name:  store.ConcurrentWriteThreads,
+				Value: writeThreadCount})
 	}
-	testCfg.WriteThreadCount = threadInt
 
-	ts, kill := testutils.CreateTestSuite(testCfg)
+	ts, kill := testutils.CreateTestSuite(
+		true,
+		useV2,
+		testutils.TestSuiteWithOverriddenEnvVars(envVarsToOverride...))
 	defer kill()
 
 	cfg := &standard_client.Config{

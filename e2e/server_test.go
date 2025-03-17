@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"testing"
@@ -12,6 +13,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/store"
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 	"github.com/Layr-Labs/eigenda-proxy/testutils"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/stretchr/testify/assert"
@@ -81,10 +83,10 @@ func TestOptimismClientWithKeccak256CommitmentV2(t *testing.T) {
 func testOptimismClientWithKeccak256Commitment(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
-	testCfg.UseKeccak256ModeS3 = true
-
-	ts, kill := testutils.CreateTestSuite(testCfg)
+	ts, kill := testutils.CreateTestSuite(
+		testutils.UseMemstore(),
+		v2Enabled,
+		testutils.TestSuiteWithOverriddenEnvVars(testutils.GetS3EnvVars()...))
 	defer kill()
 
 	requireOPClientSetGet(t, ts, testutils.RandBytes(100), true)
@@ -105,8 +107,7 @@ with a concurrent S3 backend configured
 func testOptimismClientWithGenericCommitment(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
-	ts, kill := testutils.CreateTestSuite(testCfg)
+	ts, kill := testutils.CreateTestSuite(testutils.UseMemstore(), v2Enabled)
 	defer kill()
 
 	requireOPClientSetGet(t, ts, testutils.RandBytes(100), false)
@@ -127,8 +128,7 @@ func TestProxyClientServerIntegrationV2(t *testing.T) {
 func testProxyClientServerIntegration(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
-	ts, kill := testutils.CreateTestSuite(testCfg)
+	ts, kill := testutils.CreateTestSuite(testutils.UseMemstore(), v2Enabled)
 	t.Cleanup(kill)
 
 	cfg := &standard_client.Config{
@@ -206,8 +206,7 @@ func TestProxyClientV2(t *testing.T) {
 func testProxyClient(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
-	ts, kill := testutils.CreateTestSuite(testCfg)
+	ts, kill := testutils.CreateTestSuite(testutils.UseMemstore(), v2Enabled)
 	defer kill()
 
 	cfg := &standard_client.Config{
@@ -238,8 +237,7 @@ func TestProxyClientWriteReadV2(t *testing.T) {
 func testProxyClientWriteRead(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
-	ts, kill := testutils.CreateTestSuite(testCfg)
+	ts, kill := testutils.CreateTestSuite(testutils.UseMemstore(), v2Enabled)
 	defer kill()
 
 	requireStandardClientSetGet(t, ts, testutils.RandBytes(100))
@@ -257,8 +255,7 @@ func TestProxyWithMaximumSizedBlobV2(t *testing.T) {
 func testProxyWithMaximumSizedBlob(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
-	ts, kill := testutils.CreateTestSuite(testCfg)
+	ts, kill := testutils.CreateTestSuite(testutils.UseMemstore(), v2Enabled)
 	defer kill()
 
 	requireStandardClientSetGet(t, ts, testutils.RandBytes(16_000_000))
@@ -279,10 +276,10 @@ Ensure that proxy is able to write/read from a cache backend when enabled
 func testProxyCaching(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
-	testCfg.UseS3Caching = true
-
-	ts, kill := testutils.CreateTestSuite(testCfg)
+	ts, kill := testutils.CreateTestSuite(
+		testutils.UseMemstore(),
+		v2Enabled,
+		testutils.TestSuiteWithOverriddenEnvVars(testutils.GetS3EnvVars()...))
 	defer kill()
 
 	requireStandardClientSetGet(t, ts, testutils.RandBytes(1_000_000))
@@ -301,10 +298,10 @@ func TestProxyCachingWithRedisV2(t *testing.T) {
 func testProxyCachingWithRedis(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
-	testCfg.UseRedisCaching = true
-
-	ts, kill := testutils.CreateTestSuite(testCfg)
+	ts, kill := testutils.CreateTestSuite(
+		testutils.UseMemstore(),
+		v2Enabled,
+		testutils.TestSuiteWithOverriddenEnvVars(testutils.GetRedisEnvVars()...))
 	defer kill()
 
 	requireStandardClientSetGet(t, ts, testutils.RandBytes(1_000_000))
@@ -328,12 +325,16 @@ before attempting to read it.
 func testProxyReadFallback(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
-	testCfg.UseS3Fallback = true
+	overriddenTestVars := testutils.GetS3EnvVars()
 	// ensure that blob memstore eviction times result in near immediate activation
-	testCfg.Expiration = time.Millisecond * 1
+	overriddenTestVars = append(
+		overriddenTestVars,
+		testutils.EnvVar{Name: memstore.ExpirationFlagName, Value: fmt.Sprintf("%v", time.Millisecond*1)})
 
-	ts, kill := testutils.CreateTestSuite(testCfg)
+	ts, kill := testutils.CreateTestSuite(
+		testutils.UseMemstore(),
+		v2Enabled,
+		testutils.TestSuiteWithOverriddenEnvVars(overriddenTestVars...))
 	defer kill()
 
 	cfg := &standard_client.Config{
@@ -372,8 +373,7 @@ func testProxyMemConfigClientCanGetAndPatch(t *testing.T, v2Enabled bool) {
 		t.Skip("test can't be run against holesky since read failure case can't be manually triggered")
 	}
 
-	testCfg := testutils.NewTestConfig(useMemstore, v2Enabled)
-	ts, kill := testutils.CreateTestSuite(testCfg)
+	ts, kill := testutils.CreateTestSuite(useMemstore, v2Enabled)
 	defer kill()
 
 	memClient := memconfig_client.New(

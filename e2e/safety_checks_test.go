@@ -32,10 +32,10 @@ func TestOpClientKeccak256MalformedInputsV2(t *testing.T) {
 func testOpClientKeccak256MalformedInputs(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
-	testCfg.UseKeccak256ModeS3 = true
-
-	ts, kill := testutils.CreateTestSuite(testCfg)
+	ts, kill := testutils.CreateTestSuite(
+		testutils.UseMemstore(),
+		v2Enabled,
+		testutils.TestSuiteWithOverriddenEnvVars(testutils.GetS3EnvVars()...))
 	defer kill()
 
 	// nil commitment. Should return an error but currently is not. This needs to be fixed by OP
@@ -83,13 +83,10 @@ func TestProxyClientMalformedInputCasesV2(t *testing.T) {
 }
 
 // TestProxyClientMalformedInputCases tests the proxy client and server integration by setting the data as a single
-// byte,
-// many unicode characters, single unicode character and an empty preimage. It then tries to get the data from the
+// byte, many unicode characters, single unicode character and an empty preimage. It then tries to get the data from the
 // proxy server with empty byte, single byte and random string.
 func testProxyClientMalformedInputCases(t *testing.T, v2Enabled bool) {
-	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
-
-	ts, kill := testutils.CreateTestSuite(testCfg)
+	ts, kill := testutils.CreateTestSuite(testutils.UseMemstore(), v2Enabled)
 	defer kill()
 
 	cfg := &standard_client.Config{
@@ -198,8 +195,7 @@ func TestOversizedBlobRequestErrorsV2(t *testing.T) {
 func testOversizedBlobRequestErrors(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	testCfg := testutils.NewTestConfig(testutils.UseMemstore(), v2Enabled)
-	ts, kill := testutils.CreateTestSuite(testCfg)
+	ts, kill := testutils.CreateTestSuite(testutils.UseMemstore(), v2Enabled)
 	defer kill()
 
 	cfg := &standard_client.Config{

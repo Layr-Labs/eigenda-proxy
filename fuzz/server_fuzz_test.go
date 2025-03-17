@@ -16,20 +16,18 @@ import (
 // FuzzProxyClientServerV1 will fuzz the proxy client server integration
 // and op client keccak256 with malformed inputs. This is never meant to be fuzzed with EigenDA.
 func FuzzProxyClientServerV1(f *testing.F) {
-	testCfg := testutils.NewTestConfig(true, false)
-	fuzzProxyClientServer(f, testCfg)
+	fuzzProxyClientServer(f, false)
 }
 
 func FuzzProxyClientServerV2(f *testing.F) {
-	testCfg := testutils.NewTestConfig(true, true)
-	fuzzProxyClientServer(f, testCfg)
+	fuzzProxyClientServer(f, true)
 }
 
-func fuzzProxyClientServer(f *testing.F, testCfg testutils.TestConfig) {
+func fuzzProxyClientServer(f *testing.F, useV2 bool) {
 	// We want a silent logger for fuzzing because we need to see the output of the fuzzer itself,
 	// which tells us each new interesting inputs it finds.
 	logger := logging.NewTextSLogger(os.Stdout, &logging.SLoggerOptions{Level: slog.LevelError})
-	ts, kill := testutils.CreateTestSuite(testCfg, testutils.TestSuiteWithLogger(logger))
+	ts, kill := testutils.CreateTestSuite(true, useV2, testutils.TestSuiteWithLogger(logger))
 	f.Cleanup(kill)
 
 	f.Add([]byte{})
