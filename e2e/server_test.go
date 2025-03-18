@@ -258,7 +258,7 @@ func testProxyWithMaximumSizedBlob(t *testing.T, v2Enabled bool) {
 	ts, kill := testutils.CreateTestSuite(testutils.GetBackend(), v2Enabled)
 	defer kill()
 
-	requireStandardClientSetGet(t, ts, testutils.RandBytes(16_000_000))
+	requireStandardClientSetGet(t, ts, testutils.RandBytes(1_000_000))
 	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
 }
 

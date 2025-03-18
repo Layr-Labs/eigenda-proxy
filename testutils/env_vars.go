@@ -74,7 +74,7 @@ func configureContextFromEnvVars(envVars []EnvVar, flags []cli.Flag) (*cli.Conte
 func getDefaultTestEnvVars(backend Backend, useV2 bool) []EnvVar {
 	signingKey := os.Getenv(privateKey)
 	ethRPCURL := os.Getenv(ethRPC)
-	maxBlobLengthString := "16mib"
+	maxBlobLengthString := "1mib"
 	expiration := 14 * 24 * time.Hour
 	writeThreadCount := 0
 

@@ -91,7 +91,7 @@ func ReadKzgConfig(ctx *cli.Context, maxBlobSizeBytes uint64) kzg.KzgConfig {
 		G2Path:          ctx.String(G2PathFlagName),
 		LoadG2Points:    ctx.Bool(ReadG2PointsFlagName),
 		CacheDir:        ctx.String(CachePathFlagName),
-		SRSOrder:        eigendaflags.SrsOrder,
+		SRSOrder:        maxBlobSizeBytes * eigendaflags.MaxCodingRatio / eigendaflags.BytesPerSymbol,
 		SRSNumberToLoad: maxBlobSizeBytes / 32,         // # of fr.Elements
 		NumWorker:       uint64(runtime.GOMAXPROCS(0)), // #nosec G115
 	}
