@@ -13,7 +13,6 @@
                 "ENV_PATH": "../../.env",
                 "EIGENDA_PROXY_EIGENDA_CERT_VERIFICATION_DISABLED": "true",
                 "EIGENDA_PROXY_EIGENDA_TARGET_KZG_G1_PATH": "../../resources/g1.point",
-                "EIGENDA_PROXY_EIGENDA_TARGET_KZG_G2_POWER_OF_2_PATH": "../../resources/g2.point.powerOf2"
             },
             "program": "cmd/server"
         }

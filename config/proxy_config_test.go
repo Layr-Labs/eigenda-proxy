@@ -34,10 +34,9 @@ func validCfg() ProxyConfig {
 		},
 		EdaVerifierConfigV1: verify.Config{
 			KzgConfig: &kzg.KzgConfig{
-				G1Path:         "path/to/g1",
-				G2PowerOf2Path: "path/to/g2",
-				CacheDir:       "path/to/cache",
-				SRSOrder:       maxBlobLengthBytes / 32,
+				G1Path:   "path/to/g1",
+				CacheDir: "path/to/cache",
+				SRSOrder: maxBlobLengthBytes / 32,
 			},
 			VerifyCerts:          false,
 			SvcManagerAddr:       "0x1234567890abcdef",

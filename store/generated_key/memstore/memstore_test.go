@@ -22,12 +22,13 @@ const (
 )
 
 func getDefaultMemStoreTestConfig() *memconfig.SafeConfig {
-	return memconfig.NewSafeConfig(memconfig.Config{
-		MaxBlobSizeBytes: 1024 * 1024,
-		BlobExpiration:   0,
-		PutLatency:       0,
-		GetLatency:       0,
-	})
+	return memconfig.NewSafeConfig(
+		memconfig.Config{
+			MaxBlobSizeBytes: 1024 * 1024,
+			BlobExpiration:   0,
+			PutLatency:       0,
+			GetLatency:       0,
+		})
 }
 
 func getDefaultVerifierTestConfig() *verify.Config {
@@ -35,7 +36,6 @@ func getDefaultVerifierTestConfig() *verify.Config {
 		VerifyCerts: false,
 		KzgConfig: &kzg.KzgConfig{
 			G1Path:          "../../../resources/g1.point",
-			G2PowerOf2Path:  "../../../resources/g2.point.powerOf2",
 			CacheDir:        "../../../resources/SRSTables",
 			SRSOrder:        3000,
 			SRSNumberToLoad: 3000,

@@ -32,7 +32,6 @@ func TestCommitmentVerification(t *testing.T) {
 
 	kzgConfig := &kzg.KzgConfig{
 		G1Path:          "../../resources/g1.point",
-		G2PowerOf2Path:  "../../resources/g2.point.powerOf2",
 		CacheDir:        "../../resources/SRSTables",
 		SRSOrder:        3000,
 		SRSNumberToLoad: 3000,
@@ -70,7 +69,6 @@ func TestCommitmentWithTooLargeBlob(t *testing.T) {
 
 	kzgConfig := &kzg.KzgConfig{
 		G1Path:          "../../resources/g1.point",
-		G2PowerOf2Path:  "../../resources/g2.point.powerOf2",
 		CacheDir:        "../../resources/SRSTables",
 		SRSOrder:        3000,
 		SRSNumberToLoad: 3000,

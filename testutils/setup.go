@@ -214,7 +214,6 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 			EthConfirmationDepth: 1,
 			KzgConfig: &kzg.KzgConfig{
 				G1Path:          "../resources/g1.point",
-				G2PowerOf2Path:  "../resources/g2.point.powerOf2",
 				CacheDir:        "../resources/SRSTables",
 				SRSOrder:        268435456,
 				SRSNumberToLoad: maxBlobLengthBytes / 32,

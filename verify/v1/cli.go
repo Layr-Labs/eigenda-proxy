@@ -23,10 +23,9 @@ var (
 	CertVerificationDisabledFlagName = withFlagPrefix("cert-verification-disabled")
 
 	// kzg flags
-	G1PathFlagName         = withFlagPrefix("g1-path")
-	G2PowerOf2PathFlagName = withFlagPrefix("g2-power-of-2-path")
-	CachePathFlagName      = withFlagPrefix("cache-path")
-	MaxBlobLengthFlagName  = withFlagPrefix("max-blob-length")
+	G1PathFlagName        = withFlagPrefix("g1-path")
+	CachePathFlagName     = withFlagPrefix("cache-path")
+	MaxBlobLengthFlagName = withFlagPrefix("max-blob-length")
 )
 
 // we keep the eigenda prefix like eigenda client flags, because we
@@ -59,13 +58,6 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Usage:    "path to g1.point file.",
 			EnvVars:  []string{withEnvPrefix(envPrefix, "TARGET_KZG_G1_PATH")},
 			Value:    "resources/g1.point",
-			Category: category,
-		},
-		&cli.StringFlag{
-			Name:     G2PowerOf2PathFlagName,
-			Usage:    "path to g2.point.powerOf2 file. This resource is not currently used, but needed because of the shared eigenda KZG library that we use. We will eventually fix this.",
-			EnvVars:  []string{withEnvPrefix(envPrefix, "TARGET_KZG_G2_POWER_OF_2_PATH")},
-			Value:    "resources/g2.point.powerOf2",
 			Category: category,
 		},
 		&cli.StringFlag{
@@ -120,7 +112,6 @@ var MaxBlobLengthBytes uint64
 func ReadConfig(ctx *cli.Context, edaClientConfig clients.EigenDAClientConfig) Config {
 	kzgCfg := &kzg.KzgConfig{
 		G1Path:          ctx.String(G1PathFlagName),
-		G2PowerOf2Path:  ctx.String(G2PowerOf2PathFlagName),
 		CacheDir:        ctx.String(CachePathFlagName),
 		SRSOrder:        SrsOrder,
 		SRSNumberToLoad: MaxBlobLengthBytes / 32,       // # of fr.Elements

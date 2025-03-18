@@ -67,4 +67,7 @@ func init() {
 	Flags = append(Flags, s3.CLIFlags(common.GlobalPrefix, S3Category)...)
 	Flags = append(Flags, memstore.CLIFlags(common.GlobalPrefix, MemstoreFlagsCategory)...)
 	Flags = append(Flags, verify.CLIFlags(common.GlobalPrefix, VerifierCategory)...)
+
+	Flags = append(Flags, verify.DeprecatedCLIFlags(common.GlobalPrefix, VerifierCategory)...)
+	Flags = append(Flags, store.DeprecatedCLIFlags(common.GlobalPrefix, StorageFlagsCategory)...)
 }
