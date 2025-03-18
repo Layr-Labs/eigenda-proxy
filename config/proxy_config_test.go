@@ -43,6 +43,7 @@ func validCfg() ProxyConfig {
 		KzgConfig: kzg.KzgConfig{
 			G1Path:         "path/to/g1",
 			G2PowerOf2Path: "path/to/g2",
+			G2Path:         "path/to/g2",
 			CacheDir:       "path/to/cache",
 			SRSOrder:       maxBlobLengthBytes / 32,
 		},

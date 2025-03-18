@@ -15,8 +15,8 @@ import (
 const (
 	BytesPerSymbol     = 31
 	MaxCodingRatio     = 8
-	SrsOrder           = 1 << 28 // 2^28
-	MaxAllowedBlobSize = uint64(SrsOrder * BytesPerSymbol / MaxCodingRatio)
+	MaxAllowedBlobSize = 16 * 1024 * 1024 // 16 mb
+	SrsOrder           = MaxAllowedBlobSize * MaxCodingRatio / BytesPerSymbol
 )
 
 var (
