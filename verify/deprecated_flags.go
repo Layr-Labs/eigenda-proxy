@@ -93,22 +93,6 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 			Category: category,
 		},
 		&cli.StringFlag{
-			Name:    DeprecatedG2TauFlagName,
-			Usage:   "path to g2.point.powerOf2 file.",
-			EnvVars: []string{withDeprecatedEnvPrefix(envPrefix, "TARGET_G2_TAU_PATH")},
-			// we use a relative path so that the path works for both the binary and the docker container
-			// aka we assume the binary is run from root dir, and that the resources/ dir is copied into the working dir
-			// of the container
-			Value: "resources/g2.point.powerOf2",
-			Action: func(_ *cli.Context, _ string) error {
-				return fmt.Errorf(
-					"flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
-					DeprecatedG2TauFlagName, withDeprecatedEnvPrefix(envPrefix, "TARGET_G2_TAU_PATH"),
-					G2PowerOf2PathFlagName, withEnvPrefix(envPrefix, "TARGET_KZG_G2_POWER_OF_2_PATH"))
-			},
-			Category: category,
-		},
-		&cli.StringFlag{
 			Name:    DeprecatedCachePathFlagName,
 			Usage:   "path to SRS tables for caching.",
 			EnvVars: []string{withDeprecatedEnvPrefix(envPrefix, "TARGET_CACHE_PATH")},

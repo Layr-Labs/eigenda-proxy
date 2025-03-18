@@ -73,6 +73,12 @@ func NewVerifier(cfg *Config, kzgConfig kzg.KzgConfig, l logging.Logger) (*Verif
 		log.Warn("Certificate verification against Ethereum state disabled")
 	}
 
+	// It's really ugly, but we must force this value to false here.
+	// The verifier doesn't initialize its SRS data in a clean way, and will try to read g2 points it doesn't need,
+	// even though they are missing from the file. It's not always possible to set LoadG2Points with environment
+	// variables, though, because it might need to be true in other contexts (e.g. initializing a prover)
+	kzgConfig.LoadG2Points = false
+
 	log.Info("Creating blob KZG verifier")
 	kzgVerifier, err := kzgverifier.NewVerifier(&kzgConfig, encoding.DefaultConfig())
 	if err != nil {
