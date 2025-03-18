@@ -195,7 +195,8 @@ func getKZGEnvVars() []EnvVar {
 	envVars := []EnvVar{
 		{verify.G1PathFlagName, "../resources/g1.point"},
 		{verify.G2PathFlagName, "../resources/g2.point"},
-		{verify.G2PowerOf2PathFlagName, "../resources/g2.point.powerOf2"},
+		{verify.G2TrailingPathFlagName, "../resources/g2.trailing.point"},
+		{verify.G2PowerOf2PathFlagName, "../resources/g2.powerOf2.point"},
 		{verify.ReadG2PointsFlagName, "false"},
 		{verify.CachePathFlagName, "../resources/SRSTables"},
 	}

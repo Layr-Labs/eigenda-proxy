@@ -41,8 +41,9 @@ func TestGetSet(t *testing.T) {
 
 	kzgConfig := kzg.KzgConfig{
 		G1Path:          "../../../resources/g1.point",
-		G2PowerOf2Path:  "../../../resources/g2.point.powerOf2",
+		G2PowerOf2Path:  "../../../resources/g2.powerOf2.point",
 		G2Path:          "../../../resources/g2.point",
+		G2TrailingPath:  "../../../resources/g2.trailing.point",
 		CacheDir:        "../../../resources/SRSTables",
 		SRSOrder:        3000,
 		SRSNumberToLoad: 3000,

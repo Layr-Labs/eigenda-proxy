@@ -16,6 +16,7 @@ var (
 	// kzg flags
 	G1PathFlagName         = withFlagPrefix("g1-path")
 	G2PathFlagName         = withFlagPrefix("g2-path")
+	G2TrailingPathFlagName = withFlagPrefix("g2-path-trailing")
 	ReadG2PointsFlagName   = withFlagPrefix("read-g2-points")
 	G2PowerOf2PathFlagName = withFlagPrefix("g2-power-of-2-path")
 	CachePathFlagName      = withFlagPrefix("cache-path")
@@ -60,6 +61,13 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Value:    "resources/g2.point",
 			Category: category,
 		},
+		&cli.StringFlag{
+			Name:     G2TrailingPathFlagName,
+			Usage:    "path to g2.trailing.point file.",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "TARGET_KZG_G2_TRAILING_PATH")},
+			Value:    "resources/g2.trailing.point",
+			Category: category,
+		},
 		&cli.BoolFlag{
 			Name:     ReadG2PointsFlagName,
 			Usage:    "Whether to read in G2 SRS points.",
@@ -69,9 +77,9 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		},
 		&cli.StringFlag{
 			Name:     G2PowerOf2PathFlagName,
-			Usage:    "path to g2.point.powerOf2 file. This resource is not currently used, but needed because of the shared eigenda KZG library that we use. We will eventually fix this.",
+			Usage:    "path to g2.powerOf2.point file. This resource is not currently used, but needed because of the shared eigenda KZG library that we use. We will eventually fix this.",
 			EnvVars:  []string{withEnvPrefix(envPrefix, "TARGET_KZG_G2_POWER_OF_2_PATH")},
-			Value:    "resources/g2.point.powerOf2",
+			Value:    "resources/g2.powerOf2.point",
 			Category: category,
 		},
 		&cli.StringFlag{
@@ -89,6 +97,7 @@ func ReadKzgConfig(ctx *cli.Context, maxBlobSizeBytes uint64) kzg.KzgConfig {
 		G1Path:          ctx.String(G1PathFlagName),
 		G2PowerOf2Path:  ctx.String(G2PowerOf2PathFlagName),
 		G2Path:          ctx.String(G2PathFlagName),
+		G2TrailingPath:  ctx.String(G2TrailingPathFlagName),
 		LoadG2Points:    ctx.Bool(ReadG2PointsFlagName),
 		CacheDir:        ctx.String(CachePathFlagName),
 		SRSOrder:        eigendaflags.SrsOrder,
