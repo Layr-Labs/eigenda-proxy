@@ -72,5 +72,8 @@ func CreateCLIFlags() []cli.Flag {
 	flags = append(flags, memstore.CLIFlags(common.GlobalPrefix, MemstoreFlagsCategory)...)
 	flags = append(flags, verify.CLIFlags(common.GlobalPrefix, VerifierCategory)...)
 
+	flags = append(flags, verify.DeprecatedCLIFlags(common.GlobalPrefix, VerifierCategory)...)
+	flags = append(flags, store.DeprecatedCLIFlags(common.GlobalPrefix, StorageFlagsCategory)...)
+
 	return flags
 }
