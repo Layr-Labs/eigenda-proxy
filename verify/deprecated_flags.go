@@ -17,10 +17,11 @@ var (
 	DeprecatedEthConfirmationDepthFlagName    = withDeprecatedFlagPrefix("eth-confirmation-depth")
 
 	// kzg flags
-	DeprecatedG1PathFlagName        = withDeprecatedFlagPrefix("g1-path")
-	DeprecatedG2TauFlagName         = withDeprecatedFlagPrefix("g2-tau-path")
-	DeprecatedCachePathFlagName     = withDeprecatedFlagPrefix("cache-path")
-	DeprecatedMaxBlobLengthFlagName = withDeprecatedFlagPrefix("max-blob-length")
+	DeprecatedG1PathFlagName         = withDeprecatedFlagPrefix("g1-path")
+	DeprecatedG2TauFlagName          = withDeprecatedFlagPrefix("g2-tau-path")
+	DeprecatedCachePathFlagName      = withDeprecatedFlagPrefix("cache-path")
+	DeprecatedMaxBlobLengthFlagName  = withDeprecatedFlagPrefix("max-blob-length")
+	DeprecatedG2PowerOf2PathFlagName = withDeprecatedFlagPrefix("g2-power-of-2-path")
 )
 
 func withDeprecatedFlagPrefix(s string) string {
@@ -122,6 +123,19 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 			},
 			// we also use this flag for memstore.
 			// should we duplicate the flag? Or is there a better way to handle this?
+			Category: category,
+		},
+		&cli.StringFlag{
+			Name:    DeprecatedG2PowerOf2PathFlagName,
+			Usage:   "path to g2.point.powerOf2 file.",
+			EnvVars: []string{withDeprecatedEnvPrefix(envPrefix, "TARGET_KZG_G2_POWER_OF_2_PATH")},
+			Value:   "",
+			Action: func(_ *cli.Context, _ string) error {
+				return fmt.Errorf(
+					"flag --%s (env var %s) is deprecated",
+					DeprecatedG2PowerOf2PathFlagName,
+					withDeprecatedEnvPrefix(envPrefix, "TARGET_KZG_G2_POWER_OF_2_PATH"))
+			},
 			Category: category,
 		},
 	}
