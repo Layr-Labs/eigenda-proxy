@@ -125,7 +125,7 @@ func (e Store) BackendType() common.BackendType {
 // this Verify method only needs to check the cert on chain. That is why the third parameter is ignored.
 func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte) error {
 	var eigenDACert coretypes.EigenDACert
-	err := rlp.DecodeBytes(certBytes, eigenDACert)
+	err := rlp.DecodeBytes(certBytes, &eigenDACert)
 	if err != nil {
 		return fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
 	}
