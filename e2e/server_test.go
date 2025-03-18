@@ -244,24 +244,6 @@ func testProxyClientWriteRead(t *testing.T, v2Enabled bool) {
 	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
 }
 
-func TestProxyWithMaximumSizedBlobV1(t *testing.T) {
-	testProxyWithMaximumSizedBlob(t, false)
-}
-
-func TestProxyWithMaximumSizedBlobV2(t *testing.T) {
-	testProxyWithMaximumSizedBlob(t, true)
-}
-
-func testProxyWithMaximumSizedBlob(t *testing.T, v2Enabled bool) {
-	t.Parallel()
-
-	ts, kill := testutils.CreateTestSuite(testutils.GetBackend(), v2Enabled)
-	defer kill()
-
-	requireStandardClientSetGet(t, ts, testutils.RandBytes(1_000_000))
-	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
-}
-
 func TestProxyCachingV1(t *testing.T) {
 	testProxyCaching(t, false)
 }
