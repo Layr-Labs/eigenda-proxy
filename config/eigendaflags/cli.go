@@ -149,6 +149,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Required: false,
 		},
 		// Flags that are proxy specific, and not used by the eigenda-client
+		// TODO: should we move this to a more specific category, like EIGENDA_STORE?
 		&cli.UintFlag{
 			Name:     PutRetriesFlagName,
 			Usage:    "Number of times to retry blob dispersals.",

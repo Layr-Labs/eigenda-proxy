@@ -81,7 +81,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		},
 		&cli.StringFlag{
 			Name:     EthRPCURLFlagName,
-			Usage:    "URL of the Ethereum RPC endpoint. Needed to confirm blobs landed onchain.",
+			Usage:    "URL of the Ethereum RPC endpoint.",
 			EnvVars:  []string{withEnvPrefix(envPrefix, "ETH_RPC")},
 			Category: category,
 			Required: false,
