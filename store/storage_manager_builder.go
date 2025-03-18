@@ -320,7 +320,7 @@ func (smb *StorageManagerBuilder) buildRelayClient(
 func (smb *StorageManagerBuilder) buildPayloadDisperser(
 	ctx context.Context,
 	ethClient common_eigenda.EthClient,
-	_ *prover.Prover,
+	prover *prover.Prover,
 	certVerifier *verification.CertVerifier,
 ) (*payloaddispersal.PayloadDisperser, error) {
 	signer, err := smb.buildLocalSigner(ctx, ethClient)
@@ -328,7 +328,7 @@ func (smb *StorageManagerBuilder) buildPayloadDisperser(
 		return nil, fmt.Errorf("build local signer: %w", err)
 	}
 
-	disperserClient, err := clients_v2.NewDisperserClient(&smb.v2ClientCfg.DisperserClientCfg, signer, nil, nil)
+	disperserClient, err := clients_v2.NewDisperserClient(&smb.v2ClientCfg.DisperserClientCfg, signer, prover, nil)
 	if err != nil {
 		return nil, fmt.Errorf("new disperser client: %w", err)
 	}
