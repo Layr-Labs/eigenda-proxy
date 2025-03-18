@@ -4,6 +4,8 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/Layr-Labs/eigenda-proxy/config/eigendaflags"
+	eigendaflagsv2 "github.com/Layr-Labs/eigenda-proxy/config/v2/eigendaflags"
 	"github.com/Layr-Labs/eigenda-proxy/testutils"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/stretchr/testify/require"
@@ -24,10 +26,18 @@ func FuzzProxyClientServerV2(f *testing.F) {
 }
 
 func fuzzProxyClientServer(f *testing.F, useV2 bool) {
+	maxBlobLengthString := "16mb"
+
 	// We want a silent logger for fuzzing because we need to see the output of the fuzzer itself,
 	// which tells us each new interesting inputs it finds.
 	logger := logging.NewTextSLogger(os.Stdout, &logging.SLoggerOptions{Level: slog.LevelError})
-	ts, kill := testutils.CreateTestSuite(testutils.MemstoreBackend, useV2, testutils.TestSuiteWithLogger(logger))
+	ts, kill := testutils.CreateTestSuite(
+		testutils.MemstoreBackend,
+		useV2,
+		testutils.TestSuiteWithLogger(logger),
+		testutils.TestSuiteWithOverriddenEnvVars(
+			testutils.EnvVar{Name: eigendaflags.MaxBlobLengthFlagName, Value: maxBlobLengthString},
+			testutils.EnvVar{Name: eigendaflagsv2.MaxBlobLengthFlagName, Value: maxBlobLengthString}))
 	f.Cleanup(kill)
 
 	f.Add([]byte{})
