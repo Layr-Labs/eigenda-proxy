@@ -17,8 +17,6 @@ type TestSuite struct {
 	Log     logging.Logger
 	Metrics *proxy_metrics.EmulatedMetricer
 	Server  *server.Server
-	// OverriddenFlagConfigs are the flag configs that should override the default configurations
-	OverriddenFlagConfigs []FlagConfig
 }
 
 // TestSuiteWithLogger returns a function which overrides the logger for a TestSuite
