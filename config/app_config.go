@@ -13,7 +13,7 @@ import (
 type AppConfig struct {
 	EigenDAConfig ProxyConfig
 	SecretConfig  common.SecretConfigV2
-	MetricsCfg    metrics.Config
+	MetricsConfig metrics.Config
 }
 
 // Check checks config invariants, and returns an error if there is a problem with the config struct
@@ -44,6 +44,6 @@ func ReadCLIConfig(ctx *cli.Context) (AppConfig, error) {
 	return AppConfig{
 		EigenDAConfig: proxyConfig,
 		SecretConfig:  secretConfig,
-		MetricsCfg:    metrics.ReadConfig(ctx),
+		MetricsConfig: metrics.ReadConfig(ctx),
 	}, nil
 }

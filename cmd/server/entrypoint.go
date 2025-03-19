@@ -59,9 +59,9 @@ func StartProxySvr(cliCtx *cli.Context) error {
 		log.Info("successfully shutdown API server")
 	}()
 
-	if cfg.MetricsCfg.Enabled {
-		log.Debug("starting metrics server", "addr", cfg.MetricsCfg.Host, "port", cfg.MetricsCfg.Port)
-		svr, err := metrics.StartServer(cfg.MetricsCfg.Host, cfg.MetricsCfg.Port)
+	if cfg.MetricsConfig.Enabled {
+		log.Debug("starting metrics server", "addr", cfg.MetricsConfig.Host, "port", cfg.MetricsConfig.Port)
+		svr, err := metrics.StartServer(cfg.MetricsConfig.Host, cfg.MetricsConfig.Port)
 		if err != nil {
 			return fmt.Errorf("failed to start metrics server: %w", err)
 		}
