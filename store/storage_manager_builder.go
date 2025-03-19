@@ -138,10 +138,10 @@ func (smb *StorageManagerBuilder) Build(ctx context.Context) (*Manager, error) {
 		"verify_v1_certs", smb.v1VerifierCfg.VerifyCerts,
 	)
 
-	v2Enabled := &atomic.Bool{}
-	v2Enabled.Store(smb.v2ClientCfg.Enabled)
+	disperseV2 := &atomic.Bool{}
+	disperseV2.Store(smb.v2ClientCfg.Enabled)
 
-	return NewManager(eigenDAV1Store, eigenDAV2Store, s3Store, smb.log, secondary, v2Enabled)
+	return NewManager(eigenDAV1Store, eigenDAV2Store, s3Store, smb.log, secondary, disperseV2)
 }
 
 // buildSecondaries ... Creates a slice of secondary targets used for either read
