@@ -36,7 +36,7 @@ func StartProxySvr(cliCtx *cli.Context) error {
 	}
 	configString, err := cfg.EigenDAConfig.ToString()
 	if err != nil {
-		return fmt.Errorf("convert config string to json: %w", err)
+		return fmt.Errorf("convert config json to string: %w", err)
 	}
 
 	log.Infof("Initializing EigenDA proxy server with config (\"*****\" fields are hidden): %v", configString)
@@ -59,9 +59,9 @@ func StartProxySvr(cliCtx *cli.Context) error {
 		log.Info("successfully shutdown API server")
 	}()
 
-	if cfg.MetricsCfg.Enabled {
-		log.Debug("starting metrics server", "addr", cfg.MetricsCfg.Host, "port", cfg.MetricsCfg.Port)
-		svr, err := metrics.StartServer(cfg.MetricsCfg.Host, cfg.MetricsCfg.Port)
+	if cfg.MetricsConfig.Enabled {
+		log.Debug("starting metrics server", "addr", cfg.MetricsConfig.Host, "port", cfg.MetricsConfig.Port)
+		svr, err := metrics.StartServer(cfg.MetricsConfig.Host, cfg.MetricsConfig.Port)
 		if err != nil {
 			return fmt.Errorf("failed to start metrics server: %w", err)
 		}

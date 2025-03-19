@@ -23,20 +23,20 @@ func BenchmarkPutsWithSecondaryV2(b *testing.B) {
 }
 
 func putsWithSecondary(b *testing.B, useV2 bool) {
-	envVarsToOverride := testutils.GetS3EnvVars()
+	flagsToOverride := testutils.GetFlagsToEnableS3Caching()
 	writeThreadCount := os.Getenv("WRITE_THREAD_COUNT")
 	if writeThreadCount != "" {
-		envVarsToOverride = append(
-			envVarsToOverride,
-			testutils.EnvVar{
+		flagsToOverride = append(
+			flagsToOverride,
+			testutils.FlagConfig{
 				Name:  store.ConcurrentWriteThreads,
 				Value: writeThreadCount})
 	}
 
-	ts, kill := testutils.CreateTestSuite(
+	ts, kill := testutils.CreateTestSuiteWithFlagOverrides(
 		testutils.MemstoreBackend,
 		useV2,
-		testutils.TestSuiteWithOverriddenEnvVars(envVarsToOverride...))
+		flagsToOverride)
 	defer kill()
 
 	cfg := &standard_client.Config{
