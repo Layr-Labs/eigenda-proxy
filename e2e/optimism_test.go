@@ -204,17 +204,22 @@ func testOptimismGenericCommitment(t *testing.T, v2Enabled bool) {
 	ot := actions.NewDefaultTesting(t)
 
 	optimism := NewL2AltDA(ot, proxyTS.Address(), true)
-	exerciseGenericCommitments(t, ot, proxyTS, optimism)
+	exerciseGenericCommitments(t, ot, optimism)
+	requireDispersalRetrievalEigenDA(
+		t,
+		proxyTS.Metrics.HTTPServerRequestsTotal,
+		commitments.OptimismGeneric)
 }
 
-// TODO: @ethen can you help me formulate a description of what this sequence of calls is doing?
+// exerciseGenericCommitments simulates some activity with OPs e2e testing framework
+//
+// TODO (litt3): This method should be split into smaller logical chunks, so that it's easier to interpret its logic
 func exerciseGenericCommitments(
 	t *testing.T,
 	ot actions.StatefulTesting,
-	proxyTS testutils.TestSuite,
 	optimism *L2AltDA,
 ) {
-	startingBlockNumber := optimism.sequencer.SyncStatus().SafeL1.Number
+	expectedBlockNumber := optimism.sequencer.SyncStatus().SafeL1.Number
 
 	// build L1 block #1
 	optimism.ActL1Blocks(ot, 1)
@@ -227,7 +232,7 @@ func exerciseGenericCommitments(
 	optimism.sequencer.ActL2PipelineFull(ot)
 	optimism.sequencer.ActL1SafeSignal(ot)
 
-	expectedBlockNumber := startingBlockNumber + 1
+	expectedBlockNumber++
 	require.Equal(t, expectedBlockNumber, optimism.sequencer.SyncStatus().SafeL1.Number)
 
 	// add L1 block #2
@@ -242,6 +247,9 @@ func exerciseGenericCommitments(
 	optimism.sequencer.ActL1FinalizedSignal(ot)
 	optimism.sequencer.ActL1SafeSignal(ot)
 
+	expectedBlockNumber++
+	require.Equal(t, expectedBlockNumber, optimism.sequencer.SyncStatus().SafeL1.Number)
+
 	// commit all the l2 blocks to L1
 	optimism.batcher.ActSubmitAll(ot)
 	optimism.miner.ActL1StartBlock(12)(ot)
@@ -251,11 +259,6 @@ func exerciseGenericCommitments(
 	// verify
 	optimism.sequencer.ActL2PipelineFull(ot)
 	optimism.ActL1Finalized(ot)
-
-	requireDispersalRetrievalEigenDA(
-		t,
-		proxyTS.Metrics.HTTPServerRequestsTotal,
-		commitments.OptimismGeneric)
 }
 
 func TestOptimismGenericCommitmentMigration(t *testing.T) {
@@ -269,9 +272,14 @@ func TestOptimismGenericCommitmentMigration(t *testing.T) {
 	ot := actions.NewDefaultTesting(t)
 
 	optimism := NewL2AltDA(ot, proxyTS.Address(), true)
-	exerciseGenericCommitments(t, ot, proxyTS, optimism)
+	exerciseGenericCommitments(t, ot, optimism)
 
 	// turn on v2 dispersal
 	proxyTS.Server.SetDisperseV2(true)
-	exerciseGenericCommitments(t, ot, proxyTS, optimism)
+	exerciseGenericCommitments(t, ot, optimism)
+
+	requireDispersalRetrievalEigenDA(
+		t,
+		proxyTS.Metrics.HTTPServerRequestsTotal,
+		commitments.OptimismGeneric)
 }
