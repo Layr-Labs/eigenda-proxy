@@ -208,7 +208,7 @@ func getKZGFlags() []FlagConfig {
 }
 
 // GetFlagsToEnableKeccak256ModeS3 returns the list of FlagConfigs necessary to enable Keccak256 commitment mode
-// TODO: explain why enabling s3 along is enough to accomplish this
+// TODO: explain why enabling s3 alone is enough to accomplish this
 func GetFlagsToEnableKeccak256ModeS3() []FlagConfig {
 	return getFlagsToEnableS3()
 }

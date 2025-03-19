@@ -135,7 +135,7 @@ func buildTestAppConfig(backend Backend, useV2 bool, overriddenFlags []FlagConfi
 
 	cliContext, err := configureContextFromFlags(flagConfigs, cliFlags)
 	if err != nil {
-		panic(fmt.Errorf("configure context from env map: %w", err))
+		panic(fmt.Errorf("configure context from flags: %w", err))
 	}
 	appConfig, err := config.ReadCLIConfig(cliContext)
 	if err != nil {
