@@ -437,6 +437,5 @@ func TestInterleavedVersions(t *testing.T) {
 	require.Equal(t, payload1b, fetchedPayload1b)
 	require.Equal(t, payload2b, fetchedPayload2b)
 
-	// requireStandardClientSetGet(t, testSuite, testutils.RandBytes(100))
-	// requireDispersalRetrievalEigenDA(t, testSuite.Metrics.HTTPServerRequestsTotal, commitments.Standard)
+	requireDispersalRetrievalEigenDA(t, testSuite.Metrics.HTTPServerRequestsTotal, commitments.Standard)
 }

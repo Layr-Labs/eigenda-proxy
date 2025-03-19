@@ -228,7 +228,6 @@ func exerciseGenericCommitments(
 	optimism.sequencer.ActL1SafeSignal(ot)
 
 	expectedBlockNumber := startingBlockNumber + 1
-	println("BLOCK NUMBER", expectedBlockNumber)
 	require.Equal(t, expectedBlockNumber, optimism.sequencer.SyncStatus().SafeL1.Number)
 
 	// add L1 block #2
