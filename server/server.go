@@ -24,7 +24,6 @@ var (
 )
 
 type Server struct {
-	cfg        config.ServerConfig
 	log        logging.Logger
 	endpoint   string
 	sm         store.IManager
@@ -41,7 +40,6 @@ func NewServer(
 ) *Server {
 	endpoint := net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))
 	return &Server{
-		cfg:      cfg,
 		m:        m,
 		log:      log,
 		endpoint: endpoint,
@@ -137,6 +135,11 @@ func (svr *Server) Stop() error {
 		return err
 	}
 	return nil
+}
+
+// SetDisperseV2 configures which version of eigenDA the server disperses to
+func (svr *Server) SetDisperseV2(disperseV2 bool) {
+	svr.sm.SetV2Enabled(disperseV2)
 }
 
 func (svr *Server) writeResponse(w http.ResponseWriter, data []byte) {
