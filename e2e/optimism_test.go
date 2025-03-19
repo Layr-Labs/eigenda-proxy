@@ -142,7 +142,7 @@ func testOptimismKeccak256Commitment(t *testing.T, v2Enabled bool) {
 	proxyTS, shutDown := testutils.CreateTestSuite(
 		testutils.GetBackend(),
 		v2Enabled,
-		testutils.TestSuiteWithOverriddenEnvVars(testutils.GetS3EnvVars()...))
+		testutils.TestSuiteWithOverriddenFlags(testutils.GetS3Flags()...))
 	defer shutDown()
 
 	ot := actions.NewDefaultTesting(t)

@@ -17,8 +17,8 @@ type TestSuite struct {
 	Log     logging.Logger
 	Metrics *proxy_metrics.EmulatedMetricer
 	Server  *server.Server
-	// OverriddenEnvVars are the environment variable configurations that should override the default configurations
-	OverriddenEnvVars []EnvVar
+	// OverriddenFlagConfigs are the flag configs that should override the default configurations
+	OverriddenFlagConfigs []FlagConfig
 }
 
 // TestSuiteWithLogger returns a function which overrides the logger for a TestSuite
@@ -28,10 +28,10 @@ func TestSuiteWithLogger(log logging.Logger) func(*TestSuite) {
 	}
 }
 
-// TestSuiteWithOverriddenEnvVars returns a function which sets the OverriddenEnvVars for a TestSuite
-func TestSuiteWithOverriddenEnvVars(envVars ...EnvVar) func(*TestSuite) {
+// TestSuiteWithOverriddenFlags returns a function which sets the OverriddenFlagConfigs for a TestSuite
+func TestSuiteWithOverriddenFlags(flagConfigs ...FlagConfig) func(*TestSuite) {
 	return func(ts *TestSuite) {
-		ts.OverriddenEnvVars = envVars
+		ts.OverriddenFlagConfigs = flagConfigs
 	}
 }
 
@@ -51,7 +51,7 @@ func CreateTestSuite(backend Backend, useV2 bool, options ...func(*TestSuite)) (
 		option(ts)
 	}
 
-	appConfig := buildTestAppConfig(backend, useV2, ts.OverriddenEnvVars)
+	appConfig := buildTestAppConfig(backend, useV2, ts.OverriddenFlagConfigs)
 
 	ctx, logger, metrics := ts.Ctx, ts.Log, ts.Metrics
 

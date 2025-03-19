@@ -127,13 +127,13 @@ func GetBackend() Backend {
 	return backend
 }
 
-func buildTestAppConfig(backend Backend, useV2 bool, overriddenVars []EnvVar) config.AppConfig {
+func buildTestAppConfig(backend Backend, useV2 bool, overriddenFlags []FlagConfig) config.AppConfig {
 	cliFlags := config.CreateCLIFlags()
 
-	envVars := getDefaultTestEnvVars(backend, useV2)
-	envVars = append(envVars, overriddenVars...)
+	flagConfigs := getDefaultTestFlags(backend, useV2)
+	flagConfigs = append(flagConfigs, overriddenFlags...)
 
-	cliContext, err := configureContextFromEnvVars(envVars, cliFlags)
+	cliContext, err := configureContextFromFlags(flagConfigs, cliFlags)
 	if err != nil {
 		panic(fmt.Errorf("configure context from env map: %w", err))
 	}

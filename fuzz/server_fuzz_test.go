@@ -35,9 +35,9 @@ func fuzzProxyClientServer(f *testing.F, useV2 bool) {
 		testutils.MemstoreBackend,
 		useV2,
 		testutils.TestSuiteWithLogger(logger),
-		testutils.TestSuiteWithOverriddenEnvVars(
-			testutils.EnvVar{Name: eigendaflags.MaxBlobLengthFlagName, Value: maxBlobLengthString},
-			testutils.EnvVar{Name: eigendaflagsv2.MaxBlobLengthFlagName, Value: maxBlobLengthString}))
+		testutils.TestSuiteWithOverriddenFlags(
+			testutils.FlagConfig{Name: eigendaflags.MaxBlobLengthFlagName, Value: maxBlobLengthString},
+			testutils.FlagConfig{Name: eigendaflagsv2.MaxBlobLengthFlagName, Value: maxBlobLengthString}))
 	f.Cleanup(kill)
 
 	f.Add([]byte{})

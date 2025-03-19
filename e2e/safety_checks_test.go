@@ -36,7 +36,7 @@ func testOpClientKeccak256MalformedInputs(t *testing.T, v2Enabled bool) {
 	ts, kill := testutils.CreateTestSuite(
 		testutils.GetBackend(),
 		v2Enabled,
-		testutils.TestSuiteWithOverriddenEnvVars(testutils.GetS3EnvVars()...))
+		testutils.TestSuiteWithOverriddenFlags(testutils.GetS3Flags()...))
 	defer kill()
 
 	// nil commitment. Should return an error but currently is not. This needs to be fixed by OP
@@ -167,13 +167,15 @@ func TestKeccak256CommitmentRequestErrorsWhenS3NotSetV2(t *testing.T) {
 func testKeccak256CommitmentRequestErrorsWhenS3NotSet(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	envVarsToOverride := testutils.GetS3EnvVars()
-	envVarsToOverride = append(envVarsToOverride, testutils.EnvVar{Name: s3.EndpointFlagName, Value: "localhost:1234"})
+	flagsToOverride := testutils.GetS3Flags()
+	flagsToOverride = append(
+		flagsToOverride,
+		testutils.FlagConfig{Name: s3.EndpointFlagName, Value: "localhost:1234"})
 
 	ts, kill := testutils.CreateTestSuite(
 		testutils.GetBackend(),
 		v2Enabled,
-		testutils.TestSuiteWithOverriddenEnvVars(envVarsToOverride...))
+		testutils.TestSuiteWithOverriddenFlags(flagsToOverride...))
 	defer kill()
 
 	daClient := altda.NewDAClient(ts.Address(), false, true)

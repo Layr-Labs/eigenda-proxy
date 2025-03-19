@@ -86,7 +86,7 @@ func testOptimismClientWithKeccak256Commitment(t *testing.T, v2Enabled bool) {
 	ts, kill := testutils.CreateTestSuite(
 		testutils.GetBackend(),
 		v2Enabled,
-		testutils.TestSuiteWithOverriddenEnvVars(testutils.GetS3EnvVars()...))
+		testutils.TestSuiteWithOverriddenFlags(testutils.GetS3Flags()...))
 	defer kill()
 
 	requireOPClientSetGet(t, ts, testutils.RandBytes(100), true)
@@ -261,7 +261,7 @@ func testProxyCaching(t *testing.T, v2Enabled bool) {
 	ts, kill := testutils.CreateTestSuite(
 		testutils.GetBackend(),
 		v2Enabled,
-		testutils.TestSuiteWithOverriddenEnvVars(testutils.GetS3EnvVars()...))
+		testutils.TestSuiteWithOverriddenFlags(testutils.GetS3Flags()...))
 	defer kill()
 
 	requireStandardClientSetGet(t, ts, testutils.RandBytes(1_000_000))
@@ -283,7 +283,7 @@ func testProxyCachingWithRedis(t *testing.T, v2Enabled bool) {
 	ts, kill := testutils.CreateTestSuite(
 		testutils.GetBackend(),
 		v2Enabled,
-		testutils.TestSuiteWithOverriddenEnvVars(testutils.GetRedisEnvVars()...))
+		testutils.TestSuiteWithOverriddenFlags(testutils.GetRedisFlags()...))
 	defer kill()
 
 	requireStandardClientSetGet(t, ts, testutils.RandBytes(1_000_000))
@@ -307,16 +307,16 @@ before attempting to read it.
 func testProxyReadFallback(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	overriddenTestVars := testutils.GetS3EnvVars()
+	overriddenTestVars := testutils.GetS3Flags()
 	// ensure that blob memstore eviction times result in near immediate activation
 	overriddenTestVars = append(
 		overriddenTestVars,
-		testutils.EnvVar{Name: memstore.ExpirationFlagName, Value: fmt.Sprintf("%v", time.Millisecond*1)})
+		testutils.FlagConfig{Name: memstore.ExpirationFlagName, Value: fmt.Sprintf("%v", time.Millisecond*1)})
 
 	ts, kill := testutils.CreateTestSuite(
 		testutils.GetBackend(),
 		v2Enabled,
-		testutils.TestSuiteWithOverriddenEnvVars(overriddenTestVars...))
+		testutils.TestSuiteWithOverriddenFlags(overriddenTestVars...))
 	defer kill()
 
 	cfg := &standard_client.Config{
