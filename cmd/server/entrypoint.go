@@ -36,7 +36,7 @@ func StartProxySvr(cliCtx *cli.Context) error {
 	}
 	configString, err := cfg.EigenDAConfig.ToString()
 	if err != nil {
-		return fmt.Errorf("convert config string to json: %w", err)
+		return fmt.Errorf("convert config json to string: %w", err)
 	}
 
 	log.Infof("Initializing EigenDA proxy server with config (\"*****\" fields are hidden): %v", configString)
