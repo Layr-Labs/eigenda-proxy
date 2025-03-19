@@ -28,16 +28,19 @@ func FuzzProxyClientServerV2(f *testing.F) {
 func fuzzProxyClientServer(f *testing.F, useV2 bool) {
 	maxBlobLengthString := "16mb"
 
+	flagsToOverride := []testutils.FlagConfig{
+		{Name: eigendaflags.MaxBlobLengthFlagName, Value: maxBlobLengthString},
+		{Name: eigendaflagsv2.MaxBlobLengthFlagName, Value: maxBlobLengthString},
+	}
+
 	// We want a silent logger for fuzzing because we need to see the output of the fuzzer itself,
 	// which tells us each new interesting inputs it finds.
 	logger := logging.NewTextSLogger(os.Stdout, &logging.SLoggerOptions{Level: slog.LevelError})
-	ts, kill := testutils.CreateTestSuite(
+	ts, kill := testutils.CreateTestSuiteWithFlagOverrides(
 		testutils.MemstoreBackend,
 		useV2,
-		testutils.TestSuiteWithLogger(logger),
-		testutils.TestSuiteWithOverriddenFlags(
-			testutils.FlagConfig{Name: eigendaflags.MaxBlobLengthFlagName, Value: maxBlobLengthString},
-			testutils.FlagConfig{Name: eigendaflagsv2.MaxBlobLengthFlagName, Value: maxBlobLengthString}))
+		flagsToOverride,
+		testutils.TestSuiteWithLogger(logger))
 	f.Cleanup(kill)
 
 	f.Add([]byte{})

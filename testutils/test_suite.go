@@ -28,19 +28,16 @@ func TestSuiteWithLogger(log logging.Logger) func(*TestSuite) {
 	}
 }
 
-// TestSuiteWithOverriddenFlags returns a function which sets the OverriddenFlagConfigs for a TestSuite
-func TestSuiteWithOverriddenFlags(flagConfigs ...FlagConfig) func(*TestSuite) {
-	return func(ts *TestSuite) {
-		ts.OverriddenFlagConfigs = flagConfigs
-	}
-}
-
-// CreateTestSuite constructs a new TestSuite
+// CreateTestSuiteWithFlagOverrides creates a test suite.
 //
-// It accepts flags indicating whether memstore and/or v2 should be enabled.
-// It also accepts a variadic options parameter, which contains functions that operate on a TestSuite object.
-// These options allow for configuration control over the TestSuite.
-func CreateTestSuite(backend Backend, useV2 bool, options ...func(*TestSuite)) (TestSuite, func()) {
+// In addition to the options provided by CreateTestSuite, this method also accepts a list of FlagConfigs. The
+// configurations passed in as part of this parameter are used to override the default test flag configurations.
+func CreateTestSuiteWithFlagOverrides(
+	backend Backend,
+	useV2 bool,
+	flagOverrides []FlagConfig,
+	options ...func(*TestSuite),
+) (TestSuite, func()) {
 	ts := &TestSuite{
 		Ctx:     context.Background(),
 		Log:     logging.NewTextSLogger(os.Stdout, &logging.SLoggerOptions{}),
@@ -51,7 +48,7 @@ func CreateTestSuite(backend Backend, useV2 bool, options ...func(*TestSuite)) (
 		option(ts)
 	}
 
-	appConfig := buildTestAppConfig(backend, useV2, ts.OverriddenFlagConfigs)
+	appConfig := buildTestAppConfig(backend, useV2, flagOverrides)
 
 	ctx, logger, metrics := ts.Ctx, ts.Log, ts.Metrics
 
@@ -72,6 +69,15 @@ func CreateTestSuite(backend Backend, useV2 bool, options ...func(*TestSuite)) (
 		Metrics: metrics,
 		Server:  proxyServer,
 	}, kill
+}
+
+// CreateTestSuite constructs a new TestSuite
+//
+// It accepts flags indicating whether memstore and/or v2 should be enabled.
+// It also accepts a variadic options parameter, which contains functions that operate on a TestSuite object.
+// These options allow for configuration control over the TestSuite.
+func CreateTestSuite(backend Backend, useV2 bool, options ...func(*TestSuite)) (TestSuite, func()) {
+	return CreateTestSuiteWithFlagOverrides(backend, useV2, nil, options...)
 }
 
 func (ts *TestSuite) Address() string {

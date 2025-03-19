@@ -207,8 +207,30 @@ func getKZGFlags() []FlagConfig {
 	return flagConfigs
 }
 
-// GetS3Flags gets a list of the necessary FlagConfig definitions, to enable an S3 backend
-func GetS3Flags() []FlagConfig {
+// GetFlagsToEnableKeccak256ModeS3 returns the list of FlagConfigs necessary to enable Keccak256 commitment mode
+// TODO: explain why enabling s3 along is enough to accomplish this
+func GetFlagsToEnableKeccak256ModeS3() []FlagConfig {
+	return getFlagsToEnableS3()
+}
+
+// GetFlagsToEnableS3Caching returns the list of FlagConfigs necessary to enable S3 caching
+func GetFlagsToEnableS3Caching() []FlagConfig {
+	outputFlags := getFlagsToEnableS3()
+	outputFlags = append(outputFlags, FlagConfig{Name: store.CacheTargetsFlagName, Value: "S3"})
+
+	return outputFlags
+}
+
+// GetFlagsToEnableS3Fallback returns the list of FlagConfigs necessary to enable S3 fallback
+func GetFlagsToEnableS3Fallback() []FlagConfig {
+	outputFlags := getFlagsToEnableS3()
+	outputFlags = append(outputFlags, FlagConfig{Name: store.FallbackTargetsFlagName, Value: "S3"})
+
+	return outputFlags
+}
+
+// getFlagsToEnableS3 returns the list of FlagConfigs necessary to enable an S3 backend
+func getFlagsToEnableS3() []FlagConfig {
 	flagConfigs := []FlagConfig{
 		{s3.EnableTLSFlagName, fmt.Sprintf("%v", false)},
 		{s3.CredentialTypeFlagName, string(s3.CredentialTypeStatic)},
@@ -216,14 +238,13 @@ func GetS3Flags() []FlagConfig {
 		{s3.AccessKeySecretFlagName, minioAdmin},
 		{s3.BucketFlagName, bucketName},
 		{s3.EndpointFlagName, minioEndpoint},
-		{store.CacheTargetsFlagName, "S3"},
 	}
 
 	return flagConfigs
 }
 
-// GetRedisFlags gets a list of the necessary FlagConfig definitions, to enable a redis backend
-func GetRedisFlags() []FlagConfig {
+// GetFlagsToEnableRedisCaching returns the list of FlagConfigs necessary to enable redis caching
+func GetFlagsToEnableRedisCaching() []FlagConfig {
 	flagConfigs := []FlagConfig{
 		{redis.DBFlagName, "0"},
 		{redis.EvictionFlagName, "10m"},

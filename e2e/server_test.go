@@ -83,10 +83,10 @@ func TestOptimismClientWithKeccak256CommitmentV2(t *testing.T) {
 func testOptimismClientWithKeccak256Commitment(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	ts, kill := testutils.CreateTestSuite(
+	ts, kill := testutils.CreateTestSuiteWithFlagOverrides(
 		testutils.GetBackend(),
 		v2Enabled,
-		testutils.TestSuiteWithOverriddenFlags(testutils.GetS3Flags()...))
+		testutils.GetFlagsToEnableKeccak256ModeS3())
 	defer kill()
 
 	requireOPClientSetGet(t, ts, testutils.RandBytes(100), true)
@@ -258,10 +258,10 @@ Ensure that proxy is able to write/read from a cache backend when enabled
 func testProxyCaching(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	ts, kill := testutils.CreateTestSuite(
+	ts, kill := testutils.CreateTestSuiteWithFlagOverrides(
 		testutils.GetBackend(),
 		v2Enabled,
-		testutils.TestSuiteWithOverriddenFlags(testutils.GetS3Flags()...))
+		testutils.GetFlagsToEnableS3Caching())
 	defer kill()
 
 	requireStandardClientSetGet(t, ts, testutils.RandBytes(1_000_000))
@@ -280,10 +280,10 @@ func TestProxyCachingWithRedisV2(t *testing.T) {
 func testProxyCachingWithRedis(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	ts, kill := testutils.CreateTestSuite(
+	ts, kill := testutils.CreateTestSuiteWithFlagOverrides(
 		testutils.GetBackend(),
 		v2Enabled,
-		testutils.TestSuiteWithOverriddenFlags(testutils.GetRedisFlags()...))
+		testutils.GetFlagsToEnableRedisCaching())
 	defer kill()
 
 	requireStandardClientSetGet(t, ts, testutils.RandBytes(1_000_000))
@@ -307,16 +307,16 @@ before attempting to read it.
 func testProxyReadFallback(t *testing.T, v2Enabled bool) {
 	t.Parallel()
 
-	overriddenTestVars := testutils.GetS3Flags()
+	flagsToOverride := testutils.GetFlagsToEnableS3Fallback()
 	// ensure that blob memstore eviction times result in near immediate activation
-	overriddenTestVars = append(
-		overriddenTestVars,
+	flagsToOverride = append(
+		flagsToOverride,
 		testutils.FlagConfig{Name: memstore.ExpirationFlagName, Value: fmt.Sprintf("%v", time.Millisecond*1)})
 
-	ts, kill := testutils.CreateTestSuite(
+	ts, kill := testutils.CreateTestSuiteWithFlagOverrides(
 		testutils.GetBackend(),
 		v2Enabled,
-		testutils.TestSuiteWithOverriddenFlags(overriddenTestVars...))
+		flagsToOverride)
 	defer kill()
 
 	cfg := &standard_client.Config{
