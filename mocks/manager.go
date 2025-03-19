@@ -50,18 +50,18 @@ func (mr *MockIManagerMockRecorder) Get(arg0, arg1, arg2 interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockIManager)(nil).Get), arg0, arg1, arg2)
 }
 
-// IsV2Enabled mocks base method.
-func (m *MockIManager) IsV2Enabled() bool {
+// DisperseV2 mocks base method.
+func (m *MockIManager) DisperseV2() bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsV2Enabled")
+	ret := m.ctrl.Call(m, "DisperseV2")
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
-// IsV2Enabled indicates an expected call of IsV2Enabled.
-func (mr *MockIManagerMockRecorder) IsV2Enabled() *gomock.Call {
+// DisperseV2 indicates an expected call of DisperseV2.
+func (mr *MockIManagerMockRecorder) DisperseV2() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsV2Enabled", reflect.TypeOf((*MockIManager)(nil).IsV2Enabled))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisperseV2", reflect.TypeOf((*MockIManager)(nil).DisperseV2))
 }
 
 // Put mocks base method.
@@ -79,14 +79,14 @@ func (mr *MockIManagerMockRecorder) Put(arg0, arg1, arg2, arg3 interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Put", reflect.TypeOf((*MockIManager)(nil).Put), arg0, arg1, arg2, arg3)
 }
 
-// SetV2Enabled mocks base method.
-func (m *MockIManager) SetV2Enabled(arg0 bool) {
+// SetDisperseV2 mocks base method.
+func (m *MockIManager) SetDisperseV2(arg0 bool) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetV2Enabled", arg0)
+	m.ctrl.Call(m, "SetDisperseV2", arg0)
 }
 
-// SetV2Enabled indicates an expected call of SetV2Enabled.
-func (mr *MockIManagerMockRecorder) SetV2Enabled(arg0 interface{}) *gomock.Call {
+// SetDisperseV2 indicates an expected call of SetDisperseV2.
+func (mr *MockIManagerMockRecorder) SetDisperseV2(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetV2Enabled", reflect.TypeOf((*MockIManager)(nil).SetV2Enabled), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDisperseV2", reflect.TypeOf((*MockIManager)(nil).SetDisperseV2), arg0)
 }
