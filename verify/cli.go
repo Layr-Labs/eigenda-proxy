@@ -1,6 +1,7 @@
 package verify
 
 import (
+	"fmt"
 	"runtime"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
@@ -14,11 +15,12 @@ var (
 	CertVerificationDisabledFlagName = withFlagPrefix("cert-verification-disabled")
 
 	// kzg flags
-	G1PathFlagName         = withFlagPrefix("g1-path")
-	G2PathFlagName         = withFlagPrefix("g2-path")
-	G2TrailingPathFlagName = withFlagPrefix("g2-path-trailing")
-	ReadG2PointsFlagName   = withFlagPrefix("read-g2-points")
-	CachePathFlagName      = withFlagPrefix("cache-path")
+	G1PathFlagName                   = withFlagPrefix("g1-path")
+	G2PowerOf2PathFlagNameDeprecated = withFlagPrefix("g2-power-of-2-path")
+	G2PathFlagName                   = withFlagPrefix("g2-path")
+	G2TrailingPathFlagName           = withFlagPrefix("g2-path-trailing")
+	ReadG2PointsFlagName             = withFlagPrefix("read-g2-points")
+	CachePathFlagName                = withFlagPrefix("cache-path")
 )
 
 // we keep the eigenda prefix like eigenda client flags, because we
@@ -51,6 +53,17 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Usage:    "path to g1.point file.",
 			EnvVars:  []string{withEnvPrefix(envPrefix, "TARGET_KZG_G1_PATH")},
 			Value:    "resources/g1.point",
+			Category: category,
+		},
+		&cli.StringFlag{
+			Name:    G2PowerOf2PathFlagNameDeprecated,
+			Usage:   "path to g2.point.powerOf2 file. Deprecated.",
+			EnvVars: []string{withEnvPrefix(envPrefix, "TARGET_KZG_G2_POWER_OF_2_PATH")},
+			Action: func(_ *cli.Context, _ string) error {
+				return fmt.Errorf(
+					"flag --%s (env var %s) is deprecated",
+					G2PowerOf2PathFlagNameDeprecated, withEnvPrefix(envPrefix, "TARGET_KZG_G2_POWER_OF_2_PATH"))
+			},
 			Category: category,
 		},
 		&cli.StringFlag{

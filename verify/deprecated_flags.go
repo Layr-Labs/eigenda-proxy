@@ -11,17 +11,15 @@ import (
 // if we upstream the changes before removing the deprecated flags
 var (
 	// cert verification flags
-	DeprecatedCertVerificationEnabledFlagName = withDeprecatedFlagPrefix("cert-verification-enabled")
-	DeprecatedEthRPCFlagName                  = withDeprecatedFlagPrefix("eth-rpc")
-	DeprecatedSvcManagerAddrFlagName          = withDeprecatedFlagPrefix("svc-manager-addr")
-	DeprecatedEthConfirmationDepthFlagName    = withDeprecatedFlagPrefix("eth-confirmation-depth")
+	DeprecatedEthRPCFlagName               = withDeprecatedFlagPrefix("eth-rpc")
+	DeprecatedSvcManagerAddrFlagName       = withDeprecatedFlagPrefix("svc-manager-addr")
+	DeprecatedEthConfirmationDepthFlagName = withDeprecatedFlagPrefix("eth-confirmation-depth")
 
 	// kzg flags
-	DeprecatedG1PathFlagName         = withDeprecatedFlagPrefix("g1-path")
-	DeprecatedG2TauFlagName          = withDeprecatedFlagPrefix("g2-tau-path")
-	DeprecatedCachePathFlagName      = withDeprecatedFlagPrefix("cache-path")
-	DeprecatedMaxBlobLengthFlagName  = withDeprecatedFlagPrefix("max-blob-length")
-	DeprecatedG2PowerOf2PathFlagName = withDeprecatedFlagPrefix("g2-power-of-2-path")
+	DeprecatedG1PathFlagName        = withDeprecatedFlagPrefix("g1-path")
+	DeprecatedG2TauFlagName         = withDeprecatedFlagPrefix("g2-tau-path")
+	DeprecatedCachePathFlagName     = withDeprecatedFlagPrefix("cache-path")
+	DeprecatedMaxBlobLengthFlagName = withDeprecatedFlagPrefix("max-blob-length")
 )
 
 func withDeprecatedFlagPrefix(s string) string {
@@ -94,6 +92,21 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 			Category: category,
 		},
 		&cli.StringFlag{
+			Name:    DeprecatedG2TauFlagName,
+			Usage:   "path to g2.point.powerOf2 file.",
+			EnvVars: []string{withDeprecatedEnvPrefix(envPrefix, "TARGET_G2_TAU_PATH")},
+			// we use a relative path so that the path works for both the binary and the docker container
+			// aka we assume the binary is run from root dir, and that the resources/ dir is copied into the working dir
+			// of the container
+			Value: "resources/g2.point.powerOf2",
+			Action: func(_ *cli.Context, _ string) error {
+				return fmt.Errorf(
+					"flag --%s (env var %s) is deprecated",
+					DeprecatedG2TauFlagName, withDeprecatedEnvPrefix(envPrefix, "TARGET_G2_TAU_PATH"))
+			},
+			Category: category,
+		},
+		&cli.StringFlag{
 			Name:    DeprecatedCachePathFlagName,
 			Usage:   "path to SRS tables for caching.",
 			EnvVars: []string{withDeprecatedEnvPrefix(envPrefix, "TARGET_CACHE_PATH")},
@@ -123,19 +136,6 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 			},
 			// we also use this flag for memstore.
 			// should we duplicate the flag? Or is there a better way to handle this?
-			Category: category,
-		},
-		&cli.StringFlag{
-			Name:    DeprecatedG2PowerOf2PathFlagName,
-			Usage:   "path to g2.point.powerOf2 file.",
-			EnvVars: []string{withDeprecatedEnvPrefix(envPrefix, "TARGET_KZG_G2_POWER_OF_2_PATH")},
-			Value:   "",
-			Action: func(_ *cli.Context, _ string) error {
-				return fmt.Errorf(
-					"flag --%s (env var %s) is deprecated",
-					DeprecatedG2PowerOf2PathFlagName,
-					withDeprecatedEnvPrefix(envPrefix, "TARGET_KZG_G2_POWER_OF_2_PATH"))
-			},
 			Category: category,
 		},
 	}
