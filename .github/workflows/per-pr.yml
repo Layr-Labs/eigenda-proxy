@@ -26,16 +26,27 @@ jobs:
           version: v1.61
           args: --timeout 3m
 
-  # This checks that the flags in .env.holesky.example are valid and allow the proxy to start.
-  flags:
+  # This checks that the flags in .env.holeskyV1.example are valid and allow the proxy to start.
+  flagsV1:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
         with:
           go-version: ${{ env.GO_VERSION}}
-      - name: Run flag test
-        run: ${{ github.workspace }}/scripts/test-proxy-startup-with-env-vars.sh
+      - name: Run flag test V1
+        run: ${{ github.workspace }}/scripts/test-proxy-startup-with-env-vars.sh ".env.holeskyV1.example"
+
+  # This checks that the flags in .env.holeskyV2.example are valid and allow the proxy to start.
+  flagsV2:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION}}
+      - name: Run flag test V2
+        run: ${{ github.workspace }}/scripts/test-proxy-startup-with-env-vars.sh ".env.holeskyV2.example"
 
   unit-tests:
     runs-on: ubuntu-latest
@@ -61,7 +72,7 @@ jobs:
       - run: go mod download
       - run: make test-e2e-local
 
-  e2e-tests-holesky:
+  e2e-tests-testnet:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -71,7 +82,22 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
       - run: go mod download
-      - run: make test-e2e-holesky
+      - run: make test-e2e-testnet
+        env:
+          SIGNER_PRIVATE_KEY: ${{ secrets.SIGNER_PRIVATE_KEY }}
+          ETHEREUM_RPC: ${{ secrets.ETHEREUM_RPC }}
+
+  e2e-tests-preprod:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - run: go mod download
+      - run: make test-e2e-preprod
         env:
           SIGNER_PRIVATE_KEY: ${{ secrets.SIGNER_PRIVATE_KEY }}
           ETHEREUM_RPC: ${{ secrets.ETHEREUM_RPC }}

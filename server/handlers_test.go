@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
+	"github.com/Layr-Labs/eigenda-proxy/config"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/mocks"
 	"github.com/Layr-Labs/eigenda/api"
@@ -26,7 +27,7 @@ import (
 
 var (
 	testLogger = logging.NewTextSLogger(os.Stdout, &logging.SLoggerOptions{})
-	testCfg    = Config{
+	testCfg    = config.ServerConfig{
 		Host: "localhost",
 		Port: 0,
 	}
@@ -126,6 +127,7 @@ func TestHandlerPutSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockStorageMgr := mocks.NewMockIManager(ctrl)
+	mockStorageMgr.EXPECT().DisperseToV2().AnyTimes().Return(false)
 
 	tests := []struct {
 		name         string
@@ -228,6 +230,7 @@ func TestHandlerPutErrors(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockStorageMgr := mocks.NewMockIManager(ctrl)
+	mockStorageMgr.EXPECT().DisperseToV2().AnyTimes().Return(false)
 
 	tests := []struct {
 		name                         string
