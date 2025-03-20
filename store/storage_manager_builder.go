@@ -42,13 +42,18 @@ type StorageManagerBuilder struct {
 	log     logging.Logger
 	metrics metrics.Metricer
 
-	managerCfg    Config
-	memConfig     *memconfig.SafeConfig
-	v1VerifierCfg verify.Config
-	kzgConfig     kzg.KzgConfig
+	// configs that are used for both v1 and v2
+	managerCfg Config
+	memConfig  *memconfig.SafeConfig
+	kzgConfig  kzg.KzgConfig
+
+	// v1 specific configs
 	v1ClientCfg   common.ClientConfigV1
-	v2ClientCfg   common.ClientConfigV2
-	v2SecretCfg   common.SecretConfigV2
+	v1VerifierCfg verify.Config
+
+	// v2 specific configs
+	v2ClientCfg common.ClientConfigV2
+	v2SecretCfg common.SecretConfigV2
 }
 
 // NewStorageManagerBuilder creates a builder which knows how to build an IManager
@@ -57,12 +62,12 @@ func NewStorageManagerBuilder(
 	log logging.Logger,
 	metrics metrics.Metricer,
 	managerConfig Config,
-	v1VerifierCfg verify.Config,
+	memConfig *memconfig.SafeConfig,
 	kzgConfig kzg.KzgConfig,
 	v1ClientCfg common.ClientConfigV1,
+	v1VerifierCfg verify.Config,
 	v2ClientCfg common.ClientConfigV2,
 	v2SecretCfg common.SecretConfigV2,
-	memConfig *memconfig.SafeConfig,
 ) *StorageManagerBuilder {
 	return &StorageManagerBuilder{
 		ctx,
@@ -70,9 +75,9 @@ func NewStorageManagerBuilder(
 		metrics,
 		managerConfig,
 		memConfig,
-		v1VerifierCfg,
 		kzgConfig,
 		v1ClientCfg,
+		v1VerifierCfg,
 		v2ClientCfg,
 		v2SecretCfg,
 	}
@@ -101,7 +106,7 @@ func (smb *StorageManagerBuilder) Build(ctx context.Context) (*Manager, error) {
 		}
 	}
 
-	if smb.v2ClientCfg.Enabled {
+	if smb.v2ClientCfg.DisperseToV2 {
 		smb.log.Info("Using EigenDA V2 storage backend")
 		eigenDAV2Store, err = smb.buildEigenDAV2Backend(ctx)
 		if err != nil {
@@ -325,7 +330,7 @@ func (smb *StorageManagerBuilder) buildRelayClient(
 func (smb *StorageManagerBuilder) buildPayloadDisperser(
 	ctx context.Context,
 	ethClient common_eigenda.EthClient,
-	prover *prover.Prover,
+	kzgProver *prover.Prover,
 	certVerifier *verification.CertVerifier,
 ) (*payloaddispersal.PayloadDisperser, error) {
 	signer, err := smb.buildLocalSigner(ctx, ethClient)
@@ -333,7 +338,7 @@ func (smb *StorageManagerBuilder) buildPayloadDisperser(
 		return nil, fmt.Errorf("build local signer: %w", err)
 	}
 
-	disperserClient, err := clients_v2.NewDisperserClient(&smb.v2ClientCfg.DisperserClientCfg, signer, prover, nil)
+	disperserClient, err := clients_v2.NewDisperserClient(&smb.v2ClientCfg.DisperserClientCfg, signer, kzgProver, nil)
 	if err != nil {
 		return nil, fmt.Errorf("new disperser client: %w", err)
 	}

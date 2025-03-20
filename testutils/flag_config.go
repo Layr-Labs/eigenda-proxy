@@ -18,11 +18,11 @@ import (
 )
 
 const (
-	privateKey    = "SIGNER_PRIVATE_KEY"
-	ethRPC        = "ETHEREUM_RPC"
-	transport     = "http"
-	host          = "127.0.0.1"
-	disperserPort = "443"
+	privateKeyEnvVar = "SIGNER_PRIVATE_KEY"
+	ethRPCEnvVar     = "ETHEREUM_RPC"
+	transport        = "http"
+	host             = "127.0.0.1"
+	disperserPort    = "443"
 
 	disperserPreprodHostname   = "disperser-preprod-holesky.eigenda.xyz"
 	preprodCertVerifierAddress = "0xd973fA62E22BC2779F8489258F040C0344B03C21"
@@ -71,16 +71,16 @@ func configureContextFromFlags(flagConfigs []FlagConfig, flags []cli.Flag) (*cli
 //
 // Flags are used to configure tests, since that's how it's done in production. We want to exercise as many prod
 // code pathways as possible in e2e tests.
-func getDefaultTestFlags(backend Backend, useV2 bool) []FlagConfig {
-	signingKey := os.Getenv(privateKey)
-	ethRPCURL := os.Getenv(ethRPC)
+func getDefaultTestFlags(backend Backend, disperseToV2 bool) []FlagConfig {
+	signingKey := os.Getenv(privateKeyEnvVar)
+	ethRPCURL := os.Getenv(ethRPCEnvVar)
 	maxBlobLengthString := "1mib"
 	expiration := 14 * 24 * time.Hour
 	writeThreadCount := 0
 
 	outputVars := make([]FlagConfig, 0)
 	outputVars = append(outputVars, getV1Flags(backend, signingKey, ethRPCURL, maxBlobLengthString)...)
-	outputVars = append(outputVars, getV2Flags(backend, useV2, signingKey, ethRPCURL, maxBlobLengthString)...)
+	outputVars = append(outputVars, getV2Flags(backend, disperseToV2, signingKey, ethRPCURL, maxBlobLengthString)...)
 	outputVars = append(outputVars, getKZGFlags()...)
 
 	// Memstore flags
@@ -148,7 +148,7 @@ func getV1Flags(
 
 func getV2Flags(
 	backend Backend,
-	useV2 bool,
+	disperseToV2 bool,
 	signingKey string,
 	ethRPCURL string,
 	maxBlobLengthString string,
@@ -156,7 +156,7 @@ func getV2Flags(
 	flagConfigs := []FlagConfig{
 		{eigendaflagsv2.SignerPaymentKeyHexFlagName, signingKey},
 		{eigendaflagsv2.EthRPCURLFlagName, ethRPCURL},
-		{eigendaflagsv2.V2EnabledFlagName, fmt.Sprintf("%t", useV2)},
+		{eigendaflagsv2.DisperseToV2FlagName, fmt.Sprintf("%t", disperseToV2)},
 
 		{eigendaflagsv2.DisableTLSFlagName, fmt.Sprintf("%v", false)},
 		{eigendaflagsv2.BlobStatusPollIntervalFlagName, "1s"},
@@ -208,7 +208,7 @@ func getKZGFlags() []FlagConfig {
 }
 
 // GetFlagsToEnableKeccak256ModeS3 returns the list of FlagConfigs necessary to enable Keccak256 commitment mode
-// TODO: explain why enabling s3 along is enough to accomplish this
+// TODO: explain why enabling s3 alone is enough to accomplish this
 func GetFlagsToEnableKeccak256ModeS3() []FlagConfig {
 	return getFlagsToEnableS3()
 }

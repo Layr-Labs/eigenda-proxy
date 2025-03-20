@@ -43,7 +43,7 @@ func ReadProxyConfig(ctx *cli.Context) (ProxyConfig, error) {
 	}
 
 	var maxBlobSizeBytes uint64
-	if clientConfigV2.Enabled {
+	if clientConfigV2.DisperseToV2 {
 		maxBlobSizeBytes = clientConfigV2.MaxBlobSizeBytes
 	} else {
 		maxBlobSizeBytes = clientConfigV1.MaxBlobSizeBytes
@@ -108,7 +108,7 @@ func (cfg *ProxyConfig) Check() error {
 	}
 
 	// V2 dispersal/retrieval enabled
-	if cfg.ClientConfigV2.Enabled && !cfg.MemstoreConfig.Enabled() {
+	if cfg.ClientConfigV2.DisperseToV2 && !cfg.MemstoreConfig.Enabled() {
 		err := cfg.ClientConfigV2.Check()
 		if err != nil {
 			return err

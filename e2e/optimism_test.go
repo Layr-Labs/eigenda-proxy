@@ -138,10 +138,10 @@ func TestOptimismKeccak256CommitmentV2(t *testing.T) {
 	testOptimismKeccak256Commitment(t, true)
 }
 
-func testOptimismKeccak256Commitment(t *testing.T, v2Enabled bool) {
+func testOptimismKeccak256Commitment(t *testing.T, disperseToV2 bool) {
 	proxyTS, shutDown := testutils.CreateTestSuiteWithFlagOverrides(
 		testutils.GetBackend(),
-		v2Enabled,
+		disperseToV2,
 		testutils.GetFlagsToEnableKeccak256ModeS3())
 	defer shutDown()
 
@@ -197,8 +197,8 @@ func TestOptimismGenericCommitmentV2(t *testing.T) {
 	testOptimismGenericCommitment(t, true)
 }
 
-func testOptimismGenericCommitment(t *testing.T, v2Enabled bool) {
-	proxyTS, shutDown := testutils.CreateTestSuite(testutils.GetBackend(), v2Enabled)
+func testOptimismGenericCommitment(t *testing.T, disperseToV2 bool) {
+	proxyTS, shutDown := testutils.CreateTestSuite(testutils.GetBackend(), disperseToV2)
 	defer shutDown()
 
 	ot := actions.NewDefaultTesting(t)

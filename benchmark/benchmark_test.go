@@ -22,7 +22,7 @@ func BenchmarkPutsWithSecondaryV2(b *testing.B) {
 	putsWithSecondary(b, true)
 }
 
-func putsWithSecondary(b *testing.B, useV2 bool) {
+func putsWithSecondary(b *testing.B, disperseToV2 bool) {
 	flagsToOverride := testutils.GetFlagsToEnableS3Caching()
 	writeThreadCount := os.Getenv("WRITE_THREAD_COUNT")
 	if writeThreadCount != "" {
@@ -35,7 +35,7 @@ func putsWithSecondary(b *testing.B, useV2 bool) {
 
 	ts, kill := testutils.CreateTestSuiteWithFlagOverrides(
 		testutils.MemstoreBackend,
-		useV2,
+		disperseToV2,
 		flagsToOverride)
 	defer kill()
 

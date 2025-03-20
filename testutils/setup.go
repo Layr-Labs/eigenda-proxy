@@ -122,20 +122,20 @@ func startRedisContainer() error {
 func GetBackend() Backend {
 	backend, err := ParseBackend(os.Getenv(backendEnvVar))
 	if err != nil {
-		panic("parse backend error")
+		panic(fmt.Sprintf("BACKEND must be = memstore|testnet|preprod. parse backend error: %v", err))
 	}
 	return backend
 }
 
-func buildTestAppConfig(backend Backend, useV2 bool, overriddenFlags []FlagConfig) config.AppConfig {
+func buildTestAppConfig(backend Backend, disperseToV2 bool, overriddenFlags []FlagConfig) config.AppConfig {
 	cliFlags := config.CreateCLIFlags()
 
-	flagConfigs := getDefaultTestFlags(backend, useV2)
+	flagConfigs := getDefaultTestFlags(backend, disperseToV2)
 	flagConfigs = append(flagConfigs, overriddenFlags...)
 
 	cliContext, err := configureContextFromFlags(flagConfigs, cliFlags)
 	if err != nil {
-		panic(fmt.Errorf("configure context from env map: %w", err))
+		panic(fmt.Errorf("configure context from flags: %w", err))
 	}
 	appConfig, err := config.ReadCLIConfig(cliContext)
 	if err != nil {
