@@ -127,10 +127,10 @@ func GetBackend() Backend {
 	return backend
 }
 
-func buildTestAppConfig(backend Backend, useV2 bool, overriddenFlags []FlagConfig) config.AppConfig {
+func buildTestAppConfig(backend Backend, disperseToV2 bool, overriddenFlags []FlagConfig) config.AppConfig {
 	cliFlags := config.CreateCLIFlags()
 
-	flagConfigs := getDefaultTestFlags(backend, useV2)
+	flagConfigs := getDefaultTestFlags(backend, disperseToV2)
 	flagConfigs = append(flagConfigs, overriddenFlags...)
 
 	cliContext, err := configureContextFromFlags(flagConfigs, cliFlags)

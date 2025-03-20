@@ -80,12 +80,12 @@ func TestOptimismClientWithKeccak256CommitmentV2(t *testing.T) {
 	testOptimismClientWithKeccak256Commitment(t, true)
 }
 
-func testOptimismClientWithKeccak256Commitment(t *testing.T, v2Enabled bool) {
+func testOptimismClientWithKeccak256Commitment(t *testing.T, disperseToV2 bool) {
 	t.Parallel()
 
 	ts, kill := testutils.CreateTestSuiteWithFlagOverrides(
 		testutils.GetBackend(),
-		v2Enabled,
+		disperseToV2,
 		testutils.GetFlagsToEnableKeccak256ModeS3())
 	defer kill()
 
@@ -104,10 +104,10 @@ func TestOptimismClientWithGenericCommitmentV2(t *testing.T) {
 this test asserts that the data can be posted/read to EigenDA
 with a concurrent S3 backend configured
 */
-func testOptimismClientWithGenericCommitment(t *testing.T, v2Enabled bool) {
+func testOptimismClientWithGenericCommitment(t *testing.T, disperseToV2 bool) {
 	t.Parallel()
 
-	ts, kill := testutils.CreateTestSuite(testutils.GetBackend(), v2Enabled)
+	ts, kill := testutils.CreateTestSuite(testutils.GetBackend(), disperseToV2)
 	defer kill()
 
 	requireOPClientSetGet(t, ts, testutils.RandBytes(100), false)
@@ -125,10 +125,10 @@ func TestProxyClientServerIntegrationV2(t *testing.T) {
 // TestProxyClientServerIntegration tests the proxy client and server integration by setting the data as a single byte,
 // many unicode characters, single unicode character and an empty preimage. It then tries to get the data from the
 // proxy server with empty byte, single byte and random string.
-func testProxyClientServerIntegration(t *testing.T, v2Enabled bool) {
+func testProxyClientServerIntegration(t *testing.T, disperseToV2 bool) {
 	t.Parallel()
 
-	ts, kill := testutils.CreateTestSuite(testutils.GetBackend(), v2Enabled)
+	ts, kill := testutils.CreateTestSuite(testutils.GetBackend(), disperseToV2)
 	t.Cleanup(kill)
 
 	cfg := &standard_client.Config{
@@ -203,10 +203,10 @@ func TestProxyClientV2(t *testing.T) {
 	testProxyClient(t, true)
 }
 
-func testProxyClient(t *testing.T, v2Enabled bool) {
+func testProxyClient(t *testing.T, disperseToV2 bool) {
 	t.Parallel()
 
-	ts, kill := testutils.CreateTestSuite(testutils.GetBackend(), v2Enabled)
+	ts, kill := testutils.CreateTestSuite(testutils.GetBackend(), disperseToV2)
 	defer kill()
 
 	cfg := &standard_client.Config{
@@ -234,10 +234,10 @@ func TestProxyClientWriteReadV2(t *testing.T) {
 	testProxyClientWriteRead(t, true)
 }
 
-func testProxyClientWriteRead(t *testing.T, v2Enabled bool) {
+func testProxyClientWriteRead(t *testing.T, disperseToV2 bool) {
 	t.Parallel()
 
-	ts, kill := testutils.CreateTestSuite(testutils.GetBackend(), v2Enabled)
+	ts, kill := testutils.CreateTestSuite(testutils.GetBackend(), disperseToV2)
 	defer kill()
 
 	requireStandardClientSetGet(t, ts, testutils.RandBytes(100))
@@ -255,12 +255,12 @@ func TestProxyCachingV2(t *testing.T) {
 /*
 Ensure that proxy is able to write/read from a cache backend when enabled
 */
-func testProxyCaching(t *testing.T, v2Enabled bool) {
+func testProxyCaching(t *testing.T, disperseToV2 bool) {
 	t.Parallel()
 
 	ts, kill := testutils.CreateTestSuiteWithFlagOverrides(
 		testutils.GetBackend(),
-		v2Enabled,
+		disperseToV2,
 		testutils.GetFlagsToEnableS3Caching())
 	defer kill()
 
@@ -277,12 +277,12 @@ func TestProxyCachingWithRedisV2(t *testing.T) {
 	testProxyCachingWithRedis(t, true)
 }
 
-func testProxyCachingWithRedis(t *testing.T, v2Enabled bool) {
+func testProxyCachingWithRedis(t *testing.T, disperseToV2 bool) {
 	t.Parallel()
 
 	ts, kill := testutils.CreateTestSuiteWithFlagOverrides(
 		testutils.GetBackend(),
-		v2Enabled,
+		disperseToV2,
 		testutils.GetFlagsToEnableRedisCaching())
 	defer kill()
 
@@ -304,7 +304,7 @@ Ensure that fallback location is read from when EigenDA blob is not available.
 This is done by setting the memstore expiration time to 1ms and waiting for the blob to expire
 before attempting to read it.
 */
-func testProxyReadFallback(t *testing.T, v2Enabled bool) {
+func testProxyReadFallback(t *testing.T, disperseToV2 bool) {
 	t.Parallel()
 
 	flagsToOverride := testutils.GetFlagsToEnableS3Fallback()
@@ -315,7 +315,7 @@ func testProxyReadFallback(t *testing.T, v2Enabled bool) {
 
 	ts, kill := testutils.CreateTestSuiteWithFlagOverrides(
 		testutils.GetBackend(),
-		v2Enabled,
+		disperseToV2,
 		flagsToOverride)
 	defer kill()
 
@@ -347,7 +347,7 @@ func TestProxyMemConfigClientCanGetAndPatchV2(t *testing.T) {
 	testProxyMemConfigClientCanGetAndPatch(t, true)
 }
 
-func testProxyMemConfigClientCanGetAndPatch(t *testing.T, v2Enabled bool) {
+func testProxyMemConfigClientCanGetAndPatch(t *testing.T, disperseToV2 bool) {
 	t.Parallel()
 
 	useMemstore := testutils.GetBackend() == testutils.MemstoreBackend
@@ -355,7 +355,7 @@ func testProxyMemConfigClientCanGetAndPatch(t *testing.T, v2Enabled bool) {
 		t.Skip("test can't be run against holesky since read failure case can't be manually triggered")
 	}
 
-	ts, kill := testutils.CreateTestSuite(testutils.GetBackend(), v2Enabled)
+	ts, kill := testutils.CreateTestSuite(testutils.GetBackend(), disperseToV2)
 	defer kill()
 
 	memClient := memconfig_client.New(

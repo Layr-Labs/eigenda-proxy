@@ -25,7 +25,7 @@ func FuzzProxyClientServerV2(f *testing.F) {
 	fuzzProxyClientServer(f, true)
 }
 
-func fuzzProxyClientServer(f *testing.F, useV2 bool) {
+func fuzzProxyClientServer(f *testing.F, disperseToV2 bool) {
 	maxBlobLengthString := "16mb"
 
 	flagsToOverride := []testutils.FlagConfig{
@@ -38,7 +38,7 @@ func fuzzProxyClientServer(f *testing.F, useV2 bool) {
 	logger := logging.NewTextSLogger(os.Stdout, &logging.SLoggerOptions{Level: slog.LevelError})
 	ts, kill := testutils.CreateTestSuiteWithFlagOverrides(
 		testutils.MemstoreBackend,
-		useV2,
+		disperseToV2,
 		flagsToOverride,
 		testutils.TestSuiteWithLogger(logger))
 	f.Cleanup(kill)

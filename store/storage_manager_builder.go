@@ -100,7 +100,7 @@ func (smb *StorageManagerBuilder) Build(ctx context.Context) (*Manager, error) {
 		}
 	}
 
-	if smb.v2ClientCfg.Enabled {
+	if smb.v2ClientCfg.DisperseToV2 {
 		smb.log.Info("Using EigenDA V2 storage backend")
 		eigenDAV2Store, err = smb.buildEigenDAV2Backend(ctx)
 		if err != nil {
@@ -136,7 +136,7 @@ func (smb *StorageManagerBuilder) Build(ctx context.Context) (*Manager, error) {
 		"async_secondary_writes", (secondary.Enabled() && smb.managerCfg.AsyncPutWorkers > 0),
 		"verify_v1_certs", smb.v1VerifierCfg.VerifyCerts,
 	)
-	return NewManager(eigenDAV1Store, eigenDAV2Store, s3Store, smb.log, secondary, smb.v2ClientCfg.Enabled)
+	return NewManager(eigenDAV1Store, eigenDAV2Store, s3Store, smb.log, secondary, smb.v2ClientCfg.DisperseToV2)
 }
 
 // buildSecondaries ... Creates a slice of secondary targets used for either read

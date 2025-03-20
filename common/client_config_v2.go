@@ -10,8 +10,7 @@ import (
 
 // ClientConfigV2 contains all non-sensitive configuration to construct V2 clients
 type ClientConfigV2 struct {
-	// Enabled is true if using eigenDA v2, or false if using eigenDA v1
-	Enabled                  bool
+	DisperseToV2             bool
 	DisperserClientCfg       clients_v2.DisperserClientConfig
 	PayloadDisperserCfg      payloaddispersal.PayloadDisperserConfig
 	RelayPayloadRetrieverCfg payloadretrieval.RelayPayloadRetrieverConfig

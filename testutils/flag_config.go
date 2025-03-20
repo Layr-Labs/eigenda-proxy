@@ -71,7 +71,7 @@ func configureContextFromFlags(flagConfigs []FlagConfig, flags []cli.Flag) (*cli
 //
 // Flags are used to configure tests, since that's how it's done in production. We want to exercise as many prod
 // code pathways as possible in e2e tests.
-func getDefaultTestFlags(backend Backend, useV2 bool) []FlagConfig {
+func getDefaultTestFlags(backend Backend, disperseToV2 bool) []FlagConfig {
 	signingKey := os.Getenv(privateKey)
 	ethRPCURL := os.Getenv(ethRPC)
 	maxBlobLengthString := "1mib"
@@ -80,7 +80,7 @@ func getDefaultTestFlags(backend Backend, useV2 bool) []FlagConfig {
 
 	outputVars := make([]FlagConfig, 0)
 	outputVars = append(outputVars, getV1Flags(backend, signingKey, ethRPCURL, maxBlobLengthString)...)
-	outputVars = append(outputVars, getV2Flags(backend, useV2, signingKey, ethRPCURL, maxBlobLengthString)...)
+	outputVars = append(outputVars, getV2Flags(backend, disperseToV2, signingKey, ethRPCURL, maxBlobLengthString)...)
 	outputVars = append(outputVars, getKZGFlags()...)
 
 	// Memstore flags
@@ -148,7 +148,7 @@ func getV1Flags(
 
 func getV2Flags(
 	backend Backend,
-	useV2 bool,
+	disperseToV2 bool,
 	signingKey string,
 	ethRPCURL string,
 	maxBlobLengthString string,
@@ -156,7 +156,7 @@ func getV2Flags(
 	flagConfigs := []FlagConfig{
 		{eigendaflagsv2.SignerPaymentKeyHexFlagName, signingKey},
 		{eigendaflagsv2.EthRPCURLFlagName, ethRPCURL},
-		{eigendaflagsv2.V2EnabledFlagName, fmt.Sprintf("%t", useV2)},
+		{eigendaflagsv2.DisperseToV2FlagName, fmt.Sprintf("%t", disperseToV2)},
 
 		{eigendaflagsv2.DisableTLSFlagName, fmt.Sprintf("%v", false)},
 		{eigendaflagsv2.BlobStatusPollIntervalFlagName, "1s"},

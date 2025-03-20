@@ -15,9 +15,9 @@ import (
 )
 
 var (
-	// V2EnabledFlagName is a temporary feature flag that will be deprecated once all client
+	// DisperseToV2FlagName is a temporary feature flag that will be deprecated once all client
 	// dependencies migrate to using EigenDA V2 network
-	V2EnabledFlagName = withFlagPrefix("enabled")
+	DisperseToV2FlagName = withFlagPrefix("disperse-to-v2")
 
 	DisperserFlagName               = withFlagPrefix("disperser-rpc")
 	DisableTLSFlagName              = withFlagPrefix("disable-tls")
@@ -46,9 +46,9 @@ func withEnvPrefix(envPrefix, s string) string {
 func CLIFlags(envPrefix, category string) []cli.Flag {
 	return []cli.Flag{
 		&cli.BoolFlag{
-			Name:     V2EnabledFlagName,
+			Name:     DisperseToV2FlagName,
 			Usage:    "Enable blob dispersal and retrieval against EigenDA V2 protocol.",
-			EnvVars:  []string{withEnvPrefix(envPrefix, "ENABLED")},
+			EnvVars:  []string{withEnvPrefix(envPrefix, "DISPERSE_TO_V2")},
 			Category: category,
 			Required: false,
 		},
@@ -165,8 +165,8 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 }
 
 func ReadClientConfigV2(ctx *cli.Context) (common.ClientConfigV2, error) {
-	v2Enabled := ctx.Bool(V2EnabledFlagName)
-	if !v2Enabled {
+	disperseToV2 := ctx.Bool(DisperseToV2FlagName)
+	if !disperseToV2 {
 		return common.ClientConfigV2{}, nil
 	}
 
@@ -183,7 +183,7 @@ func ReadClientConfigV2(ctx *cli.Context) (common.ClientConfigV2, error) {
 	}
 
 	return common.ClientConfigV2{
-		Enabled:                    v2Enabled,
+		DisperseToV2:               disperseToV2,
 		DisperserClientCfg:         disperserConfig,
 		PayloadDisperserCfg:        readPayloadDisperserCfg(ctx),
 		RelayPayloadRetrieverCfg:   readRetrievalConfig(ctx),

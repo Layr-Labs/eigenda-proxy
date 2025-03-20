@@ -32,7 +32,7 @@ func TestSuiteWithLogger(log logging.Logger) func(*TestSuite) {
 // configurations passed in as part of this parameter are used to override the default test flag configurations.
 func CreateTestSuiteWithFlagOverrides(
 	backend Backend,
-	useV2 bool,
+	disperseToV2 bool,
 	flagOverrides []FlagConfig,
 	options ...func(*TestSuite),
 ) (TestSuite, func()) {
@@ -46,7 +46,7 @@ func CreateTestSuiteWithFlagOverrides(
 		option(ts)
 	}
 
-	appConfig := buildTestAppConfig(backend, useV2, flagOverrides)
+	appConfig := buildTestAppConfig(backend, disperseToV2, flagOverrides)
 
 	ctx, logger, metrics := ts.Ctx, ts.Log, ts.Metrics
 
@@ -71,11 +71,11 @@ func CreateTestSuiteWithFlagOverrides(
 
 // CreateTestSuite constructs a new TestSuite
 //
-// It accepts flags indicating whether memstore and/or v2 should be enabled.
+// It accepts parameters indicating which type of Backend to use, and whether it should disperse to v2.
 // It also accepts a variadic options parameter, which contains functions that operate on a TestSuite object.
 // These options allow for configuration control over the TestSuite.
-func CreateTestSuite(backend Backend, useV2 bool, options ...func(*TestSuite)) (TestSuite, func()) {
-	return CreateTestSuiteWithFlagOverrides(backend, useV2, nil, options...)
+func CreateTestSuite(backend Backend, disperseToV2 bool, options ...func(*TestSuite)) (TestSuite, func()) {
+	return CreateTestSuiteWithFlagOverrides(backend, disperseToV2, nil, options...)
 }
 
 func (ts *TestSuite) Address() string {

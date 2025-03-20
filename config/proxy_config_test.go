@@ -53,7 +53,7 @@ func validCfg() ProxyConfig {
 				Enabled:        false,
 			}),
 		ClientConfigV2: common.ClientConfigV2{
-			Enabled: true,
+			DisperseToV2: true,
 			DisperserClientCfg: v2_clients.DisperserClientConfig{
 				Hostname:          "http://localhost",
 				Port:              "9999",
