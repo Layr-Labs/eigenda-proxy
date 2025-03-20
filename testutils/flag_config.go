@@ -18,11 +18,11 @@ import (
 )
 
 const (
-	privateKey    = "SIGNER_PRIVATE_KEY"
-	ethRPC        = "ETHEREUM_RPC"
-	transport     = "http"
-	host          = "127.0.0.1"
-	disperserPort = "443"
+	privateKeyEnvVar = "SIGNER_PRIVATE_KEY"
+	ethRPCEnvVar     = "ETHEREUM_RPC"
+	transport        = "http"
+	host             = "127.0.0.1"
+	disperserPort    = "443"
 
 	disperserPreprodHostname   = "disperser-preprod-holesky.eigenda.xyz"
 	preprodCertVerifierAddress = "0xd973fA62E22BC2779F8489258F040C0344B03C21"
@@ -72,8 +72,8 @@ func configureContextFromFlags(flagConfigs []FlagConfig, flags []cli.Flag) (*cli
 // Flags are used to configure tests, since that's how it's done in production. We want to exercise as many prod
 // code pathways as possible in e2e tests.
 func getDefaultTestFlags(backend Backend, disperseToV2 bool) []FlagConfig {
-	signingKey := os.Getenv(privateKey)
-	ethRPCURL := os.Getenv(ethRPC)
+	signingKey := os.Getenv(privateKeyEnvVar)
+	ethRPCURL := os.Getenv(ethRPCEnvVar)
 	maxBlobLengthString := "1mib"
 	expiration := 14 * 24 * time.Hour
 	writeThreadCount := 0
