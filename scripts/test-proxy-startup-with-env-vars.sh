@@ -2,15 +2,23 @@
 set -e  # Exit on any error
 
 ##### This script is meant to be run in ci #####
-# It tests that the env vars defined in .env.example.holesky are correct.
+# It tests that the env vars defined in the specified environment file are correct.
 # It starts the eigenda-proxy with those env vars, waits 5 seconds, and then kills the proxy.
-# If any deprecated flags are still being used in .env.example.holesky, the script will fail.
+# If any deprecated flags are still being used in the specified environment file, the script will fail.
+
+echo "Using environment file: $ENV_FILE"
+
+# Check if the environment file exists
+if [ ! -f "$ENV_FILE" ]; then
+    echo "Error: Environment file $ENV_FILE does not exist"
+    exit 1
+fi
 
 # build the eigenda-proxy binary
 make
 
-# Start the eigenda-proxy with the env vars defined in .env.example.holesky
-set -a; source .env.example.holesky; set +a
+# Start the eigenda-proxy with the env vars defined in the specified environment file
+set -a; source "$ENV_FILE"; set +a
 ./bin/eigenda-proxy &
 PID=$!
 
