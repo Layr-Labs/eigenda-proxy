@@ -399,25 +399,25 @@ func TestInterleavedVersions(t *testing.T) {
 		})
 
 	// disperse a payload to v1
-	testSuite.Server.SetDisperseV2(false)
+	testSuite.Server.SetDisperseToV2(false)
 	payload1a := testRandom.Bytes(1000)
 	cert1a, err := client.SetData(testSuite.Ctx, payload1a)
 	require.NoError(t, err)
 
 	// disperse a payload to v2
-	testSuite.Server.SetDisperseV2(true)
+	testSuite.Server.SetDisperseToV2(true)
 	payload2a := testRandom.Bytes(1000)
 	cert2a, err := client.SetData(testSuite.Ctx, payload2a)
 	require.NoError(t, err)
 
 	// disperse another payload to v1
-	testSuite.Server.SetDisperseV2(false)
+	testSuite.Server.SetDisperseToV2(false)
 	payload1b := testRandom.Bytes(1000)
 	cert1b, err := client.SetData(testSuite.Ctx, payload1b)
 	require.NoError(t, err)
 
 	// disperse another payload to v2
-	testSuite.Server.SetDisperseV2(true)
+	testSuite.Server.SetDisperseToV2(true)
 	payload2b := testRandom.Bytes(1000)
 	cert2b, err := client.SetData(testSuite.Ctx, payload2b)
 	require.NoError(t, err)
