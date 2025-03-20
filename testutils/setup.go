@@ -4,10 +4,25 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
+	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/config"
+	"github.com/Layr-Labs/eigenda-proxy/config/eigendaflags"
+	proxy_metrics "github.com/Layr-Labs/eigenda-proxy/metrics"
+	"github.com/Layr-Labs/eigenda-proxy/store"
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
+	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
+	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
+	"github.com/Layr-Labs/eigenda-proxy/verify"
+	"github.com/Layr-Labs/eigenda/api/clients"
+	"github.com/Layr-Labs/eigenda/api/clients/codecs"
+	clientsv2 "github.com/Layr-Labs/eigenda/api/clients/v2"
+	"github.com/Layr-Labs/eigenda/api/clients/v2/payloaddispersal"
+	"github.com/Layr-Labs/eigenda/api/clients/v2/payloadretrieval"
+	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -18,8 +33,21 @@ import (
 )
 
 const (
-	minioAdmin    = "minioadmin"
-	backendEnvVar = "BACKEND"
+	minioAdmin       = "minioadmin"
+	backendEnvVar    = "BACKEND"
+	privateKeyEnvVar = "SIGNER_PRIVATE_KEY"
+	ethRPCEnvVar     = "ETHEREUM_RPC"
+	transport        = "http"
+	host             = "127.0.0.1"
+	disperserPort    = "443"
+
+	disperserPreprodHostname   = "disperser-preprod-holesky.eigenda.xyz"
+	preprodCertVerifierAddress = "0xd973fA62E22BC2779F8489258F040C0344B03C21"
+	preprodSvcManagerAddress   = "0x54A03db2784E3D0aCC08344D05385d0b62d4F432"
+
+	disperserTestnetHostname   = "disperser-testnet-holesky.eigenda.xyz"
+	testnetCertVerifierAddress = "0xFe52fE1940858DCb6e12153E2104aD0fDFbE1162"
+	testnetSvcManagerAddress   = "0xD4A7E1Bd8015057293f0D0A557088c286942e84b"
 )
 
 type Backend int
@@ -42,6 +70,62 @@ func ParseBackend(inputString string) (Backend, error) {
 	default:
 		return 0, fmt.Errorf("invalid backend: %s", inputString)
 	}
+}
+
+type TestConfig struct {
+	DisperseToV2     bool
+	Backend          Backend
+	Expiration       time.Duration
+	WriteThreadCount int
+	// at most one of the below options should be true
+	UseKeccak256ModeS3 bool
+	UseS3Caching       bool
+	UseRedisCaching    bool
+	UseS3Fallback      bool
+}
+
+func NewTestConfig(backend Backend, disperseToV2 bool) TestConfig {
+	return TestConfig{
+		DisperseToV2:       disperseToV2,
+		Backend:            backend,
+		Expiration:         14 * 24 * time.Hour,
+		UseKeccak256ModeS3: false,
+		UseS3Caching:       false,
+		UseRedisCaching:    false,
+		UseS3Fallback:      false,
+		WriteThreadCount:   0,
+	}
+}
+
+func createRedisConfig(storageConfig store.Config) store.Config {
+	storageConfig.CacheTargets = []string{"redis"}
+	storageConfig.RedisConfig = redis.Config{
+		Endpoint: redisEndpoint,
+		Password: "",
+		DB:       0,
+		Eviction: 10 * time.Minute,
+	}
+
+	return storageConfig
+}
+
+func createS3Config(storeConfig store.Config) store.Config {
+	// generate random string
+	bucketName := "eigenda-proxy-test-" + RandStr(10)
+	createS3Bucket(bucketName)
+
+	storeConfig.CacheTargets = []string{"S3"}
+	storeConfig.S3Config = s3.Config{
+		Bucket:          bucketName,
+		Path:            "",
+		Endpoint:        minioEndpoint,
+		EnableTLS:       false,
+		AccessKeySecret: "minioadmin",
+		AccessKeyID:     "minioadmin",
+		CredentialType:  s3.CredentialTypeStatic,
+	}
+
+	return storeConfig
 }
 
 var (
@@ -127,32 +211,155 @@ func GetBackend() Backend {
 	return backend
 }
 
-func buildTestAppConfig(backend Backend, disperseToV2 bool, overriddenFlags []FlagConfig) config.AppConfig {
-	cliFlags := config.CreateCLIFlags()
+func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
+	useMemory := testCfg.Backend != MemstoreBackend
 
-	flagConfigs := getDefaultTestFlags(backend, disperseToV2)
-	flagConfigs = append(flagConfigs, overriddenFlags...)
+	// load signer key from environment
+	pk := os.Getenv(privateKeyEnvVar)
+	if pk == "" && !useMemory {
+		panic("SIGNER_PRIVATE_KEY environment variable not set")
+	}
 
-	cliContext, err := configureContextFromFlags(flagConfigs, cliFlags)
+	// load node url from environment
+	ethRPC := os.Getenv(ethRPCEnvVar)
+	if ethRPC == "" && !useMemory {
+		panic("ETHEREUM_RPC environment variable is not set")
+	}
+
+	var pollInterval time.Duration
+	if useMemory {
+		pollInterval = time.Second * 1
+	} else {
+		pollInterval = time.Minute * 1
+	}
+
+	maxBlobLengthBytes, err := common.ParseBytesAmount("16mib")
 	if err != nil {
-		panic(fmt.Errorf("configure context from flags: %w", err))
-	}
-	appConfig, err := config.ReadCLIConfig(cliContext)
-	if err != nil {
-		panic(fmt.Errorf("read cli config: %w", err))
+		panic(err)
 	}
 
-	if err := appConfig.Check(); err != nil {
-		panic(fmt.Errorf("check app config: %w", err))
-	}
-	configString, err := appConfig.EigenDAConfig.ToString()
-	if err != nil {
-		panic(fmt.Errorf("convert config string to json: %w", err))
+	var disperserHostname string
+	var certVerifierAddress string
+	var svcManagerAddress string
+	switch testCfg.Backend {
+	case MemstoreBackend:
+		// no need to set these fields for local tests
+		break
+	case PreprodBackend:
+		disperserHostname = disperserPreprodHostname
+		certVerifierAddress = preprodCertVerifierAddress
+		svcManagerAddress = preprodSvcManagerAddress
+	case TestnetBackend:
+		disperserHostname = disperserTestnetHostname
+		certVerifierAddress = testnetCertVerifierAddress
+		svcManagerAddress = testnetSvcManagerAddress
+	default:
+		panic("Unsupported backend")
 	}
 
-	println("Initializing EigenDA proxy server with config (\"*****\" fields are hidden): %v", configString)
+	payloadClientConfig := clientsv2.PayloadClientConfig{
+		PayloadPolynomialForm: codecs.PolynomialFormEval,
+		BlobVersion:           0,
+	}
 
-	return appConfig
+	proxyConfig := config.ProxyConfig{
+		ServerConfig: config.ServerConfig{
+			Host: host,
+			Port: 0,
+		},
+		ClientConfigV1: common.ClientConfigV1{
+			EdaClientCfg: clients.EigenDAClientConfig{
+				RPC:                      disperserHostname + ":" + disperserPort,
+				StatusQueryTimeout:       time.Minute * 45,
+				StatusQueryRetryInterval: pollInterval,
+				DisableTLS:               false,
+				SignerPrivateKeyHex:      pk,
+				EthRpcUrl:                ethRPC,
+				SvcManagerAddr:           svcManagerAddress,
+			},
+		},
+		VerifierConfigV1: verify.Config{
+			VerifyCerts:          false,
+			RPCURL:               ethRPC,
+			SvcManagerAddr:       svcManagerAddress,
+			EthConfirmationDepth: 1,
+			WaitForFinalization:  false,
+		},
+		KzgConfig: kzg.KzgConfig{
+			G1Path:          "../resources/g1.point",
+			G2Path:          "../resources/g2.point",
+			G2TrailingPath:  "../resources/g2.trailing.point",
+			CacheDir:        "../resources/SRSTables",
+			SRSOrder:        eigendaflags.SrsOrder,
+			SRSNumberToLoad: maxBlobLengthBytes / 32,
+			NumWorker:       uint64(runtime.GOMAXPROCS(0)), // #nosec G115
+		},
+		MemstoreConfig: memconfig.NewSafeConfig(
+			memconfig.Config{
+				Enabled:          useMemory,
+				BlobExpiration:   testCfg.Expiration,
+				MaxBlobSizeBytes: maxBlobLengthBytes,
+			}),
+
+		ClientConfigV2: common.ClientConfigV2{
+			DisperseToV2: testCfg.DisperseToV2,
+			DisperserClientCfg: clientsv2.DisperserClientConfig{
+				Hostname:          disperserHostname,
+				Port:              disperserPort,
+				UseSecureGrpcFlag: true,
+			},
+			PayloadDisperserCfg: payloaddispersal.PayloadDisperserConfig{
+				PayloadClientConfig:    payloadClientConfig,
+				DisperseBlobTimeout:    2 * time.Minute,
+				BlobCertifiedTimeout:   2 * time.Minute,
+				BlobStatusPollInterval: 1 * time.Second,
+				ContractCallTimeout:    5 * time.Second,
+			},
+			RelayPayloadRetrieverCfg: payloadretrieval.RelayPayloadRetrieverConfig{
+				PayloadClientConfig: payloadClientConfig,
+				RelayTimeout:        5 * time.Second,
+			},
+			PutRetries:                 1,
+			MaxBlobSizeBytes:           maxBlobLengthBytes,
+			EigenDACertVerifierAddress: certVerifierAddress,
+		},
+		StorageConfig: store.Config{
+			AsyncPutWorkers: testCfg.WriteThreadCount,
+		},
+	}
+
+	if useMemory {
+		proxyConfig.ClientConfigV1.EdaClientCfg.SignerPrivateKeyHex =
+			"0000000000000000000100000000000000000000000000000000000000000000"
+	}
+
+	switch {
+	case testCfg.UseKeccak256ModeS3:
+		proxyConfig.StorageConfig = createS3Config(proxyConfig.StorageConfig)
+
+	case testCfg.UseS3Caching:
+		proxyConfig.StorageConfig.CacheTargets = []string{"S3"}
+		proxyConfig.StorageConfig = createS3Config(proxyConfig.StorageConfig)
+
+	case testCfg.UseS3Fallback:
+		proxyConfig.StorageConfig.FallbackTargets = []string{"S3"}
+		proxyConfig.StorageConfig = createS3Config(proxyConfig.StorageConfig)
+
+	case testCfg.UseRedisCaching:
+		proxyConfig.StorageConfig.CacheTargets = []string{"redis"}
+		proxyConfig.StorageConfig = createRedisConfig(proxyConfig.StorageConfig)
+	}
+
+	secretConfig := common.SecretConfigV2{
+		SignerPaymentKey: pk,
+		EthRPCURL:        ethRPC,
+	}
+
+	return config.AppConfig{
+		EigenDAConfig: proxyConfig,
+		SecretConfig:  secretConfig,
+		MetricsConfig: proxy_metrics.Config{},
+	}
 }
 
 func createS3Bucket(bucketName string) {

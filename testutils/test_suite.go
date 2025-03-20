@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Layr-Labs/eigenda-proxy/config"
 	proxy_metrics "github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/server"
 	"github.com/Layr-Labs/eigensdk-go/logging"
@@ -26,14 +27,13 @@ func TestSuiteWithLogger(log logging.Logger) func(*TestSuite) {
 	}
 }
 
-// CreateTestSuiteWithFlagOverrides creates a test suite.
+// CreateTestSuite creates a test suite.
 //
-// In addition to the options provided by CreateTestSuite, this method also accepts a list of FlagConfigs. The
-// configurations passed in as part of this parameter are used to override the default test flag configurations.
-func CreateTestSuiteWithFlagOverrides(
-	backend Backend,
-	disperseToV2 bool,
-	flagOverrides []FlagConfig,
+// It accepts parameters indicating which type of Backend to use, and a test config.
+// It also accepts a variadic options parameter, which contains functions that operate on a TestSuite object.
+// These options allow for configuration control over the TestSuite.
+func CreateTestSuite(
+	appConfig config.AppConfig,
 	options ...func(*TestSuite),
 ) (TestSuite, func()) {
 	ts := &TestSuite{
@@ -45,8 +45,6 @@ func CreateTestSuiteWithFlagOverrides(
 	for _, option := range options {
 		option(ts)
 	}
-
-	appConfig := buildTestAppConfig(backend, disperseToV2, flagOverrides)
 
 	ctx, logger, metrics := ts.Ctx, ts.Log, ts.Metrics
 
@@ -67,15 +65,6 @@ func CreateTestSuiteWithFlagOverrides(
 		Metrics: metrics,
 		Server:  proxyServer,
 	}, kill
-}
-
-// CreateTestSuite constructs a new TestSuite
-//
-// It accepts parameters indicating which type of Backend to use, and whether it should disperse to v2.
-// It also accepts a variadic options parameter, which contains functions that operate on a TestSuite object.
-// These options allow for configuration control over the TestSuite.
-func CreateTestSuite(backend Backend, disperseToV2 bool, options ...func(*TestSuite)) (TestSuite, func()) {
-	return CreateTestSuiteWithFlagOverrides(backend, disperseToV2, nil, options...)
 }
 
 func (ts *TestSuite) Address() string {

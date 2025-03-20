@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/Layr-Labs/eigenda-proxy/testutils"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/stretchr/testify/assert"
@@ -33,10 +32,11 @@ func TestOpClientKeccak256MalformedInputsV2(t *testing.T) {
 func testOpClientKeccak256MalformedInputs(t *testing.T, disperseToV2 bool) {
 	t.Parallel()
 
-	ts, kill := testutils.CreateTestSuiteWithFlagOverrides(
-		testutils.GetBackend(),
-		disperseToV2,
-		testutils.GetFlagsToEnableKeccak256ModeS3())
+	testConfig := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
+	testConfig.UseKeccak256ModeS3 = true
+
+	tsConfig := testutils.BuildTestSuiteConfig(testConfig)
+	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
 
 	// nil commitment. Should return an error but currently is not. This needs to be fixed by OP
@@ -87,7 +87,10 @@ func TestProxyClientMalformedInputCasesV2(t *testing.T) {
 // byte, many unicode characters, single unicode character and an empty preimage. It then tries to get the data from the
 // proxy server with empty byte, single byte and random string.
 func testProxyClientMalformedInputCases(t *testing.T, disperseToV2 bool) {
-	ts, kill := testutils.CreateTestSuite(testutils.GetBackend(), disperseToV2)
+	testConfig := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
+
+	tsConfig := testutils.BuildTestSuiteConfig(testConfig)
+	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
 
 	cfg := &standard_client.Config{
@@ -167,15 +170,13 @@ func TestKeccak256CommitmentRequestErrorsWhenS3NotSetV2(t *testing.T) {
 func testKeccak256CommitmentRequestErrorsWhenS3NotSet(t *testing.T, disperseToV2 bool) {
 	t.Parallel()
 
-	flagsToOverride := testutils.GetFlagsToEnableKeccak256ModeS3()
-	flagsToOverride = append(
-		flagsToOverride,
-		testutils.FlagConfig{Name: s3.EndpointFlagName, Value: "localhost:1234"})
+	testConfig := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
+	testConfig.UseKeccak256ModeS3 = true
 
-	ts, kill := testutils.CreateTestSuiteWithFlagOverrides(
-		testutils.GetBackend(),
-		disperseToV2,
-		flagsToOverride)
+	tsConfig := testutils.BuildTestSuiteConfig(testConfig)
+	tsConfig.EigenDAConfig.StorageConfig.S3Config.Endpoint = "localhost:1234"
+
+	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
 
 	daClient := altda.NewDAClient(ts.Address(), false, true)
@@ -198,7 +199,10 @@ func TestOversizedBlobRequestErrorsV2(t *testing.T) {
 func testOversizedBlobRequestErrors(t *testing.T, disperseToV2 bool) {
 	t.Parallel()
 
-	ts, kill := testutils.CreateTestSuite(testutils.GetBackend(), disperseToV2)
+	testConfig := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
+	tsConfig := testutils.BuildTestSuiteConfig(testConfig)
+
+	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
 
 	cfg := &standard_client.Config{
