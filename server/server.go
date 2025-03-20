@@ -67,12 +67,12 @@ func BuildAndStartProxyServer(
 		logger,
 		metrics,
 		appConfig.EigenDAConfig.StorageConfig,
-		appConfig.EigenDAConfig.VerifierConfigV1,
+		appConfig.EigenDAConfig.MemstoreConfig,
 		appConfig.EigenDAConfig.KzgConfig,
 		appConfig.EigenDAConfig.ClientConfigV1,
+		appConfig.EigenDAConfig.VerifierConfigV1,
 		appConfig.EigenDAConfig.ClientConfigV2,
 		appConfig.SecretConfig,
-		appConfig.EigenDAConfig.MemstoreConfig,
 	).Build(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create store: %w", err)

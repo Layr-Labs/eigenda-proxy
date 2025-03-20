@@ -41,13 +41,18 @@ type StorageManagerBuilder struct {
 	log     logging.Logger
 	metrics metrics.Metricer
 
-	managerCfg    Config
-	memConfig     *memconfig.SafeConfig
-	v1VerifierCfg verify.Config
-	kzgConfig     kzg.KzgConfig
+	// configs that are used for both v1 and v2
+	managerCfg Config
+	memConfig  *memconfig.SafeConfig
+	kzgConfig  kzg.KzgConfig
+
+	// v1 specific configs
 	v1ClientCfg   common.ClientConfigV1
-	v2ClientCfg   common.ClientConfigV2
-	v2SecretCfg   common.SecretConfigV2
+	v1VerifierCfg verify.Config
+
+	// v2 specific configs
+	v2ClientCfg common.ClientConfigV2
+	v2SecretCfg common.SecretConfigV2
 }
 
 // NewStorageManagerBuilder creates a builder which knows how to build an IManager
@@ -56,12 +61,12 @@ func NewStorageManagerBuilder(
 	log logging.Logger,
 	metrics metrics.Metricer,
 	managerConfig Config,
-	v1VerifierCfg verify.Config,
+	memConfig *memconfig.SafeConfig,
 	kzgConfig kzg.KzgConfig,
 	v1ClientCfg common.ClientConfigV1,
+	v1VerifierCfg verify.Config,
 	v2ClientCfg common.ClientConfigV2,
 	v2SecretCfg common.SecretConfigV2,
-	memConfig *memconfig.SafeConfig,
 ) *StorageManagerBuilder {
 	return &StorageManagerBuilder{
 		ctx,
@@ -69,9 +74,9 @@ func NewStorageManagerBuilder(
 		metrics,
 		managerConfig,
 		memConfig,
-		v1VerifierCfg,
 		kzgConfig,
 		v1ClientCfg,
+		v1VerifierCfg,
 		v2ClientCfg,
 		v2SecretCfg,
 	}
