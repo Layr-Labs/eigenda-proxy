@@ -122,7 +122,7 @@ func startRedisContainer() error {
 func GetBackend() Backend {
 	backend, err := ParseBackend(os.Getenv(backendEnvVar))
 	if err != nil {
-		panic("parse backend error")
+		panic(fmt.Sprintf("BACKEND must be = memstore|testnet|preprod. parse backend error: %v", err))
 	}
 	return backend
 }
