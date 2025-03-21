@@ -204,7 +204,7 @@ func createS3Config(storeConfig store.Config) store.Config {
 }
 
 func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
-	useMemory := testCfg.Backend != MemstoreBackend
+	useMemory := testCfg.Backend == MemstoreBackend
 
 	// load signer key from environment
 	pk := os.Getenv(privateKeyEnvVar)
@@ -323,6 +323,7 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 	if useMemory {
 		proxyConfig.ClientConfigV1.EdaClientCfg.SignerPrivateKeyHex =
 			"0000000000000000000100000000000000000000000000000000000000000000"
+		proxyConfig.ClientConfigV1.EdaClientCfg.SvcManagerAddr = "0x00000000069"
 	}
 
 	switch {
