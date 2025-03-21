@@ -245,7 +245,7 @@ func TestProxyClientWriteReadV2(t *testing.T) {
 func testProxyClientWriteRead(t *testing.T, disperseToV2 bool) {
 	t.Parallel()
 
-	testCfg := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
+	testCfg := testutils.NewTestConfig(testutils.MemstoreBackend, disperseToV2)
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()

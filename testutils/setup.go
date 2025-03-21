@@ -256,6 +256,7 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 
 	proxyConfig := config.ProxyConfig{
 		ServerConfig: config.ServerConfig{
+			DisperseToV2: testCfg.DisperseToV2,
 			Host: host,
 			Port: 0,
 		},
