@@ -83,6 +83,7 @@ func testOptimismClientWithKeccak256Commitment(t *testing.T, disperseToV2 bool) 
 
 	testCfg := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
 	testCfg.UseKeccak256ModeS3 = true
+
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 
 	ts, kill := testutils.CreateTestSuite(tsConfig)
@@ -320,11 +321,10 @@ func testProxyReadFallback(t *testing.T, disperseToV2 bool) {
 
 	testCfg := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
 	testCfg.UseS3Fallback = true
+	// ensure that blob memstore eviction times result in near immediate activation
+	testCfg.Expiration = time.Millisecond * 1
 
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	// ensure that blob memstore eviction times result in near immediate activation
-	tsConfig.EigenDAConfig.MemstoreConfig.SetBlobExpiration(time.Millisecond * 1)
-
 	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
 
