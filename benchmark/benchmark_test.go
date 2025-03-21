@@ -2,6 +2,9 @@ package benchmark
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"strconv"
 	"testing"
 
 	"github.com/Layr-Labs/eigenda-proxy/clients/standard_client"
@@ -24,6 +27,12 @@ func BenchmarkPutsWithSecondaryV2(b *testing.B) {
 
 func putsWithSecondary(b *testing.B, testConfig testutils.TestConfig) {
 	testConfig.UseS3Caching = true
+	writeThreadCount := os.Getenv("WRITE_THREAD_COUNT")
+	threadInt, err := strconv.Atoi(writeThreadCount)
+	if err != nil {
+		panic(fmt.Errorf("Could not parse WRITE_THREAD_COUNT field %w", err))
+	}
+	testConfig.WriteThreadCount = threadInt
 
 	tsConfig := testutils.BuildTestSuiteConfig(testConfig)
 	ts, kill := testutils.CreateTestSuite(tsConfig)
