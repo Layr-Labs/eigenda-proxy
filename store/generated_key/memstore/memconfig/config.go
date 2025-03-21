@@ -34,12 +34,14 @@ func (c Config) MarshalJSON() ([]byte, error) {
 		PutLatency              string
 		GetLatency              string
 		PutReturnsFailoverError bool
+		Enabled                 bool
 	}{
 		MaxBlobSizeBytes:        c.MaxBlobSizeBytes,
 		BlobExpiration:          c.BlobExpiration.String(),
 		PutLatency:              c.PutLatency.String(),
 		GetLatency:              c.GetLatency.String(),
 		PutReturnsFailoverError: c.PutReturnsFailoverError,
+		Enabled:                 c.Enabled,
 	})
 }
 
