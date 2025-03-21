@@ -54,8 +54,6 @@ const (
 
 var (
 	// set by startMinioContainer
-	bucketName = ""
-	// set by startMinioContainer
 	minioEndpoint = ""
 
 	// set by startRedisContainer
@@ -98,11 +96,6 @@ func startMinIOContainer() error {
 	}
 
 	minioEndpoint = strings.TrimPrefix(endpoint, "http://")
-
-	// generate random string
-	bucketName = "eigenda-proxy-test-" + RandStr(10)
-	createS3Bucket(bucketName)
-
 	return nil
 }
 
@@ -183,7 +176,6 @@ func NewTestConfig(backend Backend, disperseToV2 bool) TestConfig {
 }
 
 func createRedisConfig(storageConfig store.Config) store.Config {
-	storageConfig.CacheTargets = []string{"redis"}
 	storageConfig.RedisConfig = redis.Config{
 		Endpoint: redisEndpoint,
 		Password: "",
@@ -199,7 +191,6 @@ func createS3Config(storeConfig store.Config) store.Config {
 	bucketName := "eigenda-proxy-test-" + RandStr(10)
 	createS3Bucket(bucketName)
 
-	storeConfig.CacheTargets = []string{"S3"}
 	storeConfig.S3Config = s3.Config{
 		Bucket:          bucketName,
 		Path:            "",
