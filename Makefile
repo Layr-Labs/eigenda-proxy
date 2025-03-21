@@ -33,7 +33,7 @@ test-unit:
 test-e2e-local:
 	# Add the -v flag to observe logs as the run is happening on CI, given that this test takes ~5 minutes to run.
 	# Good to have early feedback when needed.
-	BACKEND=memstore go test -v -timeout 10m ./e2e -parallel 4 | grep --line-buffered -E "^[[:space:]]*--- (PASS|FAIL)"
+	BACKEND=memstore go test -v -timeout 10m ./e2e -parallel 4
 
 # E2E tests using holesky testnet backend, leveraging op-e2e framework. Also tests the standard client against the proxy.
 # If holesky tests are failing, consider checking https://dora.holesky.ethpandaops.io/epochs for block production status.
@@ -45,7 +45,7 @@ test-e2e-testnet:
 test-e2e-preprod:
 	# Add the -v flag to observe logs as the run is happening on CI, given that this test takes ~20 minutes to run.
 	# Good to have early feedback when needed.
-	BACKEND=preprod go test -v -timeout 30m ./e2e -parallel 4 | grep --line-buffered -E "^[[:space:]]*--- (PASS|FAIL)"
+	BACKEND=preprod go test -v -timeout 30m ./e2e -parallel 4
 
 # Very simple fuzzer which generates random bytes arrays and sends them to the proxy using the standard client.
 # To clean the cached corpus, run `go clean -fuzzcache` before running this.
