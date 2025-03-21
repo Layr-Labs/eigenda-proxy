@@ -33,8 +33,8 @@ func testOpClientKeccak256MalformedInputs(t *testing.T, disperseToV2 bool) {
 	t.Parallel()
 
 	testCfg := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
-	testCfg.UseKeccak256ModeS3 = true
 
+	testCfg.UseKeccak256ModeS3 = true
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
