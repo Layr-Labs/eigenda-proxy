@@ -204,6 +204,22 @@ func testOptimismGenericCommitment(t *testing.T, disperseToV2 bool) {
 	ot := actions.NewDefaultTesting(t)
 
 	optimism := NewL2AltDA(ot, proxyTS.Address(), true)
+	exerciseGenericCommitments(t, ot, optimism)
+	requireDispersalRetrievalEigenDA(
+		t,
+		proxyTS.Metrics.HTTPServerRequestsTotal,
+		commitments.OptimismGeneric)
+}
+
+// exerciseGenericCommitments simulates some activity with OPs e2e testing framework
+//
+// TODO (litt3): This method should be split into smaller logical chunks, so that it's easier to interpret its logic
+func exerciseGenericCommitments(
+	t *testing.T,
+	ot actions.StatefulTesting,
+	optimism *L2AltDA,
+) {
+	expectedBlockNumber := optimism.sequencer.SyncStatus().SafeL1.Number
 
 	// build L1 block #1
 	optimism.ActL1Blocks(ot, 1)
@@ -215,7 +231,9 @@ func testOptimismGenericCommitment(t *testing.T, disperseToV2 bool) {
 
 	optimism.sequencer.ActL2PipelineFull(ot)
 	optimism.sequencer.ActL1SafeSignal(ot)
-	require.Equal(t, uint64(1), optimism.sequencer.SyncStatus().SafeL1.Number)
+
+	expectedBlockNumber++
+	require.Equal(t, expectedBlockNumber, optimism.sequencer.SyncStatus().SafeL1.Number)
 
 	// add L1 block #2
 	optimism.ActL1Blocks(ot, 1)
@@ -229,6 +247,9 @@ func testOptimismGenericCommitment(t *testing.T, disperseToV2 bool) {
 	optimism.sequencer.ActL1FinalizedSignal(ot)
 	optimism.sequencer.ActL1SafeSignal(ot)
 
+	expectedBlockNumber++
+	require.Equal(t, expectedBlockNumber, optimism.sequencer.SyncStatus().SafeL1.Number)
+
 	// commit all the l2 blocks to L1
 	optimism.batcher.ActSubmitAll(ot)
 	optimism.miner.ActL1StartBlock(12)(ot)
@@ -238,6 +259,24 @@ func testOptimismGenericCommitment(t *testing.T, disperseToV2 bool) {
 	// verify
 	optimism.sequencer.ActL2PipelineFull(ot)
 	optimism.ActL1Finalized(ot)
+}
+
+func TestOptimismGenericCommitmentMigration(t *testing.T) {
+	// initialize with v2 = true, so that the necessary components are constructed
+	proxyTS, shutDown := testutils.CreateTestSuite(testutils.GetBackend(), true)
+	defer shutDown()
+
+	// turn off v2 dispersal, so that we exercise v1, i.e. "pre migration"
+	proxyTS.Server.SetDisperseToV2(false)
+
+	ot := actions.NewDefaultTesting(t)
+
+	optimism := NewL2AltDA(ot, proxyTS.Address(), true)
+	exerciseGenericCommitments(t, ot, optimism)
+
+	// turn on v2 dispersal
+	proxyTS.Server.SetDisperseToV2(true)
+	exerciseGenericCommitments(t, ot, optimism)
 
 	requireDispersalRetrievalEigenDA(
 		t,
