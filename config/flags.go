@@ -2,15 +2,15 @@ package config
 
 import (
 	"github.com/Layr-Labs/eigenda-proxy/config/eigendaflags"
-	eigenda_v2_flags "github.com/Layr-Labs/eigenda-proxy/config/eigendaflags/v2"
+	eigenda_v2_flags "github.com/Layr-Labs/eigenda-proxy/config/v2/eigendaflags"
 	"github.com/Layr-Labs/eigenda-proxy/store"
+	"github.com/Layr-Labs/eigenda-proxy/verify"
 
 	"github.com/Layr-Labs/eigenda-proxy/logging"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
-	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
 	"github.com/urfave/cli/v2"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
@@ -67,4 +67,8 @@ func init() {
 	Flags = append(Flags, s3.CLIFlags(common.GlobalPrefix, S3Category)...)
 	Flags = append(Flags, memstore.CLIFlags(common.GlobalPrefix, MemstoreFlagsCategory)...)
 	Flags = append(Flags, verify.CLIFlags(common.GlobalPrefix, VerifierCategory)...)
+
+	Flags = append(Flags, eigendaflags.DeprecatedCLIFlags(common.GlobalPrefix, EigenDAClientCategory)...)
+	Flags = append(Flags, verify.DeprecatedCLIFlags(common.GlobalPrefix, VerifierCategory)...)
+	Flags = append(Flags, store.DeprecatedCLIFlags(common.GlobalPrefix, StorageFlagsCategory)...)
 }
