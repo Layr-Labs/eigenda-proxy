@@ -55,7 +55,6 @@ const (
 var (
 	// set by startMinioContainer
 	minioEndpoint = ""
-
 	// set by startRedisContainer
 	redisEndpoint = ""
 )
