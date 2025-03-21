@@ -149,6 +149,14 @@ func ParseBackend(inputString string) (Backend, error) {
 	}
 }
 
+func GetBackend() Backend {
+	backend, err := ParseBackend(os.Getenv(backendEnvVar))
+	if err != nil {
+		panic(fmt.Sprintf("BACKEND must be = memstore|testnet|preprod. parse backend error: %v", err))
+	}
+	return backend
+}
+
 type TestConfig struct {
 	DisperseToV2     bool
 	Backend          Backend
@@ -203,14 +211,6 @@ func createS3Config(storeConfig store.Config) store.Config {
 	}
 
 	return storeConfig
-}
-
-func GetBackend() Backend {
-	backend, err := ParseBackend(os.Getenv(backendEnvVar))
-	if err != nil {
-		panic(fmt.Sprintf("BACKEND must be = memstore|testnet|preprod. parse backend error: %v", err))
-	}
-	return backend
 }
 
 func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
