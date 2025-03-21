@@ -205,7 +205,6 @@ func createS3Config(storeConfig store.Config) store.Config {
 
 func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 	useMemory := testCfg.Backend == MemstoreBackend
-
 	// load signer key from environment
 	pk := os.Getenv(privateKeyEnvVar)
 	if pk == "" && !useMemory {
@@ -257,8 +256,8 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 	proxyConfig := config.ProxyConfig{
 		ServerConfig: config.ServerConfig{
 			DisperseToV2: testCfg.DisperseToV2,
-			Host: host,
-			Port: 0,
+			Host:         host,
+			Port:         0,
 		},
 		ClientConfigV1: common.ClientConfigV1{
 			EdaClientCfg: clients.EigenDAClientConfig{

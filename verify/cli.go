@@ -65,6 +65,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 					G2PowerOf2PathFlagNameDeprecated, withEnvPrefix(envPrefix, "TARGET_KZG_G2_POWER_OF_2_PATH"))
 			},
 			Category: category,
+			Hidden:   true,
 		},
 		&cli.StringFlag{
 			Name:     G2PathFlagName,

@@ -68,6 +68,7 @@ func init() {
 	Flags = append(Flags, memstore.CLIFlags(common.GlobalPrefix, MemstoreFlagsCategory)...)
 	Flags = append(Flags, verify.CLIFlags(common.GlobalPrefix, VerifierCategory)...)
 
+	Flags = append(Flags, eigendaflags.DeprecatedCLIFlags(common.GlobalPrefix, EigenDAClientCategory)...)
 	Flags = append(Flags, verify.DeprecatedCLIFlags(common.GlobalPrefix, VerifierCategory)...)
 	Flags = append(Flags, store.DeprecatedCLIFlags(common.GlobalPrefix, StorageFlagsCategory)...)
 }

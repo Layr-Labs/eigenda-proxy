@@ -44,6 +44,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 					eigendaflags.EthRPCURLFlagName, withEnvPrefix(envPrefix, "ETH_RPC"))
 			},
 			Category: category,
+			Hidden:   true,
 		},
 		&cli.StringFlag{
 			Name:    DeprecatedSvcManagerAddrFlagName,
@@ -55,6 +56,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 					eigendaflags.SvcManagerAddrFlagName, withEnvPrefix(envPrefix, "SERVICE_MANAGER_ADDR"))
 			},
 			Category: category,
+			Hidden:   true,
 		},
 		&cli.Uint64Flag{
 			Name:    DeprecatedEthConfirmationDepthFlagName,
@@ -71,6 +73,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 				)
 			},
 			Category: category,
+			Hidden:   true,
 		},
 		// kzg flags
 		&cli.StringFlag{
@@ -87,6 +90,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 					G1PathFlagName, withEnvPrefix(envPrefix, "TARGET_KZG_G1_PATH"))
 			},
 			Category: category,
+			Hidden:   true,
 		},
 		&cli.StringFlag{
 			Name:    DeprecatedG2TauFlagName,
@@ -101,6 +105,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 					DeprecatedG2TauFlagName, withDeprecatedEnvPrefix(envPrefix, "TARGET_G2_TAU_PATH"))
 			},
 			Category: category,
+			Hidden:   true,
 		},
 		&cli.StringFlag{
 			Name:    DeprecatedCachePathFlagName,
@@ -116,6 +121,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 					CachePathFlagName, withEnvPrefix(envPrefix, "TARGET_CACHE_PATH"))
 			},
 			Category: category,
+			Hidden:   true,
 		},
 		// TODO: can we use a genericFlag for this, and automatically parse the string into a uint64?
 		&cli.StringFlag{
@@ -131,6 +137,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 			// we also use this flag for memstore.
 			// should we duplicate the flag? Or is there a better way to handle this?
 			Category: category,
+			Hidden:   true,
 		},
 	}
 }
