@@ -4,6 +4,8 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/Layr-Labs/eigenda-proxy/config/eigendaflags"
+	eigendaflagsv2 "github.com/Layr-Labs/eigenda-proxy/config/v2/eigendaflags"
 	"github.com/Layr-Labs/eigenda-proxy/testutils"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/stretchr/testify/require"
@@ -16,22 +18,29 @@ import (
 // FuzzProxyClientServerV1 will fuzz the proxy client server integration
 // and op client keccak256 with malformed inputs. This is never meant to be fuzzed with EigenDA.
 func FuzzProxyClientServerV1(f *testing.F) {
-	testCfg := testutils.NewTestConfig(true, false)
-	fuzzProxyClientServer(f, testCfg)
+	fuzzProxyClientServer(f, false)
 }
 
 func FuzzProxyClientServerV2(f *testing.F) {
-	testCfg := testutils.NewTestConfig(true, true)
-	fuzzProxyClientServer(f, testCfg)
+	fuzzProxyClientServer(f, true)
 }
 
-func fuzzProxyClientServer(f *testing.F, testCfg testutils.TestConfig) {
-	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	tsSecretConfig := testutils.TestSuiteSecretConfig(testCfg)
+func fuzzProxyClientServer(f *testing.F, disperseToV2 bool) {
+	maxBlobLengthString := "16mb"
+
+	flagsToOverride := []testutils.FlagConfig{
+		{Name: eigendaflags.MaxBlobLengthFlagName, Value: maxBlobLengthString},
+		{Name: eigendaflagsv2.MaxBlobLengthFlagName, Value: maxBlobLengthString},
+	}
+
 	// We want a silent logger for fuzzing because we need to see the output of the fuzzer itself,
 	// which tells us each new interesting inputs it finds.
 	logger := logging.NewTextSLogger(os.Stdout, &logging.SLoggerOptions{Level: slog.LevelError})
-	ts, kill := testutils.CreateTestSuite(tsConfig, tsSecretConfig, testutils.TestSuiteWithLogger(logger))
+	ts, kill := testutils.CreateTestSuiteWithFlagOverrides(
+		testutils.MemstoreBackend,
+		disperseToV2,
+		flagsToOverride,
+		testutils.TestSuiteWithLogger(logger))
 	f.Cleanup(kill)
 
 	f.Add([]byte{})

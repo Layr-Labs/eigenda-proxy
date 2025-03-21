@@ -4,24 +4,10 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"runtime"
 	"strings"
 	"time"
 
-	"github.com/Layr-Labs/eigenda-proxy/common"
-	"github.com/Layr-Labs/eigenda-proxy/config"
-	proxy_metrics "github.com/Layr-Labs/eigenda-proxy/metrics"
-	"github.com/Layr-Labs/eigenda-proxy/server"
-	"github.com/Layr-Labs/eigenda-proxy/store"
-	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
-	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
-	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
-	"github.com/Layr-Labs/eigenda-proxy/verify/v1"
-	"github.com/Layr-Labs/eigenda/api/clients"
-	"github.com/Layr-Labs/eigenda/encoding/kzg"
-	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/gorilla/mux"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"golang.org/x/exp/rand"
@@ -31,17 +17,38 @@ import (
 )
 
 const (
-	privateKey         = "SIGNER_PRIVATE_KEY"
-	ethRPC             = "ETHEREUM_RPC"
-	transport          = "http"
-	host               = "127.0.0.1"
-	v1DisperserHolesky = "disperser-holesky.eigenda.xyz:443"
-	memstoreEnvVar     = "MEMSTORE"
+	minioAdmin    = "minioadmin"
+	backendEnvVar = "BACKEND"
 )
+
+type Backend int
+
+const (
+	TestnetBackend Backend = iota + 1
+	PreprodBackend
+	MemstoreBackend
+)
+
+// ParseBackend converts a string to a Backend enum (case insensitive)
+func ParseBackend(inputString string) (Backend, error) {
+	switch strings.ToLower(inputString) {
+	case "testnet":
+		return TestnetBackend, nil
+	case "preprod":
+		return PreprodBackend, nil
+	case "memstore":
+		return MemstoreBackend, nil
+	default:
+		return 0, fmt.Errorf("invalid backend: %s", inputString)
+	}
+}
 
 var (
 	// set by startMinioContainer
+	bucketName = ""
+	// set by startMinioContainer
 	minioEndpoint = ""
+
 	// set by startRedisContainer
 	redisEndpoint = ""
 )
@@ -69,8 +76,8 @@ func startMinIOContainer() error {
 	minioContainer, err := miniotc.Run(
 		ctx,
 		"minio/minio:RELEASE.2024-10-02T17-50-41Z",
-		miniotc.WithUsername("minioadmin"),
-		miniotc.WithPassword("minioadmin"),
+		miniotc.WithUsername(minioAdmin),
+		miniotc.WithPassword(minioAdmin),
 	)
 	if err != nil {
 		return fmt.Errorf("failed to start MinIO container: %w", err)
@@ -82,6 +89,11 @@ func startMinIOContainer() error {
 	}
 
 	minioEndpoint = strings.TrimPrefix(endpoint, "http://")
+
+	// generate random string
+	bucketName = "eigenda-proxy-test-" + RandStr(10)
+	createS3Bucket(bucketName)
+
 	return nil
 }
 
@@ -106,271 +118,19 @@ func startRedisContainer() error {
 	return nil
 }
 
-func UseMemstore() bool {
-	return os.Getenv(memstoreEnvVar) == "true" || os.Getenv(memstoreEnvVar) == "1"
-}
-
-type TestConfig struct {
-	UseV2            bool
-	UseMemory        bool
-	Expiration       time.Duration
-	WriteThreadCount int
-	// at most one of the below options should be true
-	UseKeccak256ModeS3 bool
-	UseS3Caching       bool
-	UseRedisCaching    bool
-	UseS3Fallback      bool
-}
-
-func NewTestConfig(useMemory bool, useV2 bool) TestConfig {
-	return TestConfig{
-		UseV2:              useV2,
-		UseMemory:          useMemory,
-		Expiration:         14 * 24 * time.Hour,
-		UseKeccak256ModeS3: false,
-		UseS3Caching:       false,
-		UseRedisCaching:    false,
-		UseS3Fallback:      false,
-		WriteThreadCount:   0,
-	}
-}
-
-func createRedisConfig(eigendaCfg config.ProxyConfig) config.AppConfig {
-	eigendaCfg.StorageConfig.RedisConfig = redis.Config{
-		Endpoint: redisEndpoint,
-		Password: "",
-		DB:       0,
-		Eviction: 10 * time.Minute,
-	}
-	return config.AppConfig{
-		EigenDAConfig: eigendaCfg,
-	}
-}
-
-func createS3Config(eigendaCfg config.ProxyConfig) config.AppConfig {
-	// generate random string
-	bucketName := "eigenda-proxy-test-" + RandStr(10)
-	createS3Bucket(bucketName)
-
-	eigendaCfg.StorageConfig.S3Config = s3.Config{
-		Bucket:          bucketName,
-		Path:            "",
-		Endpoint:        minioEndpoint,
-		EnableTLS:       false,
-		AccessKeySecret: "minioadmin",
-		AccessKeyID:     "minioadmin",
-		CredentialType:  s3.CredentialTypeStatic,
-	}
-	return config.AppConfig{
-		EigenDAConfig: eigendaCfg,
-	}
-}
-
-func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
-	// load signer key from environment
-	pk := os.Getenv(privateKey)
-	if pk == "" && !testCfg.UseMemory {
-		panic("SIGNER_PRIVATE_KEY environment variable not set")
-	}
-
-	// load node url from environment
-	ethRPC := os.Getenv(ethRPC)
-	if ethRPC == "" && !testCfg.UseMemory {
-		panic("ETHEREUM_RPC environment variable is not set")
-	}
-
-	var pollInterval time.Duration
-	if testCfg.UseMemory {
-		pollInterval = time.Second * 1
-	} else {
-		pollInterval = time.Minute * 1
-	}
-
-	maxBlobLengthBytes, err := common.ParseBytesAmount("16mib")
+func GetBackend() Backend {
+	backend, err := ParseBackend(os.Getenv(backendEnvVar))
 	if err != nil {
-		panic(err)
+		panic(fmt.Sprintf("BACKEND must be = memstore|testnet|preprod. parse backend error: %v", err))
 	}
-
-	svcManagerAddr := "0xD4A7E1Bd8015057293f0D0A557088c286942e84b" // holesky testnet
-	eigendaCfg := config.ProxyConfig{
-		ServerConfig: server.Config{
-			DisperseV2: testCfg.UseV2,
-			Host:       host,
-			Port:       0,
-		},
-		EdaClientConfigV1: clients.EigenDAClientConfig{
-			RPC:                      v1DisperserHolesky,
-			StatusQueryTimeout:       time.Minute * 45,
-			StatusQueryRetryInterval: pollInterval,
-			DisableTLS:               false,
-			SignerPrivateKeyHex:      pk,
-			EthRpcUrl:                ethRPC,
-			SvcManagerAddr:           svcManagerAddr,
-		},
-		EdaVerifierConfigV1: verify.Config{
-			VerifyCerts:          false,
-			RPCURL:               ethRPC,
-			SvcManagerAddr:       svcManagerAddr,
-			EthConfirmationDepth: 1,
-			KzgConfig: &kzg.KzgConfig{
-				G1Path:          "../resources/g1.point",
-				G2PowerOf2Path:  "../resources/g2.point.powerOf2",
-				CacheDir:        "../resources/SRSTables",
-				SRSOrder:        268435456,
-				SRSNumberToLoad: maxBlobLengthBytes / 32,
-				NumWorker:       uint64(runtime.GOMAXPROCS(0)), // #nosec G115
-			},
-			WaitForFinalization: false,
-		},
-		MemstoreEnabled: testCfg.UseMemory,
-		MemstoreConfig: memconfig.NewSafeConfig(
-			memconfig.Config{
-				BlobExpiration:   testCfg.Expiration,
-				MaxBlobSizeBytes: maxBlobLengthBytes,
-			}),
-
-		EdaClientConfigV2: common.ClientConfigV2{
-			Enabled: testCfg.UseV2,
-		},
-		StorageConfig: store.Config{
-			AsyncPutWorkers: testCfg.WriteThreadCount,
-		},
-
-		EigenDAV2Enabled: testCfg.UseV2,
-	}
-
-	if testCfg.UseMemory {
-		eigendaCfg.EdaClientConfigV1.SignerPrivateKeyHex = "0000000000000000000100000000000000000000000000000000000000000000"
-	}
-
-	var cfg config.AppConfig
-	switch {
-	case testCfg.UseKeccak256ModeS3:
-		cfg = createS3Config(eigendaCfg)
-
-	case testCfg.UseS3Caching:
-		eigendaCfg.StorageConfig.CacheTargets = []string{"S3"}
-		cfg = createS3Config(eigendaCfg)
-
-	case testCfg.UseS3Fallback:
-		eigendaCfg.StorageConfig.FallbackTargets = []string{"S3"}
-		cfg = createS3Config(eigendaCfg)
-
-	case testCfg.UseRedisCaching:
-		eigendaCfg.StorageConfig.CacheTargets = []string{"redis"}
-		cfg = createRedisConfig(eigendaCfg)
-
-	default:
-		cfg = config.AppConfig{
-			EigenDAConfig: eigendaCfg,
-			MetricsCfg:    proxy_metrics.Config{},
-		}
-	}
-
-	return cfg
-}
-
-func TestSuiteSecretConfig(testCfg TestConfig) common.SecretConfigV2 {
-	// load signer key from environment
-	signerPrivateKey := os.Getenv(privateKey)
-	if signerPrivateKey == "" && !testCfg.UseMemory {
-		panic("SIGNER_PRIVATE_KEY environment variable not set")
-	}
-
-	return common.SecretConfigV2{
-		SignerPaymentKey: signerPrivateKey,
-	}
-}
-
-type TestSuite struct {
-	Ctx     context.Context
-	Log     logging.Logger
-	Metrics *proxy_metrics.EmulatedMetricer
-	Server  *server.Server
-}
-
-func TestSuiteWithLogger(log logging.Logger) func(*TestSuite) {
-	return func(ts *TestSuite) {
-		ts.Log = log
-	}
-}
-
-func TestSuiteWithContext(ctx context.Context) func(*TestSuite) {
-	return func(ts *TestSuite) {
-		ts.Ctx = ctx
-	}
-}
-
-func CreateTestSuite(
-	testSuiteCfg config.AppConfig, secretConfigV2 common.SecretConfigV2, options ...func(*TestSuite),
-) (TestSuite, func()) {
-	ts := &TestSuite{
-		Ctx:     context.Background(),
-		Log:     logging.NewTextSLogger(os.Stdout, &logging.SLoggerOptions{}),
-		Metrics: proxy_metrics.NewEmulatedMetricer(),
-	}
-	// Override the defaults with the provided options, if present.
-	for _, option := range options {
-		option(ts)
-	}
-	ctx, log, metrics := ts.Ctx, ts.Log, ts.Metrics
-
-	storageManager, err := store.NewStorageManagerBuilder(
-		ctx,
-		log,
-		metrics,
-		testSuiteCfg.EigenDAConfig.StorageConfig,
-		testSuiteCfg.EigenDAConfig.EdaVerifierConfigV1,
-		testSuiteCfg.EigenDAConfig.EdaClientConfigV1,
-		testSuiteCfg.EigenDAConfig.EdaClientConfigV2,
-		secretConfigV2,
-		testSuiteCfg.EigenDAConfig.MemstoreConfig,
-		testSuiteCfg.EigenDAConfig.PutRetries,
-		testSuiteCfg.EigenDAConfig.MaxBlobSizeBytes,
-	).Build(ctx)
-	if err != nil {
-		panic(err)
-	}
-	proxySvr := server.NewServer(testSuiteCfg.EigenDAConfig.ServerConfig, storageManager, log, metrics)
-
-	log.Info("Starting proxy server...")
-	r := mux.NewRouter()
-	proxySvr.RegisterRoutes(r)
-	err = proxySvr.Start(r)
-	if err != nil {
-		panic(err)
-	}
-
-	if testSuiteCfg.EigenDAConfig.MemstoreEnabled {
-		memconfig.NewHandlerHTTP(log, testSuiteCfg.EigenDAConfig.MemstoreConfig).RegisterMemstoreConfigHandlers(r)
-	}
-
-	kill := func() {
-		if err := proxySvr.Stop(); err != nil {
-			log.Error("failed to stop proxy server", "err", err)
-		}
-	}
-
-	return TestSuite{
-		Ctx:     ctx,
-		Log:     log,
-		Metrics: metrics,
-		Server:  proxySvr,
-	}, kill
-}
-
-func (ts *TestSuite) Address() string {
-	// read port from listener
-	port := ts.Server.Port()
-
-	return fmt.Sprintf("%s://%s:%d", transport, host, port)
+	return backend
 }
 
 func createS3Bucket(bucketName string) {
 	// Initialize minio client object.
 	endpoint := minioEndpoint
-	accessKeyID := "minioadmin"
-	secretAccessKey := "minioadmin"
+	accessKeyID := minioAdmin
+	secretAccessKey := minioAdmin
 	useSSL := false
 
 	minioClient, err := minio.New(
