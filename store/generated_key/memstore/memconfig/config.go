@@ -28,20 +28,21 @@ type Config struct {
 // for the GET /memstore/config endpoint, which only reads the configuration.
 // Patches are reads as ConfigUpdates instead to handle omitted fields.
 func (c Config) MarshalJSON() ([]byte, error) {
-	return json.Marshal(
-		struct {
-			MaxBlobSizeBytes        uint64
-			BlobExpiration          string
-			PutLatency              string
-			GetLatency              string
-			PutReturnsFailoverError bool
-		}{
-			MaxBlobSizeBytes:        c.MaxBlobSizeBytes,
-			BlobExpiration:          c.BlobExpiration.String(),
-			PutLatency:              c.PutLatency.String(),
-			GetLatency:              c.GetLatency.String(),
-			PutReturnsFailoverError: c.PutReturnsFailoverError,
-		})
+	return json.Marshal(struct {
+		MaxBlobSizeBytes        uint64
+		BlobExpiration          string
+		PutLatency              string
+		GetLatency              string
+		PutReturnsFailoverError bool
+		Enabled                 bool
+	}{
+		MaxBlobSizeBytes:        c.MaxBlobSizeBytes,
+		BlobExpiration:          c.BlobExpiration.String(),
+		PutLatency:              c.PutLatency.String(),
+		GetLatency:              c.GetLatency.String(),
+		PutReturnsFailoverError: c.PutReturnsFailoverError,
+		Enabled:                 c.Enabled,
+	})
 }
 
 // SafeConfig handles thread-safe access to Config.

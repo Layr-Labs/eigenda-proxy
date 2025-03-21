@@ -22,13 +22,12 @@ const (
 )
 
 func getDefaultMemStoreTestConfig() *memconfig.SafeConfig {
-	return memconfig.NewSafeConfig(
-		memconfig.Config{
-			MaxBlobSizeBytes: 1024 * 1024,
-			BlobExpiration:   0,
-			PutLatency:       0,
-			GetLatency:       0,
-		})
+	return memconfig.NewSafeConfig(memconfig.Config{
+		MaxBlobSizeBytes: 1024 * 1024,
+		BlobExpiration:   0,
+		PutLatency:       0,
+		GetLatency:       0,
+	})
 }
 
 func TestGetSet(t *testing.T) {
