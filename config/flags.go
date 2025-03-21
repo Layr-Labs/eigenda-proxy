@@ -57,23 +57,17 @@ func CLIFlags() []cli.Flag {
 var Flags = []cli.Flag{}
 
 func init() {
-	Flags = CreateCLIFlags()
-}
+	Flags = CLIFlags()
+	Flags = append(Flags, logging.CLIFlags(common.GlobalPrefix, LoggingFlagsCategory)...)
+	Flags = append(Flags, metrics.CLIFlags(common.GlobalPrefix, MetricsFlagCategory)...)
+	Flags = append(Flags, eigendaflags.CLIFlags(common.GlobalPrefix, EigenDAClientCategory)...)
+	Flags = append(Flags, eigenda_v2_flags.CLIFlags(common.GlobalPrefix, EigenDAV2ClientCategory)...)
+	Flags = append(Flags, store.CLIFlags(common.GlobalPrefix, StorageFlagsCategory)...)
+	Flags = append(Flags, redis.CLIFlags(common.GlobalPrefix, RedisCategory)...)
+	Flags = append(Flags, s3.CLIFlags(common.GlobalPrefix, S3Category)...)
+	Flags = append(Flags, memstore.CLIFlags(common.GlobalPrefix, MemstoreFlagsCategory)...)
+	Flags = append(Flags, verify.CLIFlags(common.GlobalPrefix, VerifierCategory)...)
 
-func CreateCLIFlags() []cli.Flag {
-	flags := CLIFlags()
-	flags = append(flags, logging.CLIFlags(common.GlobalPrefix, LoggingFlagsCategory)...)
-	flags = append(flags, metrics.CLIFlags(common.GlobalPrefix, MetricsFlagCategory)...)
-	flags = append(flags, eigendaflags.CLIFlags(common.GlobalPrefix, EigenDAClientCategory)...)
-	flags = append(flags, eigenda_v2_flags.CLIFlags(common.GlobalPrefix, EigenDAV2ClientCategory)...)
-	flags = append(flags, store.CLIFlags(common.GlobalPrefix, StorageFlagsCategory)...)
-	flags = append(flags, redis.CLIFlags(common.GlobalPrefix, RedisCategory)...)
-	flags = append(flags, s3.CLIFlags(common.GlobalPrefix, S3Category)...)
-	flags = append(flags, memstore.CLIFlags(common.GlobalPrefix, MemstoreFlagsCategory)...)
-	flags = append(flags, verify.CLIFlags(common.GlobalPrefix, VerifierCategory)...)
-
-	flags = append(flags, verify.DeprecatedCLIFlags(common.GlobalPrefix, VerifierCategory)...)
-	flags = append(flags, store.DeprecatedCLIFlags(common.GlobalPrefix, StorageFlagsCategory)...)
-
-	return flags
+	Flags = append(Flags, verify.DeprecatedCLIFlags(common.GlobalPrefix, VerifierCategory)...)
+	Flags = append(Flags, store.DeprecatedCLIFlags(common.GlobalPrefix, StorageFlagsCategory)...)
 }
