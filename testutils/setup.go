@@ -12,6 +12,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/config"
 	"github.com/Layr-Labs/eigenda-proxy/config/eigendaflags"
 	proxy_metrics "github.com/Layr-Labs/eigenda-proxy/metrics"
+	"github.com/Layr-Labs/eigenda-proxy/server"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
@@ -23,6 +24,7 @@ import (
 	"github.com/Layr-Labs/eigenda/api/clients/v2/payloaddispersal"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/payloadretrieval"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
+	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -49,6 +51,81 @@ const (
 	testnetCertVerifierAddress = "0xFe52fE1940858DCb6e12153E2104aD0fDFbE1162"
 	testnetSvcManagerAddress   = "0xD4A7E1Bd8015057293f0D0A557088c286942e84b"
 )
+
+var (
+	// set by startMinioContainer
+	bucketName = ""
+	// set by startMinioContainer
+	minioEndpoint = ""
+
+	// set by startRedisContainer
+	redisEndpoint = ""
+)
+
+// TODO: we shouldn't start the containers in the init function like this.
+// Need to find a better way to start the containers and set the endpoints.
+// Even better would be for the endpoints not to be global variables injected into the test configs.
+// Starting the containers on init like this also makes it harder to import this file into other tests.
+func init() {
+	err := startMinIOContainer()
+	if err != nil {
+		panic(err)
+	}
+	err = startRedisContainer()
+	if err != nil {
+		panic(err)
+	}
+}
+
+// startMinIOContainer starts a MinIO container and sets the minioEndpoint global variable
+func startMinIOContainer() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	minioContainer, err := miniotc.Run(
+		ctx,
+		"minio/minio:RELEASE.2024-10-02T17-50-41Z",
+		miniotc.WithUsername(minioAdmin),
+		miniotc.WithPassword(minioAdmin),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to start MinIO container: %w", err)
+	}
+
+	endpoint, err := minioContainer.Endpoint(ctx, "")
+	if err != nil {
+		return fmt.Errorf("failed to get MinIO endpoint: %w", err)
+	}
+
+	minioEndpoint = strings.TrimPrefix(endpoint, "http://")
+
+	// generate random string
+	bucketName = "eigenda-proxy-test-" + RandStr(10)
+	createS3Bucket(bucketName)
+
+	return nil
+}
+
+// startRedisContainer starts a Redis container and sets the redisEndpoint global variable
+func startRedisContainer() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	redisContainer, err := redistc.Run(
+		ctx,
+		"docker.io/redis:7",
+	)
+	if err != nil {
+		return fmt.Errorf("failed to start Redis container: %w", err)
+	}
+
+	endpoint, err := redisContainer.Endpoint(ctx, "")
+	if err != nil {
+		return fmt.Errorf("failed to get Redis endpoint: %w", err)
+	}
+	redisEndpoint = endpoint
+	return nil
+}
 
 type Backend int
 
@@ -126,81 +203,6 @@ func createS3Config(storeConfig store.Config) store.Config {
 	}
 
 	return storeConfig
-}
-
-var (
-	// set by startMinioContainer
-	bucketName = ""
-	// set by startMinioContainer
-	minioEndpoint = ""
-
-	// set by startRedisContainer
-	redisEndpoint = ""
-)
-
-// TODO: we shouldn't start the containers in the init function like this.
-// Need to find a better way to start the containers and set the endpoints.
-// Even better would be for the endpoints not to be global variables injected into the test configs.
-// Starting the containers on init like this also makes it harder to import this file into other tests.
-func init() {
-	err := startMinIOContainer()
-	if err != nil {
-		panic(err)
-	}
-	err = startRedisContainer()
-	if err != nil {
-		panic(err)
-	}
-}
-
-// startMinIOContainer starts a MinIO container and sets the minioEndpoint global variable
-func startMinIOContainer() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	minioContainer, err := miniotc.Run(
-		ctx,
-		"minio/minio:RELEASE.2024-10-02T17-50-41Z",
-		miniotc.WithUsername(minioAdmin),
-		miniotc.WithPassword(minioAdmin),
-	)
-	if err != nil {
-		return fmt.Errorf("failed to start MinIO container: %w", err)
-	}
-
-	endpoint, err := minioContainer.Endpoint(ctx, "")
-	if err != nil {
-		return fmt.Errorf("failed to get MinIO endpoint: %w", err)
-	}
-
-	minioEndpoint = strings.TrimPrefix(endpoint, "http://")
-
-	// generate random string
-	bucketName = "eigenda-proxy-test-" + RandStr(10)
-	createS3Bucket(bucketName)
-
-	return nil
-}
-
-// startRedisContainer starts a Redis container and sets the redisEndpoint global variable
-func startRedisContainer() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	redisContainer, err := redistc.Run(
-		ctx,
-		"docker.io/redis:7",
-	)
-	if err != nil {
-		return fmt.Errorf("failed to start Redis container: %w", err)
-	}
-
-	endpoint, err := redisContainer.Endpoint(ctx, "")
-	if err != nil {
-		return fmt.Errorf("failed to get Redis endpoint: %w", err)
-	}
-	redisEndpoint = endpoint
-	return nil
 }
 
 func GetBackend() Backend {
@@ -360,6 +362,68 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 		SecretConfig:  secretConfig,
 		MetricsConfig: proxy_metrics.Config{},
 	}
+}
+
+// TestSuite contains necessary objects, to be able to execute a proxy test
+type TestSuite struct {
+	Ctx     context.Context
+	Log     logging.Logger
+	Metrics *proxy_metrics.EmulatedMetricer
+	Server  *server.Server
+}
+
+// TestSuiteWithLogger returns a function which overrides the logger for a TestSuite
+func TestSuiteWithLogger(log logging.Logger) func(*TestSuite) {
+	return func(ts *TestSuite) {
+		ts.Log = log
+	}
+}
+
+// CreateTestSuite creates a test suite.
+//
+// It accepts parameters indicating which type of Backend to use, and a test config.
+// It also accepts a variadic options parameter, which contains functions that operate on a TestSuite object.
+// These options allow for configuration control over the TestSuite.
+func CreateTestSuite(
+	appConfig config.AppConfig,
+	options ...func(*TestSuite),
+) (TestSuite, func()) {
+	ts := &TestSuite{
+		Ctx:     context.Background(),
+		Log:     logging.NewTextSLogger(os.Stdout, &logging.SLoggerOptions{}),
+		Metrics: proxy_metrics.NewEmulatedMetricer(),
+	}
+	// Override the defaults with the provided options, if present.
+	for _, option := range options {
+		option(ts)
+	}
+
+	ctx, logger, metrics := ts.Ctx, ts.Log, ts.Metrics
+
+	proxyServer, err := server.BuildAndStartProxyServer(ctx, logger, metrics, appConfig)
+	if err != nil {
+		panic(fmt.Errorf("build and start proxy server: %w", err))
+	}
+
+	kill := func() {
+		if err := proxyServer.Stop(); err != nil {
+			log.Error("failed to stop proxy server", "err", err)
+		}
+	}
+
+	return TestSuite{
+		Ctx:     ctx,
+		Log:     logger,
+		Metrics: metrics,
+		Server:  proxyServer,
+	}, kill
+}
+
+func (ts *TestSuite) Address() string {
+	// read port from listener
+	port := ts.Server.Port()
+
+	return fmt.Sprintf("%s://%s:%d", transport, host, port)
 }
 
 func createS3Bucket(bucketName string) {

@@ -81,9 +81,9 @@ func TestOptimismClientWithKeccak256CommitmentV2(t *testing.T) {
 func testOptimismClientWithKeccak256Commitment(t *testing.T, disperseToV2 bool) {
 	t.Parallel()
 
-	testConfig := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
-	testConfig.UseKeccak256ModeS3 = true
-	tsConfig := testutils.BuildTestSuiteConfig(testConfig)
+	testCfg := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
+	testCfg.UseKeccak256ModeS3 = true
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 
 	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
@@ -106,8 +106,8 @@ with a concurrent S3 backend configured
 func testOptimismClientWithGenericCommitment(t *testing.T, disperseToV2 bool) {
 	t.Parallel()
 
-	testConfig := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
-	tsConfig := testutils.BuildTestSuiteConfig(testConfig)
+	testCfg := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
 
@@ -129,8 +129,8 @@ func TestProxyClientServerIntegrationV2(t *testing.T) {
 func testProxyClientServerIntegration(t *testing.T, disperseToV2 bool) {
 	t.Parallel()
 
-	testConfig := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
-	tsConfig := testutils.BuildTestSuiteConfig(testConfig)
+	testCfg := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 
 	ts, kill := testutils.CreateTestSuite(tsConfig)
 	t.Cleanup(kill)
@@ -210,8 +210,8 @@ func TestProxyClientV2(t *testing.T) {
 func testProxyClient(t *testing.T, disperseToV2 bool) {
 	t.Parallel()
 
-	testConfig := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
-	tsConfig := testutils.BuildTestSuiteConfig(testConfig)
+	testCfg := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 
 	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
@@ -244,8 +244,8 @@ func TestProxyClientWriteReadV2(t *testing.T) {
 func testProxyClientWriteRead(t *testing.T, disperseToV2 bool) {
 	t.Parallel()
 
-	testConfig := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
-	tsConfig := testutils.BuildTestSuiteConfig(testConfig)
+	testCfg := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
 
@@ -267,10 +267,10 @@ Ensure that proxy is able to write/read from a cache backend when enabled
 func testProxyCaching(t *testing.T, disperseToV2 bool) {
 	t.Parallel()
 
-	testConfig := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
-	testConfig.UseS3Caching = true
+	testCfg := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
+	testCfg.UseS3Caching = true
 
-	tsConfig := testutils.BuildTestSuiteConfig(testConfig)
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
 
@@ -290,10 +290,10 @@ func TestProxyCachingWithRedisV2(t *testing.T) {
 func testProxyCachingWithRedis(t *testing.T, disperseToV2 bool) {
 	t.Parallel()
 
-	testConfig := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
-	testConfig.UseRedisCaching = true
+	testCfg := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
+	testCfg.UseRedisCaching = true
 
-	tsConfig := testutils.BuildTestSuiteConfig(testConfig)
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
 
@@ -318,10 +318,10 @@ before attempting to read it.
 func testProxyReadFallback(t *testing.T, disperseToV2 bool) {
 	t.Parallel()
 
-	testConfig := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
-	testConfig.UseS3Fallback = true
+	testCfg := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
+	testCfg.UseS3Fallback = true
 
-	tsConfig := testutils.BuildTestSuiteConfig(testConfig)
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 	// ensure that blob memstore eviction times result in near immediate activation
 	tsConfig.EigenDAConfig.MemstoreConfig.SetBlobExpiration(time.Millisecond * 1)
 
@@ -364,8 +364,8 @@ func testProxyMemConfigClientCanGetAndPatch(t *testing.T, disperseToV2 bool) {
 		t.Skip("test can't be run against holesky since read failure case can't be manually triggered")
 	}
 
-	testConfig := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
-	tsConfig := testutils.BuildTestSuiteConfig(testConfig)
+	testCfg := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 
 	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()

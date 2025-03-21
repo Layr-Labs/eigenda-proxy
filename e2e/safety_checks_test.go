@@ -32,10 +32,10 @@ func TestOpClientKeccak256MalformedInputsV2(t *testing.T) {
 func testOpClientKeccak256MalformedInputs(t *testing.T, disperseToV2 bool) {
 	t.Parallel()
 
-	testConfig := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
-	testConfig.UseKeccak256ModeS3 = true
+	testCfg := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
+	testCfg.UseKeccak256ModeS3 = true
 
-	tsConfig := testutils.BuildTestSuiteConfig(testConfig)
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
 
@@ -87,9 +87,9 @@ func TestProxyClientMalformedInputCasesV2(t *testing.T) {
 // byte, many unicode characters, single unicode character and an empty preimage. It then tries to get the data from the
 // proxy server with empty byte, single byte and random string.
 func testProxyClientMalformedInputCases(t *testing.T, disperseToV2 bool) {
-	testConfig := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
+	testCfg := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
 
-	tsConfig := testutils.BuildTestSuiteConfig(testConfig)
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
 
@@ -170,10 +170,10 @@ func TestKeccak256CommitmentRequestErrorsWhenS3NotSetV2(t *testing.T) {
 func testKeccak256CommitmentRequestErrorsWhenS3NotSet(t *testing.T, disperseToV2 bool) {
 	t.Parallel()
 
-	testConfig := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
-	testConfig.UseKeccak256ModeS3 = true
+	testCfg := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
+	testCfg.UseKeccak256ModeS3 = true
 
-	tsConfig := testutils.BuildTestSuiteConfig(testConfig)
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 	tsConfig.EigenDAConfig.StorageConfig.S3Config.Endpoint = "localhost:1234"
 
 	ts, kill := testutils.CreateTestSuite(tsConfig)
@@ -199,8 +199,8 @@ func TestOversizedBlobRequestErrorsV2(t *testing.T) {
 func testOversizedBlobRequestErrors(t *testing.T, disperseToV2 bool) {
 	t.Parallel()
 
-	testConfig := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
-	tsConfig := testutils.BuildTestSuiteConfig(testConfig)
+	testCfg := testutils.NewTestConfig(testutils.GetBackend(), disperseToV2)
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 
 	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
