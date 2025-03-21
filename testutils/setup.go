@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Layr-Labs/eigenda-proxy/config"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -125,34 +124,6 @@ func GetBackend() Backend {
 		panic(fmt.Sprintf("BACKEND must be = memstore|testnet|preprod. parse backend error: %v", err))
 	}
 	return backend
-}
-
-func buildTestAppConfig(backend Backend, disperseToV2 bool, overriddenFlags []FlagConfig) config.AppConfig {
-	cliFlags := config.CreateCLIFlags()
-
-	flagConfigs := getDefaultTestFlags(backend, disperseToV2)
-	flagConfigs = append(flagConfigs, overriddenFlags...)
-
-	cliContext, err := configureContextFromFlags(flagConfigs, cliFlags)
-	if err != nil {
-		panic(fmt.Errorf("configure context from flags: %w", err))
-	}
-	appConfig, err := config.ReadCLIConfig(cliContext)
-	if err != nil {
-		panic(fmt.Errorf("read cli config: %w", err))
-	}
-
-	if err := appConfig.Check(); err != nil {
-		panic(fmt.Errorf("check app config: %w", err))
-	}
-	configString, err := appConfig.EigenDAConfig.ToString()
-	if err != nil {
-		panic(fmt.Errorf("convert config string to json: %w", err))
-	}
-
-	println("Initializing EigenDA proxy server with config (\"*****\" fields are hidden): %v", configString)
-
-	return appConfig
 }
 
 func createS3Bucket(bucketName string) {

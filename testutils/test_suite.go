@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Layr-Labs/eigenda-proxy/config"
 	proxy_metrics "github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/server"
 	"github.com/Layr-Labs/eigensdk-go/logging"
@@ -76,6 +77,34 @@ func CreateTestSuiteWithFlagOverrides(
 // These options allow for configuration control over the TestSuite.
 func CreateTestSuite(backend Backend, disperseToV2 bool, options ...func(*TestSuite)) (TestSuite, func()) {
 	return CreateTestSuiteWithFlagOverrides(backend, disperseToV2, nil, options...)
+}
+
+func buildTestAppConfig(backend Backend, disperseToV2 bool, overriddenFlags []FlagConfig) config.AppConfig {
+	cliFlags := config.CreateCLIFlags()
+
+	flagConfigs := getDefaultTestFlags(backend, disperseToV2)
+	flagConfigs = append(flagConfigs, overriddenFlags...)
+
+	cliContext, err := configureContextFromFlags(flagConfigs, cliFlags)
+	if err != nil {
+		panic(fmt.Errorf("configure context from flags: %w", err))
+	}
+	appConfig, err := config.ReadCLIConfig(cliContext)
+	if err != nil {
+		panic(fmt.Errorf("read cli config: %w", err))
+	}
+
+	if err := appConfig.Check(); err != nil {
+		panic(fmt.Errorf("check app config: %w", err))
+	}
+	configString, err := appConfig.EigenDAConfig.ToString()
+	if err != nil {
+		panic(fmt.Errorf("convert config string to json: %w", err))
+	}
+
+	println("Initializing EigenDA proxy server with config (\"*****\" fields are hidden): %v", configString)
+
+	return appConfig
 }
 
 func (ts *TestSuite) Address() string {
