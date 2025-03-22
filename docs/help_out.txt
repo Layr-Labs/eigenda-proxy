@@ -5,7 +5,6 @@ USAGE:
    eigenda-proxy [global options] command [command options]
 
 VERSION:
-   v1.6.5-13-ga4dcfa4-dirty
 
 DESCRIPTION:
    Service for more trustless and secure interactions with EigenDA
@@ -22,7 +21,7 @@ GLOBAL OPTIONS:
 
    EigenDA Client
 
-   --eigenda.confirmation-depth value                                       Number of Ethereum blocks to wait after the blob's batch has been included on-chain, before returning from PutBlob calls. Can either be a number or 'finalized'. (default: "0") [$EIGENDA_PROXY_EIGENDA_CONFIRMATION_DEPTH]
+   --eigenda.confirmation-depth value                                       Number of Ethereum blocks to wait after the blob's batch has been included on-chain, before returning from PutBlob calls. Can either be a number or 'finalized'. (default: "8") [$EIGENDA_PROXY_EIGENDA_CONFIRMATION_DEPTH]
    --eigenda.confirmation-timeout value                                     The total amount of time that the client will spend waiting for EigenDA
                                                                                 to "confirm" (include onchain) a blob after it has been dispersed. Note that
                                                                                 we stick to "confirm" here but this really means InclusionTimeout,
