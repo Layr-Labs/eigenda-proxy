@@ -76,7 +76,7 @@ format:
 ## to indivdual builds (e.g, version)
 gen-static-help-output: eigenda-proxy
 	@echo "Storing binary output to docs/help_out.txt"
-	@./bin/eigenda-proxy --help | sed -E '/^[[:space:]]*v[0-9]+\.[0-9]+\.[0-9]+/d' > docs/help_out.txt
+	@./bin/eigenda-proxy --help | sed -r '/^[[:space:]]*v[0-9]+\.[0-9]+\.[0-9]+/d' > docs/help_out.txt
 
 go-gen-mocks:
 	@echo "generating go mocks..."
