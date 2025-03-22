@@ -4,7 +4,6 @@ NAME:
 USAGE:
    eigenda-proxy [global options] command [command options]
 
-VERSION:
 
 DESCRIPTION:
    Service for more trustless and secure interactions with EigenDA
