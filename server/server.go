@@ -68,6 +68,7 @@ func BuildAndStartProxyServer(
 		metrics,
 		appConfig.EigenDAConfig.StorageConfig,
 		appConfig.EigenDAConfig.MemstoreConfig,
+		appConfig.EigenDAConfig.MemstoreEnabled,
 		appConfig.EigenDAConfig.KzgConfig,
 		appConfig.EigenDAConfig.ClientConfigV1,
 		appConfig.EigenDAConfig.VerifierConfigV1,
@@ -81,7 +82,7 @@ func BuildAndStartProxyServer(
 	proxyServer := NewServer(appConfig.EigenDAConfig.ServerConfig, storageManager, logger, metrics)
 	router := mux.NewRouter()
 	proxyServer.RegisterRoutes(router)
-	if appConfig.EigenDAConfig.MemstoreConfig.Enabled() {
+	if appConfig.EigenDAConfig.MemstoreEnabled {
 		memconfig.NewHandlerHTTP(logger, appConfig.EigenDAConfig.MemstoreConfig).RegisterMemstoreConfigHandlers(router)
 	}
 

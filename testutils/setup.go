@@ -287,11 +287,10 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 		},
 		MemstoreConfig: memconfig.NewSafeConfig(
 			memconfig.Config{
-				Enabled:          useMemory,
 				BlobExpiration:   testCfg.Expiration,
 				MaxBlobSizeBytes: maxBlobLengthBytes,
 			}),
-
+		MemstoreEnabled: useMemory,
 		ClientConfigV2: common.ClientConfigV2{
 			DisperseToV2: testCfg.DisperseToV2,
 			DisperserClientCfg: clientsv2.DisperserClientConfig{

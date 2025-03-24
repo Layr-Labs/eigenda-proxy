@@ -42,9 +42,10 @@ type StorageManagerBuilder struct {
 	metrics metrics.Metricer
 
 	// configs that are used for both v1 and v2
-	managerCfg Config
-	memConfig  *memconfig.SafeConfig
-	kzgConfig  kzg.KzgConfig
+	managerCfg      Config
+	memConfig       *memconfig.SafeConfig
+	memstoreEnabled bool
+	kzgConfig       kzg.KzgConfig
 
 	// v1 specific configs
 	v1ClientCfg   common.ClientConfigV1
@@ -62,6 +63,7 @@ func NewStorageManagerBuilder(
 	metrics metrics.Metricer,
 	managerConfig Config,
 	memConfig *memconfig.SafeConfig,
+	memstoreEnabled bool,
 	kzgConfig kzg.KzgConfig,
 	v1ClientCfg common.ClientConfigV1,
 	v1VerifierCfg verify.Config,
@@ -74,6 +76,7 @@ func NewStorageManagerBuilder(
 		metrics,
 		managerConfig,
 		memConfig,
+		memstoreEnabled,
 		kzgConfig,
 		v1ClientCfg,
 		v1VerifierCfg,
@@ -183,7 +186,7 @@ func (smb *StorageManagerBuilder) buildEigenDAV2Backend(ctx context.Context) (co
 		return nil, fmt.Errorf("new KZG prover: %w", err)
 	}
 
-	if smb.memConfig.Enabled() {
+	if smb.memstoreEnabled {
 		return memstore_v2.New(smb.ctx, smb.log, smb.memConfig, kzgProver.Srs.G1)
 	}
 
@@ -236,7 +239,7 @@ func (smb *StorageManagerBuilder) buildEigenDAV1Backend(ctx context.Context) (co
 		smb.log.Warn("Certificate verification disabled. This can result in invalid EigenDA certificates being accredited.")
 	}
 
-	if smb.memConfig.Enabled() {
+	if smb.memstoreEnabled {
 		smb.log.Info("Using memstore backend for EigenDA V1")
 		return memstore.New(ctx, verifier, smb.log, smb.memConfig)
 	}

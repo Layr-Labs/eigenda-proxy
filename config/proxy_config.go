@@ -24,8 +24,9 @@ type ProxyConfig struct {
 	KzgConfig        kzg.KzgConfig
 	ClientConfigV2   common.ClientConfigV2
 
-	MemstoreConfig *memconfig.SafeConfig
-	StorageConfig  store.Config
+	MemstoreConfig  *memconfig.SafeConfig
+	MemstoreEnabled bool
+	StorageConfig   store.Config
 }
 
 // ReadProxyConfig ... parses the Config from the provided flags or environment variables.
@@ -67,6 +68,7 @@ func ReadProxyConfig(ctx *cli.Context) (ProxyConfig, error) {
 		KzgConfig:        kzgConfig,
 		ClientConfigV2:   clientConfigV2,
 		MemstoreConfig:   memstoreConfig,
+		MemstoreEnabled:  ctx.Bool(memstore.EnabledFlagName),
 		StorageConfig:    store.ReadConfig(ctx),
 	}
 
@@ -75,7 +77,7 @@ func ReadProxyConfig(ctx *cli.Context) (ProxyConfig, error) {
 
 // Check ... verifies that configuration values are adequately set
 func (cfg *ProxyConfig) Check() error {
-	if cfg.MemstoreConfig.Enabled() {
+	if cfg.MemstoreEnabled {
 		// provide dummy values to eigenda client config. Since the client won't be called in this
 		// mode it doesn't matter.
 		cfg.VerifierConfigV1.SvcManagerAddr = "0x0000000000000000000000000000000000000000"
@@ -95,7 +97,7 @@ func (cfg *ProxyConfig) Check() error {
 	// cert verification is enabled
 	// TODO: move this verification logic to verify/cli.go
 	if cfg.VerifierConfigV1.VerifyCerts {
-		if cfg.MemstoreConfig.Enabled() {
+		if cfg.MemstoreEnabled {
 			return fmt.Errorf(
 				"cannot enable cert verification when memstore is enabled. use --%s",
 				verify.CertVerificationDisabledFlagName)
@@ -109,7 +111,7 @@ func (cfg *ProxyConfig) Check() error {
 	}
 
 	// V2 dispersal/retrieval enabled
-	if cfg.ClientConfigV2.DisperseToV2 && !cfg.MemstoreConfig.Enabled() {
+	if cfg.ClientConfigV2.DisperseToV2 && !cfg.MemstoreEnabled {
 		err := cfg.ClientConfigV2.Check()
 		if err != nil {
 			return err

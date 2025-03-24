@@ -50,8 +50,8 @@ func validCfg() ProxyConfig {
 		MemstoreConfig: memconfig.NewSafeConfig(
 			memconfig.Config{
 				BlobExpiration: 25 * time.Minute,
-				Enabled:        false,
 			}),
+		MemstoreEnabled: false,
 		ClientConfigV2: common.ClientConfigV2{
 			DisperseToV2: true,
 			DisperserClientCfg: v2_clients.DisperserClientConfig{
@@ -84,7 +84,7 @@ func TestConfigVerification(t *testing.T) {
 				"MissingSvcManagerAddr", func(t *testing.T) {
 					cfg := validCfg()
 					// cert verification only makes sense when memstore is disabled (we use eigenda as backend)
-					cfg.MemstoreConfig.SetEnabled(false)
+					cfg.MemstoreEnabled = false
 					cfg.VerifierConfigV1.VerifyCerts = true
 					cfg.VerifierConfigV1.SvcManagerAddr = ""
 
@@ -96,7 +96,7 @@ func TestConfigVerification(t *testing.T) {
 				"MissingEthRPC", func(t *testing.T) {
 					cfg := validCfg()
 					// cert verification only makes sense when memstore is disabled (we use eigenda as backend)
-					cfg.MemstoreConfig.SetEnabled(false)
+					cfg.MemstoreEnabled = false
 					cfg.VerifierConfigV1.VerifyCerts = true
 					cfg.VerifierConfigV1.RPCURL = ""
 
@@ -107,7 +107,7 @@ func TestConfigVerification(t *testing.T) {
 			t.Run(
 				"CantDoCertVerificationWhenMemstoreEnabled", func(t *testing.T) {
 					cfg := validCfg()
-					cfg.MemstoreConfig.SetEnabled(true)
+					cfg.MemstoreEnabled = true
 					cfg.VerifierConfigV1.VerifyCerts = true
 
 					err := cfg.Check()
@@ -117,7 +117,7 @@ func TestConfigVerification(t *testing.T) {
 			t.Run(
 				"EigenDAClientFieldsAreDefaultSetWhenMemStoreEnabled", func(t *testing.T) {
 					cfg := validCfg()
-					cfg.MemstoreConfig.SetEnabled(true)
+					cfg.MemstoreEnabled = true
 					cfg.VerifierConfigV1.VerifyCerts = false
 					cfg.VerifierConfigV1.RPCURL = ""
 					cfg.VerifierConfigV1.SvcManagerAddr = ""
@@ -131,7 +131,7 @@ func TestConfigVerification(t *testing.T) {
 			t.Run(
 				"FailWhenEigenDAClientFieldsAreUnsetAndMemStoreDisabled", func(t *testing.T) {
 					cfg := validCfg()
-					cfg.MemstoreConfig.SetEnabled(false)
+					cfg.MemstoreEnabled = false
 					cfg.ClientConfigV1.EdaClientCfg.EthRpcUrl = ""
 					cfg.ClientConfigV1.EdaClientCfg.SvcManagerAddr = ""
 

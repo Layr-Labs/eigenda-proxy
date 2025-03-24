@@ -113,6 +113,5 @@ func ReadConfig(ctx *cli.Context, maxBlobSizeBytes uint64) (*memconfig.SafeConfi
 			PutLatency:              ctx.Duration(PutLatencyFlagName),
 			GetLatency:              ctx.Duration(GetLatencyFlagName),
 			PutReturnsFailoverError: ctx.Bool(PutReturnsFailoverErrorFlagName),
-			Enabled:                 ctx.Bool(EnabledFlagName),
 		}), nil
 }

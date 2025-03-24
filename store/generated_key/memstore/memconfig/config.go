@@ -17,8 +17,6 @@ type Config struct {
 	// after sleeping PutLatency duration.
 	// This can be used to simulate eigenda being down.
 	PutReturnsFailoverError bool
-	// if true, memstore is enabled and will be used
-	Enabled bool
 }
 
 // MarshalJSON implements custom JSON marshaling for Config.
@@ -34,14 +32,12 @@ func (c Config) MarshalJSON() ([]byte, error) {
 		PutLatency              string
 		GetLatency              string
 		PutReturnsFailoverError bool
-		Enabled                 bool
 	}{
 		MaxBlobSizeBytes:        c.MaxBlobSizeBytes,
 		BlobExpiration:          c.BlobExpiration.String(),
 		PutLatency:              c.PutLatency.String(),
 		GetLatency:              c.GetLatency.String(),
 		PutReturnsFailoverError: c.PutReturnsFailoverError,
-		Enabled:                 c.Enabled,
 	})
 }
 
@@ -132,16 +128,4 @@ func (sc *SafeConfig) Update(config Config) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 	sc.config = config
-}
-
-func (sc *SafeConfig) Enabled() bool {
-	sc.mu.RLock()
-	defer sc.mu.RUnlock()
-	return sc.config.Enabled
-}
-
-func (sc *SafeConfig) SetEnabled(enabled bool) {
-	sc.mu.Lock()
-	defer sc.mu.Unlock()
-	sc.config.Enabled = enabled
 }
