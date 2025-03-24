@@ -79,14 +79,14 @@ func (mr *MockIManagerMockRecorder) Put(arg0, arg1, arg2, arg3 interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Put", reflect.TypeOf((*MockIManager)(nil).Put), arg0, arg1, arg2, arg3)
 }
 
-// SetV2Enabled mocks base method.
-func (m *MockIManager) SetV2Enabled(arg0 bool) {
+// SetDisperseToV2 mocks base method.
+func (m *MockIManager) SetDisperseToV2(arg0 bool) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetV2Enabled", arg0)
+	m.ctrl.Call(m, "SetDisperseToV2", arg0)
 }
 
-// SetV2Enabled indicates an expected call of SetV2Enabled.
-func (mr *MockIManagerMockRecorder) SetV2Enabled(arg0 interface{}) *gomock.Call {
+// SetDisperseToV2 indicates an expected call of SetDisperseToV2.
+func (mr *MockIManagerMockRecorder) SetDisperseToV2(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetV2Enabled", reflect.TypeOf((*MockIManager)(nil).SetV2Enabled), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDisperseToV2", reflect.TypeOf((*MockIManager)(nil).SetDisperseToV2), arg0)
 }

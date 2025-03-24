@@ -17,7 +17,7 @@ import (
 type IManager interface {
 	Get(ctx context.Context, key []byte, cm commitments.CommitmentMeta) ([]byte, error)
 	Put(ctx context.Context, cm commitments.CommitmentMode, key, value []byte) ([]byte, error)
-	SetV2Enabled(enabled bool)
+	SetDisperseToV2(disperseToV2 bool)
 	DisperseToV2() bool
 }
 
@@ -42,11 +42,11 @@ func (m *Manager) DisperseToV2() bool {
 	return m.writeV2.Load()
 }
 
-// SetV2Enabled sets whether v2 dispersal is enabled.
+// SetDisperseToV2 sets whether v2 dispersal is enabled.
 //
 // If set to true, the manager will disperse to eigenDA v2. If false, it will disperse to eigenDA v1
-func (m *Manager) SetV2Enabled(enabled bool) {
-	m.writeV2.Store(enabled)
+func (m *Manager) SetDisperseToV2(disperseToV2 bool) {
+	m.writeV2.Store(disperseToV2)
 }
 
 // NewManager ... Init

@@ -140,7 +140,7 @@ func (svr *Server) Stop() error {
 
 // SetDisperseV2 configures which version of eigenDA the server disperses to
 func (svr *Server) SetDisperseV2(disperseV2 bool) {
-	svr.sm.SetV2Enabled(disperseV2)
+	svr.sm.SetDisperseToV2(disperseV2)
 }
 
 func (svr *Server) writeResponse(w http.ResponseWriter, data []byte) {
