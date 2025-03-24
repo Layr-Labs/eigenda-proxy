@@ -208,6 +208,17 @@ func testOptimismGenericCommitment(t *testing.T, disperseToV2 bool) {
 	ot := actions.NewDefaultTesting(t)
 
 	optimism := NewL2AltDA(ot, proxyTS.Address(), true)
+	exerciseGenericCommitments(t, ot, proxyTS, optimism)
+}
+
+// TODO: @ethen can you help me formulate a description of what this sequence of calls is doing?
+func exerciseGenericCommitments(
+	t *testing.T,
+	ot actions.StatefulTesting,
+	proxyTS testutils.TestSuite,
+	optimism *L2AltDA,
+) {
+	startingBlockNumber := optimism.sequencer.SyncStatus().SafeL1.Number
 
 	// build L1 block #1
 	optimism.ActL1Blocks(ot, 1)
@@ -219,7 +230,10 @@ func testOptimismGenericCommitment(t *testing.T, disperseToV2 bool) {
 
 	optimism.sequencer.ActL2PipelineFull(ot)
 	optimism.sequencer.ActL1SafeSignal(ot)
-	require.Equal(t, uint64(1), optimism.sequencer.SyncStatus().SafeL1.Number)
+
+	expectedBlockNumber := startingBlockNumber + 1
+	println("BLOCK NUMBER", expectedBlockNumber)
+	require.Equal(t, expectedBlockNumber, optimism.sequencer.SyncStatus().SafeL1.Number)
 
 	// add L1 block #2
 	optimism.ActL1Blocks(ot, 1)
@@ -247,4 +261,24 @@ func testOptimismGenericCommitment(t *testing.T, disperseToV2 bool) {
 		t,
 		proxyTS.Metrics.HTTPServerRequestsTotal,
 		commitments.OptimismGeneric)
+}
+
+func TestOptimismGenericCommitmentMigration(t *testing.T) {
+	testCfg := testutils.NewTestConfig(testutils.GetBackend(), true)
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+	// initialize with v2 = true, so that the necessary components are constructed
+	proxyTS, shutDown := testutils.CreateTestSuite(tsConfig)
+	defer shutDown()
+
+	// turn off v2 dispersal, so that we exercise v1, i.e. "pre migration"
+	proxyTS.Server.SetDisperseV2(false)
+
+	ot := actions.NewDefaultTesting(t)
+
+	optimism := NewL2AltDA(ot, proxyTS.Address(), true)
+	exerciseGenericCommitments(t, ot, proxyTS, optimism)
+
+	// turn on v2 dispersal
+	proxyTS.Server.SetDisperseV2(true)
+	exerciseGenericCommitments(t, ot, proxyTS, optimism)
 }

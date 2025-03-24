@@ -50,6 +50,20 @@ func (mr *MockIManagerMockRecorder) Get(arg0, arg1, arg2 interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockIManager)(nil).Get), arg0, arg1, arg2)
 }
 
+// IsV2Enabled mocks base method.
+func (m *MockIManager) IsV2Enabled() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsV2Enabled")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsV2Enabled indicates an expected call of IsV2Enabled.
+func (mr *MockIManagerMockRecorder) IsV2Enabled() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsV2Enabled", reflect.TypeOf((*MockIManager)(nil).IsV2Enabled))
+}
+
 // Put mocks base method.
 func (m *MockIManager) Put(arg0 context.Context, arg1 commitments.CommitmentMode, arg2, arg3 []byte) ([]byte, error) {
 	m.ctrl.T.Helper()
@@ -63,4 +77,16 @@ func (m *MockIManager) Put(arg0 context.Context, arg1 commitments.CommitmentMode
 func (mr *MockIManagerMockRecorder) Put(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Put", reflect.TypeOf((*MockIManager)(nil).Put), arg0, arg1, arg2, arg3)
+}
+
+// SetV2Enabled mocks base method.
+func (m *MockIManager) SetV2Enabled(arg0 bool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetV2Enabled", arg0)
+}
+
+// SetV2Enabled indicates an expected call of SetV2Enabled.
+func (mr *MockIManagerMockRecorder) SetV2Enabled(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetV2Enabled", reflect.TypeOf((*MockIManager)(nil).SetV2Enabled), arg0)
 }
