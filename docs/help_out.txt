@@ -18,11 +18,11 @@ GLOBAL OPTIONS:
    --port value   Server listening port (default: 3100) [$EIGENDA_PROXY_PORT]
    --version, -v  print the version
 
-   Cert Verifier
+   Cert Verifier (V1 only)
 
    --eigenda.cert-verification-disabled  Whether to verify certificates received from EigenDA disperser. (default: false) [$EIGENDA_PROXY_EIGENDA_CERT_VERIFICATION_DISABLED]
 
-   EigenDA Client
+   EigenDA V1 Client
 
    --eigenda.confirmation-depth value                                       Number of Ethereum blocks to wait after the blob's batch has been included on-chain, before returning from PutBlob calls. Can either be a number or 'finalized'. (default: "8") [$EIGENDA_PROXY_EIGENDA_CONFIRMATION_DEPTH]
    --eigenda.confirmation-timeout value                                     The total amount of time that the client will spend waiting for EigenDA

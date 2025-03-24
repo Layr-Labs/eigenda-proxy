@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	EigenDAClientCategory   = "EigenDA Client"
+	EigenDAClientCategory   = "EigenDA V1 Client"
 	EigenDAV2ClientCategory = "EigenDA V2 Client"
 	LoggingFlagsCategory    = "Logging"
 	MetricsFlagCategory     = "Metrics"
@@ -25,7 +25,7 @@ const (
 	StorageFlagsCategory    = "Storage"
 	RedisCategory           = "Redis Cache/Fallback"
 	S3Category              = "S3 Cache/Fallback"
-	VerifierCategory        = "Cert Verifier"
+	VerifierCategory        = "Cert Verifier (V1 only)"
 	KZGCategory             = "KZG"
 )
 
