@@ -25,7 +25,8 @@ const (
 	StorageFlagsCategory    = "Storage"
 	RedisCategory           = "Redis Cache/Fallback"
 	S3Category              = "S3 Cache/Fallback"
-	VerifierCategory        = "KZG and Cert Verifier"
+	VerifierCategory        = "Cert Verifier"
+	KZGCategory             = "KZG"
 )
 
 const (
@@ -66,7 +67,8 @@ func init() {
 	Flags = append(Flags, redis.CLIFlags(common.GlobalPrefix, RedisCategory)...)
 	Flags = append(Flags, s3.CLIFlags(common.GlobalPrefix, S3Category)...)
 	Flags = append(Flags, memstore.CLIFlags(common.GlobalPrefix, MemstoreFlagsCategory)...)
-	Flags = append(Flags, verify.CLIFlags(common.GlobalPrefix, VerifierCategory)...)
+	Flags = append(Flags, verify.VerifierCLIFlags(common.GlobalPrefix, VerifierCategory)...)
+	Flags = append(Flags, verify.KZGCLIFlags(common.GlobalPrefix, KZGCategory)...)
 
 	Flags = append(Flags, eigendaflags.DeprecatedCLIFlags(common.GlobalPrefix, EigenDAClientCategory)...)
 	Flags = append(Flags, verify.DeprecatedCLIFlags(common.GlobalPrefix, VerifierCategory)...)

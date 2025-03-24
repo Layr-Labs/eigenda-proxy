@@ -35,7 +35,7 @@ func withEnvPrefix(envPrefix, s string) string {
 
 // CLIFlags ... used for Verifier configuration
 // category is used to group the flags in the help output (see https://cli.urfave.org/v2/examples/flags/#grouping)
-func CLIFlags(envPrefix, category string) []cli.Flag {
+func VerifierCLIFlags(envPrefix, category string) []cli.Flag {
 	return []cli.Flag{
 		&cli.BoolFlag{
 			Name:     CertVerificationDisabledFlagName,
@@ -44,7 +44,13 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Value:    false,
 			Category: category,
 		},
-		// kzg flags
+	}
+}
+
+// KZGCLIFlags ... used for KZG configuration
+// category is used to group the flags in the help output (see https://cli.urfave.org/v2/examples/flags/#grouping)
+func KZGCLIFlags(envPrefix, category string) []cli.Flag {
+	return []cli.Flag{
 		// we use a relative path for these so that the path works for both the binary and the docker container
 		// aka we assume the binary is run from root dir, and that the resources/ dir is copied into the working dir of
 		// the container
