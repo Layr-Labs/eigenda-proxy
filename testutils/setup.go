@@ -232,8 +232,7 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 	var svcManagerAddress string
 	switch testCfg.Backend {
 	case MemstoreBackend:
-		// no need to set these fields for local tests
-		break
+		break // no need to set these fields for local tests
 	case PreprodBackend:
 		disperserHostname = disperserPreprodHostname
 		certVerifierAddress = preprodCertVerifierAddress
