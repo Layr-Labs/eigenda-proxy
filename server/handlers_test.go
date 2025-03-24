@@ -127,7 +127,7 @@ func TestHandlerPutSuccess(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockStorageMgr := mocks.NewMockIManager(ctrl)
-	mockStorageMgr.EXPECT().IsV2Enabled().AnyTimes().Return(false)
+	mockStorageMgr.EXPECT().DisperseToV2().AnyTimes().Return(false)
 
 	tests := []struct {
 		name         string
@@ -230,7 +230,7 @@ func TestHandlerPutErrors(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockStorageMgr := mocks.NewMockIManager(ctrl)
-	mockStorageMgr.EXPECT().IsV2Enabled().AnyTimes().Return(false)
+	mockStorageMgr.EXPECT().DisperseToV2().AnyTimes().Return(false)
 
 	tests := []struct {
 		name                         string

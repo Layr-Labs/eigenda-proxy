@@ -50,18 +50,18 @@ func (mr *MockIManagerMockRecorder) Get(arg0, arg1, arg2 interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockIManager)(nil).Get), arg0, arg1, arg2)
 }
 
-// IsV2Enabled mocks base method.
-func (m *MockIManager) IsV2Enabled() bool {
+// DisperseToV2 mocks base method.
+func (m *MockIManager) DisperseToV2() bool {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsV2Enabled")
+	ret := m.ctrl.Call(m, "DisperseToV2")
 	ret0, _ := ret[0].(bool)
 	return ret0
 }
 
-// IsV2Enabled indicates an expected call of IsV2Enabled.
-func (mr *MockIManagerMockRecorder) IsV2Enabled() *gomock.Call {
+// DisperseToV2 indicates an expected call of DisperseToV2.
+func (mr *MockIManagerMockRecorder) DisperseToV2() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsV2Enabled", reflect.TypeOf((*MockIManager)(nil).IsV2Enabled))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisperseToV2", reflect.TypeOf((*MockIManager)(nil).DisperseToV2))
 }
 
 // Put mocks base method.

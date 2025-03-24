@@ -18,7 +18,7 @@ type IManager interface {
 	Get(ctx context.Context, key []byte, cm commitments.CommitmentMeta) ([]byte, error)
 	Put(ctx context.Context, cm commitments.CommitmentMode, key, value []byte) ([]byte, error)
 	SetV2Enabled(enabled bool)
-	IsV2Enabled() bool
+	DisperseToV2() bool
 }
 
 // Manager ... storage backend routing layer
@@ -37,8 +37,8 @@ type Manager struct {
 
 var _ IManager = &Manager{}
 
-// IsV2Enabled returns whether v2 dispersal is enabled
-func (m *Manager) IsV2Enabled() bool {
+// DisperseToV2 returns whether v2 dispersal is enabled
+func (m *Manager) DisperseToV2() bool {
 	return m.writeV2.Load()
 }
 
