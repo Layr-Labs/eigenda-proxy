@@ -27,9 +27,9 @@ type Manager struct {
 
 	s3 common.PrecomputedKeyStore // for op keccak256 commitment
 	// For op generic commitments & standard commitments
-	eigenda   common.GeneratedKeyStore // v0 da commitment version
-	eigendaV2 common.GeneratedKeyStore // v1 da commitment version
-	writeV2   *atomic.Bool             // write blobs to EigenDAV2 backend
+	eigenda      common.GeneratedKeyStore // v0 da commitment version
+	eigendaV2    common.GeneratedKeyStore // v1 da commitment version
+	disperseToV2 *atomic.Bool             // write blobs to EigenDAV2 backend
 
 	// secondary storage backends (caching and fallbacks)
 	secondary ISecondary
@@ -39,14 +39,14 @@ var _ IManager = &Manager{}
 
 // DisperseToV2 returns whether v2 dispersal is enabled
 func (m *Manager) DisperseToV2() bool {
-	return m.writeV2.Load()
+	return m.disperseToV2.Load()
 }
 
 // SetDisperseToV2 sets whether v2 dispersal is enabled.
 //
 // If set to true, the manager will disperse to eigenDA v2. If false, it will disperse to eigenDA v1
 func (m *Manager) SetDisperseToV2(disperseToV2 bool) {
-	m.writeV2.Store(disperseToV2)
+	m.disperseToV2.Store(disperseToV2)
 }
 
 // NewManager ... Init
@@ -56,24 +56,24 @@ func NewManager(
 	s3 common.PrecomputedKeyStore,
 	l logging.Logger,
 	secondary ISecondary,
-	useV2 *atomic.Bool,
+	disperseToV2 *atomic.Bool,
 ) (*Manager, error) {
 	// Enforce invariants
-	if useV2.Load() && eigenDAV2 == nil {
+	if disperseToV2.Load() && eigenDAV2 == nil {
 		return nil, fmt.Errorf("EigenDA V2 dispersal enabled but no v2 store provided")
 	}
 
-	if !useV2.Load() && eigenda == nil {
+	if !disperseToV2.Load() && eigenda == nil {
 		return nil, fmt.Errorf("EigenDA dispersal enabled but no store provided")
 	}
 
 	return &Manager{
-		log:       l,
-		eigenda:   eigenda,
-		eigendaV2: eigenDAV2,
-		s3:        s3,
-		secondary: secondary,
-		writeV2:   useV2,
+		log:          l,
+		eigenda:      eigenda,
+		eigendaV2:    eigenDAV2,
+		s3:           s3,
+		secondary:    secondary,
+		disperseToV2: disperseToV2,
 	}, nil
 }
 
@@ -185,7 +185,7 @@ func (m *Manager) Put(ctx context.Context, cm commitments.CommitmentMode, key, v
 
 // putEigenDAMode ... disperses blob to EigenDA backend
 func (m *Manager) putEigenDAMode(ctx context.Context, value []byte) ([]byte, error) {
-	if !m.writeV2.Load() { // disperse v1
+	if !m.disperseToV2.Load() { // disperse v1
 		m.log.Info("Storing data to EigenDA V1 backend")
 		return m.eigenda.Put(ctx, value)
 	}
