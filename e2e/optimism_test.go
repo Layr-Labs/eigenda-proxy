@@ -211,14 +211,13 @@ func testOptimismGenericCommitment(t *testing.T, disperseToV2 bool) {
 	exerciseGenericCommitments(t, ot, proxyTS, optimism)
 }
 
-// TODO: @ethen can you help me formulate a description of what this sequence of calls is doing?
 func exerciseGenericCommitments(
 	t *testing.T,
 	ot actions.StatefulTesting,
 	proxyTS testutils.TestSuite,
 	optimism *L2AltDA,
 ) {
-	startingBlockNumber := optimism.sequencer.SyncStatus().SafeL1.Number
+	expectedBlockNumber := optimism.sequencer.SyncStatus().SafeL1.Number
 
 	// build L1 block #1
 	optimism.ActL1Blocks(ot, 1)
@@ -231,8 +230,7 @@ func exerciseGenericCommitments(
 	optimism.sequencer.ActL2PipelineFull(ot)
 	optimism.sequencer.ActL1SafeSignal(ot)
 
-	expectedBlockNumber := startingBlockNumber + 1
-	println("BLOCK NUMBER", expectedBlockNumber)
+	expectedBlockNumber++
 	require.Equal(t, expectedBlockNumber, optimism.sequencer.SyncStatus().SafeL1.Number)
 
 	// add L1 block #2
@@ -246,6 +244,9 @@ func exerciseGenericCommitments(
 	optimism.sequencer.ActL2PipelineFull(ot)
 	optimism.sequencer.ActL1FinalizedSignal(ot)
 	optimism.sequencer.ActL1SafeSignal(ot)
+
+	expectedBlockNumber++
+	require.Equal(t, expectedBlockNumber, optimism.sequencer.SyncStatus().SafeL1.Number)
 
 	// commit all the l2 blocks to L1
 	optimism.batcher.ActSubmitAll(ot)
