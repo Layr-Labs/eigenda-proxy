@@ -252,9 +252,8 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 
 	proxyConfig := config.ProxyConfig{
 		ServerConfig: config.ServerConfig{
-			DisperseToV2: testCfg.DisperseToV2,
-			Host:         host,
-			Port:         0,
+			Host: host,
+			Port: 0,
 		},
 		ClientConfigV1: common.ClientConfigV1{
 			EdaClientCfg: clients.EigenDAClientConfig{

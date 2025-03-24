@@ -13,6 +13,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/testutils"
+	"github.com/Layr-Labs/eigenda/common/testutils/random"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -393,4 +394,64 @@ func testProxyMemConfigClientCanGetAndPatch(t *testing.T, disperseToV2 bool) {
 
 	require.NoError(t, err)
 	require.Equal(t, cfg.PutLatency, expectedChange)
+}
+
+// TestInterleavedVersions alternately disperses payloads to v1 and v2, and then retrieves them.
+func TestInterleavedVersions(t *testing.T) {
+	t.Parallel()
+	testRandom := random.NewTestRandom()
+
+	testCfg := testutils.NewTestConfig(testutils.GetBackend(), true)
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+
+	// initialize with v2 enabled, so that the necessary components are built
+	testSuite, kill := testutils.CreateTestSuite(tsConfig)
+	defer kill()
+
+	client := standard_client.New(
+		&standard_client.Config{
+			URL: testSuite.Address(),
+		})
+
+	// disperse a payload to v1
+	testSuite.Server.SetDisperseV2(false)
+	payload1a := testRandom.Bytes(1000)
+	cert1a, err := client.SetData(testSuite.Ctx, payload1a)
+	require.NoError(t, err)
+
+	// disperse a payload to v2
+	testSuite.Server.SetDisperseV2(true)
+	payload2a := testRandom.Bytes(1000)
+	cert2a, err := client.SetData(testSuite.Ctx, payload2a)
+	require.NoError(t, err)
+
+	// disperse another payload to v1
+	testSuite.Server.SetDisperseV2(false)
+	payload1b := testRandom.Bytes(1000)
+	cert1b, err := client.SetData(testSuite.Ctx, payload1b)
+	require.NoError(t, err)
+
+	// disperse another payload to v2
+	testSuite.Server.SetDisperseV2(true)
+	payload2b := testRandom.Bytes(1000)
+	cert2b, err := client.SetData(testSuite.Ctx, payload2b)
+	require.NoError(t, err)
+
+	// fetch in reverse order, because why not
+	fetchedPayload2b, err := client.GetData(testSuite.Ctx, cert2b)
+	require.NoError(t, err)
+	fetchedPayload1b, err := client.GetData(testSuite.Ctx, cert1b)
+	require.NoError(t, err)
+	fetchedPayload2a, err := client.GetData(testSuite.Ctx, cert2a)
+	require.NoError(t, err)
+	fetchedPayload1a, err := client.GetData(testSuite.Ctx, cert1a)
+	require.NoError(t, err)
+
+	require.Equal(t, payload1a, fetchedPayload1a)
+	require.Equal(t, payload2a, fetchedPayload2a)
+	require.Equal(t, payload1b, fetchedPayload1b)
+	require.Equal(t, payload2b, fetchedPayload2b)
+
+	// requireStandardClientSetGet(t, testSuite, testutils.RandBytes(100))
+	// requireDispersalRetrievalEigenDA(t, testSuite.Metrics.HTTPServerRequestsTotal, commitments.Standard)
 }
