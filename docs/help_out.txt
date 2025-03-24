@@ -4,14 +4,12 @@ NAME:
 USAGE:
    eigenda-proxy [global options] command [command options]
 
-VERSION:
-   v1.6.5-116-g8f674ac
 
 DESCRIPTION:
    Service for more trustless and secure interactions with EigenDA
 
 COMMANDS:
-   doc
+   doc      
    help, h  Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:
@@ -31,7 +29,7 @@ GLOBAL OPTIONS:
                                                                                 to "confirm" (include onchain) a blob after it has been dispersed. Note that
                                                                                 we stick to "confirm" here but this really means InclusionTimeout,
                                                                                 not confirmation in the sense of confirmation depth.
-
+                                                                                
                                                                                 If ConfirmationTimeout time passes and the blob is not yet confirmed,
                                                                                 the client will return an api.ErrorFailover to let the caller failover to EthDA. (default: 15m0s) [$EIGENDA_PROXY_EIGENDA_CONFIRMATION_TIMEOUT]
    --eigenda.custom-quorum-ids value [ --eigenda.custom-quorum-ids value ]  Custom quorum IDs for writing blobs. Should not include default quorums 0 or 1. [$EIGENDA_PROXY_EIGENDA_CUSTOM_QUORUM_IDS]
@@ -54,8 +52,8 @@ GLOBAL OPTIONS:
 
    --eigenda.v2.blob-certified-timeout value     Maximum amount of time to wait for blob certification against the on-chain EigenDACertVerifier. (default: 30s) [$EIGENDA_PROXY_EIGENDA_V2_CERTIFY_BLOB_TIMEOUT]
    --eigenda.v2.blob-status-poll-interval value  Duration to query for blob status updates during dispersal. (default: 1s) [$EIGENDA_PROXY_EIGENDA_V2_BLOB_STATUS_POLL_INTERVAL]
-   --eigenda.v2.blob-version value               Blob params version used when dispersing.
-                                                            This refers to a global version maintained by EigenDA governance
+   --eigenda.v2.blob-version value               Blob params version used when dispersing. 
+                                                            This refers to a global version maintained by EigenDA governance 
                                                             and is injected in the BlobHeader before dispersing.
                                                             Currently only supports (0). (default: 0) [$EIGENDA_PROXY_EIGENDA_V2_BLOB_PARAMS_VERSION]
    --eigenda.v2.cert-verifier-addr value         Address of the EigenDACertVerifier contract. Required for performing eth_calls to verify EigenDA certificates. [$EIGENDA_PROXY_EIGENDA_V2_CERT_VERIFIER_ADDR]
@@ -123,3 +121,4 @@ GLOBAL OPTIONS:
    --storage.cache-targets value [ --storage.cache-targets value ]        List of caching targets to use fast reads from EigenDA. [$EIGENDA_PROXY_STORAGE_CACHE_TARGETS]
    --storage.concurrent-write-routines value                              Number of threads spun-up for async secondary storage insertions. (<=0) denotes single threaded insertions where (>0) indicates decoupled writes. (default: 0) [$EIGENDA_PROXY_STORAGE_CONCURRENT_WRITE_THREADS]
    --storage.fallback-targets value [ --storage.fallback-targets value ]  List of read fallback targets to rollover to if cert can't be read from EigenDA. [$EIGENDA_PROXY_STORAGE_FALLBACK_TARGETS]
+
