@@ -267,6 +267,7 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 				EthRpcUrl:                ethRPC,
 				SvcManagerAddr:           svcManagerAddress,
 			},
+			MaxBlobSizeBytes: maxBlobLengthBytes,
 		},
 		VerifierConfigV1: verify.Config{
 			VerifyCerts:          false,
@@ -274,6 +275,7 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 			SvcManagerAddr:       svcManagerAddress,
 			EthConfirmationDepth: 1,
 			WaitForFinalization:  false,
+			MaxBlobSizeBytes:     maxBlobLengthBytes,
 		},
 		KzgConfig: kzg.KzgConfig{
 			G1Path:          "../resources/g1.point",
