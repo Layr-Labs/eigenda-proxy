@@ -120,7 +120,7 @@ func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.Commitment
 
 		// 3 - read blob from fallbacks if enabled and data is non-retrievable from EigenDA
 		if m.secondary.FallbackEnabled() {
-			data, err = m.secondary.MultiSourceRead(ctx, key, true, m.eigenda.Verify)
+			data, err = m.secondary.MultiSourceRead(ctx, key, true, verifyMethod)
 			if err != nil {
 				m.log.Error("Failed to read from fallback targets", "err", err)
 				return nil, err
