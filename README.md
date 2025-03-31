@@ -56,7 +56,6 @@ Features:
     - [Fuzz](#fuzz)
 - [Repo Structure and Releases](#repo-structure-and-releases)
 
-
 ## User Guide
 
 ### Quick Start With Memstore Backend
@@ -201,6 +200,8 @@ This behavior is turned on by default, but configurable via the `--eigenda.confi
 #### Authn/Authz/Payments
 
 In order to disperse to the EigenDA V1 network in production, or at high throughput on testnet, please register your authentication ethereum address through [this form](https://forms.gle/3QRNTYhSMacVFNcU8). Your EigenDA authentication keypair address should not be associated with any funds anywhere. For EigenDA V2, please see our [payments](https://docs.eigenda.xyz/releases/payments) doc.
+
+> Note: Proxy only supports using a single authorization (v1) or payment (v2) key. For RaaS providers, we discourage sharing keys between rollups, and thus recommend running a single instance of the Proxy per Rollup.
 
 #### Ethereum Node
 
