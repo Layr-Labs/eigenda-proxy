@@ -273,6 +273,10 @@ func TestOptimismGenericCommitmentMigration(t *testing.T) {
 
 	optimism := NewL2AltDA(ot, proxyTS.Address(), true)
 	exerciseGenericCommitments(t, ot, optimism)
+	requireDispersalRetrievalEigenDA(
+		t,
+		proxyTS.Metrics.HTTPServerRequestsTotal,
+		commitments.OptimismGeneric)
 
 	// turn on v2 dispersal
 	proxyTS.Server.SetDisperseToV2(true)
