@@ -60,16 +60,19 @@ func NewManager(
 	s3 common.PrecomputedKeyStore,
 	l logging.Logger,
 	secondary ISecondary,
-	disperseToV2 *atomic.Bool,
+	disperseToV2 bool,
 ) (*Manager, error) {
 	// Enforce invariants
-	if disperseToV2.Load() && eigenDAV2 == nil {
+	if disperseToV2 && eigenDAV2 == nil {
 		return nil, fmt.Errorf("EigenDA V2 dispersal enabled but no v2 store provided")
 	}
 
-	if !disperseToV2.Load() && eigenda == nil {
+	if !disperseToV2 && eigenda == nil {
 		return nil, fmt.Errorf("EigenDA dispersal enabled but no store provided")
 	}
+
+	disperseToV2Atomic := &atomic.Bool{}
+	disperseToV2Atomic.Store(disperseToV2)
 
 	return &Manager{
 		log:          l,
@@ -77,7 +80,7 @@ func NewManager(
 		eigendaV2:    eigenDAV2,
 		s3:           s3,
 		secondary:    secondary,
-		disperseToV2: disperseToV2,
+		disperseToV2: disperseToV2Atomic,
 	}, nil
 }
 

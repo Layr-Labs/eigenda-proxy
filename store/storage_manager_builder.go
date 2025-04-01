@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
-	"sync/atomic"
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
@@ -146,10 +145,7 @@ func (smb *StorageManagerBuilder) Build(ctx context.Context) (*Manager, error) {
 		"verify_v1_certs", smb.v1VerifierCfg.VerifyCerts,
 	)
 
-	disperseToV2 := &atomic.Bool{}
-	disperseToV2.Store(smb.v2ClientCfg.DisperseToV2)
-
-	return NewManager(eigenDAV1Store, eigenDAV2Store, s3Store, smb.log, secondary, disperseToV2)
+	return NewManager(eigenDAV1Store, eigenDAV2Store, s3Store, smb.log, secondary, smb.v2ClientCfg.DisperseToV2)
 }
 
 // buildSecondaries ... Creates a slice of secondary targets used for either read
