@@ -31,9 +31,9 @@ PID=$!
 # Ensure we kill the process on script exit
 trap "kill $PID" EXIT
 
-# Wait 60 seconds for startup to happen (actual startup can take up to ~30 seconds)
-echo "sleeping 60 seconds to let the proxy start up"
-sleep 60
+# Wait 75 seconds for startup to happen (actual startup can take up to ~50 seconds, due to SRS parsing)
+echo "sleeping 75 seconds to let the proxy start up"
+sleep 75
 
 echo "Pinging the proxy's health endpoint"
 curl 'http://localhost:3100/health'
