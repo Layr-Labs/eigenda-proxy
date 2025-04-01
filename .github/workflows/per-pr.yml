@@ -38,7 +38,7 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version: ${{ env.GO_VERSION}}
-      - name: Run flag test V1
+      - name: Run flag test
         run: ${{ github.workspace }}/scripts/test-proxy-startup-with-env-vars.sh ${{ matrix.env-file }}
 
   # This ensures that std output generated when running binary with `--help` is reflected in docs/help_out.txt
