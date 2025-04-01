@@ -35,7 +35,7 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION}}
       - name: Run flag test V1
-        run: ${{ github.workspace }}/scripts/test-proxy-startup-with-env-vars.sh ".env.holeskyV1.example"
+        run: ${{ github.workspace }}/scripts/test-proxy-startup-with-env-vars.sh ".env.exampleV1.holesky"
 
   # This checks that the flags in .env.holeskyV2.example are valid and allow the proxy to start.
   flagsV2:
@@ -46,7 +46,7 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION}}
       - name: Run flag test V2
-        run: ${{ github.workspace }}/scripts/test-proxy-startup-with-env-vars.sh ".env.holeskyV2.example"
+        run: ${{ github.workspace }}/scripts/test-proxy-startup-with-env-vars.sh ".env.exampleV2.holesky"
 
   # This ensures that std output generated when running binary with `--help` is reflected in
   # in docs/help_out.txt
