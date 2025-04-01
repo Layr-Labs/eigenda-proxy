@@ -26,7 +26,7 @@ jobs:
           version: v1.61
           args: --timeout 3m
 
-  # This checks that the flags in .env.holeskyV1.example are valid and allow the proxy to start.
+  # This checks that the flags in .env.exampleV1.holesky are valid and allow the proxy to start.
   flagsV1:
     runs-on: ubuntu-latest
     steps:
@@ -37,7 +37,7 @@ jobs:
       - name: Run flag test V1
         run: ${{ github.workspace }}/scripts/test-proxy-startup-with-env-vars.sh .env.exampleV1.holesky
 
-  # This checks that the flags in .env.holeskyV2.example are valid and allow the proxy to start.
+  # This checks that the flags in .env.exampleV2.holesky are valid and allow the proxy to start.
   flagsV2:
     runs-on: ubuntu-latest
     steps:
@@ -48,8 +48,7 @@ jobs:
       - name: Run flag test V2
         run: ${{ github.workspace }}/scripts/test-proxy-startup-with-env-vars.sh .env.exampleV2.holesky
 
-  # This ensures that std output generated when running binary with `--help` is reflected in
-  # in docs/help_out.txt
+  # This ensures that std output generated when running binary with `--help` is reflected in docs/help_out.txt
   help-output-check:
     runs-on: ubuntu-latest
     steps:
