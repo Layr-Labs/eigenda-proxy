@@ -24,6 +24,7 @@ GLOBAL OPTIONS:
 
    EigenDA V1 Client
 
+   --eigenda.backends-to-enable value                                       Configures which set of eigenDA backends to enable (valid options are V1, V2, or V1andV2). (default: "V1") [$EIGENDA_PROXY_EIGENDA_BACKENDS_TO_ENABLE]
    --eigenda.confirmation-depth value                                       Number of Ethereum blocks to wait after the blob's batch has been included on-chain, before returning from PutBlob calls. Can either be a number or 'finalized'. (default: "8") [$EIGENDA_PROXY_EIGENDA_CONFIRMATION_DEPTH]
    --eigenda.confirmation-timeout value                                     The total amount of time that the client will spend waiting for EigenDA
                                                                                 to "confirm" (include onchain) a blob after it has been dispersed. Note that
