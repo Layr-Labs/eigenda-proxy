@@ -6,13 +6,19 @@ set -e  # Exit on any error
 # It starts the eigenda-proxy with those env vars, waits 5 seconds, and then kills the proxy.
 # If any deprecated flags are still being used in the specified environment file, the script will fail.
 
-echo "Using environment file: $ENV_FILE"
+ENV_FILE=$1
 
 # Check if the environment file exists
 if [ ! -f "$ENV_FILE" ]; then
     echo "Error: Environment file $ENV_FILE does not exist"
+    echo "Current working directory: $(pwd)"
+    echo "Files in current directory:"
+    ls -la
+
     exit 1
 fi
+
+echo "Using environment file: $ENV_FILE"
 
 # build the eigenda-proxy binary
 make
