@@ -33,6 +33,7 @@ func validCfg() ProxyConfig {
 				SvcManagerAddr:               "0x00000000069",
 				EthRpcUrl:                    "http://localhosts",
 			},
+			BackendsToEnable: common.V1AndV2Backends,
 		},
 		VerifierConfigV1: verify.Config{
 			VerifyCerts:          false,
