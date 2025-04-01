@@ -208,13 +208,17 @@ func testOptimismGenericCommitment(t *testing.T, disperseToV2 bool) {
 	ot := actions.NewDefaultTesting(t)
 
 	optimism := NewL2AltDA(ot, proxyTS.Address(), true)
-	exerciseGenericCommitments(t, ot, proxyTS, optimism)
+	exerciseGenericCommitments(t, ot, optimism)
+
+	requireDispersalRetrievalEigenDA(
+		t,
+		proxyTS.Metrics.HTTPServerRequestsTotal,
+		commitments.OptimismGeneric)
 }
 
 func exerciseGenericCommitments(
 	t *testing.T,
 	ot actions.StatefulTesting,
-	proxyTS testutils.TestSuite,
 	optimism *L2AltDA,
 ) {
 	expectedBlockNumber := optimism.sequencer.SyncStatus().SafeL1.Number
@@ -257,11 +261,6 @@ func exerciseGenericCommitments(
 	// verify
 	optimism.sequencer.ActL2PipelineFull(ot)
 	optimism.ActL1Finalized(ot)
-
-	requireDispersalRetrievalEigenDA(
-		t,
-		proxyTS.Metrics.HTTPServerRequestsTotal,
-		commitments.OptimismGeneric)
 }
 
 func TestOptimismGenericCommitmentMigration(t *testing.T) {
@@ -277,9 +276,13 @@ func TestOptimismGenericCommitmentMigration(t *testing.T) {
 	ot := actions.NewDefaultTesting(t)
 
 	optimism := NewL2AltDA(ot, proxyTS.Address(), true)
-	exerciseGenericCommitments(t, ot, proxyTS, optimism)
+	exerciseGenericCommitments(t, ot, optimism)
 
 	// turn on v2 dispersal
 	proxyTS.Server.SetDisperseToV2(true)
-	exerciseGenericCommitments(t, ot, proxyTS, optimism)
+	exerciseGenericCommitments(t, ot, optimism)
+	requireDispersalRetrievalEigenDA(
+		t,
+		proxyTS.Metrics.HTTPServerRequestsTotal,
+		commitments.OptimismGeneric)
 }
