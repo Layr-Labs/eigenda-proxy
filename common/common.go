@@ -80,3 +80,28 @@ func ParseBytesAmount(s string) (uint64, error) {
 		return 0, fmt.Errorf("unsupported unit: %s", unit)
 	}
 }
+
+// BackendsToEnable represents potential backend combinations to enable. Options include v1, v2, or both
+type BackendsToEnable uint8
+
+const (
+	V1BackendOnly BackendsToEnable = iota + 1
+	V2BackendOnly
+	V1AndV2Backends
+)
+
+// StringToBackendsToEnable converts a string to BackendsToEnable enum
+func StringToBackendsToEnable(inputString string) (BackendsToEnable, error) {
+	inputString = strings.ToLower(strings.TrimSpace(inputString))
+
+	switch inputString {
+	case "v1":
+		return V1BackendOnly, nil
+	case "v2":
+		return V2BackendOnly, nil
+	case "v1andv2":
+		return V1AndV2Backends, nil
+	default:
+		return 0, fmt.Errorf("invalid backend option: %s", inputString)
+	}
+}

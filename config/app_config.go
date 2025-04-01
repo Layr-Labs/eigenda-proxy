@@ -23,7 +23,10 @@ func (c AppConfig) Check() error {
 		return fmt.Errorf("check eigenDAConfig: %w", err)
 	}
 
-	if c.EigenDAConfig.ClientConfigV2.DisperseToV2 && !c.EigenDAConfig.MemstoreEnabled {
+	v2Enabled := c.EigenDAConfig.ClientConfigV1.BackendsToEnable == common.V2BackendOnly ||
+		c.EigenDAConfig.ClientConfigV1.BackendsToEnable == common.V1AndV2Backends
+
+	if v2Enabled && !c.EigenDAConfig.MemstoreEnabled {
 		err = c.SecretConfig.Check()
 		if err != nil {
 			return fmt.Errorf("check secret config: %w", err)

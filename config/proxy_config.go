@@ -109,8 +109,10 @@ func (cfg *ProxyConfig) Check() error {
 		}
 	}
 
-	// V2 dispersal/retrieval enabled
-	if cfg.ClientConfigV2.DisperseToV2 && !cfg.MemstoreEnabled {
+	v2Enabled := cfg.ClientConfigV1.BackendsToEnable == common.V2BackendOnly ||
+		cfg.ClientConfigV1.BackendsToEnable == common.V1AndV2Backends
+
+	if v2Enabled && !cfg.MemstoreEnabled {
 		err := cfg.ClientConfigV2.Check()
 		if err != nil {
 			return err

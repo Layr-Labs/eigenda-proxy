@@ -20,6 +20,7 @@ const (
 )
 
 var (
+	BackendsToEnableFlagName             = withFlagPrefix("backends-to-enable")
 	DisperserRPCFlagName                 = withFlagPrefix("disperser-rpc")
 	ResponseTimeoutFlagName              = withFlagPrefix("response-timeout")
 	ConfirmationTimeoutFlagName          = withFlagPrefix("confirmation-timeout")
@@ -49,6 +50,14 @@ func withEnvPrefix(envPrefix, s string) string {
 // CLIFlags ... used for EigenDA client configuration
 func CLIFlags(envPrefix, category string) []cli.Flag {
 	return []cli.Flag{
+		&cli.StringFlag{
+			Name:     BackendsToEnableFlagName,
+			Usage:    "Configures which set of eigenDA backends to enable (valid options are V1, V2, or V1andV2).",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "BACKENDS_TO_ENABLE")},
+			Value:    "V1",
+			Category: category,
+			Required: false,
+		},
 		&cli.StringFlag{
 			Name:     DisperserRPCFlagName,
 			Usage:    "RPC endpoint of the EigenDA disperser.",
@@ -199,10 +208,16 @@ func ReadClientConfigV1(ctx *cli.Context) (common.ClientConfigV1, error) {
 			"parse max blob length flag \"%v\": %w", maxBlobLengthFlagContents, err)
 	}
 
+	backendsToEnable, err := common.StringToBackendsToEnable(ctx.String(BackendsToEnableFlagName))
+	if err != nil {
+		return common.ClientConfigV1{}, fmt.Errorf("parse backends to enable: %w", err)
+	}
+
 	return common.ClientConfigV1{
 		EdaClientCfg:     eigenDAClientConfig,
 		MaxBlobSizeBytes: maxBlobLengthBytes,
 		PutRetries:       ctx.Uint(PutRetriesFlagName),
+		BackendsToEnable: backendsToEnable,
 	}, nil
 }
 

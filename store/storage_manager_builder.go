@@ -108,27 +108,41 @@ func (smb *StorageManagerBuilder) Build(ctx context.Context) (*Manager, error) {
 		}
 	}
 
-	smb.log.Info("Building EigenDA v1 storage backend")
-	eigenDAV1Store, err = smb.buildEigenDAV1Backend(ctx)
-	if err != nil {
-		if smb.v2ClientCfg.DisperseToV2 {
-			smb.log.Warnf(
-				`Building EigenDA v1 backend failed. Attempts to GET v1 blobs will fail, and toggling
-							DisperseToV2 to false will cause dispersals to fail: %v`, err)
-		} else {
-			return nil, fmt.Errorf("DisperseToV2 is set to false, but building of v1 backend failed: %w", err)
+	var enableV1 bool
+	var enableV2 bool
+	switch smb.v1ClientCfg.BackendsToEnable {
+	case common.V1BackendOnly:
+		enableV1 = true
+		enableV2 = false
+	case common.V2BackendOnly:
+		enableV1 = false
+		enableV2 = true
+	case common.V1AndV2Backends:
+		enableV1 = true
+		enableV2 = true
+	default:
+		return nil, fmt.Errorf("unsupported backends to enable: %v", smb.v1ClientCfg.BackendsToEnable)
+	}
+
+	if smb.v2ClientCfg.DisperseToV2 && !enableV2 {
+		return nil, fmt.Errorf("DisperseToV2 is true, but v2 backend is not enabled")
+	} else if !smb.v2ClientCfg.DisperseToV2 && !enableV1 {
+		return nil, fmt.Errorf("DisperseToV2 is false, but v1 backend is not enabled")
+	}
+
+	if enableV1 {
+		smb.log.Info("Building EigenDA v1 storage backend")
+		eigenDAV1Store, err = smb.buildEigenDAV1Backend(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("build v1 backend: %w", err)
 		}
 	}
 
-	smb.log.Info("Building EigenDA v2 storage backend")
-	eigenDAV2Store, err = smb.buildEigenDAV2Backend(ctx)
-	if err != nil {
-		if smb.v2ClientCfg.DisperseToV2 {
-			return nil, fmt.Errorf("DisperseToV2 is set to true, but building of v2 backend failed: %w", err)
-		} else {
-			smb.log.Warnf(
-				`Building EigenDA v2 backend failed. Attempts to GET v2 blobs will fail, and toggling
-							DisperseToV2 to true will cause dispersals to fail: %v`, err)
+	if enableV2 {
+		smb.log.Info("Building EigenDA v2 storage backend")
+		eigenDAV2Store, err = smb.buildEigenDAV2Backend(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("build v2 backend: %w", err)
 		}
 	}
 

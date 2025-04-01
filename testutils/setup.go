@@ -266,6 +266,7 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 				SvcManagerAddr:           svcManagerAddress,
 			},
 			MaxBlobSizeBytes: maxBlobLengthBytes,
+			BackendsToEnable: common.V1AndV2Backends,
 		},
 		VerifierConfigV1: verify.Config{
 			VerifyCerts:          false,
