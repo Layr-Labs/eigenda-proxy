@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/config/v2/eigendaflags"
@@ -23,9 +24,7 @@ func (c AppConfig) Check() error {
 		return fmt.Errorf("check eigenDAConfig: %w", err)
 	}
 
-	v2Enabled := c.EigenDAConfig.ClientConfigV1.BackendsToEnable == common.V2BackendOnly ||
-		c.EigenDAConfig.ClientConfigV1.BackendsToEnable == common.V1AndV2Backends
-
+	v2Enabled := slices.Contains(c.EigenDAConfig.StorageConfig.BackendsToEnable, common.V2EigenDABackend)
 	if v2Enabled && !c.EigenDAConfig.MemstoreEnabled {
 		err = c.SecretConfig.Check()
 		if err != nil {

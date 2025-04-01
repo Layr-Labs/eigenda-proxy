@@ -14,5 +14,4 @@ type ClientConfigV1 struct {
 	EdaClientCfg     clients.EigenDAClientConfig
 	MaxBlobSizeBytes uint64
 	PutRetries       uint
-	BackendsToEnable BackendsToEnable
 }

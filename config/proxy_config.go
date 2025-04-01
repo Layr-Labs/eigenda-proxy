@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/config/eigendaflags"
@@ -43,8 +44,13 @@ func ReadProxyConfig(ctx *cli.Context) (ProxyConfig, error) {
 		return ProxyConfig{}, fmt.Errorf("read client config v2: %w", err)
 	}
 
+	storageConfig, err := store.ReadConfig(ctx)
+	if err != nil {
+		return ProxyConfig{}, fmt.Errorf("read storage config: %w", err)
+	}
+
 	var maxBlobSizeBytes uint64
-	if clientConfigV2.DisperseToV2 {
+	if storageConfig.DisperseToV2 {
 		maxBlobSizeBytes = clientConfigV2.MaxBlobSizeBytes
 	} else {
 		maxBlobSizeBytes = clientConfigV1.MaxBlobSizeBytes
@@ -68,7 +74,7 @@ func ReadProxyConfig(ctx *cli.Context) (ProxyConfig, error) {
 		ClientConfigV2:   clientConfigV2,
 		MemstoreConfig:   memstoreConfig,
 		MemstoreEnabled:  ctx.Bool(memstore.EnabledFlagName),
-		StorageConfig:    store.ReadConfig(ctx),
+		StorageConfig:    storageConfig,
 	}
 
 	return cfg, nil
@@ -109,9 +115,7 @@ func (cfg *ProxyConfig) Check() error {
 		}
 	}
 
-	v2Enabled := cfg.ClientConfigV1.BackendsToEnable == common.V2BackendOnly ||
-		cfg.ClientConfigV1.BackendsToEnable == common.V1AndV2Backends
-
+	v2Enabled := slices.Contains(cfg.StorageConfig.BackendsToEnable, common.V2EigenDABackend)
 	if v2Enabled && !cfg.MemstoreEnabled {
 		err := cfg.ClientConfigV2.Check()
 		if err != nil {

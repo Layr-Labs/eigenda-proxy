@@ -266,7 +266,6 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 				SvcManagerAddr:           svcManagerAddress,
 			},
 			MaxBlobSizeBytes: maxBlobLengthBytes,
-			BackendsToEnable: common.V1AndV2Backends,
 		},
 		VerifierConfigV1: verify.Config{
 			VerifyCerts:          false,
@@ -293,7 +292,6 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 			}),
 		MemstoreEnabled: useMemory,
 		ClientConfigV2: common.ClientConfigV2{
-			DisperseToV2: testCfg.DisperseToV2,
 			DisperserClientCfg: clientsv2.DisperserClientConfig{
 				Hostname:          disperserHostname,
 				Port:              disperserPort,
@@ -315,7 +313,9 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 			EigenDACertVerifierAddress: certVerifierAddress,
 		},
 		StorageConfig: store.Config{
-			AsyncPutWorkers: testCfg.WriteThreadCount,
+			AsyncPutWorkers:  testCfg.WriteThreadCount,
+			BackendsToEnable: []common.EigenDABackend{common.V1EigenDABackend, common.V2EigenDABackend},
+			DisperseToV2:     testCfg.DisperseToV2,
 		},
 	}
 

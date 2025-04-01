@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"slices"
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
@@ -108,29 +109,16 @@ func (smb *StorageManagerBuilder) Build(ctx context.Context) (*Manager, error) {
 		}
 	}
 
-	var enableV1 bool
-	var enableV2 bool
-	switch smb.v1ClientCfg.BackendsToEnable {
-	case common.V1BackendOnly:
-		enableV1 = true
-		enableV2 = false
-	case common.V2BackendOnly:
-		enableV1 = false
-		enableV2 = true
-	case common.V1AndV2Backends:
-		enableV1 = true
-		enableV2 = true
-	default:
-		return nil, fmt.Errorf("unsupported backends to enable: %v", smb.v1ClientCfg.BackendsToEnable)
-	}
+	v1Enabled := slices.Contains(smb.managerCfg.BackendsToEnable, common.V1EigenDABackend)
+	v2Enabled := slices.Contains(smb.managerCfg.BackendsToEnable, common.V2EigenDABackend)
 
-	if smb.v2ClientCfg.DisperseToV2 && !enableV2 {
+	if smb.managerCfg.DisperseToV2 && !v2Enabled {
 		return nil, fmt.Errorf("DisperseToV2 is true, but v2 backend is not enabled")
-	} else if !smb.v2ClientCfg.DisperseToV2 && !enableV1 {
+	} else if !smb.managerCfg.DisperseToV2 && !v1Enabled {
 		return nil, fmt.Errorf("DisperseToV2 is false, but v1 backend is not enabled")
 	}
 
-	if enableV1 {
+	if v1Enabled {
 		smb.log.Info("Building EigenDA v1 storage backend")
 		eigenDAV1Store, err = smb.buildEigenDAV1Backend(ctx)
 		if err != nil {
@@ -138,7 +126,7 @@ func (smb *StorageManagerBuilder) Build(ctx context.Context) (*Manager, error) {
 		}
 	}
 
-	if enableV2 {
+	if v2Enabled {
 		smb.log.Info("Building EigenDA v2 storage backend")
 		eigenDAV2Store, err = smb.buildEigenDAV2Backend(ctx)
 		if err != nil {
@@ -170,7 +158,7 @@ func (smb *StorageManagerBuilder) Build(ctx context.Context) (*Manager, error) {
 		"verify_v1_certs", smb.v1VerifierCfg.VerifyCerts,
 	)
 
-	return NewManager(eigenDAV1Store, eigenDAV2Store, s3Store, smb.log, secondary, smb.v2ClientCfg.DisperseToV2)
+	return NewManager(eigenDAV1Store, eigenDAV2Store, s3Store, smb.log, secondary, smb.managerCfg.DisperseToV2)
 }
 
 // buildSecondaries ... Creates a slice of secondary targets used for either read

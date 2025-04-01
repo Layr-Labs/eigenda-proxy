@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
+	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
 	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/api/clients"
@@ -33,7 +34,6 @@ func validCfg() ProxyConfig {
 				SvcManagerAddr:               "0x00000000069",
 				EthRpcUrl:                    "http://localhosts",
 			},
-			BackendsToEnable: common.V1AndV2Backends,
 		},
 		VerifierConfigV1: verify.Config{
 			VerifyCerts:          false,
@@ -54,7 +54,6 @@ func validCfg() ProxyConfig {
 			}),
 		MemstoreEnabled: false,
 		ClientConfigV2: common.ClientConfigV2{
-			DisperseToV2: true,
 			DisperserClientCfg: v2_clients.DisperserClientConfig{
 				Hostname:          "http://localhost",
 				Port:              "9999",
@@ -62,6 +61,10 @@ func validCfg() ProxyConfig {
 			},
 			EigenDACertVerifierAddress: "0x0000000000032443134",
 			MaxBlobSizeBytes:           maxBlobLengthBytes,
+		},
+		StorageConfig: store.Config{
+			BackendsToEnable: []common.EigenDABackend{common.V1EigenDABackend, common.V2EigenDABackend},
+			DisperseToV2:     true,
 		},
 	}
 
