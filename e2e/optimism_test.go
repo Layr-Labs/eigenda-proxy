@@ -272,7 +272,7 @@ func TestOptimismGenericCommitmentMigration(t *testing.T) {
 	defer shutDown()
 
 	// turn off v2 dispersal, so that we exercise v1, i.e. "pre migration"
-	proxyTS.Server.SetDisperseV2(false)
+	proxyTS.Server.SetDisperseToV2(false)
 
 	ot := actions.NewDefaultTesting(t)
 
@@ -280,6 +280,6 @@ func TestOptimismGenericCommitmentMigration(t *testing.T) {
 	exerciseGenericCommitments(t, ot, proxyTS, optimism)
 
 	// turn on v2 dispersal
-	proxyTS.Server.SetDisperseV2(true)
+	proxyTS.Server.SetDisperseToV2(true)
 	exerciseGenericCommitments(t, ot, proxyTS, optimism)
 }

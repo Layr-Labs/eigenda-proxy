@@ -138,9 +138,9 @@ func (svr *Server) Stop() error {
 	return nil
 }
 
-// SetDisperseV2 configures which version of eigenDA the server disperses to
-func (svr *Server) SetDisperseV2(disperseV2 bool) {
-	svr.sm.SetDisperseToV2(disperseV2)
+// SetDisperseToV2 configures which version of eigenDA the server disperses to
+func (svr *Server) SetDisperseToV2(disperseToV2 bool) {
+	svr.sm.SetDisperseToV2(disperseToV2)
 }
 
 func (svr *Server) writeResponse(w http.ResponseWriter, data []byte) {
