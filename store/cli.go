@@ -1,6 +1,7 @@
 package store
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
@@ -70,6 +71,10 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 
 func ReadConfig(ctx *cli.Context) (Config, error) {
 	backendStrings := ctx.StringSlice(BackendsToEnableFlagName)
+	if len(backendStrings) == 0 {
+		return Config{}, errors.New("backends must not be empty")
+	}
+
 	backends := make([]common.EigenDABackend, 0, len(backendStrings))
 	for _, backendString := range backendStrings {
 		backend, err := common.StringToEigenDABackend(backendString)
