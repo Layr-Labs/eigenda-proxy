@@ -6,6 +6,13 @@ set -e  # Exit on any error
 # It starts the eigenda-proxy with those env vars, waits 5 seconds, and then kills the proxy.
 # If any deprecated flags are still being used in the specified environment file, the script will fail.
 
+# Check if an environment file is provided
+if [ $# -eq 0 ]; then
+    echo "Error: No environment file specified"
+    echo "Usage: $0 <environment_file_path>"
+    exit 1
+fi
+
 ENV_FILE=$1
 
 # Check if the environment file exists
