@@ -139,6 +139,10 @@ func (svr *Server) Stop() error {
 }
 
 // SetDisperseToV2 configures which version of eigenDA the server disperses to
+//
+// Note: calling svr.SetDisperseToV2(true) will only work if the proxy was initialized with v2 dispersal enabled! If
+// the proxy was initialized without v2 dispersal enabled, then the required v2 components will not have been
+// constructed.
 func (svr *Server) SetDisperseToV2(disperseToV2 bool) {
 	svr.sm.SetDisperseToV2(disperseToV2)
 }
