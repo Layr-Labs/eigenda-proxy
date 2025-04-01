@@ -406,10 +406,8 @@ func TestInterleavedVersions(t *testing.T) {
 	t.Parallel()
 	testRandom := random.NewTestRandom()
 
-	testCfg := testutils.NewTestConfig(testutils.GetBackend(), true)
+	testCfg := testutils.NewTestConfig(testutils.GetBackend(), false)
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-
-	// initialize with v2 enabled, so that the necessary components are built
 	testSuite, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
 
@@ -419,7 +417,6 @@ func TestInterleavedVersions(t *testing.T) {
 		})
 
 	// disperse a payload to v1
-	testSuite.Server.SetDisperseToV2(false)
 	payload1a := testRandom.Bytes(1000)
 	cert1a, err := client.SetData(testSuite.Ctx, payload1a)
 	require.NoError(t, err)

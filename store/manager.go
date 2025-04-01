@@ -45,10 +45,6 @@ func (m *Manager) DisperseToV2() bool {
 // SetDisperseToV2 sets whether v2 dispersal is enabled.
 //
 // If set to true, the manager will disperse to eigenDA v2. If false, it will disperse to eigenDA v1
-//
-// Note: calling m.SetDisperseToV2(true) will only work if the proxy was initialized with v2 dispersal enabled! If
-// the proxy was initialized without v2 dispersal enabled, then the required v2 components will not have been
-// constructed.
 func (m *Manager) SetDisperseToV2(disperseToV2 bool) {
 	m.disperseToV2.Store(disperseToV2)
 }

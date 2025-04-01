@@ -108,17 +108,28 @@ func (smb *StorageManagerBuilder) Build(ctx context.Context) (*Manager, error) {
 		}
 	}
 
-	if smb.v2ClientCfg.DisperseToV2 {
-		smb.log.Info("Using EigenDA V2 storage backend")
-		eigenDAV2Store, err = smb.buildEigenDAV2Backend(ctx)
-		if err != nil {
-			return nil, err
+	smb.log.Info("Building EigenDA v1 storage backend")
+	eigenDAV1Store, err = smb.buildEigenDAV1Backend(ctx)
+	if err != nil {
+		if smb.v2ClientCfg.DisperseToV2 {
+			smb.log.Warnf(
+				`Building EigenDA v1 backend failed. Attempts to GET v1 blobs will fail, and toggling
+							DisperseToV2 to false will cause dispersals to fail: %v`, err)
+		} else {
+			return nil, fmt.Errorf("DisperseToV2 is set to false, but building of v1 backend failed: %w", err)
 		}
 	}
 
-	eigenDAV1Store, err = smb.buildEigenDAV1Backend(ctx)
+	smb.log.Info("Building EigenDA v2 storage backend")
+	eigenDAV2Store, err = smb.buildEigenDAV2Backend(ctx)
 	if err != nil {
-		return nil, err
+		if smb.v2ClientCfg.DisperseToV2 {
+			return nil, fmt.Errorf("DisperseToV2 is set to true, but building of v2 backend failed: %w", err)
+		} else {
+			smb.log.Warnf(
+				`Building EigenDA v2 backend failed. Attempts to GET v2 blobs will fail, and toggling
+							DisperseToV2 to true will cause dispersals to fail: %v`, err)
+		}
 	}
 
 	fallbacks := smb.buildSecondaries(smb.managerCfg.FallbackTargets, s3Store, redisStore)
@@ -246,7 +257,7 @@ func (smb *StorageManagerBuilder) buildEigenDAV1Backend(ctx context.Context) (co
 	}
 	// EigenDAV1 backend dependency injection
 	var client *clients.EigenDAClient
-	smb.log.Warn("Using EigenDA backend.. This backend type will be deprecated soon. Please migrate to V2.")
+
 	client, err = clients.NewEigenDAClient(smb.log, smb.v1ClientCfg.EdaClientCfg)
 	if err != nil {
 		return nil, err

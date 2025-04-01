@@ -264,14 +264,10 @@ func exerciseGenericCommitments(
 }
 
 func TestOptimismGenericCommitmentMigration(t *testing.T) {
-	testCfg := testutils.NewTestConfig(testutils.GetBackend(), true)
+	testCfg := testutils.NewTestConfig(testutils.GetBackend(), false)
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	// initialize with v2 = true, so that the necessary components are constructed
 	proxyTS, shutDown := testutils.CreateTestSuite(tsConfig)
 	defer shutDown()
-
-	// turn off v2 dispersal, so that we exercise v1, i.e. "pre migration"
-	proxyTS.Server.SetDisperseToV2(false)
 
 	ot := actions.NewDefaultTesting(t)
 
