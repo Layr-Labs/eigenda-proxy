@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"net/http"
 	"testing"
 
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
@@ -279,27 +278,22 @@ func TestOptimismGenericCommitmentMigration(t *testing.T) {
 	exerciseGenericCommitments(t, ot, optimism)
 	expectedWriteCount++
 	expectedReadCount++
-	actualWriteCount, err := proxyTS.Metrics.HTTPServerRequestsTotal.Get(
-		string(commitments.OptimismGeneric), http.MethodPost)
-	require.NoError(t, err)
-	require.Equal(t, expectedWriteCount, actualWriteCount)
-	actualReadCount, err := proxyTS.Metrics.HTTPServerRequestsTotal.Get(
-		string(commitments.OptimismGeneric), http.MethodGet)
-	require.NoError(t, err)
-	require.Equal(t, expectedReadCount, actualReadCount)
+	requireDispersalRetrievalEigenDACounts(
+		t,
+		proxyTS.Metrics.HTTPServerRequestsTotal,
+		commitments.OptimismGeneric,
+		expectedWriteCount,
+		expectedReadCount)
 
 	// turn on v2 dispersal
 	proxyTS.Server.SetDisperseToV2(true)
 	exerciseGenericCommitments(t, ot, optimism)
 	expectedWriteCount++
 	expectedReadCount++
-
-	actualWriteCount, err = proxyTS.Metrics.HTTPServerRequestsTotal.Get(
-		string(commitments.OptimismGeneric), http.MethodPost)
-	require.NoError(t, err)
-	require.Equal(t, expectedWriteCount, actualWriteCount)
-	actualReadCount, err = proxyTS.Metrics.HTTPServerRequestsTotal.Get(
-		string(commitments.OptimismGeneric), http.MethodGet)
-	require.NoError(t, err)
-	require.Equal(t, expectedReadCount, actualReadCount)
+	requireDispersalRetrievalEigenDACounts(
+		t,
+		proxyTS.Metrics.HTTPServerRequestsTotal,
+		commitments.OptimismGeneric,
+		expectedWriteCount,
+		expectedReadCount)
 }
