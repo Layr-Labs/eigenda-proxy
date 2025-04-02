@@ -45,8 +45,8 @@ test-e2e-testnet:
 test-e2e-preprod:
 	# Add the -v flag to observe logs as the run is happening on CI, given that this test takes ~40 minutes to run.
 	# Good to have early feedback when needed.
-	#BACKEND=preprod go test -v -timeout 60m ./e2e -parallel 1 -run 'TestProxyCachingWithRedisV1|TestProxyCachingV1|TestProxyCachingWithRedisV2|TestProxyCachingV2'
-	BACKEND=preprod go test -v -timeout 60m ./e2e -parallel 1 -run 'TestProxyCachingV1'
+	BACKEND=preprod go test -v -timeout 60m ./e2e -parallel 4 | grep --line-buffered -E "^[[:space:]]*--- (PASS|FAIL)"
+	#BACKEND=preprod go test -v -timeout 60m ./e2e -parallel 1 -run 'TestProxyCachingV1'
 
 # Very simple fuzzer which generates random bytes arrays and sends them to the proxy using the standard client.
 # To clean the cached corpus, run `go clean -fuzzcache` before running this.
