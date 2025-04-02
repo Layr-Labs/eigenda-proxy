@@ -278,6 +278,7 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 				SvcManagerAddr:           svcManagerAddress,
 			},
 			MaxBlobSizeBytes: maxBlobLengthBytes,
+			PutRetries:       3,
 		},
 		VerifierConfigV1: verify.Config{
 			VerifyCerts:          false,
@@ -320,7 +321,7 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 				PayloadClientConfig: payloadClientConfig,
 				RelayTimeout:        5 * time.Second,
 			},
-			PutRetries:                 1,
+			PutRetries:                 3,
 			MaxBlobSizeBytes:           maxBlobLengthBytes,
 			EigenDACertVerifierAddress: certVerifierAddress,
 		},
@@ -340,15 +341,12 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 	switch {
 	case testCfg.UseKeccak256ModeS3:
 		proxyConfig.StorageConfig = createS3Config(proxyConfig.StorageConfig)
-
 	case testCfg.UseS3Caching:
 		proxyConfig.StorageConfig.CacheTargets = []string{"S3"}
 		proxyConfig.StorageConfig = createS3Config(proxyConfig.StorageConfig)
-
 	case testCfg.UseS3Fallback:
 		proxyConfig.StorageConfig.FallbackTargets = []string{"S3"}
 		proxyConfig.StorageConfig = createS3Config(proxyConfig.StorageConfig)
-
 	case testCfg.UseRedisCaching:
 		proxyConfig.StorageConfig.CacheTargets = []string{"redis"}
 		proxyConfig.StorageConfig = createRedisConfig(proxyConfig.StorageConfig)
