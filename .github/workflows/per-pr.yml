@@ -13,6 +13,9 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
+      - uses: step-security/harden-runner@446798f8213ac2e75931c1b0769676d927801858 # v2.10.3
+        with:
+          egress-policy: audit
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34
         with:
@@ -30,6 +33,9 @@ jobs:
   flags:
     runs-on: ubuntu-latest
     steps:
+      - uses: step-security/harden-runner@446798f8213ac2e75931c1b0769676d927801858 # v2.10.3
+        with:
+          egress-policy: audit
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34
         with:
@@ -42,6 +48,9 @@ jobs:
   help-output-check:
     runs-on: ubuntu-latest
     steps:
+      - uses: step-security/harden-runner@446798f8213ac2e75931c1b0769676d927801858 # v2.10.3
+        with:
+          egress-policy: audit
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34
         with:
@@ -51,6 +60,9 @@ jobs:
   unit-tests:
     runs-on: ubuntu-latest
     steps:
+      - uses: step-security/harden-runner@446798f8213ac2e75931c1b0769676d927801858 # v2.10.3
+        with:
+          egress-policy: audit
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           submodules: true
@@ -63,6 +75,9 @@ jobs:
   e2e-tests-local:
     runs-on: ubuntu-latest
     steps:
+      - uses: step-security/harden-runner@446798f8213ac2e75931c1b0769676d927801858 # v2.10.3
+        with:
+          egress-policy: audit
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           submodules: true
@@ -75,6 +90,9 @@ jobs:
   e2e-tests-testnet:
     runs-on: ubuntu-latest
     steps:
+      - uses: step-security/harden-runner@446798f8213ac2e75931c1b0769676d927801858 # v2.10.3
+        with:
+          egress-policy: audit
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           submodules: true
@@ -90,6 +108,9 @@ jobs:
   e2e-tests-preprod:
     runs-on: ubuntu-latest
     steps:
+      - uses: step-security/harden-runner@446798f8213ac2e75931c1b0769676d927801858 # v2.10.3
+        with:
+          egress-policy: audit
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           submodules: true
@@ -105,6 +126,9 @@ jobs:
   fuzz:
     runs-on: ubuntu-latest
     steps:
+      - uses: step-security/harden-runner@446798f8213ac2e75931c1b0769676d927801858 # v2.10.3
+        with:
+          egress-policy: audit
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           submodules: true
@@ -117,6 +141,9 @@ jobs:
   build-binary:
     runs-on: ubuntu-latest
     steps:
+      - uses: step-security/harden-runner@446798f8213ac2e75931c1b0769676d927801858 # v2.10.3
+        with:
+          egress-policy: audit
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: actions/setup-go@f111f3307d8850f501ac008e886eec1fd1932a34
         with:
@@ -126,6 +153,9 @@ jobs:
   build-docker:
     runs-on: ubuntu-latest
     steps:
+      - uses: step-security/harden-runner@446798f8213ac2e75931c1b0769676d927801858 # v2.10.3
+        with:
+          egress-policy: audit
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       - uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4
         with:
