@@ -26,12 +26,12 @@ jobs:
           version: v1.61
           args: --timeout 3m
 
-  # This checks that the flags in .env.exampleV1.holesky and .env.exampleV2.holesky are valid, and allow the
-  # proxy to start.
+  # This checks that the flags in .env.exampleV1.holesky, .env.exampleV2.holesky, and .env.exampleV1AndV2.holesky are
+  # valid, and allow the proxy to start.
   flags:
     strategy:
       matrix:
-        env-file: [ .env.exampleV1.holesky, .env.exampleV2.holesky ]
+        env-file: [ .env.exampleV1.holesky, .env.exampleV2.holesky, .env.exampleV1AndV2.holesky]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
