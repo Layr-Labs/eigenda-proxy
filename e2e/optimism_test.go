@@ -265,10 +265,11 @@ func exerciseGenericCommitments(
 }
 
 func TestOptimismGenericCommitmentMigration(t *testing.T) {
-	testCfg := testutils.NewTestConfigSpecifyingBackends(
+	testCfg := testutils.NewTestConfig(
 		testutils.GetBackend(),
 		false,
-		[]proxycommon.EigenDABackend{proxycommon.V1EigenDABackend, proxycommon.V2EigenDABackend})
+		proxycommon.V1EigenDABackend,
+		proxycommon.V2EigenDABackend)
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 	proxyTS, shutDown := testutils.CreateTestSuite(tsConfig)
 	defer shutDown()

@@ -160,24 +160,17 @@ type TestConfig struct {
 	UseS3Fallback      bool
 }
 
-// NewTestConfig returns a new TestConfig, which only enables the single eigenDA backend needed, based on backend
-// dispersal target
-func NewTestConfig(backend Backend, disperseToV2 bool) TestConfig {
-	var backendsToEnable []common.EigenDABackend
-	if disperseToV2 {
-		backendsToEnable = []common.EigenDABackend{common.V2EigenDABackend}
-	} else {
-		backendsToEnable = []common.EigenDABackend{common.V1EigenDABackend}
+// NewTestConfig returns a new TestConfig
+func NewTestConfig(backend Backend, disperseToV2 bool, backendsToEnable ...common.EigenDABackend) TestConfig {
+	// if the caller doesn't specify which backends to enable, enable whichever eigenda backend is being dispersed to
+	if len(backendsToEnable) == 0 {
+		if disperseToV2 {
+			backendsToEnable = []common.EigenDABackend{common.V2EigenDABackend}
+		} else {
+			backendsToEnable = []common.EigenDABackend{common.V1EigenDABackend}
+		}
 	}
-	return NewTestConfigSpecifyingBackends(backend, disperseToV2, backendsToEnable)
-}
 
-// NewTestConfigSpecifyingBackends returns a new test config, which enables a specific set of eigenDA backends
-func NewTestConfigSpecifyingBackends(
-	backend Backend,
-	disperseToV2 bool,
-	backendsToEnable []common.EigenDABackend,
-) TestConfig {
 	return TestConfig{
 		BackendsToEnable:   backendsToEnable,
 		DisperseToV2:       disperseToV2,

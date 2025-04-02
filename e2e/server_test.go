@@ -424,10 +424,11 @@ func TestInterleavedVersions(t *testing.T) {
 	t.Parallel()
 	testRandom := random.NewTestRandom()
 
-	testCfg := testutils.NewTestConfigSpecifyingBackends(
+	testCfg := testutils.NewTestConfig(
 		testutils.GetBackend(),
 		false,
-		[]common.EigenDABackend{common.V1EigenDABackend, common.V2EigenDABackend})
+		common.V1EigenDABackend,
+		common.V2EigenDABackend)
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 	testSuite, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
