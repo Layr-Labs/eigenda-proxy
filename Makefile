@@ -31,9 +31,9 @@ test-unit:
 
 # E2E tests using local memstore, leveraging op-e2e framework. Also tests the standard client against the proxy.
 test-e2e-local:
-	# Add the -v flag to observe logs as the run is happening on CI, given that this test takes ~10 minutes to run.
+	# Add the -v flag to observe logs as the run is happening on CI, given that this test takes ~20 minutes to run.
 	# Good to have early feedback when needed.
-	BACKEND=memstore go test -v -timeout 20m ./e2e -parallel 4
+	BACKEND=memstore go test -v -timeout 30m ./e2e -parallel 4
 
 # E2E tests using holesky testnet backend, leveraging op-e2e framework. Also tests the standard client against the proxy.
 # If holesky tests are failing, consider checking https://dora.holesky.ethpandaops.io/epochs for block production status.
