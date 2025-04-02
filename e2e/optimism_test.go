@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
+	proxycommon "github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/testutils"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	e2econfig "github.com/ethereum-optimism/optimism/op-e2e/config"
@@ -264,7 +265,10 @@ func exerciseGenericCommitments(
 }
 
 func TestOptimismGenericCommitmentMigration(t *testing.T) {
-	testCfg := testutils.NewTestConfig(testutils.GetBackend(), false)
+	testCfg := testutils.NewTestConfigSpecifyingBackends(
+		testutils.GetBackend(),
+		false,
+		[]proxycommon.EigenDABackend{proxycommon.V1EigenDABackend, proxycommon.V2EigenDABackend})
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
 	proxyTS, shutDown := testutils.CreateTestSuite(tsConfig)
 	defer shutDown()

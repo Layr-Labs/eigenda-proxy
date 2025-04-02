@@ -104,8 +104,11 @@ func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.Commitment
 		return value, nil
 
 	case commitments.Standard, commitments.OptimismGeneric:
-		if m.eigenda == nil {
-			return nil, errors.New("expected EigenDA backend for DA commitment type, but none configured")
+		if cm.Version == commitments.CertV0 && m.eigenda == nil {
+			return nil, errors.New("expected EigenDA V1 backend for DA commitment type with CertV0")
+		}
+		if cm.Version == commitments.CertV1 && m.eigendaV2 == nil {
+			return nil, errors.New("expected EigenDA V2 backend for DA commitment type with CertV1")
 		}
 
 		verifyMethod, err := m.getVerifyMethod(cm.Version)

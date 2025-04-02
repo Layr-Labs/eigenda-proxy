@@ -148,6 +148,7 @@ func GetBackend() Backend {
 }
 
 type TestConfig struct {
+	BackendsToEnable []common.EigenDABackend
 	DisperseToV2     bool
 	Backend          Backend
 	Expiration       time.Duration
@@ -159,8 +160,26 @@ type TestConfig struct {
 	UseS3Fallback      bool
 }
 
+// NewTestConfig returns a new TestConfig, which only enables the single eigenDA backend needed, based on backend
+// dispersal target
 func NewTestConfig(backend Backend, disperseToV2 bool) TestConfig {
+	var backendsToEnable []common.EigenDABackend
+	if disperseToV2 {
+		backendsToEnable = []common.EigenDABackend{common.V2EigenDABackend}
+	} else {
+		backendsToEnable = []common.EigenDABackend{common.V1EigenDABackend}
+	}
+	return NewTestConfigSpecifyingBackends(backend, disperseToV2, backendsToEnable)
+}
+
+// NewTestConfigSpecifyingBackends returns a new test config, which enables a specific set of eigenDA backends
+func NewTestConfigSpecifyingBackends(
+	backend Backend,
+	disperseToV2 bool,
+	backendsToEnable []common.EigenDABackend,
+) TestConfig {
 	return TestConfig{
+		BackendsToEnable:   backendsToEnable,
 		DisperseToV2:       disperseToV2,
 		Backend:            backend,
 		Expiration:         14 * 24 * time.Hour,
@@ -314,7 +333,7 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 		},
 		StorageConfig: store.Config{
 			AsyncPutWorkers:  testCfg.WriteThreadCount,
-			BackendsToEnable: []common.EigenDABackend{common.V1EigenDABackend, common.V2EigenDABackend},
+			BackendsToEnable: testCfg.BackendsToEnable,
 			DisperseToV2:     testCfg.DisperseToV2,
 		},
 	}
