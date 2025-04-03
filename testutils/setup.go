@@ -234,7 +234,7 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 		pollInterval = time.Minute * 1
 	}
 
-	maxBlobLengthBytes, err := common.ParseBytesAmount("16mib")
+	maxBlobLengthBytes, err := common.ParseBytesAmount("1mib")
 	if err != nil {
 		panic(err)
 	}
