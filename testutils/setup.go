@@ -152,6 +152,7 @@ type TestConfig struct {
 	DisperseToV2     bool
 	Backend          Backend
 	Expiration       time.Duration
+	MaxBlobLength    string
 	WriteThreadCount int
 	// at most one of the below options should be true
 	UseKeccak256ModeS3 bool
@@ -215,13 +216,11 @@ func createS3Config(storeConfig store.Config) store.Config {
 
 func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 	useMemory := testCfg.Backend == MemstoreBackend
-	// load signer key from environment
 	pk := os.Getenv(privateKeyEnvVar)
 	if pk == "" && !useMemory {
 		panic("SIGNER_PRIVATE_KEY environment variable not set")
 	}
 
-	// load node url from environment
 	ethRPC := os.Getenv(ethRPCEnvVar)
 	if ethRPC == "" && !useMemory {
 		panic("ETHEREUM_RPC environment variable is not set")
@@ -234,7 +233,11 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 		pollInterval = time.Minute * 1
 	}
 
-	maxBlobLengthBytes, err := common.ParseBytesAmount("1mib")
+	maxBlobLength := testCfg.MaxBlobLength
+	if maxBlobLength == "" {
+		maxBlobLength = "1mib"
+	}
+	maxBlobLengthBytes, err := common.ParseBytesAmount(maxBlobLength)
 	if err != nil {
 		panic(err)
 	}
