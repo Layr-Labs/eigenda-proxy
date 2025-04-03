@@ -36,11 +36,11 @@ test-e2e-local:
 # E2E tests using holesky testnet backend, leveraging op-e2e framework. Also tests the standard client against the proxy.
 # If holesky tests are failing, consider checking https://dora.holesky.ethpandaops.io/epochs for block production status.
 test-e2e-testnet:
-	BACKEND=testnet gotestsum --format testname -- -v -timeout 60m ./e2e -parallel 32
+	BACKEND=testnet gotestsum --format testname -- -v -timeout 60m ./e2e -parallel 16
 
 ## Equivalent to `test-e2e-testnet`, but against preprod instead of testnet
 test-e2e-preprod:
-	BACKEND=preprod gotestsum --format testname -- -v -timeout 60m ./e2e -parallel 32
+	BACKEND=preprod gotestsum --format testname -- -v -timeout 60m ./e2e -parallel 16
 
 # Very simple fuzzer which generates random bytes arrays and sends them to the proxy using the standard client.
 # To clean the cached corpus, run `go clean -fuzzcache` before running this.
