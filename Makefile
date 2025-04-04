@@ -89,6 +89,9 @@ op-devnet-allocs:
 benchmark:
 	go test -benchmem -run=^$ -bench . ./benchmark -test.parallel 4
 
+install-gotestsum:
+	go install gotest.tools/gotestsum@latest
+
 .PHONY: \
 	clean \
 	test

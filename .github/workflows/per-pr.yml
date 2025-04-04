@@ -61,7 +61,7 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Install gotestsum
-        run: go install gotest.tools/gotestsum@latest
+        run: make install-gotestsum
       - run: go mod download
       - run: make test-unit
 
@@ -75,7 +75,7 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Install gotestsum
-        run: go install gotest.tools/gotestsum@latest
+        run: make install-gotestsum
       - run: go mod download
       - run: make test-e2e-local
 
@@ -89,7 +89,7 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Install gotestsum
-        run: go install gotest.tools/gotestsum@latest
+        run: make install-gotestsum
       - run: go mod download
       - run: make test-e2e-testnet
         env:
@@ -106,7 +106,7 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Install gotestsum
-        run: go install gotest.tools/gotestsum@latest
+        run: make install-gotestsum
       - run: go mod download
       - run: make test-e2e-preprod
         env:
