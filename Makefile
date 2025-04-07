@@ -77,7 +77,7 @@ format:
 
 ## calls --help on binary and routes output to file while ignoring dynamic fields specific
 ## to indivdual builds (e.g, version)
-gen-static-help-output: eigenda-proxy
+gen-static-help-output: build
 	@echo "Storing binary output to docs/help_out.txt"
 	@./bin/eigenda-proxy --help | sed '/^VERSION:/ {N;d;}' > docs/help_out.txt
 
