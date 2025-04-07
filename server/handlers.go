@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -15,6 +16,12 @@ import (
 const (
 	// limit requests to only 32 mib to mitigate potential DoS attacks
 	maxRequestBodySize int64 = 1024 * 1024 * 32
+
+	// HTTP headers
+	headerContentType = "Content-Type"
+
+	// Content types
+	contentTypeJSON = "application/json"
 )
 
 func (svr *Server) handleHealth(w http.ResponseWriter, _ *http.Request) error {
@@ -121,6 +128,25 @@ func (svr *Server) handleGetShared(
 	}
 
 	svr.writeResponse(w, input)
+	return nil
+}
+
+// handleGetDisperseToV2 handles the GET request to check the current DisperseToV2 state.
+func (svr *Server) handleGetDisperseToV2(w http.ResponseWriter, _ *http.Request) error {
+	w.Header().Set(headerContentType, contentTypeJSON)
+	w.WriteHeader(http.StatusOK)
+
+	response := struct {
+		DisperseToV2 bool `json:"disperseToV2"`
+	}{
+		DisperseToV2: svr.sm.DisperseToV2(),
+	}
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, fmt.Sprintf("failed to encode response: %v", err), http.StatusInternalServerError)
+		return err
+	}
+
 	return nil
 }
 
@@ -234,5 +260,44 @@ func (svr *Server) handlePostShared(
 	if meta.Mode != commitments.OptimismKeccak {
 		svr.writeResponse(w, responseCommit)
 	}
+	return nil
+}
+
+// handleSetDisperseToV2 handles the PUT request to set the DisperseToV2 flag.
+func (svr *Server) handleSetDisperseToV2(w http.ResponseWriter, r *http.Request) error {
+	// Read request body to get the new value
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1024)) // Small limit since we only expect a boolean
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to read request body: %v", err), http.StatusBadRequest)
+		return err
+	}
+
+	// Parse the boolean value
+	var setRequest struct {
+		DisperseToV2 bool `json:"disperseToV2"`
+	}
+
+	if err := json.Unmarshal(body, &setRequest); err != nil {
+		http.Error(w, fmt.Sprintf("failed to parse JSON request: %v", err), http.StatusBadRequest)
+		return err
+	}
+
+	svr.SetDisperseToV2(setRequest.DisperseToV2)
+
+	// Return the current value in the response
+	w.Header().Set(headerContentType, contentTypeJSON)
+	w.WriteHeader(http.StatusOK)
+
+	response := struct {
+		DisperseToV2 bool `json:"disperseToV2"`
+	}{
+		DisperseToV2: svr.sm.DisperseToV2(),
+	}
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, fmt.Sprintf("failed to encode response: %v", err), http.StatusInternalServerError)
+		return err
+	}
+
 	return nil
 }

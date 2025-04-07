@@ -30,8 +30,9 @@ const (
 )
 
 const (
-	ListenAddrFlagName = "addr"
-	PortFlagName       = "port"
+	ListenAddrFlagName            = "addr"
+	PortFlagName                  = "port"
+	AdminEndpointsEnabledFlagName = "admin-endpoints-enabled"
 )
 
 func CLIFlags() []cli.Flag {
@@ -48,6 +49,12 @@ func CLIFlags() []cli.Flag {
 			Usage:   "Server listening port",
 			Value:   3100,
 			EnvVars: common.PrefixEnvVar(common.GlobalPrefix, "PORT"),
+		},
+		&cli.BoolFlag{
+			Name:    AdminEndpointsEnabledFlagName,
+			Usage:   "Enable administrative HTTP endpoints for runtime configuration",
+			Value:   false,
+			EnvVars: common.PrefixEnvVar(common.GlobalPrefix, "ADMIN_ENDPOINTS_ENABLED"),
 		},
 	}
 

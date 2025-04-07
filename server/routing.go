@@ -85,6 +85,13 @@ func (svr *Server) RegisterRoutes(r *mux.Router) {
 	)
 
 	r.HandleFunc("/health", withLogging(svr.handleHealth, svr.log)).Methods("GET")
+
+	// Only register admin endpoints if explicitly enabled in configuration
+	if svr.config.AdminEndpointsEnabled {
+		// Admin endpoints to check and set V2 dispersal
+		r.HandleFunc("/admin/v2-dispersal", withLogging(svr.handleGetDisperseToV2, svr.log)).Methods("GET")
+		r.HandleFunc("/admin/v2-dispersal", withLogging(svr.handleSetDisperseToV2, svr.log)).Methods("PUT")
+	}
 }
 
 func notCommitmentModeStandard(r *http.Request, _ *mux.RouteMatch) bool {

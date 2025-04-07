@@ -126,6 +126,38 @@ Response:
   Body: <preimage_bytes>
 ```
 
+#### Admin Routes
+
+The proxy provides administrative endpoints to control runtime behavior. By default, these endpoints are disabled and must be explicitly enabled through configuration.
+
+To enable admin endpoints, set the `--admin-endpoints-enabled` flag to `true` or set the environment variable `EIGENDA_PROXY_ADMIN_ENDPOINTS_ENABLED=true` when starting the proxy server.
+
+When enabled, the following admin endpoints are available:
+
+```text
+Request:
+  GET /admin/v2-dispersal
+
+Response:
+  200 OK
+  Content-Type: application/json
+  Body: {"disperseToV2": boolean}
+```
+
+```text
+Request:
+  PUT /admin/v2-dispersal
+  Content-Type: application/json
+  Body: {"disperseToV2": boolean}
+
+Response:
+  200 OK
+  Content-Type: application/json
+  Body: {"disperseToV2": boolean}
+```
+
+These endpoints allow operators to check and set whether blobs are dispersed to EigenDA V1 or V2. The GET endpoint retrieves the current state, while the PUT endpoint idempotently updates the state to the specified value. The `disperseToV2` value in the response represents the current state after any changes have been applied.
+
 ### Deployment Against Real EigenDA Network
 
 We also provide network-specific example env configuration files in `.env.example.holesky` and `.env.example.mainnet` as a place to get started:

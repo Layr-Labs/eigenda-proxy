@@ -5,6 +5,7 @@ package server
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -28,8 +29,9 @@ import (
 var (
 	testLogger = logging.NewTextSLogger(os.Stdout, &logging.SLoggerOptions{})
 	testCfg    = config.ServerConfig{
-		Host: "localhost",
-		Port: 0,
+		Host:                  "localhost",
+		Port:                  0,
+		AdminEndpointsEnabled: true, // Enable admin endpoints for testing
 	}
 )
 
@@ -293,5 +295,89 @@ func TestHandlerPutErrors(t *testing.T) {
 				})
 		}
 	}
+}
 
+func TestDisperseToV2Endpoints(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStorageMgr := mocks.NewMockIManager(ctrl)
+
+	// Test with admin endpoints disabled - they should not be accessible
+	t.Run("Admin Endpoints Disabled", func(t *testing.T) {
+		// Create server config with admin endpoints disabled
+		adminDisabledCfg := config.ServerConfig{
+			Host:                  "localhost",
+			Port:                  0,
+			AdminEndpointsEnabled: false,
+		}
+
+		// Test GET endpoint with admin disabled
+		req := httptest.NewRequest(http.MethodGet, "/admin/v2-dispersal", nil)
+		rec := httptest.NewRecorder()
+
+		r := mux.NewRouter()
+		server := NewServer(adminDisabledCfg, mockStorageMgr, testLogger, metrics.NoopMetrics)
+		server.RegisterRoutes(r)
+		r.ServeHTTP(rec, req)
+
+		// Should get 404 because the endpoint isn't registered
+		require.Equal(t, http.StatusNotFound, rec.Code)
+	})
+
+	// Test with admin endpoints enabled
+	t.Run("Admin Endpoints Enabled", func(t *testing.T) {
+		// Initial state is false
+		mockStorageMgr.EXPECT().DisperseToV2().Return(false)
+
+		// Test GET endpoint first to verify initial state
+		t.Run("Get V2 Dispersal State", func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/admin/v2-dispersal", nil)
+			rec := httptest.NewRecorder()
+
+			r := mux.NewRouter()
+			server := NewServer(testCfg, mockStorageMgr, testLogger, metrics.NoopMetrics)
+			server.RegisterRoutes(r)
+			r.ServeHTTP(rec, req)
+
+			require.Equal(t, http.StatusOK, rec.Code)
+
+			var response struct {
+				DisperseToV2 bool `json:"disperseToV2"`
+			}
+			err := json.Unmarshal(rec.Body.Bytes(), &response)
+			require.NoError(t, err)
+			require.False(t, response.DisperseToV2)
+		})
+
+		// Test PUT endpoint to set state to true
+		t.Run("Set V2 Dispersal State", func(t *testing.T) {
+			requestBody := struct {
+				DisperseToV2 bool `json:"disperseToV2"`
+			}{
+				DisperseToV2: true,
+			}
+			jsonBody, err := json.Marshal(requestBody)
+			require.NoError(t, err)
+
+			mockStorageMgr.EXPECT().SetDisperseToV2(true)
+			mockStorageMgr.EXPECT().DisperseToV2().Return(true)
+
+			req := httptest.NewRequest(http.MethodPut, "/admin/v2-dispersal", bytes.NewReader(jsonBody))
+			rec := httptest.NewRecorder()
+
+			r := mux.NewRouter()
+			server := NewServer(testCfg, mockStorageMgr, testLogger, metrics.NoopMetrics)
+			server.RegisterRoutes(r)
+			r.ServeHTTP(rec, req)
+
+			require.Equal(t, http.StatusOK, rec.Code)
+
+			var response struct {
+				DisperseToV2 bool `json:"disperseToV2"`
+			}
+			err = json.Unmarshal(rec.Body.Bytes(), &response)
+			require.NoError(t, err)
+			require.True(t, response.DisperseToV2)
+		})
+	})
 }
