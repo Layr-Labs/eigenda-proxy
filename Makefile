@@ -7,23 +7,21 @@ LDFLAGSSTRING +=-X main.Date=$(BUILD_TIME)
 LDFLAGSSTRING +=-X main.Version=$(GIT_TAG)
 LDFLAGS := -ldflags "$(LDFLAGSSTRING)"
 
-.PHONY: eigenda-proxy
-eigenda-proxy:
+build:
 	env GO111MODULE=on GOOS=$(TARGETOS) GOARCH=$(TARGETARCH) go build -v $(LDFLAGS) -o ./bin/eigenda-proxy ./cmd/server
 
-.PHONY: docker-build
+clean:
+	rm bin/eigenda-proxy
+
 docker-build:
 	# we only use this to build the docker image locally, so we give it the dev tag as a reminder
 	@docker build -t ghcr.io/layr-labs/eigenda-proxy:dev .
 
-run-memstore-server:
+run-memstore-server: build
 	./bin/eigenda-proxy --memstore.enabled --metrics.enabled
 
 disperse-test-blob:
 	curl -X POST -d my-blob-content http://127.0.0.1:3100/put/
-
-clean:
-	rm bin/eigenda-proxy
 
 # Runs all tests, excluding e2e
 test-unit:
@@ -74,7 +72,7 @@ format:
 
 ## calls --help on binary and routes output to file while ignoring dynamic fields specific
 ## to indivdual builds (e.g, version)
-gen-static-help-output: eigenda-proxy
+gen-static-help-output: build
 	@echo "Storing binary output to docs/help_out.txt"
 	@./bin/eigenda-proxy --help | sed '/^VERSION:/ {N;d;}' > docs/help_out.txt
 
@@ -92,7 +90,4 @@ benchmark:
 deps:
 	go install gotest.tools/gotestsum@latest
 
-.PHONY: \
-	clean \
-	test \
-	deps
+.PHONY: build clean docker-build test lint format benchmark deps
