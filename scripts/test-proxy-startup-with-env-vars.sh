@@ -38,7 +38,7 @@ PID=$!
 # Ensure we kill the process on script exit
 trap "kill $PID" EXIT
 
-# Wait 10 seconds for startup to happen (actual startup takes ~5 seconds)
+# Wait 10 seconds for startup to happen (actual startup takes ~5 seconds with max blob length=1MiB)
 echo "sleeping 10 seconds to let the proxy start up"
 sleep 10
 
