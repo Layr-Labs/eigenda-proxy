@@ -135,6 +135,9 @@ Response:
 The proxy provides administrative endpoints to control runtime behavior. By default, these endpoints are disabled 
 and must be explicitly enabled through configuration.
 
+> **SECURITY WARNING:** The admin endpoints should NEVER be publicly accessible. These endpoints 
+> do not implement authentication or authorization controls and should only be exposed on internal networks.
+
 To enable admin endpoints, set the `--admin-endpoints-enabled` flag to `true` or set the environment variable 
 `EIGENDA_PROXY_ADMIN_ENDPOINTS_ENABLED=true` when starting the proxy server.
 
