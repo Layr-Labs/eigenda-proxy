@@ -98,9 +98,9 @@ GLOBAL OPTIONS:
 
    Proxy Server
 
-   --addr value               Server listening address (default: "0.0.0.0") [$EIGENDA_PROXY_ADDR]
-   --admin-endpoints-enabled  Enable administrative HTTP endpoints for runtime configuration (default: false) [$EIGENDA_PROXY_ADMIN_ENDPOINTS_ENABLED]
-   --port value               Server listening port (default: 3100) [$EIGENDA_PROXY_PORT]
+   --addr value                                 Server listening address (default: "0.0.0.0") [$EIGENDA_PROXY_ADDR]
+   --api-enabled value [ --api-enabled value ]  List of API types to enable (e.g. admin) [$EIGENDA_PROXY_API_ENABLED]
+   --port value                                 Server listening port (default: 3100) [$EIGENDA_PROXY_PORT]
 
    Redis Cache/Fallback
 

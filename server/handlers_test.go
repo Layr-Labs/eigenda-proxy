@@ -29,9 +29,9 @@ import (
 var (
 	testLogger = logging.NewTextSLogger(os.Stdout, &logging.SLoggerOptions{})
 	testCfg    = config.ServerConfig{
-		Host:                  "localhost",
-		Port:                  0,
-		AdminEndpointsEnabled: true, // Enable admin endpoints for testing
+		Host:        "localhost",
+		Port:        0,
+		EnabledAPIs: []string{config.AdminAPIType}, // Enable admin API for testing
 	}
 )
 
@@ -306,9 +306,9 @@ func TestEigenDADispersalBackendEndpoints(t *testing.T) {
 	t.Run("Admin Endpoints Disabled", func(t *testing.T) {
 		// Create server config with admin endpoints disabled
 		adminDisabledCfg := config.ServerConfig{
-			Host:                  "localhost",
-			Port:                  0,
-			AdminEndpointsEnabled: false,
+			Host:        "localhost",
+			Port:        0,
+			EnabledAPIs: []string{}, // Empty list means no APIs are enabled
 		}
 
 		// Test GET endpoint with admin disabled

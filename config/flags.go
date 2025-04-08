@@ -31,9 +31,10 @@ const (
 )
 
 const (
-	ListenAddrFlagName            = "addr"
-	PortFlagName                  = "port"
-	AdminEndpointsEnabledFlagName = "admin-endpoints-enabled"
+	ListenAddrFlagName  = "addr"
+	PortFlagName        = "port"
+	APIsEnabledFlagName = "api-enabled"
+	AdminAPIType        = "admin"
 )
 
 func CLIFlags(envPrefix string, category string) []cli.Flag {
@@ -53,11 +54,11 @@ func CLIFlags(envPrefix string, category string) []cli.Flag {
 			EnvVars:  common.PrefixEnvVar(envPrefix, "PORT"),
 			Category: category,
 		},
-		&cli.BoolFlag{
-			Name:     AdminEndpointsEnabledFlagName,
-			Usage:    "Enable administrative HTTP endpoints for runtime configuration",
-			Value:    false,
-			EnvVars:  common.PrefixEnvVar(envPrefix, "ADMIN_ENDPOINTS_ENABLED"),
+		&cli.StringSliceFlag{
+			Name:     APIsEnabledFlagName,
+			Usage:    "List of API types to enable (e.g. admin)",
+			Value:    cli.NewStringSlice(),
+			EnvVars:  common.PrefixEnvVar(envPrefix, "API_ENABLED"),
 			Category: category,
 		},
 	}

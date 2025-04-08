@@ -138,8 +138,16 @@ and must be explicitly enabled through configuration.
 > **SECURITY WARNING:** The admin endpoints should NEVER be publicly accessible. These endpoints 
 > do not implement authentication or authorization controls and should only be exposed on internal networks.
 
-To enable admin endpoints, set the `--admin-endpoints-enabled` flag to `true` or set the environment variable 
-`EIGENDA_PROXY_ADMIN_ENDPOINTS_ENABLED=true` when starting the proxy server.
+To enable admin endpoints, include "admin" in the `--api-enabled` flag value or set the environment variable 
+`EIGENDA_PROXY_API_ENABLED=admin` when starting the proxy server. For example:
+  
+```bash
+# Enable admin API
+./bin/eigenda-proxy --api-enabled admin
+
+# Example of enabling multiple APIs (note: 'metrics' shown for illustration only and is not currently implemented)
+./bin/eigenda-proxy --api-enabled admin,metrics
+```
 
 When enabled, the following admin endpoints are available:
 
@@ -187,7 +195,7 @@ This approach allows you to switch from V1 to V2 while the proxy is running, wit
       - See `.env.exampleV1AndV2.holesky` for an example configuration
    - Set `EIGENDA_PROXY_STORAGE_DISPERSE_TO_V2=false` in your configuration
       - This ensures that the proxy will continue dispersing to the V1 backend, until it's time to migrate
-   - Set `EIGENDA_PROXY_ADMIN_ENDPOINTS_ENABLED=true` to expose the admin API
+   - Set `EIGENDA_PROXY_API_ENABLED=admin` to expose the admin API
       - This allows runtime switching between V1 and V2 without service restart
 
 2. **Runtime Migration**
