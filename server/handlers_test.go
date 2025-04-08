@@ -349,6 +349,27 @@ func TestEigenDADispersalBackendEndpoints(t *testing.T) {
 			require.Equal(t, common.EigenDABackendToString(common.V1EigenDABackend), response.EigenDADispersalBackend)
 		})
 
+		// Test PUT endpoint with invalid input
+		t.Run("Set EigenDA Dispersal Backend With Invalid Value", func(t *testing.T) {
+			requestBody := struct {
+				EigenDADispersalBackend string `json:"eigenDADispersalBackend"`
+			}{
+				EigenDADispersalBackend: "invalid",
+			}
+			jsonBody, err := json.Marshal(requestBody)
+			require.NoError(t, err)
+
+			req := httptest.NewRequest(http.MethodPut, "/admin/eigenda-dispersal-backend", bytes.NewReader(jsonBody))
+			rec := httptest.NewRecorder()
+
+			r := mux.NewRouter()
+			server := NewServer(testCfg, mockStorageMgr, testLogger, metrics.NoopMetrics)
+			server.RegisterRoutes(r)
+			r.ServeHTTP(rec, req)
+
+			require.Equal(t, http.StatusBadRequest, rec.Code)
+		})
+
 		// Test PUT endpoint to set the EigenDA dispersal backend
 		t.Run("Set EigenDA Dispersal Backend", func(t *testing.T) {
 			requestBody := struct {

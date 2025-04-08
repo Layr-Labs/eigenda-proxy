@@ -132,18 +132,26 @@ func (svr *Server) handleGetShared(
 	return nil
 }
 
+// disperseToV2ToEigenDABackend converts the boolean disperseToV2 flag to the corresponding EigenDABackend enum
+func disperseToV2ToEigenDABackend(disperseToV2 bool) common.EigenDABackend {
+	if disperseToV2 {
+		return common.V2EigenDABackend
+	}
+	return common.V1EigenDABackend
+}
+
+// eigenDABackendToDisperseToV2 converts an EigenDABackend enum to the corresponding boolean flag
+func eigenDABackendToDisperseToV2(backend common.EigenDABackend) bool {
+	return backend == common.V2EigenDABackend
+}
+
 // handleGetEigenDADispersalBackend handles the GET request to check the current EigenDA backend used for dispersal.
 // This endpoint returns which EigenDA backend version (v1 or v2) is currently being used for blob dispersal.
 func (svr *Server) handleGetEigenDADispersalBackend(w http.ResponseWriter, _ *http.Request) error {
 	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
 
-	var backend common.EigenDABackend
-	if svr.sm.DisperseToV2() {
-		backend = common.V2EigenDABackend
-	} else {
-		backend = common.V1EigenDABackend
-	}
+	backend := disperseToV2ToEigenDABackend(svr.sm.DisperseToV2())
 	backendString := common.EigenDABackendToString(backend)
 
 	response := struct {
@@ -300,21 +308,14 @@ func (svr *Server) handleSetEigenDADispersalBackend(w http.ResponseWriter, r *ht
 		return err
 	}
 
-	// Convert the enum to the internal boolean needed by the storage manager
-	disperseToV2 := backend == common.V2EigenDABackend
+	disperseToV2 := eigenDABackendToDisperseToV2(backend)
 	svr.SetDisperseToV2(disperseToV2)
 
 	// Return the current value in the response
 	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
 
-	// Convert current state to EigenDABackend and then to string for the response
-	var currentBackend common.EigenDABackend
-	if svr.sm.DisperseToV2() {
-		currentBackend = common.V2EigenDABackend
-	} else {
-		currentBackend = common.V1EigenDABackend
-	}
+	currentBackend := disperseToV2ToEigenDABackend(svr.sm.DisperseToV2())
 	backendString := common.EigenDABackendToString(currentBackend)
 
 	response := struct {
