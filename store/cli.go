@@ -40,7 +40,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		},
 		&cli.StringFlag{
 			Name:     DispersalBackendFlagName,
-			Usage:    "Target EigenDA backend version for blob dispersal (e.g. V1, V2).",
+			Usage:    "Target EigenDA backend version for blob dispersal (e.g. V1 or V2).",
 			EnvVars:  withEnvPrefix(envPrefix, "DISPERSAL_BACKEND"),
 			Category: category,
 			Required: false,
