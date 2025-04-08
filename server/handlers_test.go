@@ -297,7 +297,7 @@ func TestHandlerPutErrors(t *testing.T) {
 	}
 }
 
-func TestDisperseToV2Endpoints(t *testing.T) {
+func TestEigenDADispersalBackendEndpoints(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockStorageMgr := mocks.NewMockIManager(ctrl)
@@ -312,7 +312,7 @@ func TestDisperseToV2Endpoints(t *testing.T) {
 		}
 
 		// Test GET endpoint with admin disabled
-		req := httptest.NewRequest(http.MethodGet, "/admin/v2-dispersal", nil)
+		req := httptest.NewRequest(http.MethodGet, "/admin/eigenda-dispersal-backend", nil)
 		rec := httptest.NewRecorder()
 
 		r := mux.NewRouter()
@@ -330,8 +330,8 @@ func TestDisperseToV2Endpoints(t *testing.T) {
 		mockStorageMgr.EXPECT().DisperseToV2().Return(false)
 
 		// Test GET endpoint first to verify initial state
-		t.Run("Get V2 Dispersal State", func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, "/admin/v2-dispersal", nil)
+		t.Run("Get EigenDA Dispersal Backend", func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/admin/eigenda-dispersal-backend", nil)
 			rec := httptest.NewRecorder()
 
 			r := mux.NewRouter()
@@ -342,19 +342,19 @@ func TestDisperseToV2Endpoints(t *testing.T) {
 			require.Equal(t, http.StatusOK, rec.Code)
 
 			var response struct {
-				DisperseToV2 bool `json:"disperseToV2"`
+				EigenDADispersalBackend string `json:"eigenDADispersalBackend"`
 			}
 			err := json.Unmarshal(rec.Body.Bytes(), &response)
 			require.NoError(t, err)
-			require.False(t, response.DisperseToV2)
+			require.Equal(t, common.EigenDABackendToString(common.V1EigenDABackend), response.EigenDADispersalBackend)
 		})
 
-		// Test PUT endpoint to set state to true
-		t.Run("Set V2 Dispersal State", func(t *testing.T) {
+		// Test PUT endpoint to set the EigenDA dispersal backend
+		t.Run("Set EigenDA Dispersal Backend", func(t *testing.T) {
 			requestBody := struct {
-				DisperseToV2 bool `json:"disperseToV2"`
+				EigenDADispersalBackend string `json:"eigenDADispersalBackend"`
 			}{
-				DisperseToV2: true,
+				EigenDADispersalBackend: common.EigenDABackendToString(common.V2EigenDABackend),
 			}
 			jsonBody, err := json.Marshal(requestBody)
 			require.NoError(t, err)
@@ -362,7 +362,7 @@ func TestDisperseToV2Endpoints(t *testing.T) {
 			mockStorageMgr.EXPECT().SetDisperseToV2(true)
 			mockStorageMgr.EXPECT().DisperseToV2().Return(true)
 
-			req := httptest.NewRequest(http.MethodPut, "/admin/v2-dispersal", bytes.NewReader(jsonBody))
+			req := httptest.NewRequest(http.MethodPut, "/admin/eigenda-dispersal-backend", bytes.NewReader(jsonBody))
 			rec := httptest.NewRecorder()
 
 			r := mux.NewRouter()
@@ -373,11 +373,11 @@ func TestDisperseToV2Endpoints(t *testing.T) {
 			require.Equal(t, http.StatusOK, rec.Code)
 
 			var response struct {
-				DisperseToV2 bool `json:"disperseToV2"`
+				EigenDADispersalBackend string `json:"eigenDADispersalBackend"`
 			}
 			err = json.Unmarshal(rec.Body.Bytes(), &response)
 			require.NoError(t, err)
-			require.True(t, response.DisperseToV2)
+			require.Equal(t, common.EigenDABackendToString(common.V2EigenDABackend), response.EigenDADispersalBackend)
 		})
 	})
 }

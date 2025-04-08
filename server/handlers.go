@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
+	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/gorilla/mux"
 )
 
@@ -131,15 +132,24 @@ func (svr *Server) handleGetShared(
 	return nil
 }
 
-// handleGetDisperseToV2 handles the GET request to check the current DisperseToV2 state.
-func (svr *Server) handleGetDisperseToV2(w http.ResponseWriter, _ *http.Request) error {
+// handleGetEigenDADispersalBackend handles the GET request to check the current EigenDA backend used for dispersal.
+// This endpoint returns which EigenDA backend version (v1 or v2) is currently being used for blob dispersal.
+func (svr *Server) handleGetEigenDADispersalBackend(w http.ResponseWriter, _ *http.Request) error {
 	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
 
+	var backend common.EigenDABackend
+	if svr.sm.DisperseToV2() {
+		backend = common.V2EigenDABackend
+	} else {
+		backend = common.V1EigenDABackend
+	}
+	backendString := common.EigenDABackendToString(backend)
+
 	response := struct {
-		DisperseToV2 bool `json:"disperseToV2"`
+		EigenDADispersalBackend string `json:"eigenDADispersalBackend"`
 	}{
-		DisperseToV2: svr.sm.DisperseToV2(),
+		EigenDADispersalBackend: backendString,
 	}
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
@@ -263,18 +273,19 @@ func (svr *Server) handlePostShared(
 	return nil
 }
 
-// handleSetDisperseToV2 handles the PUT request to set the DisperseToV2 flag.
-func (svr *Server) handleSetDisperseToV2(w http.ResponseWriter, r *http.Request) error {
+// handleSetEigenDADispersalBackend handles the PUT request to set the EigenDA backend used for dispersal.
+// This endpoint configures which EigenDA backend version (v1 or v2) will be used for blob dispersal.
+func (svr *Server) handleSetEigenDADispersalBackend(w http.ResponseWriter, r *http.Request) error {
 	// Read request body to get the new value
-	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1024)) // Small limit since we only expect a boolean
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1024)) // Small limit since we only expect a string
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to read request body: %v", err), http.StatusBadRequest)
 		return err
 	}
 
-	// Parse the boolean value
+	// Parse the backend string value
 	var setRequest struct {
-		DisperseToV2 bool `json:"disperseToV2"`
+		EigenDADispersalBackend string `json:"eigenDADispersalBackend"`
 	}
 
 	if err := json.Unmarshal(body, &setRequest); err != nil {
@@ -282,16 +293,34 @@ func (svr *Server) handleSetDisperseToV2(w http.ResponseWriter, r *http.Request)
 		return err
 	}
 
-	svr.SetDisperseToV2(setRequest.DisperseToV2)
+	// Convert the string to EigenDABackend enum
+	backend, err := common.StringToEigenDABackend(setRequest.EigenDADispersalBackend)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("invalid eigenDADispersalBackend value: %v", err), http.StatusBadRequest)
+		return err
+	}
+
+	// Convert the enum to the internal boolean needed by the storage manager
+	disperseToV2 := backend == common.V2EigenDABackend
+	svr.SetDisperseToV2(disperseToV2)
 
 	// Return the current value in the response
 	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
 
+	// Convert current state to EigenDABackend and then to string for the response
+	var currentBackend common.EigenDABackend
+	if svr.sm.DisperseToV2() {
+		currentBackend = common.V2EigenDABackend
+	} else {
+		currentBackend = common.V1EigenDABackend
+	}
+	backendString := common.EigenDABackendToString(currentBackend)
+
 	response := struct {
-		DisperseToV2 bool `json:"disperseToV2"`
+		EigenDADispersalBackend string `json:"eigenDADispersalBackend"`
 	}{
-		DisperseToV2: svr.sm.DisperseToV2(),
+		EigenDADispersalBackend: backendString,
 	}
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {

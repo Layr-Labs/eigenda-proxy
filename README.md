@@ -132,35 +132,43 @@ Response:
 
 #### Admin Routes
 
-The proxy provides administrative endpoints to control runtime behavior. By default, these endpoints are disabled and must be explicitly enabled through configuration.
+The proxy provides administrative endpoints to control runtime behavior. By default, these endpoints are disabled 
+and must be explicitly enabled through configuration.
 
-To enable admin endpoints, set the `--admin-endpoints-enabled` flag to `true` or set the environment variable `EIGENDA_PROXY_ADMIN_ENDPOINTS_ENABLED=true` when starting the proxy server.
+To enable admin endpoints, set the `--admin-endpoints-enabled` flag to `true` or set the environment variable 
+`EIGENDA_PROXY_ADMIN_ENDPOINTS_ENABLED=true` when starting the proxy server.
 
 When enabled, the following admin endpoints are available:
 
 ```text
 Request:
-  GET /admin/v2-dispersal
+  GET /admin/eigenda-dispersal-backend
 
 Response:
   200 OK
   Content-Type: application/json
-  Body: {"disperseToV2": boolean}
+  Body: {"eigenDADispersalBackend": string}
 ```
 
 ```text
 Request:
-  PUT /admin/v2-dispersal
+  PUT /admin/eigenda-dispersal-backend
   Content-Type: application/json
-  Body: {"disperseToV2": boolean}
+  Body: {"eigenDADispersalBackend": string}
 
 Response:
   200 OK
   Content-Type: application/json
-  Body: {"disperseToV2": boolean}
+  Body: {"eigenDADispersalBackend": string}
 ```
 
-These endpoints allow operators to check and set whether blobs are dispersed to EigenDA V1 or V2. The GET endpoint retrieves the current state, while the PUT endpoint idempotently updates the state to the specified value. The `disperseToV2` value in the response represents the current state after any changes have been applied.
+These endpoints allow operators to check and set which EigenDA backend version is used for blob dispersal. 
+The GET endpoint retrieves the current state, while the PUT endpoint idempotently updates the state to the specified value. 
+The `eigenDADispersalBackend` value represents the current backend being used after any changes have been applied.
+
+Valid values for `eigenDADispersalBackend` are:
+- `"v1"`: Use EigenDA V1 backend for dispersal
+- `"v2"`: Use EigenDA V2 backend for dispersal
 
 ### Migrating from EigenDA V1 to V2
 
@@ -179,12 +187,12 @@ This approach allows you to switch from V1 to V2 while the proxy is running, wit
    - Set `EIGENDA_PROXY_ADMIN_ENDPOINTS_ENABLED=true` to expose the admin API
       - This allows runtime switching between V1 and V2 without service restart
 
-2**Runtime Migration**
+2. **Runtime Migration**
    - When ready to migrate to V2, use the admin endpoint to switch dispersal targets:
    ```
-   curl -X PUT http://localhost:3100/admin/v2-dispersal \
+   curl -X PUT http://localhost:3100/admin/eigenda-dispersal-backend \
      -H "Content-Type: application/json" \
-     -d '{"disperseToV2": true}'
+     -d '{"eigenDADispersalBackend": "v2"}'
    ```
 
 This migration path allows for a seamless transition from V1 to V2 without service downtime and provides the ability 
