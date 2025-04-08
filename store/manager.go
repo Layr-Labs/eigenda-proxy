@@ -49,9 +49,6 @@ func (m *Manager) GetDispersalBackend() common.EigenDABackend {
 }
 
 // SetDispersalBackend sets which EigenDA backend to use for dispersal
-//
-// If set to V2EigenDABackend, the manager will disperse to eigenDA v2.
-// If set to V1EigenDABackend, it will disperse to eigenDA v1.
 func (m *Manager) SetDispersalBackend(backend common.EigenDABackend) {
 	m.dispersalBackend.Store(backend)
 }

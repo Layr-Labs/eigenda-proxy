@@ -113,9 +113,9 @@ func (smb *StorageManagerBuilder) Build(ctx context.Context) (*Manager, error) {
 	v2Enabled := slices.Contains(smb.managerCfg.BackendsToEnable, common.V2EigenDABackend)
 
 	if smb.managerCfg.DispersalBackend == common.V2EigenDABackend && !v2Enabled {
-		return nil, fmt.Errorf("dispersal backend is set to V2, but v2 backend is not enabled")
+		return nil, fmt.Errorf("dispersal backend is set to V2, but V2 backend is not enabled")
 	} else if smb.managerCfg.DispersalBackend == common.V1EigenDABackend && !v1Enabled {
-		return nil, fmt.Errorf("dispersal backend is set to V1, but v1 backend is not enabled")
+		return nil, fmt.Errorf("dispersal backend is set to V1, but V1 backend is not enabled")
 	}
 
 	if v1Enabled {
