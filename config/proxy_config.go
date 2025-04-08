@@ -50,7 +50,7 @@ func ReadProxyConfig(ctx *cli.Context) (ProxyConfig, error) {
 	}
 
 	var maxBlobSizeBytes uint64
-	if storageConfig.DisperseToV2 {
+	if storageConfig.DispersalBackend == common.V2EigenDABackend {
 		maxBlobSizeBytes = clientConfigV2.MaxBlobSizeBytes
 	} else {
 		maxBlobSizeBytes = clientConfigV1.MaxBlobSizeBytes
