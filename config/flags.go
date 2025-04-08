@@ -27,6 +27,7 @@ const (
 	S3Category              = "S3 Cache/Fallback"
 	VerifierCategory        = "Cert Verifier (V1 only)"
 	KZGCategory             = "KZG"
+	ProxyServerCategory     = "Proxy Server"
 )
 
 const (
@@ -35,26 +36,29 @@ const (
 	AdminEndpointsEnabledFlagName = "admin-endpoints-enabled"
 )
 
-func CLIFlags() []cli.Flag {
+func CLIFlags(envPrefix string, category string) []cli.Flag {
 	// TODO: Decompose all flags into constituent parts based on their respective category / usage
 	flags := []cli.Flag{
 		&cli.StringFlag{
-			Name:    ListenAddrFlagName,
-			Usage:   "Server listening address",
-			Value:   "0.0.0.0",
-			EnvVars: common.PrefixEnvVar(common.GlobalPrefix, "ADDR"),
+			Name:     ListenAddrFlagName,
+			Usage:    "Server listening address",
+			Value:    "0.0.0.0",
+			EnvVars:  common.PrefixEnvVar(envPrefix, "ADDR"),
+			Category: category,
 		},
 		&cli.IntFlag{
-			Name:    PortFlagName,
-			Usage:   "Server listening port",
-			Value:   3100,
-			EnvVars: common.PrefixEnvVar(common.GlobalPrefix, "PORT"),
+			Name:     PortFlagName,
+			Usage:    "Server listening port",
+			Value:    3100,
+			EnvVars:  common.PrefixEnvVar(envPrefix, "PORT"),
+			Category: category,
 		},
 		&cli.BoolFlag{
-			Name:    AdminEndpointsEnabledFlagName,
-			Usage:   "Enable administrative HTTP endpoints for runtime configuration",
-			Value:   false,
-			EnvVars: common.PrefixEnvVar(common.GlobalPrefix, "ADMIN_ENDPOINTS_ENABLED"),
+			Name:     AdminEndpointsEnabledFlagName,
+			Usage:    "Enable administrative HTTP endpoints for runtime configuration",
+			Value:    false,
+			EnvVars:  common.PrefixEnvVar(envPrefix, "ADMIN_ENDPOINTS_ENABLED"),
+			Category: category,
 		},
 	}
 
@@ -65,7 +69,7 @@ func CLIFlags() []cli.Flag {
 var Flags = []cli.Flag{}
 
 func init() {
-	Flags = CLIFlags()
+	Flags = CLIFlags(common.GlobalPrefix, ProxyServerCategory)
 	Flags = append(Flags, logging.CLIFlags(common.GlobalPrefix, LoggingFlagsCategory)...)
 	Flags = append(Flags, metrics.CLIFlags(common.GlobalPrefix, MetricsFlagCategory)...)
 	Flags = append(Flags, eigendaflags.CLIFlags(common.GlobalPrefix, EigenDAClientCategory)...)
