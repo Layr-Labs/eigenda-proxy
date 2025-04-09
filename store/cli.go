@@ -30,21 +30,21 @@ func withEnvPrefix(envPrefix, s string) []string {
 // category is used to group the flags in the help output (see https://cli.urfave.org/v2/examples/flags/#grouping)
 func CLIFlags(envPrefix, category string) []cli.Flag {
 	return []cli.Flag{
-		&cli.StringSliceFlag{
+		&cli.GenericFlag{
 			Name:     BackendsToEnableFlagName,
 			Usage:    "Comma separated list of eigenDA backends to enable (e.g. V1,V2)",
 			EnvVars:  withEnvPrefix(envPrefix, "BACKENDS_TO_ENABLE"),
-			Value:    cli.NewStringSlice("V1"),
+			Value:    common.NewEigenDABackendSliceValue([]common.EigenDABackend{common.V1EigenDABackend}),
 			Category: category,
 			Required: false,
 		},
-		&cli.StringFlag{
+		&cli.GenericFlag{
 			Name:     DispersalBackendFlagName,
 			Usage:    "Target EigenDA backend version for blob dispersal (e.g. V1 or V2).",
 			EnvVars:  withEnvPrefix(envPrefix, "DISPERSAL_BACKEND"),
 			Category: category,
 			Required: false,
-			Value:    "V1",
+			Value:    common.NewEigenDABackendValue(common.V1EigenDABackend),
 		},
 		&cli.StringSliceFlag{
 			Name:     FallbackTargetsFlagName,
@@ -71,24 +71,23 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 }
 
 func ReadConfig(ctx *cli.Context) (Config, error) {
-	backendStrings := ctx.StringSlice(BackendsToEnableFlagName)
-	if len(backendStrings) == 0 {
+	// Get backends directly as []common.EigenDABackend
+	backendsValue, ok := ctx.Generic(BackendsToEnableFlagName).(*common.EigenDABackendSliceValue)
+	if !ok {
+		return Config{}, fmt.Errorf("failed to get backends value from context")
+	}
+	backends := *backendsValue.Value
+
+	if len(backends) == 0 {
 		return Config{}, errors.New("backends must not be empty")
 	}
 
-	backends := make([]common.EigenDABackend, 0, len(backendStrings))
-	for _, backendString := range backendStrings {
-		backend, err := common.StringToEigenDABackend(backendString)
-		if err != nil {
-			return Config{}, fmt.Errorf("string to eigenDA backend: %w", err)
-		}
-		backends = append(backends, backend)
+	// Get dispersal backend directly as common.EigenDABackend
+	dispersalBackendValue, ok := ctx.Generic(DispersalBackendFlagName).(*common.EigenDABackendValue)
+	if !ok {
+		return Config{}, fmt.Errorf("failed to get dispersal backend value from context")
 	}
-
-	dispersalBackend, err := common.StringToEigenDABackend(ctx.String(DispersalBackendFlagName))
-	if err != nil {
-		return Config{}, fmt.Errorf("string to eigenDA backend: %w", err)
-	}
+	dispersalBackend := *dispersalBackendValue.Value
 
 	return Config{
 		BackendsToEnable: backends,
