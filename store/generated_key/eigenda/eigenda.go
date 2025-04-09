@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/utils"
 	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/Layr-Labs/eigenda/api/grpc/disperser"
@@ -27,7 +28,17 @@ type StoreConfig struct {
 	// total duration time that client waits for blob to confirm
 	StatusQueryTimeout time.Duration
 
-	// number of times to retry eigenda blob dispersals
+	// PutRetries specifies the total number of times to try dispersing a blob.
+	// This value comes from utils.MapPutRetries() and is passed directly to retry-go.
+	//
+	// IMPORTANT: In retry-go, this parameter means:
+	// - Value of 0: Try indefinitely until success
+	// - Value of 1: Try once with no retries
+	// - Value > 1: Try up to this many times total (first try + up to N-1 retries)
+	//
+	// Users should NEVER set this field directly. Always use NewStoreConfig()
+	// which correctly maps from the user-friendly int values to the internal uint values
+	// required by the retry-go library.
 	PutRetries uint
 }
 
@@ -41,8 +52,28 @@ type Store struct {
 
 var _ common.GeneratedKeyStore = (*Store)(nil)
 
-func NewStore(client *clients.EigenDAClient,
-	v *verify.Verifier, log logging.Logger, cfg *StoreConfig) (*Store, error) {
+// NewStoreConfig creates a new StoreConfig with special handling for PutRetries
+// See utils.MapPutRetries for details on how putRetries is interpreted
+func NewStoreConfig(
+	maxBlobSizeBytes uint64,
+	ethConfirmationDepth uint64,
+	statusQueryTimeout time.Duration,
+	putRetries int,
+) *StoreConfig {
+	return &StoreConfig{
+		MaxBlobSizeBytes:     maxBlobSizeBytes,
+		EthConfirmationDepth: ethConfirmationDepth,
+		StatusQueryTimeout:   statusQueryTimeout,
+		PutRetries:           utils.MapPutRetries(putRetries),
+	}
+}
+
+func NewStore(
+	client *clients.EigenDAClient,
+	v *verify.Verifier,
+	log logging.Logger,
+	cfg *StoreConfig,
+) (*Store, error) {
 	return &Store{
 		client:   client,
 		verifier: v,
@@ -93,7 +124,8 @@ func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 		)
 	}
 
-	// We attempt to disperse the blob to EigenDA up to 3 times, unless we get a 400 error on any attempt.
+	// We attempt to disperse the blob to EigenDA up to e.cfg.PutRetries times total,
+	// unless we get a 400 error which aborts retries.
 	blobInfo, err := retry.DoWithData(
 		func() (*disperser.BlobInfo, error) {
 			return e.client.PutBlob(ctx, value)

@@ -269,12 +269,12 @@ func (smb *StorageManagerBuilder) buildEigenDAV1Backend(ctx context.Context) (co
 		client,
 		verifier,
 		smb.log,
-		&eigenda.StoreConfig{
-			MaxBlobSizeBytes:     smb.v1ClientCfg.MaxBlobSizeBytes,
-			EthConfirmationDepth: smb.v1VerifierCfg.EthConfirmationDepth,
-			StatusQueryTimeout:   smb.v1ClientCfg.EdaClientCfg.StatusQueryTimeout,
-			PutRetries:           smb.v1ClientCfg.PutRetries,
-		},
+		eigenda.NewStoreConfig(
+			smb.v1ClientCfg.MaxBlobSizeBytes,
+			smb.v1VerifierCfg.EthConfirmationDepth,
+			smb.v1ClientCfg.EdaClientCfg.StatusQueryTimeout,
+			smb.v1ClientCfg.PutRetries,
+		),
 	)
 }
 

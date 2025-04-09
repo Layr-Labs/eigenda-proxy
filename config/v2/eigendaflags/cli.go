@@ -75,9 +75,9 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Category: category,
 			Required: false,
 		},
-		&cli.UintFlag{
+		&cli.IntFlag{
 			Name:     PutRetriesFlagName,
-			Usage:    "Number of times to retry blob dispersals before serving an error response.",
+			Usage:    "Total number of times to try blob dispersals before serving an error response. Set to 0 for no retries (try only once), set to a negative value to retry indefinitely.",
 			Value:    3,
 			EnvVars:  []string{withEnvPrefix(envPrefix, "PUT_RETRIES")},
 			Category: category,
@@ -170,7 +170,7 @@ func ReadClientConfigV2(ctx *cli.Context) (common.ClientConfigV2, error) {
 		DisperserClientCfg:         disperserConfig,
 		PayloadDisperserCfg:        readPayloadDisperserCfg(ctx),
 		RelayPayloadRetrieverCfg:   readRetrievalConfig(ctx),
-		PutRetries:                 ctx.Uint(PutRetriesFlagName),
+		PutRetries:                 ctx.Int(PutRetriesFlagName),
 		MaxBlobSizeBytes:           maxBlobLengthBytes,
 		EigenDACertVerifierAddress: ctx.String(CertVerifierAddrFlagName),
 	}, nil
