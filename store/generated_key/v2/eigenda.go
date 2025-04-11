@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/utils"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/coretypes"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/payloaddispersal"
 	"github.com/Layr-Labs/eigensdk-go/logging"
@@ -19,6 +20,16 @@ import (
 
 // Store does storage interactions and verifications for blobs with the EigenDA V2 protocol.
 type Store struct {
+	// putRetries specifies the total number of times to try dispersing a blob.
+	// This value comes from utils.MapPutRetries() and is passed directly to retry-go.
+	//
+	// IMPORTANT: In retry-go, this parameter means:
+	// - Value of 0: Try indefinitely until success
+	// - Value of 1: Try once with no retries
+	// - Value > 1: Try up to this many times total (first try + up to N-1 retries)
+	//
+	// Users should NEVER set this field directly. Always use NewStore(), which correctly maps from the user-friendly
+	// int values to the internal uint values required by the retry-go library.
 	putRetries uint
 	log        logging.Logger
 
@@ -31,14 +42,14 @@ var _ common.GeneratedKeyStore = (*Store)(nil)
 
 func NewStore(
 	log logging.Logger,
-	putRetries uint,
+	putRetries int,
 	disperser *payloaddispersal.PayloadDisperser,
 	retriever clients.PayloadRetriever,
 	verifier clients.ICertVerifier,
 ) (*Store, error) {
 	return &Store{
 		log:        log,
-		putRetries: putRetries,
+		putRetries: utils.MapPutRetries(putRetries),
 		disperser:  disperser,
 		retriever:  retriever,
 		verifier:   verifier,

@@ -150,9 +150,9 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		},
 		// Flags that are proxy specific, and not used by the eigenda-client
 		// TODO: should we move this to a more specific category, like EIGENDA_STORE?
-		&cli.UintFlag{
+		&cli.IntFlag{
 			Name:     PutRetriesFlagName,
-			Usage:    "Number of times to retry blob dispersals.",
+			Usage:    "Total number of times to try blob dispersals before serving an error response. Set to 0 for no retries (try only once), set to a negative value to retry indefinitely.",
 			Value:    3,
 			EnvVars:  []string{withEnvPrefix(envPrefix, "PUT_RETRIES")},
 			Category: category,
@@ -202,7 +202,7 @@ func ReadClientConfigV1(ctx *cli.Context) (common.ClientConfigV1, error) {
 	return common.ClientConfigV1{
 		EdaClientCfg:     eigenDAClientConfig,
 		MaxBlobSizeBytes: maxBlobLengthBytes,
-		PutRetries:       ctx.Uint(PutRetriesFlagName),
+		PutRetries:       ctx.Int(PutRetriesFlagName),
 	}, nil
 }
 
