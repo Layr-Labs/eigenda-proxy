@@ -173,6 +173,11 @@ func ReadClientConfigV2(ctx *cli.Context) (common.ClientConfigV2, error) {
 		PutRetries:                 ctx.Uint(PutRetriesFlagName),
 		MaxBlobSizeBytes:           maxBlobLengthBytes,
 		EigenDACertVerifierAddress: ctx.String(CertVerifierAddrFlagName),
+		// we don't expose this configuration to users, as all production use cases should have
+		// both retrieval methods enabled. This could be exposed in the future, if necessary.
+		// Note the order of these retrievers, which is significant: the relay retriever will be
+		// tried first, and the validator retriever will only be tried if the relay retriever fails
+		RetrieversToEnable: []common.RetrieverType{common.RelayRetrieverType, common.ValidatorRetrieverType},
 	}, nil
 }
 
@@ -205,7 +210,7 @@ func readPayloadDisperserCfg(ctx *cli.Context) payloaddispersal.PayloadDisperser
 	return payloaddispersal.PayloadDisperserConfig{
 		PayloadClientConfig:    payCfg,
 		DisperseBlobTimeout:    ctx.Duration(DisperseBlobTimeoutFlagName),
-		BlobCertifiedTimeout:   ctx.Duration(BlobCertifiedTimeoutFlagName),
+		BlobCompleteTimeout:    ctx.Duration(BlobCertifiedTimeoutFlagName),
 		BlobStatusPollInterval: ctx.Duration(BlobStatusPollIntervalFlagName),
 		ContractCallTimeout:    ctx.Duration(ContractCallTimeoutFlagName),
 	}
