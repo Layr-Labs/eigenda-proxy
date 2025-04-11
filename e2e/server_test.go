@@ -21,7 +21,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-
 // requireDispersalRetrievalEigenDA ... ensure that blob was successfully dispersed/read to/from EigenDA
 func requireDispersalRetrievalEigenDA(t *testing.T, cm *metrics.CountMap, mode commitments.CommitmentMode) {
 	writeCount, err := cm.Get(string(mode), http.MethodPost)
