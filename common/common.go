@@ -8,6 +8,12 @@ import (
 
 const GlobalPrefix = "EIGENDA_PROXY"
 
+type ContextKey string
+
+const (
+	EncodingCtxKey ContextKey = "encoding"
+)
+
 func PrefixEnvVar(prefix, suffix string) []string {
 	return []string{prefix + "_" + suffix}
 }

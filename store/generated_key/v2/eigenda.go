@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/coretypes"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/payloaddispersal"
@@ -14,7 +15,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/Layr-Labs/eigenda/api/clients/v2"
-	"github.com/ethereum/go-ethereum/rlp"
 )
 
 // Store does storage interactions and verifications for blobs with the EigenDA V2 protocol.
@@ -48,13 +48,12 @@ func NewStore(
 // Get fetches a blob from DA using certificate fields and verifies blob
 // against commitment to ensure data is valid and non-tampered.
 func (e Store) Get(ctx context.Context, key []byte) ([]byte, error) {
-	var cert coretypes.EigenDACert
-	err := rlp.DecodeBytes(key, &cert)
+	cert, err := common.DecodeCertFromCtx(ctx, key)
 	if err != nil {
-		return nil, fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
+		return nil, fmt.Errorf("decoding cert: %w", err)
 	}
 
-	payload, err := e.retriever.GetPayload(ctx, &cert)
+	payload, err := e.retriever.GetPayload(ctx, cert)
 	if err != nil {
 		return nil, fmt.Errorf("getting payload: %w", err)
 	}
@@ -111,7 +110,12 @@ func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	return rlp.EncodeToBytes(cert)
+	encodingAlg, ok := ctx.Value(common.EncodingCtxKey).(commitments.EncodingType)
+	if !ok {
+		return nil, fmt.Errorf("could not read encoding type from context")
+	}
+
+	return common.EncodeV2CertToBytes(encodingAlg, cert)
 }
 
 // BackendType returns the backend type for EigenDA Store
@@ -124,11 +128,10 @@ func (e Store) BackendType() common.BackendType {
 // Since v2 methods for fetching a payload are responsible for verifying the received bytes against the certificate,
 // this Verify method only needs to check the cert on chain. That is why the third parameter is ignored.
 func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte) error {
-	var eigenDACert coretypes.EigenDACert
-	err := rlp.DecodeBytes(certBytes, &eigenDACert)
+	cert, err := common.DecodeCertFromCtx(ctx, certBytes)
 	if err != nil {
-		return fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
+		return fmt.Errorf("decoding cert: %w", err)
 	}
 
-	return e.verifier.VerifyCertV2(ctx, &eigenDACert)
+	return e.verifier.VerifyCertV2(ctx, cert)
 }
