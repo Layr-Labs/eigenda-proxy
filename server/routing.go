@@ -14,6 +14,8 @@ const (
 	routingVarNamePayloadHex        = "payload_hex"
 	routingVarNameVersionByteHex    = "version_byte_hex"
 	routingVarNameCommitTypeByteHex = "commit_type_byte_hex"
+	// routingVarNameEncodingByteHex   = "encoding_byte_hex"
+	routingQueryParamEncoding = "encoding"
 )
 
 func (svr *Server) RegisterRoutes(r *mux.Router) {
@@ -21,7 +23,8 @@ func (svr *Server) RegisterRoutes(r *mux.Router) {
 	// std commitments (for nitro)
 	subrouterGET.HandleFunc("/"+
 		"{optional_prefix:(?:0x)?}"+ // commitments can be prefixed with 0x
-		"{"+routingVarNameVersionByteHex+":[0-9a-fA-F]{2}}"+ // should always be 0x00 for now but we let others through to return a 404
+		"{"+routingVarNameVersionByteHex+":[0-9a-fA-F]{2}}"+
+		// "{"+routingVarNameEncodingByteHex+":[0-9a-fA-F]{2}}"+
 		"{"+routingVarNamePayloadHex+":[0-9a-fA-F]*}",
 		withLogging(withMetrics(svr.handleGetStdCommitment, svr.m, commitments.Standard), svr.log),
 	).Queries("commitment_mode", "standard")
@@ -41,7 +44,8 @@ func (svr *Server) RegisterRoutes(r *mux.Router) {
 		"{optional_prefix:(?:0x)?}"+ // commitments can be prefixed with 0x
 		"{"+routingVarNameCommitTypeByteHex+":01}"+ // 01 for generic commitments
 		"{da_layer_byte:[0-9a-fA-F]{2}}"+ // should always be 0x00 for eigenDA but we let others through to return a 404
-		"{"+routingVarNameVersionByteHex+":[0-9a-fA-F]{2}}"+ // should always be 0x00 for now but we let others through to return a 404
+		"{"+routingVarNameVersionByteHex+":[0-9a-fA-F]{2}}"+
+		// "{"+routingVarNameEncodingByteHex+":[0-9a-fA-F]{2}}"+
 		"{"+routingVarNamePayloadHex+"}",
 		withLogging(withMetrics(svr.handleGetOPGenericCommitment, svr.m, commitments.OptimismGeneric), svr.log),
 	)
@@ -49,6 +53,7 @@ func (svr *Server) RegisterRoutes(r *mux.Router) {
 	subrouterGET.HandleFunc("/"+
 		"{optional_prefix:(?:0x)?}"+ // commitments can be prefixed with 0x
 		"{"+routingVarNameCommitTypeByteHex+":[0-9a-fA-F]{2}}",
+		// "{"+routingVarNameEncodingByteHex+":[0-9a-fA-F]{2}}",
 		func(w http.ResponseWriter, r *http.Request) {
 			svr.log.Info(
 				"unsupported commitment type",

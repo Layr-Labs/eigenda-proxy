@@ -66,7 +66,7 @@ func (mr *MockIManagerMockRecorder) GetDispersalBackend() *gomock.Call {
 }
 
 // Put mocks base method.
-func (m *MockIManager) Put(arg0 context.Context, arg1 commitments.CommitmentMode, arg2, arg3 []byte) ([]byte, error) {
+func (m *MockIManager) Put(arg0 context.Context, arg1 commitments.CommitmentMeta, arg2, arg3 []byte) ([]byte, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Put", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].([]byte)

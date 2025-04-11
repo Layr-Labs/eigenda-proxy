@@ -16,7 +16,7 @@ import (
 // IManager ... read/write interface
 type IManager interface {
 	Get(ctx context.Context, key []byte, cm commitments.CommitmentMeta) ([]byte, error)
-	Put(ctx context.Context, cm commitments.CommitmentMode, key, value []byte) ([]byte, error)
+	Put(ctx context.Context, cm commitments.CommitmentMeta, key, value []byte) ([]byte, error)
 	SetDispersalBackend(backend common.EigenDABackend)
 	GetDispersalBackend() common.EigenDABackend
 }
@@ -129,6 +129,8 @@ func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.Commitment
 			m.log.Warn("Failed to read from cache targets", "err", err)
 		}
 
+		ctx = context.WithValue(ctx, common.EncodingCtxKey, cm.Encoding)
+
 		// 2 - read blob from EigenDA
 		data, err := m.getEigenDAMode(ctx, cm.Version, key)
 		if err == nil {
@@ -155,16 +157,18 @@ func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.Commitment
 }
 
 // Put ... inserts a value into a storage backend based on the commitment mode
-func (m *Manager) Put(ctx context.Context, cm commitments.CommitmentMode, key, value []byte) ([]byte, error) {
+func (m *Manager) Put(ctx context.Context, cm commitments.CommitmentMeta, key, value []byte) ([]byte, error) {
 	var commit []byte
 	var err error
 
 	// 1 - Put blob into primary storage backend
-	switch cm {
+	switch cm.Mode {
 	case commitments.OptimismKeccak: // caching and fallbacks are unsupported for this commitment mode
 		return m.putKeccak256Mode(ctx, key, value)
 	case commitments.OptimismGeneric, commitments.Standard:
-		commit, err = m.putEigenDAMode(ctx, value)
+		println("Setting context with value")
+
+		commit, err = m.putEigenDAMode(context.WithValue(ctx, common.EncodingCtxKey, cm.Encoding), value)
 	default:
 		return nil, fmt.Errorf("unknown commitment mode")
 	}
@@ -201,7 +205,7 @@ func (m *Manager) getVerifyMethod(commitmentType commitments.EigenDACommitmentTy
 	switch commitmentType {
 	case commitments.CertV0:
 		return m.eigenda.Verify, nil
-	case commitments.CertV1:
+	case commitments.CertV1, commitments.CertV2:
 		return m.eigendaV2.Verify, nil
 	default:
 		return nil, fmt.Errorf("commitment version unknown: %b", commitmentType)
@@ -253,7 +257,7 @@ func (m *Manager) getEigenDAMode(
 
 		return nil, err
 
-	case commitments.CertV1:
+	case commitments.CertV1, commitments.CertV2:
 		// the cert must be verified before attempting to get the data, since the get logic assumes the cert is valid
 		// verify v2 doesn't require a value, the "key" is the full cert
 		err := m.eigendaV2.Verify(ctx, key, nil)

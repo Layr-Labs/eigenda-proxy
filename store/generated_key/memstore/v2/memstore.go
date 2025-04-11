@@ -9,8 +9,8 @@ import (
 	"github.com/Layr-Labs/eigenda/api/clients/v2/coretypes"
 	"github.com/consensys/gnark-crypto/ecc/bn254"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/rlp"
 
+	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/ephemeraldb"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
@@ -168,7 +168,8 @@ func (e *MemStore) generateRandomCert(blobContents []byte) (*coretypes.EigenDACe
 }
 
 // Get fetches a value from the store.
-func (e *MemStore) Get(_ context.Context, commit []byte) ([]byte, error) {
+func (e *MemStore) Get(ctx context.Context, commit []byte) ([]byte, error) {
+	println(fmt.Sprintf("GET: %x", commit))
 	encodedBlob, err := e.FetchEntry(crypto.Keccak256Hash(commit).Bytes())
 	if err != nil {
 		return nil, fmt.Errorf("fetching entry via v2 memstore: %w", err)
@@ -181,7 +182,7 @@ func (e *MemStore) Get(_ context.Context, commit []byte) ([]byte, error) {
 // ephemeral db key = keccak256(pseudo_random_cert)
 // this is done to verify that a rollup must be able to provide
 // the same certificate used in dispersal for retrieval
-func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
+func (e *MemStore) Put(ctx context.Context, value []byte) ([]byte, error) {
 	encodedVal, err := e.codec.EncodeBlob(value)
 	if err != nil {
 		return nil, err
@@ -192,10 +193,17 @@ func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
 		return nil, fmt.Errorf("generating random cert: %w", err)
 	}
 
-	certBytes, err := rlp.EncodeToBytes(artificialV2Cert)
-	if err != nil {
-		return nil, fmt.Errorf("rlp decode v2 cert: %w", err)
+	encodingAlg, ok := ctx.Value(common.EncodingCtxKey).(commitments.EncodingType)
+	if !ok {
+		return nil, fmt.Errorf("could not read encoding type from context")
 	}
+
+	certBytes, err := common.EncodeV2CertToBytes(encodingAlg, artificialV2Cert)
+	if err != nil {
+		return nil, fmt.Errorf("encoding v2 cert to bytes: %w", err)
+	}
+
+	println(fmt.Sprintf("PUT: %x", certBytes))
 
 	err = e.InsertEntry(crypto.Keccak256Hash(certBytes).Bytes(), encodedVal)
 	if err != nil { // don't wrap here so api.ErrorFailover{} isn't modified
