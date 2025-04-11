@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
 
 // requireDispersalRetrievalEigenDA ... ensure that blob was successfully dispersed/read to/from EigenDA
 func requireDispersalRetrievalEigenDA(t *testing.T, cm *metrics.CountMap, mode commitments.CommitmentMode) {
@@ -194,30 +196,35 @@ func testProxyClientServerIntegration(t *testing.T, dispersalBackend common.Eige
 			require.NoError(t, err)
 		})
 
-	// t.Run(
-	// 	"get data edge cases", func(t *testing.T) {
-	// 		t.Parallel()
-	// 		testCert := []byte("")
-	// 		_, err := daClient.GetData(ts.Ctx, testCert)
-	// 		require.Error(t, err)
-	// 		assert.True(
-	// 			t, strings.Contains(
-	// 				err.Error(),
-	// 				"404") && !isNilPtrDerefPanic(err.Error()))
+	t.Run(
+		"get data edge cases", func(t *testing.T) {
+			t.Parallel()
+			// Empty certificate test
+			testCert := []byte("")
+			_, err := daClient.GetData(ts.Ctx, testCert)
+			require.Error(t, err)
+			assert.True(
+				t, strings.Contains(
+					err.Error(),
+					"404") && !isNilPtrDerefPanic(err.Error()))
 
-	// 		testCert = []byte{2}
-	// 		_, err = daClient.GetData(ts.Ctx, testCert)
-	// 		require.Error(t, err)
-	// 		assert.True(
-	// 			t, strings.Contains(
-	// 				err.Error(),
-	// 				"400") && !isNilPtrDerefPanic(err.Error()))
+			// Certificate with only version byte that's valid (CertV2)
+			// This test should now pass as CertV2 is valid since the cert encoding byte PR
+			testCert = []byte{byte(commitments.CertV2)}
+			_, err = daClient.GetData(ts.Ctx, testCert)
+			require.Error(t, err)
+			assert.True(
+				t, !strings.Contains(
+					err.Error(),
+					"unsupported version byte") && !isNilPtrDerefPanic(err.Error()),
+				"Error for CertV2 should not complain about unsupported version byte")
 
-	// 		testCert = testutils.RandBytes(10000)
-	// 		_, err = daClient.GetData(ts.Ctx, testCert)
-	// 		require.Error(t, err)
-	// 		assert.True(t, strings.Contains(err.Error(), "400") && !isNilPtrDerefPanic(err.Error()))
-	// 	})
+			// Random large certificate
+			testCert = testutils.RandBytes(10000)
+			_, err = daClient.GetData(ts.Ctx, testCert)
+			require.Error(t, err)
+			assert.True(t, strings.Contains(err.Error(), "400") && !isNilPtrDerefPanic(err.Error()))
+		})
 }
 
 func TestProxyClientV1(t *testing.T) {

@@ -145,25 +145,26 @@ func testProxyClientMalformedInputCases(t *testing.T, dispersalBackend common.Ei
 			require.NoError(t, err)
 		})
 
-	// t.Run(
-	// 	"get data edge cases - unsupported version byte 0x69", func(t *testing.T) {
-	// 		t.Parallel()
-	// 		ts, kill := testutils.CreateTestSuite(tsConfig)
-	// 		defer kill()
+	t.Run(
+		"get data edge cases - unsupported version byte", func(t *testing.T) {
+			t.Parallel()
+			ts, kill := testutils.CreateTestSuite(tsConfig)
+			defer kill()
 
-	// 		cfg := &standard_client.Config{
-	// 			URL: ts.Address(),
-	// 		}
-	// 		daClient := standard_client.New(cfg)
-	// 		testCert := []byte{0x69}
-	// 		_, err := daClient.GetData(ts.Ctx, testCert)
-	// 		require.Error(t, err)
-	// 		assert.True(
-	// 			t,
-	// 			strings.Contains(
-	// 				err.Error(),
-	// 				"unsupported version byte 0x69") && !isNilPtrDerefPanic(err.Error()))
-	// 	})
+			cfg := &standard_client.Config{
+				URL: ts.Address(),
+			}
+			daClient := standard_client.New(cfg)
+			// Use 0xFF which is higher than any defined CertV* constants (should be unsupported)
+			testCert := []byte{0xFF}
+			_, err := daClient.GetData(ts.Ctx, testCert)
+			require.Error(t, err)
+			assert.True(
+				t,
+				strings.Contains(
+					err.Error(),
+					"unsupported version byte") && !isNilPtrDerefPanic(err.Error()))
+		})
 
 	// TODO: what exactly is this test testing? What is the edge case?
 	// Error tested doesn't seem related to the cert being huge.

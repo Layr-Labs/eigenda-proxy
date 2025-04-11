@@ -186,26 +186,3 @@ func parseVersionByte(w http.ResponseWriter, r *http.Request) (byte, error) {
 		return 0, fmt.Errorf("unsupported version byte %x", versionByte)
 	}
 }
-
-// func parseEncodingByte(w http.ResponseWriter, r *http.Request) (byte, error) {
-// 	vars := mux.Vars(r)
-// 	encodingByteHex, isGETRoute := vars[routingVarNameEncodingByteHex]
-// 	if !isGETRoute {
-// 		return byte(commitments.CertV0), nil
-// 	}
-// 	encodingByte, err := hex.DecodeString(encodingByteHex)
-// 	if err != nil {
-// 		return 0, fmt.Errorf("decode version byte %s: %w", encodingByteHex, err)
-// 	}
-// 	if len(encodingByte) != 1 {
-// 		return 0, fmt.Errorf("version byte is not a single byte: %s", encodingByteHex)
-// 	}
-// 	switch encodingByte[0] {
-// 	case byte(commitments.ABIVerifyV2CertEncoding), byte(commitments.RLPEncoding):
-// 		return encodingByte[0], nil
-
-// 	default:
-// 		http.Error(w, fmt.Sprintf("unsupported version byte %x", encodingByte), http.StatusBadRequest)
-// 		return 0, fmt.Errorf("unsupported version byte %x", encodingByte)
-// 	}
-// }
