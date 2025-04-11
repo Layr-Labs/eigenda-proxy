@@ -169,7 +169,6 @@ func (e *MemStore) generateRandomCert(blobContents []byte) (*coretypes.EigenDACe
 
 // Get fetches a value from the store.
 func (e *MemStore) Get(ctx context.Context, commit []byte) ([]byte, error) {
-	println(fmt.Sprintf("GET: %x", commit))
 	encodedBlob, err := e.FetchEntry(crypto.Keccak256Hash(commit).Bytes())
 	if err != nil {
 		return nil, fmt.Errorf("fetching entry via v2 memstore: %w", err)
@@ -202,8 +201,6 @@ func (e *MemStore) Put(ctx context.Context, value []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("encoding v2 cert to bytes: %w", err)
 	}
-
-	println(fmt.Sprintf("PUT: %x", certBytes))
 
 	err = e.InsertEntry(crypto.Keccak256Hash(certBytes).Bytes(), encodedVal)
 	if err != nil { // don't wrap here so api.ErrorFailover{} isn't modified

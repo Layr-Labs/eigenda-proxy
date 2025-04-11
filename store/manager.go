@@ -166,8 +166,6 @@ func (m *Manager) Put(ctx context.Context, cm commitments.CommitmentMeta, key, v
 	case commitments.OptimismKeccak: // caching and fallbacks are unsupported for this commitment mode
 		return m.putKeccak256Mode(ctx, key, value)
 	case commitments.OptimismGeneric, commitments.Standard:
-		println("Setting context with value")
-
 		commit, err = m.putEigenDAMode(context.WithValue(ctx, common.EncodingCtxKey, cm.Encoding), value)
 	default:
 		return nil, fmt.Errorf("unknown commitment mode")
