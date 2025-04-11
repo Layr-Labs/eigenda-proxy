@@ -2,19 +2,19 @@ package eigenda
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
+	"github.com/Layr-Labs/eigenda/api/clients/v2"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/coretypes"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/payloaddispersal"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/avast/retry-go/v4"
+	"github.com/ethereum/go-ethereum/rlp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	"github.com/Layr-Labs/eigenda/api/clients/v2"
-	"github.com/ethereum/go-ethereum/rlp"
 )
 
 // Store does storage interactions and verifications for blobs with the EigenDA V2 protocol.
@@ -22,9 +22,9 @@ type Store struct {
 	putRetries uint
 	log        logging.Logger
 
-	disperser *payloaddispersal.PayloadDisperser
-	retriever clients.PayloadRetriever
-	verifier  clients.ICertVerifier
+	disperser  *payloaddispersal.PayloadDisperser
+	retrievers []clients.PayloadRetriever
+	verifier   clients.ICertVerifier
 }
 
 var _ common.GeneratedKeyStore = (*Store)(nil)
@@ -33,14 +33,14 @@ func NewStore(
 	log logging.Logger,
 	putRetries uint,
 	disperser *payloaddispersal.PayloadDisperser,
-	retriever clients.PayloadRetriever,
+	retrievers []clients.PayloadRetriever,
 	verifier clients.ICertVerifier,
 ) (*Store, error) {
 	return &Store{
 		log:        log,
 		putRetries: putRetries,
 		disperser:  disperser,
-		retriever:  retriever,
+		retrievers: retrievers,
 		verifier:   verifier,
 	}, nil
 }
@@ -54,12 +54,18 @@ func (e Store) Get(ctx context.Context, key []byte) ([]byte, error) {
 		return nil, fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
 	}
 
-	payload, err := e.retriever.GetPayload(ctx, &cert)
-	if err != nil {
-		return nil, fmt.Errorf("getting payload: %w", err)
+	// Try each retriever in sequence until one succeeds
+	var errs []error
+	for _, retriever := range e.retrievers {
+		payload, err := retriever.GetPayload(ctx, &cert)
+		if err == nil {
+			return payload.Serialize(), nil
+		}
+
+		e.log.Debugf("Payload retriever failed: %v", err)
 	}
 
-	return payload.Serialize(), nil
+	return nil, fmt.Errorf("all retrievers failed: %w", errors.Join(errs...))
 }
 
 // Put disperses a blob for some pre-image and returns the associated RLP encoded certificate commit.

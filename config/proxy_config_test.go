@@ -59,8 +59,11 @@ func validCfg() ProxyConfig {
 				Port:              "9999",
 				UseSecureGrpcFlag: true,
 			},
-			EigenDACertVerifierAddress: "0x0000000000032443134",
-			MaxBlobSizeBytes:           maxBlobLengthBytes,
+			EigenDACertVerifierAddress:    "0x0000000000032443134",
+			MaxBlobSizeBytes:              maxBlobLengthBytes,
+			BLSOperatorStateRetrieverAddr: "0x000000000004324311",
+			EigenDAServiceManagerAddr:     "0x000000000005324322",
+			RetrieversToEnable:            []common.RetrieverType{common.RelayRetrieverType, common.ValidatorRetrieverType},
 		},
 		StorageConfig: store.Config{
 			BackendsToEnable: []common.EigenDABackend{common.V1EigenDABackend, common.V2EigenDABackend},
