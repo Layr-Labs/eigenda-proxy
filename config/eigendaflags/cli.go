@@ -65,12 +65,12 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.DurationFlag{
 			Name: ConfirmationTimeoutFlagName,
 			Usage: `The total amount of time that the client will spend waiting for EigenDA
-			to "confirm" (include onchain) a blob after it has been dispersed. Note that
-			we stick to "confirm" here but this really means InclusionTimeout,
-			not confirmation in the sense of confirmation depth.
-			
-			If ConfirmationTimeout time passes and the blob is not yet confirmed,
-			the client will return an api.ErrorFailover to let the caller failover to EthDA.`,
+				to "confirm" (include onchain) a blob after it has been dispersed. Note that
+				we stick to "confirm" here but this really means InclusionTimeout,
+				not confirmation in the sense of confirmation depth.
+				
+				If ConfirmationTimeout time passes and the blob is not yet confirmed,
+				the client will return an api.ErrorFailover to let the caller failover to EthDA.`,
 			Value:    15 * time.Minute,
 			EnvVars:  []string{withEnvPrefix(envPrefix, "CONFIRMATION_TIMEOUT")},
 			Category: category,
@@ -151,8 +151,9 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		// Flags that are proxy specific, and not used by the eigenda-client
 		// TODO: should we move this to a more specific category, like EIGENDA_STORE?
 		&cli.IntFlag{
-			Name:     PutRetriesFlagName,
-			Usage:    "Total number of times to try blob dispersals before serving an error response. Set to 0 for no retries (try only once), set to a negative value to retry indefinitely.",
+			Name: PutRetriesFlagName,
+			Usage: "Total number of times to try blob dispersals before serving an error response." +
+				">0 = try dispersal that many times. <0 = retry indefinitely. 0 is not permitted (causes startup error).",
 			Value:    3,
 			EnvVars:  []string{withEnvPrefix(envPrefix, "PUT_RETRIES")},
 			Category: category,
@@ -160,8 +161,8 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.StringFlag{
 			Name: MaxBlobLengthFlagName,
 			Usage: `Maximum blob length to be written or read from EigenDA. Determines the number of SRS points
-						loaded into memory for KZG commitments. Example units: '30MiB', '4Kb', '30MB'. Maximum size
-						slightly exceeds 1GB.`,
+							loaded into memory for KZG commitments. Example units: '30MiB', '4Kb', '30MB'. Maximum size
+							slightly exceeds 1GB.`,
 			EnvVars:  []string{withEnvPrefix(envPrefix, "MAX_BLOB_LENGTH")},
 			Value:    "16MiB",
 			Category: category,
@@ -181,7 +182,7 @@ func ParseMaxBlobLength(input string) (uint64, error) {
 	if numBytes > MaxAllowedBlobSize {
 		return 0, fmt.Errorf(
 			`excluding disperser constraints on max blob size, SRS points constrain the maxBlobLength 
-					configuration parameter to be less than than %d bytes`,
+						configuration parameter to be less than than %d bytes`,
 			MaxAllowedBlobSize,
 		)
 	}
@@ -202,7 +203,7 @@ func ReadClientConfigV1(ctx *cli.Context) (common.ClientConfigV1, error) {
 	return common.ClientConfigV1{
 		EdaClientCfg:     eigenDAClientConfig,
 		MaxBlobSizeBytes: maxBlobLengthBytes,
-		PutRetries:       ctx.Int(PutRetriesFlagName),
+		PutTries:         ctx.Int(PutRetriesFlagName),
 	}, nil
 }
 

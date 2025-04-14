@@ -28,18 +28,11 @@ type StoreConfig struct {
 	// total duration time that client waits for blob to confirm
 	StatusQueryTimeout time.Duration
 
-	// PutRetries specifies the total number of times to try dispersing a blob.
-	// This value comes from utils.MapPutRetries() and is passed directly to retry-go.
-	//
-	// IMPORTANT: In retry-go, this parameter means:
-	// - Value of 0: Try indefinitely until success
-	// - Value of 1: Try once with no retries
-	// - Value > 1: Try up to this many times total (first try + up to N-1 retries)
-	//
-	// Users should NEVER set this field directly. Always use NewStoreConfig()
-	// which correctly maps from the user-friendly int values to the internal uint values
-	// required by the retry-go library.
-	PutRetries uint
+	// Number of times to try blob dispersals:
+	// - If > 0: Try N times total
+	// - If < 0: Retry indefinitely until success
+	// - If = 0: Not permitted
+	PutTries int
 }
 
 // Store does storage interactions and verifications for blobs with DA.
@@ -52,20 +45,25 @@ type Store struct {
 
 var _ common.GeneratedKeyStore = (*Store)(nil)
 
-// NewStoreConfig creates a new StoreConfig with special handling for PutRetries
-// See utils.MapPutRetries for details on how putRetries is interpreted
+// NewStoreConfig creates a new StoreConfig with validation for PutTries.
+// PutTries==0 is not permitted, and will return an error
 func NewStoreConfig(
 	maxBlobSizeBytes uint64,
 	ethConfirmationDepth uint64,
 	statusQueryTimeout time.Duration,
-	putRetries int,
-) *StoreConfig {
+	putTries int,
+) (*StoreConfig, error) {
+	if putTries == 0 {
+		return nil, fmt.Errorf(
+			"putTries==0 is not permitted. >0 means 'try N times', <0 means 'retry indefinitely'")
+	}
+
 	return &StoreConfig{
 		MaxBlobSizeBytes:     maxBlobSizeBytes,
 		EthConfirmationDepth: ethConfirmationDepth,
 		StatusQueryTimeout:   statusQueryTimeout,
-		PutRetries:           utils.MapPutRetries(putRetries),
-	}
+		PutTries:             putTries,
+	}, nil
 }
 
 func NewStore(
@@ -124,7 +122,7 @@ func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 		)
 	}
 
-	// We attempt to disperse the blob to EigenDA up to e.cfg.PutRetries times total,
+	// We attempt to disperse the blob to EigenDA up to e.cfg.PutTries times total,
 	// unless we get a 400 error which aborts retries.
 	blobInfo, err := retry.DoWithData(
 		func() (*disperser.BlobInfo, error) {
@@ -157,7 +155,9 @@ func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 		// it to an http 503 to signify to the client (batcher) to failover to ethda
 		// b/c eigenda is temporarily down.
 		retry.LastErrorOnly(true),
-		retry.Attempts(e.cfg.PutRetries),
+		// retry.Attempts uses different semantics than our config field. ConvertToRetryGoAttempts converts between
+		// these two semantics.
+		retry.Attempts(utils.ConvertToRetryGoAttempts(e.cfg.PutTries)),
 	)
 	if err != nil {
 		// TODO: we will want to filter for errors here and return a 503 when needed

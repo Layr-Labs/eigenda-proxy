@@ -13,9 +13,9 @@ import (
 type ClientConfigV1 struct {
 	EdaClientCfg     clients.EigenDAClientConfig
 	MaxBlobSizeBytes uint64
-	// Determines number of times to try blob dispersals:
-	// - If > 0: Try up to that many times total (first attempt + up to N-1 retries)
-	// - If = 0: Try only once (no retries)
-	// - If < 0: Try indefinitely until success
-	PutRetries int
+	// Number of times to try blob dispersals:
+	// - If > 0: Try N times total
+	// - If < 0: Retry indefinitely until success
+	// - If = 0: Not permitted
+	PutTries int
 }

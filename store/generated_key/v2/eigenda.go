@@ -20,18 +20,12 @@ import (
 
 // Store does storage interactions and verifications for blobs with the EigenDA V2 protocol.
 type Store struct {
-	// putRetries specifies the total number of times to try dispersing a blob.
-	// This value comes from utils.MapPutRetries() and is passed directly to retry-go.
-	//
-	// IMPORTANT: In retry-go, this parameter means:
-	// - Value of 0: Try indefinitely until success
-	// - Value of 1: Try once with no retries
-	// - Value > 1: Try up to this many times total (first try + up to N-1 retries)
-	//
-	// Users should NEVER set this field directly. Always use NewStore(), which correctly maps from the user-friendly
-	// int values to the internal uint values required by the retry-go library.
-	putRetries uint
-	log        logging.Logger
+	// Number of times to try blob dispersals:
+	// - If > 0: Try N times total
+	// - If < 0: Retry indefinitely until success
+	// - If = 0: Not permitted
+	putTries int
+	log      logging.Logger
 
 	disperser *payloaddispersal.PayloadDisperser
 	retriever clients.PayloadRetriever
@@ -42,17 +36,22 @@ var _ common.GeneratedKeyStore = (*Store)(nil)
 
 func NewStore(
 	log logging.Logger,
-	putRetries int,
+	putTries int,
 	disperser *payloaddispersal.PayloadDisperser,
 	retriever clients.PayloadRetriever,
 	verifier clients.ICertVerifier,
 ) (*Store, error) {
+	if putTries == 0 {
+		return nil, fmt.Errorf(
+			"putTries==0 is not permitted. >0 means 'try N times', <0 means 'retry indefinitely'")
+	}
+
 	return &Store{
-		log:        log,
-		putRetries: utils.MapPutRetries(putRetries),
-		disperser:  disperser,
-		retriever:  retriever,
-		verifier:   verifier,
+		log:       log,
+		putTries:  putTries,
+		disperser: disperser,
+		retriever: retriever,
+		verifier:  verifier,
 	}, nil
 }
 
@@ -114,7 +113,9 @@ func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 		// only return the last error. If it is an api.ErrorFailover, then the handler will convert
 		// it to an http 503 to signify to the client (batcher) to failover to ethda b/c eigenda is temporarily down.
 		retry.LastErrorOnly(true),
-		retry.Attempts(e.putRetries),
+		// retry.Attempts uses different semantics than our config field. ConvertToRetryGoAttempts converts between
+		// these two semantics.
+		retry.Attempts(utils.ConvertToRetryGoAttempts(e.putTries)),
 	)
 	if err != nil {
 		// TODO: we will want to filter for errors here and return a 503 when needed, i.e. when dispersal itself failed,
