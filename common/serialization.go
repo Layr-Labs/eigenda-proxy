@@ -93,7 +93,7 @@ func DecodeV2CertFromBytes(encoding commitments.EncodingType, commitment []byte)
 	case commitments.RLPEncoding:
 		var cert *coretypes.EigenDACert
 
-		err := rlp.DecodeBytes(commitment, cert)
+		err := rlp.DecodeBytes(commitment, &cert)
 		if err != nil {
 			return nil, fmt.Errorf("rlp decoding v2 cert: %w", err)
 		}
