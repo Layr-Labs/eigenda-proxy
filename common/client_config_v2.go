@@ -44,5 +44,9 @@ func (cfg *ClientConfigV2) Check() error {
 		return fmt.Errorf("max blob size is required for using EigenDA V2 backend")
 	}
 
+	if cfg.PutTries == 0 {
+		return fmt.Errorf("PutTries==0 is not permitted. >0 means 'try N times', <0 means 'retry indefinitely'")
+	}
+
 	return nil
 }
