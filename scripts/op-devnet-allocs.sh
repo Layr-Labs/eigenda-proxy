@@ -6,7 +6,7 @@ VERSION=$(echo ${VERSION} | sed 's/v//g')
 REPO_NAME=optimism-$(echo ${VERSION} | sed 's/v//g')
 
 echo "Downloading ${REPO_NAME} ..."
-git clone --branch v${VERSION} https://github.com/ethereum-optimism/optimism.git ${REPO_NAME}
+git clone --branch v${VERSION} https://github.com/ethereum-optimism/optimism ${REPO_NAME}
 cd ${REPO_NAME}
 
 echo "Initializing monorepo..."
