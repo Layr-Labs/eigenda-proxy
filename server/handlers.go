@@ -37,7 +37,6 @@ func (svr *Server) handleHealth(w http.ResponseWriter, _ *http.Request) error {
 // handleGetEigenDA helper function used for processing gets for an eigenda backend type
 func (svr *Server) handleGetEigenDA(w http.ResponseWriter, r *http.Request,
 	cm commitments.CommitmentMeta) error {
-
 	rawCommitmentHex, ok := mux.Vars(r)[routingVarNamePayloadHex]
 	if !ok {
 		return fmt.Errorf("commitment not found in path: %s", r.URL.Path)
@@ -111,7 +110,6 @@ func (svr *Server) handleGetOPGenericCommitment(w http.ResponseWriter, r *http.R
 	}
 
 	return svr.handleGetEigenDA(w, r, meta)
-
 }
 
 func (svr *Server) handleGetShared(
@@ -168,7 +166,8 @@ func (svr *Server) handleGetEigenDADispersalBackend(w http.ResponseWriter, _ *ht
 // =================================================================================================
 
 // parseEncodingQueryParamType parses the encoding query parameter
-func (svr *Server) parseEncodingQueryParamType(w http.ResponseWriter, r *http.Request) (commitments.EncodingType, error) {
+func (svr *Server) parseEncodingQueryParamType(w http.ResponseWriter,
+	r *http.Request) (commitments.EncodingType, error) {
 	encodingParam := r.URL.Query().Get(routingQueryParamEncoding)
 	if encodingParam == "" {
 		// If no encoding is provided, use default RLP encoding
@@ -177,7 +176,7 @@ func (svr *Server) parseEncodingQueryParamType(w http.ResponseWriter, r *http.Re
 
 	// if encoding param provided but historical V1 backend used then error
 	if svr.sm.GetDispersalBackend() == common.V1EigenDABackend {
-
+		http.Error(w, "Encoding type query parameter cannot be specified for V1 backend", http.StatusBadRequest)
 	}
 
 	// Parse the encoding type
