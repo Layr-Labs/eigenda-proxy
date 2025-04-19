@@ -5,6 +5,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/Layr-Labs/eigenda-proxy/commitments"
+	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	"github.com/Layr-Labs/eigensdk-go/logging"
@@ -33,6 +35,7 @@ func TestGetSet(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
+	ctx = context.WithValue(ctx, common.EncodingCtxKey, commitments.RLPEncoding)
 	defer cancel()
 
 	require.NoError(t, err)

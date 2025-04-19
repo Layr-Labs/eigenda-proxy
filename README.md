@@ -352,25 +352,38 @@ Validator nodes proceed with the exact reverse process as that used by the seque
 Currently, there are two commitment modes supported with unique encoding schemas for each. The `version byte` is shared for all modes and denotes which version of the EigenDA `DACertificate` is being used/requested. The following versions are currently supported:
 * `0x00`: EigenDA V1 certificate type (i.e, dispersal blob info struct with verification against service manager)
 * `0x01`: EigenDA V2 certificate type
+* `0x02`: EigenDA V2 certificate type with encoding byte
+
+For certificates with version byte 0x02 and higher, an encoding byte is included that specifies the serialization format:
+* `0x00`: RLP encoding (default)
+* `0x01`: `EigenDACertVerifier` *verifyDACertV2* ABI encoding (for smart contract verification)
 
 #### Optimism Commitment Mode
 For `alt-da` Optimism rollups using EigenDA, the following [commitment schemas](https://specs.optimism.io/experimental/alt-da.html#example-commitments) are supported by our proxy:
 
-| commitment_type (byte) | da_layer_byte | version_byte | payload           |
-| ---------------------- | ------------- | ------------ | ----------------- |
-| 0x00                   |               |              | keccak_commitment |
-| 0x01                   | 0x00          | 0x00         | eigenda_cert_v1   |
-| 0x01                   | 0x00          | 0x01         | eigenda_cert_v2   |
+| commitment_type (byte) | da_layer_byte | version_byte | encoding_byte | payload           |
+| ---------------------- | ------------- | ------------ | ------------- | ----------------- |
+| 0x00                   |               |              |               | keccak_commitment |
+| 0x01                   | 0x00          | 0x00         |               | eigenda_cert_v0   |
+| 0x01                   | 0x00          | 0x01         |               | eigenda_cert_v1   |
+| 0x01                   | 0x00          | 0x02         | 0x00          | eigenda_cert_v2 (RLP) |
+| 0x01                   | 0x00          | 0x02         | 0x01          | eigenda_cert_v2 (ABI_verifyDACertV2) |
 
-`keccak256` (commitment_type 0x00) uses an S3 storage backend with where a simple keccak commitment of the `blob` is used as the key. For `generic` commitments, we only support `da_layer_byte` 0x00 which represents EigenDA.
+`keccak256` (commitment_type 0x00) uses an S3 storage backend with where a simple keccak commitment of the `blob` is used as the key. For `generic` commitments, we only support `da_layer_byte` 0x00 which represents EigenDA. For certificates with version byte 0x02 and higher, an encoding byte is included to specify the serialization format.
 
 #### Standard Commitment Mode
 For standard clients (i.e, `clients/standard_client/client.go`) communicating with proxy (e.g, arbitrum nitro), the following commitment schema is supported:
 
-| version_byte | payload         |
-| ------------ | --------------- |
-| 0x00         | eigenda_cert_v1 |
-| 0x01         | eigenda_cert_v2 |
+| version_byte | encoding_byte | payload         |
+| ------------ | ------------- | --------------- |
+| 0x00         |               | eigenda_cert_v0 |
+| 0x01         |               | eigenda_cert_v1 |
+| 0x02         | 0x00          | eigenda_cert_v2 (RLP) |
+| 0x02         | 0x01          | eigenda_cert_v2 (ABI_verifyDACertV2) |
+
+For certificates with version byte 0x00 or 0x01, no encoding byte is included and RLP encoding is assumed. For version 0x02 and higher, an encoding byte is included that specifies the serialization format:
+- 0x00: RLP encoding (default)
+* `0x01`: `EigenDACertVerifier` *verifyDACertV2* ABI encoding (for smart contract verification)
 
 `eigenda_cert_v0` is an RLP-encoded [EigenDA V1 certificate](https://github.com/Layr-Labs/eigenda/blob/eb422ff58ac6dcd4e7b30373033507414d33dba1/api/proto/disperser/disperser.proto#L168). `eigenda_cert_v1` works similarly.
 

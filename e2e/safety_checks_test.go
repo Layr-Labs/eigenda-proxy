@@ -146,7 +146,7 @@ func testProxyClientMalformedInputCases(t *testing.T, dispersalBackend common.Ei
 		})
 
 	t.Run(
-		"get data edge cases - unsupported version byte 02", func(t *testing.T) {
+		"get data edge cases - unsupported version byte", func(t *testing.T) {
 			t.Parallel()
 			ts, kill := testutils.CreateTestSuite(tsConfig)
 			defer kill()
@@ -155,14 +155,15 @@ func testProxyClientMalformedInputCases(t *testing.T, dispersalBackend common.Ei
 				URL: ts.Address(),
 			}
 			daClient := standard_client.New(cfg)
-			testCert := []byte{2}
+			// Use 0xFF which is higher than any defined CertV* constants (should be unsupported)
+			testCert := []byte{0xFF}
 			_, err := daClient.GetData(ts.Ctx, testCert)
 			require.Error(t, err)
 			assert.True(
 				t,
 				strings.Contains(
 					err.Error(),
-					"unsupported version byte 02") && !isNilPtrDerefPanic(err.Error()))
+					"unsupported version byte") && !isNilPtrDerefPanic(err.Error()))
 		})
 
 	// TODO: what exactly is this test testing? What is the edge case?
