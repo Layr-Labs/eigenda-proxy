@@ -34,18 +34,9 @@ func (svr *Server) handleHealth(w http.ResponseWriter, _ *http.Request) error {
 // GET ROUTES
 // =================================================================================================
 
-// handleGetStdCommitment handles the GET request for std commitments.
-func (svr *Server) handleGetStdCommitment(w http.ResponseWriter, r *http.Request) error {
-	versionByte, err := parseVersionByte(w, r)
-	if err != nil {
-		return fmt.Errorf("error parsing version byte: %w", err)
-	}
-
-	commitmentMeta := commitments.CommitmentMeta{
-		Mode:     commitments.OptimismGeneric,
-		Version:  commitments.EigenDACommitmentType(versionByte),
-		Encoding: commitments.RLPEncoding,
-	}
+// handleGetEigenDA helper function used for processing gets for an eigenda backend type
+func (svr *Server) handleGetEigenDA(w http.ResponseWriter, r *http.Request,
+	cm commitments.CommitmentMeta) error {
 
 	rawCommitmentHex, ok := mux.Vars(r)[routingVarNamePayloadHex]
 	if !ok {
@@ -56,12 +47,28 @@ func (svr *Server) handleGetStdCommitment(w http.ResponseWriter, r *http.Request
 		return fmt.Errorf("failed to decode commitment %s: %w", rawCommitmentHex, err)
 	}
 
-	if versionByte >= byte(commitments.CertV2) {
-		commitmentMeta.Encoding = commitments.EncodingType(commitment[0])
+	if cm.Version >= commitments.CertV2 {
+		cm.Encoding = commitments.EncodingType(commitment[0])
 		commitment = commitment[1:]
 	}
 
-	return svr.handleGetShared(r.Context(), w, commitment, commitmentMeta)
+	return svr.handleGetShared(r.Context(), w, commitment, cm)
+}
+
+// handleGetStdCommitment handles the GET request for std commitments.
+func (svr *Server) handleGetStdCommitment(w http.ResponseWriter, r *http.Request) error {
+	versionByte, err := parseVersionByte(w, r)
+	if err != nil {
+		return fmt.Errorf("error parsing version byte: %w", err)
+	}
+
+	meta := commitments.CommitmentMeta{
+		Mode:     commitments.Standard,
+		Version:  commitments.EigenDACommitmentType(versionByte),
+		Encoding: commitments.RLPEncoding,
+	}
+
+	return svr.handleGetEigenDA(w, r, meta)
 }
 
 // handleGetOPKeccakCommitment handles the GET request for optimism keccak commitments.
@@ -97,27 +104,14 @@ func (svr *Server) handleGetOPGenericCommitment(w http.ResponseWriter, r *http.R
 		return fmt.Errorf("error parsing version byte: %w", err)
 	}
 
-	commitmentMeta := commitments.CommitmentMeta{
+	meta := commitments.CommitmentMeta{
 		Mode:     commitments.OptimismGeneric,
 		Version:  commitments.EigenDACommitmentType(versionByte),
 		Encoding: commitments.RLPEncoding,
 	}
 
-	rawCommitmentHex, ok := mux.Vars(r)[routingVarNamePayloadHex]
-	if !ok {
-		return fmt.Errorf("commitment not found in path: %s", r.URL.Path)
-	}
-	commitment, err := hex.DecodeString(rawCommitmentHex)
-	if err != nil {
-		return fmt.Errorf("failed to decode commitment %s: %w", rawCommitmentHex, err)
-	}
+	return svr.handleGetEigenDA(w, r, meta)
 
-	if versionByte >= byte(commitments.CertV2) {
-		commitmentMeta.Encoding = commitments.EncodingType(commitment[0])
-		commitment = commitment[1:]
-	}
-
-	return svr.handleGetShared(r.Context(), w, commitment, commitmentMeta)
 }
 
 func (svr *Server) handleGetShared(
@@ -173,28 +167,33 @@ func (svr *Server) handleGetEigenDADispersalBackend(w http.ResponseWriter, _ *ht
 // POST ROUTES
 // =================================================================================================
 
-// handlePostStdCommitment handles the POST request for std commitments.
 // parseEncodingQueryParamType parses the encoding query parameter
-func parseEncodingQueryParamType(w http.ResponseWriter, r *http.Request) (commitments.EncodingType, bool, error) {
+func (svr *Server) parseEncodingQueryParamType(w http.ResponseWriter, r *http.Request) (commitments.EncodingType, error) {
 	encodingParam := r.URL.Query().Get(routingQueryParamEncoding)
 	if encodingParam == "" {
 		// If no encoding is provided, use default RLP encoding
-		return commitments.RLPEncoding, false, nil
+		return commitments.RLPEncoding, nil
+	}
+
+	// if encoding param provided but historical V1 backend used then error
+	if svr.sm.GetDispersalBackend() == common.V1EigenDABackend {
+
 	}
 
 	// Parse the encoding type
 	encoding, err := commitments.StringToEncodingType(encodingParam)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Invalid encoding type: %s", encodingParam), http.StatusBadRequest)
-		return commitments.RLPEncoding, false, err
+		return commitments.RLPEncoding, err
 	}
 
-	return encoding, true, nil
+	return encoding, nil
 }
 
+// handlePostStdCommitment handles the POST request for std commitments.
 func (svr *Server) handlePostStdCommitment(w http.ResponseWriter, r *http.Request) error {
 	// Parse encoding type from query parameter
-	encodingType, hasEncoding, err := parseEncodingQueryParamType(w, r)
+	encodingType, err := svr.parseEncodingQueryParamType(w, r)
 	if err != nil {
 		return err
 	}
@@ -207,11 +206,7 @@ func (svr *Server) handlePostStdCommitment(w http.ResponseWriter, r *http.Reques
 
 	if svr.sm.GetDispersalBackend() == common.V2EigenDABackend {
 		// If encoding is specified and we're using V2, use CertV2
-		if hasEncoding {
-			commitmentMeta.Version = commitments.CertV2
-		} else {
-			commitmentMeta.Version = commitments.CertV1
-		}
+		commitmentMeta.Version = commitments.CertV2
 	}
 
 	return svr.handlePostShared(w, r, nil, commitmentMeta)
@@ -227,16 +222,10 @@ func (svr *Server) handlePostOPKeccakCommitment(w http.ResponseWriter, r *http.R
 	// 	return err
 	// }
 
-	// Parse encoding type from query parameter
-	encodingType, _, err := parseEncodingQueryParamType(w, r)
-	if err != nil {
-		return err
-	}
-
 	commitmentMeta := commitments.CommitmentMeta{
 		Mode:     commitments.OptimismKeccak,
 		Version:  commitments.CertV0,
-		Encoding: encodingType,
+		Encoding: commitments.RLPEncoding,
 	}
 
 	rawCommitmentHex, ok := mux.Vars(r)[routingVarNamePayloadHex]
@@ -254,7 +243,7 @@ func (svr *Server) handlePostOPKeccakCommitment(w http.ResponseWriter, r *http.R
 // handlePostOPGenericCommitment handles the POST request for optimism generic commitments.
 func (svr *Server) handlePostOPGenericCommitment(w http.ResponseWriter, r *http.Request) error {
 	// Parse encoding type from query parameter
-	encodingType, hasEncoding, err := parseEncodingQueryParamType(w, r)
+	encodingType, err := svr.parseEncodingQueryParamType(w, r)
 	if err != nil {
 		return err
 	}
@@ -266,12 +255,7 @@ func (svr *Server) handlePostOPGenericCommitment(w http.ResponseWriter, r *http.
 	}
 
 	if svr.sm.GetDispersalBackend() == common.V2EigenDABackend {
-		// If encoding is specified and we're using V2, use CertV2
-		if hasEncoding {
-			commitmentMeta.Version = commitments.CertV2
-		} else {
-			commitmentMeta.Version = commitments.CertV1
-		}
+		commitmentMeta.Version = commitments.CertV2
 	}
 
 	return svr.handlePostShared(w, r, nil, commitmentMeta)
@@ -314,7 +298,7 @@ func (svr *Server) handlePostShared(
 		return err
 	}
 
-	responseCommit, err := commitments.EncodeCommitment(commitment, meta.Mode, meta.Version, meta.Encoding)
+	responseCommit, err := commitments.EncodeCommitment(commitment, meta)
 	if err != nil {
 		err = MetaError{
 			Err:  fmt.Errorf("failed to encode commitment %v (commitment mode %v): %w", commitment, meta.Mode, err),

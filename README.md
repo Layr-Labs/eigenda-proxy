@@ -364,8 +364,8 @@ For `alt-da` Optimism rollups using EigenDA, the following [commitment schemas](
 | commitment_type (byte) | da_layer_byte | version_byte | encoding_byte | payload           |
 | ---------------------- | ------------- | ------------ | ------------- | ----------------- |
 | 0x00                   |               |              |               | keccak_commitment |
-| 0x01                   | 0x00          | 0x00         | N/A           | eigenda_cert_v0   |
-| 0x01                   | 0x00          | 0x01         | N/A           | eigenda_cert_v1   |
+| 0x01                   | 0x00          | 0x00         |               | eigenda_cert_v0   |
+| 0x01                   | 0x00          | 0x01         |               | eigenda_cert_v1   |
 | 0x01                   | 0x00          | 0x02         | 0x00          | eigenda_cert_v2 (RLP) |
 | 0x01                   | 0x00          | 0x02         | 0x01          | eigenda_cert_v2 (ABI_verifyDACertV2) |
 
@@ -376,8 +376,8 @@ For standard clients (i.e, `clients/standard_client/client.go`) communicating wi
 
 | version_byte | encoding_byte | payload         |
 | ------------ | ------------- | --------------- |
-| 0x00         | N/A           | eigenda_cert_v0 |
-| 0x01         | N/A           | eigenda_cert_v1 |
+| 0x00         |               | eigenda_cert_v0 |
+| 0x01         |               | eigenda_cert_v1 |
 | 0x02         | 0x00          | eigenda_cert_v2 (RLP) |
 | 0x02         | 0x01          | eigenda_cert_v2 (ABI_verifyDACertV2) |
 

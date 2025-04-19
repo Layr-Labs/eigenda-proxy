@@ -21,7 +21,7 @@ type CertCommitment interface {
 type EigenDACommitment struct {
 	prefix   EigenDACommitmentType
 	b        []byte
-	encoding *EncodingType // Optional encoding type, used only for V2+
+	encoding EncodingType // Optional encoding type, used only for V2+
 }
 
 // NewEigenDACommitment creates a new commitment from the given input.
@@ -38,7 +38,7 @@ func NewEigenDACommitmentWithEncoding(input []byte, commitmentType EigenDACommit
 	return EigenDACommitment{
 		prefix:   commitmentType,
 		b:        input,
-		encoding: &encoding,
+		encoding: encoding,
 	}
 }
 
@@ -50,8 +50,8 @@ func (c EigenDACommitment) CommitmentType() EigenDACommitmentType {
 // Encode adds a commitment type prefix self describing the commitment.
 func (c EigenDACommitment) Encode() []byte {
 	// For V2+ certificates with encoding type
-	if c.prefix >= CertV2 && c.encoding != nil {
-		return append([]byte{byte(c.prefix), byte(*c.encoding)}, c.b...)
+	if c.prefix >= CertV2 {
+		return append([]byte{byte(c.prefix), byte(c.encoding)}, c.b...)
 	}
 
 	// For V0/V1 certificates (backward compatibility)

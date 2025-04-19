@@ -2,6 +2,7 @@ package commitments
 
 import (
 	"fmt"
+	"strings"
 )
 
 // EncodingType represents the serialization format for the certificate
@@ -44,76 +45,47 @@ func StringToCommitmentMode(s string) (CommitmentMode, error) {
 }
 
 func StringToEncodingType(s string) (EncodingType, error) {
-	switch s {
-	case "rlp", "RLP", "0":
+	switch strings.ToLower(s) {
+	case "rlp", "0":
 		return RLPEncoding, nil
-	case "abi", "ABI", "1":
+	case "abi", "1":
 		return ABIVerifyV2CertEncoding, nil
 	default:
 		return RLPEncoding, fmt.Errorf("unknown encoding type: %s, using default RLP encoding", s)
 	}
 }
 
-// DecodeCommitmentType returns the encoding type from a certificate commitment
-func DecodeCommitmentType(cert []byte) (EigenDACommitmentType, EncodingType, []byte, error) {
-	if len(cert) == 0 {
-		return 0, 0, nil, fmt.Errorf("commitment is empty")
-	}
-
-	// Extract version byte (always present)
-	version := EigenDACommitmentType(cert[0])
-	var encoding EncodingType
-	var payload []byte
-
-	// For CertV2+, we have an encoding byte
-	if version >= CertV2 {
-		if len(cert) < 2 {
-			return 0, 0, nil, fmt.Errorf("commitment too short for CertV2")
-		}
-		encoding = EncodingType(cert[1])
-		payload = cert[2:] // Skip version and encoding bytes
-	} else {
-		// For CertV0/V1, there's no encoding byte (default to RLP)
-		encoding = RLPEncoding
-		payload = cert[1:] // Skip only version byte
-	}
-
-	return version, encoding, payload, nil
-}
-
 func EncodeCommitment(
 	bytes []byte,
-	commitmentMode CommitmentMode,
-	commitmentType EigenDACommitmentType,
-	encodingType EncodingType,
+	cm CommitmentMeta,
 ) ([]byte, error) {
-	switch commitmentMode {
+	switch cm.Mode {
 	case OptimismKeccak:
 		return Keccak256Commitment(bytes).Encode(), nil
 
 	case OptimismGeneric:
 		// For V2 certificates with encoding specified, add encoding byte
-		if commitmentType >= CertV2 {
-			certCommit := NewEigenDACommitmentWithEncoding(bytes, commitmentType, encodingType).Encode()
+		if cm.Version >= CertV2 {
+			certCommit := NewEigenDACommitmentWithEncoding(bytes, cm.Version, cm.Encoding).Encode()
 			svcCommit := EigenDASvcCommitment(certCommit).Encode()
 			altDACommit := NewGenericCommitment(svcCommit).Encode()
 			return altDACommit, nil
 		}
 
 		// Fallback to previous behavior for V0/V1
-		certCommit := NewEigenDACommitment(bytes, commitmentType).Encode()
+		certCommit := NewEigenDACommitment(bytes, cm.Version).Encode()
 		svcCommit := EigenDASvcCommitment(certCommit).Encode()
 		altDACommit := NewGenericCommitment(svcCommit).Encode()
 		return altDACommit, nil
 
 	case Standard:
 		// For V2 certificates with encoding specified, add encoding byte
-		if commitmentType >= CertV2 {
-			return NewEigenDACommitmentWithEncoding(bytes, commitmentType, encodingType).Encode(), nil
+		if cm.Version >= CertV2 {
+			return NewEigenDACommitmentWithEncoding(bytes, cm.Version, cm.Encoding).Encode(), nil
 		}
 
 		// Fallback to previous behavior for V0/V1
-		return NewEigenDACommitment(bytes, commitmentType).Encode(), nil
+		return NewEigenDACommitment(bytes, cm.Version).Encode(), nil
 	}
 
 	return nil, fmt.Errorf("unknown commitment mode")

@@ -56,14 +56,8 @@ func EncodeV2CertToBytes(encoding commitments.EncodingType, cert *coretypes.Eige
 	}
 }
 
-func interfaceToBytesJSON(data interface{}) ([]byte, error) {
-	bytes, err := json.Marshal(data)
-	if err != nil {
-		return nil, err
-	}
-	return bytes, nil
-}
-
+// DecodeV2CertFromBytes ... Decodes a raw DA commitment into an EigenDA V2 certificate
+// provided the respective encoding version
 func DecodeV2CertFromBytes(encoding commitments.EncodingType, commitment []byte) (*coretypes.EigenDACert, error) {
 	switch encoding {
 	case commitments.ABIVerifyV2CertEncoding:
@@ -76,13 +70,13 @@ func DecodeV2CertFromBytes(encoding commitments.EncodingType, commitment []byte)
 
 		// use json as intermediary to cast abstract type to bytes to
 		// then deserialize into structured certificate type
-		b, err := interfaceToBytesJSON(abiMap)
+		bytes, err := json.Marshal(commitment)
 		if err != nil {
 			return nil, err
 		}
 
 		var cert *coretypes.EigenDACert
-		err = json.Unmarshal(b, &cert)
+		err = json.Unmarshal(bytes, &cert)
 
 		if err != nil {
 			return nil, fmt.Errorf("json unmarshal v2 cert: %w", err)
