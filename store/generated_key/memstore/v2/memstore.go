@@ -168,7 +168,7 @@ func (e *MemStore) generateRandomCert(blobContents []byte) (*coretypes.EigenDACe
 }
 
 // Get fetches a value from the store.
-func (e *MemStore) Get(ctx context.Context, commit []byte) ([]byte, error) {
+func (e *MemStore) Get(_ context.Context, commit []byte) ([]byte, error) {
 	encodedBlob, err := e.FetchEntry(crypto.Keccak256Hash(commit).Bytes())
 	if err != nil {
 		return nil, fmt.Errorf("fetching entry via v2 memstore: %w", err)
