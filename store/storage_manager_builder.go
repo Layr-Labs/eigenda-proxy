@@ -146,6 +146,11 @@ func (smb *StorageManagerBuilder) Build(ctx context.Context) (*Manager, error) {
 		}
 	}
 
+	ethClient, err := smb.buildEthClient()
+	if err != nil {
+		return nil, fmt.Errorf("build eth client: %w", err)
+	}
+
 	smb.log.Info(
 		"Created storage backends",
 		"eigenda_v1", eigenDAV1Store != nil,
@@ -158,7 +163,7 @@ func (smb *StorageManagerBuilder) Build(ctx context.Context) (*Manager, error) {
 		"verify_v1_certs", smb.v1VerifierCfg.VerifyCerts,
 	)
 
-	return NewManager(eigenDAV1Store, eigenDAV2Store, s3Store, smb.log, secondary, smb.managerCfg.DispersalBackend)
+	return NewManager(eigenDAV1Store, eigenDAV2Store, s3Store, smb.log, secondary, smb.managerCfg.DispersalBackend, ethClient)
 }
 
 // buildSecondaries ... Creates a slice of secondary targets used for either read
