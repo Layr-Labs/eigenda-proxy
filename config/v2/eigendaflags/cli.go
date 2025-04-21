@@ -33,6 +33,7 @@ var (
 	BlobParamsVersionFlagName         = withFlagPrefix("blob-version")
 	EthRPCURLFlagName                 = withFlagPrefix("eth-rpc")
 	MaxBlobLengthFlagName             = withFlagPrefix("max-blob-length")
+	NetworkFlagName                   = withFlagPrefix("network")
 )
 
 func withFlagPrefix(s string) string {
@@ -159,10 +160,8 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		},
 		&cli.UintFlag{
 			Name: BlobParamsVersionFlagName,
-			Usage: `Blob params version used when dispersing. 
-					   This refers to a global version maintained by EigenDA governance 
-					   and is injected in the BlobHeader before dispersing.
-					   Currently only supports (0).`,
+			Usage: `Blob params version used when dispersing. This refers to a global version maintained by EigenDA
+						governance and is injected in the BlobHeader before dispersing. Currently only supports (0).`,
 			EnvVars:  []string{withEnvPrefix(envPrefix, "BLOB_PARAMS_VERSION")},
 			Category: category,
 			Value:    uint(0),
@@ -175,6 +174,22 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 						slightly exceeds 1GB.`,
 			EnvVars:  []string{withEnvPrefix(envPrefix, "MAX_BLOB_LENGTH")},
 			Value:    "16MiB",
+			Category: category,
+		},
+		&cli.StringFlag{
+			Name: NetworkFlagName,
+			Usage: fmt.Sprintf(`The EigenDA network that is being used. This is an optional flag, to configure
+						default values for %s, %s, %s, and %s. If all of these fields are explicitly configured, the
+						network flag may be omitted. If some or all of these fields are configured, and the network
+						is also configured, then the explicitly defined field values will take precedence. Permitted
+						EigenDANetwork values include %s, and %s.`,
+				withEnvPrefix(envPrefix, DisperserFlagName),
+				withEnvPrefix(envPrefix, CertVerifierAddrFlagName),
+				withEnvPrefix(envPrefix, ServiceManagerAddrFlagName),
+				withEnvPrefix(envPrefix, BLSOperatorStateRetrieverFlagName),
+				common.HoleskyTestnetEigenDANetwork,
+				common.HoleskyPreprodEigenDANetwork),
+			EnvVars:  []string{withEnvPrefix(envPrefix, "NETWORK")},
 			Category: category,
 		},
 	}
@@ -193,6 +208,43 @@ func ReadClientConfigV2(ctx *cli.Context) (common.ClientConfigV2, error) {
 			"parse max blob length flag \"%v\": %w", maxBlobLengthFlagContents, err)
 	}
 
+	var eigenDANetwork common.EigenDANetwork
+	networkString := ctx.String(NetworkFlagName)
+	if networkString != "" {
+		eigenDANetwork, err = common.EigenDANetworkFromString(networkString)
+		if err != nil {
+			return common.ClientConfigV2{}, fmt.Errorf("parse eigenDANetwork: %w", err)
+		}
+	}
+
+	serviceManagerAddress := ctx.String(ServiceManagerAddrFlagName)
+	if serviceManagerAddress == "" {
+		serviceManagerAddress, err = eigenDANetwork.GetServiceManagerAddress()
+		if err != nil {
+			return common.ClientConfigV2{}, fmt.Errorf(
+				"service manager address wasn't specified, and failed to get it from the specified network: %w", err)
+		}
+	}
+
+	blsOperatorStateRetrieverAddress := ctx.String(BLSOperatorStateRetrieverFlagName)
+	if blsOperatorStateRetrieverAddress == "" {
+		blsOperatorStateRetrieverAddress, err = eigenDANetwork.GetBLSOperatorStateRetrieverAddress()
+		if err != nil {
+			return common.ClientConfigV2{}, fmt.Errorf(
+				`BLS operator state retriever address wasn't specified, and failed to get it from the
+							specified network : %w`, err)
+		}
+	}
+
+	certVerifierAddress := ctx.String(CertVerifierAddrFlagName)
+	if certVerifierAddress == "" {
+		certVerifierAddress, err = eigenDANetwork.GetCertVerifierAddress()
+		if err != nil {
+			return common.ClientConfigV2{}, fmt.Errorf(
+				"cert verifier address wasn't specified, and failed to get it from the specified network: %w", err)
+		}
+	}
+
 	return common.ClientConfigV2{
 		DisperserClientCfg:            disperserConfig,
 		PayloadDisperserCfg:           readPayloadDisperserCfg(ctx),
@@ -200,9 +252,9 @@ func ReadClientConfigV2(ctx *cli.Context) (common.ClientConfigV2, error) {
 		ValidatorPayloadRetrieverCfg:  readValidatorRetrievalConfig(ctx),
 		PutTries:                      ctx.Int(PutRetriesFlagName),
 		MaxBlobSizeBytes:              maxBlobLengthBytes,
-		EigenDACertVerifierAddress:    ctx.String(CertVerifierAddrFlagName),
-		BLSOperatorStateRetrieverAddr: ctx.String(BLSOperatorStateRetrieverFlagName),
-		EigenDAServiceManagerAddr:     ctx.String(ServiceManagerAddrFlagName),
+		EigenDACertVerifierAddress:    certVerifierAddress,
+		BLSOperatorStateRetrieverAddr: blsOperatorStateRetrieverAddress,
+		EigenDAServiceManagerAddr:     serviceManagerAddress,
 		// we don't expose this configuration to users, as all production use cases should have
 		// both retrieval methods enabled. This could be exposed in the future, if necessary.
 		// Note the order of these retrievers, which is significant: the relay retriever will be
@@ -250,12 +302,27 @@ func readDisperserCfg(ctx *cli.Context) (clients_v2.DisperserClientConfig, error
 	disperserAddressString := ctx.String(DisperserFlagName)
 
 	if disperserAddressString == "" {
-		return clients_v2.DisperserClientConfig{}, nil
+		networkString := ctx.String(NetworkFlagName)
+		if networkString == "" {
+			return clients_v2.DisperserClientConfig{},
+				fmt.Errorf("either disperser address or EigenDANetwork must be specified")
+		}
+
+		eigenDANetwork, err := common.EigenDANetworkFromString(networkString)
+		if err != nil {
+			return clients_v2.DisperserClientConfig{}, fmt.Errorf("parse eigenDANetwork: %w", err)
+		}
+
+		disperserAddressString, err = eigenDANetwork.GetDisperserAddress()
+		if err != nil {
+			return clients_v2.DisperserClientConfig{}, fmt.Errorf("get disperser address: %w", err)
+		}
 	}
 
 	hostStr, portStr, err := net.SplitHostPort(disperserAddressString)
 	if err != nil {
-		return clients_v2.DisperserClientConfig{}, fmt.Errorf("split host port '%s': %w", disperserAddressString, err)
+		return clients_v2.DisperserClientConfig{},
+			fmt.Errorf("split host port '%s': %w", disperserAddressString, err)
 	}
 
 	return clients_v2.DisperserClientConfig{
