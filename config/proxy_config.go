@@ -40,7 +40,7 @@ func ReadProxyConfig(ctx *cli.Context) (ProxyConfig, error) {
 	var clientConfigV1 common.ClientConfigV1
 	var verifierConfigV1 verify.Config
 	if slices.Contains(storageConfig.BackendsToEnable, common.V1EigenDABackend) {
-		clientConfigV1, err := eigendaflags.ReadClientConfigV1(ctx)
+		clientConfigV1, err = eigendaflags.ReadClientConfigV1(ctx)
 		if err != nil {
 			return ProxyConfig{}, fmt.Errorf("read client config v1: %w", err)
 		}
