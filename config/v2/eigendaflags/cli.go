@@ -183,10 +183,10 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 						network flag may be omitted. If some or all of these fields are configured, and the network
 						is also configured, then the explicitly defined field values will take precedence. Permitted
 						EigenDANetwork values include %s, and %s.`,
-				withEnvPrefix(envPrefix, DisperserFlagName),
-				withEnvPrefix(envPrefix, CertVerifierAddrFlagName),
-				withEnvPrefix(envPrefix, ServiceManagerAddrFlagName),
-				withEnvPrefix(envPrefix, BLSOperatorStateRetrieverFlagName),
+				DisperserFlagName,
+				CertVerifierAddrFlagName,
+				ServiceManagerAddrFlagName,
+				BLSOperatorStateRetrieverFlagName,
 				common.HoleskyTestnetEigenDANetwork,
 				common.HoleskyPreprodEigenDANetwork),
 			EnvVars:  []string{withEnvPrefix(envPrefix, "NETWORK")},
