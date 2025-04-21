@@ -247,29 +247,31 @@ func (smb *StorageManagerBuilder) buildEigenDAV2Backend(
 	}
 
 	var retrievers []clients_v2.PayloadRetriever
-
-	// Initialize relay retriever if enabled
-	if slices.Contains(smb.v2ClientCfg.RetrieversToEnable, common.RelayRetrieverType) {
-		smb.log.Info("Initializing relay payload retriever")
-		relayRegistryAddress, err := certVerifier.GetRelayRegistryAddress(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("get relay registry address: %w", err)
+	for _, retrieverType := range smb.v2ClientCfg.RetrieversToEnable {
+		switch retrieverType {
+		case common.RelayRetrieverType:
+			smb.log.Info("Initializing relay payload retriever")
+			relayRegistryAddress, err := certVerifier.GetRelayRegistryAddress(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("get relay registry address: %w", err)
+			}
+			relayPayloadRetriever, err := smb.buildRelayPayloadRetriever(
+				ethClient, kzgProver.Srs.G1, *relayRegistryAddress)
+			if err != nil {
+				return nil, fmt.Errorf("build relay payload retriever: %w", err)
+			}
+			retrievers = append(retrievers, relayPayloadRetriever)
+		case common.ValidatorRetrieverType:
+			smb.log.Info("Initializing validator payload retriever")
+			validatorPayloadRetriever, err := smb.buildValidatorPayloadRetriever(
+				ethClient, kzgVerifier, kzgProver.Srs.G1)
+			if err != nil {
+				return nil, fmt.Errorf("build validator payload retriever: %w", err)
+			}
+			retrievers = append(retrievers, validatorPayloadRetriever)
+		default:
+			return nil, fmt.Errorf("unknown retriever type: %s", retrieverType)
 		}
-		relayPayloadRetriever, err := smb.buildRelayPayloadRetriever(ethClient, kzgProver.Srs.G1, *relayRegistryAddress)
-		if err != nil {
-			return nil, fmt.Errorf("build relay payload retriever: %w", err)
-		}
-		retrievers = append(retrievers, relayPayloadRetriever)
-	}
-
-	// Initialize validator retriever if enabled
-	if slices.Contains(smb.v2ClientCfg.RetrieversToEnable, common.ValidatorRetrieverType) {
-		smb.log.Info("Initializing validator payload retriever")
-		validatorPayloadRetriever, err := smb.buildValidatorPayloadRetriever(ethClient, kzgVerifier, kzgProver.Srs.G1)
-		if err != nil {
-			return nil, fmt.Errorf("build validator payload retriever: %w", err)
-		}
-		retrievers = append(retrievers, validatorPayloadRetriever)
 	}
 
 	// Ensure at least one retriever is configured
