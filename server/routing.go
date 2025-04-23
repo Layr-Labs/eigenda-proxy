@@ -96,6 +96,10 @@ func (svr *Server) RegisterRoutes(r *mux.Router) {
 		"{"+routingVarNamePayloadHex+":[0-9a-fA-F]*}",
 		withLogging(withMetrics(svr.handleVerifyCommitment, svr.m, commitments.Standard), svr.log),
 	).Queries("commitment_mode", "standard")
+
+	// this is done to explicitly log capture potential redirect errors
+	r.HandleFunc("/put", withLogging(svr.logDispersalGetError, svr.log)).Methods("GET")
+
 	// Only register admin endpoints if explicitly enabled in configuration
 	//
 	// Note: A common pattern for admin endpoints is to generate a random API key on startup for authentication.
