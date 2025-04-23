@@ -15,6 +15,29 @@ const (
 	ABIVerifyV2CertEncoding
 )
 
+// The values used here should match the one in ParseEncodingQueryParam
+func (e EncodingType) QueryParamValue() string {
+	switch e {
+	case RLPEncoding:
+		return "rlp"
+	case ABIVerifyV2CertEncoding:
+		return "abi"
+	default:
+		return "unknown"
+	}
+}
+
+func ParseEncodingQueryParam(s string) (EncodingType, error) {
+	switch strings.ToLower(s) {
+	case "rlp":
+		return RLPEncoding, nil
+	case "abi":
+		return ABIVerifyV2CertEncoding, nil
+	default:
+		return RLPEncoding, fmt.Errorf("unknown encoding type: %s, using default RLP encoding", s)
+	}
+}
+
 type CommitmentMeta struct {
 	Mode CommitmentMode
 	// version is shared for all modes and denotes version of the EigenDA certificate
@@ -41,17 +64,6 @@ func StringToCommitmentMode(s string) (CommitmentMode, error) {
 		return Standard, nil
 	default:
 		return "", fmt.Errorf("unknown commitment mode: %s", s)
-	}
-}
-
-func StringToEncodingType(s string) (EncodingType, error) {
-	switch strings.ToLower(s) {
-	case "rlp", "0":
-		return RLPEncoding, nil
-	case "abi", "1":
-		return ABIVerifyV2CertEncoding, nil
-	default:
-		return RLPEncoding, fmt.Errorf("unknown encoding type: %s, using default RLP encoding", s)
 	}
 }
 

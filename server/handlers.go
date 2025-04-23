@@ -180,7 +180,7 @@ func (svr *Server) parseEncodingQueryParamType(w http.ResponseWriter,
 	}
 
 	// Parse the encoding type
-	encoding, err := commitments.StringToEncodingType(encodingParam)
+	encoding, err := commitments.ParseEncodingQueryParam(encodingParam)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Invalid encoding type: %s", encodingParam), http.StatusBadRequest)
 		return commitments.RLPEncoding, err
