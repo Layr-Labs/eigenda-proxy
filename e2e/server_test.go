@@ -510,3 +510,30 @@ func testMaxBlobSize(t *testing.T, dispersalBackend common.EigenDABackend) {
 	requireStandardClientSetGet(t, ts, testutils.RandBytes(int(maxPayloadSize)))
 	requireDispersalRetrievalEigenDA(t, ts.Metrics.HTTPServerRequestsTotal, commitments.Standard)
 }
+
+func TestVerifyV2(t *testing.T) {
+	t.Parallel()
+
+	testCfg := testutils.NewTestConfig(testutils.GetBackend(), common.V2EigenDABackend, nil)
+	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
+
+	ts, kill := testutils.CreateTestSuite(tsConfig)
+	defer kill()
+
+	blob := []byte("hello world")
+
+	cfg := &standard_client.Config{
+		URL: ts.Address(),
+	}
+	daClient := standard_client.New(cfg)
+
+	t.Log("Setting input data on proxy server...")
+	blobInfo, err := daClient.SetData(ts.Ctx, blob)
+	require.NoError(t, err)
+
+	t.Log("Verifying input data via proxy server...")
+	passed, err := daClient.Verify(ts.Ctx, blobInfo)
+	require.NoError(t, err)
+	require.True(t, passed)
+
+}

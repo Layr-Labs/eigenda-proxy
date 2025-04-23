@@ -10,12 +10,7 @@ import (
 
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/common"
-	"github.com/Layr-Labs/eigenda/api/clients/v2/coretypes"
-	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
-	eigenda_common "github.com/Layr-Labs/eigenda/common"
 	"github.com/Layr-Labs/eigensdk-go/logging"
-	geth_common "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/rlp"
 )
 
 // IManager ... read/write interface
@@ -24,7 +19,7 @@ type IManager interface {
 	Put(ctx context.Context, cm commitments.CommitmentMode, key, value []byte) ([]byte, error)
 	SetDispersalBackend(backend common.EigenDABackend)
 	GetDispersalBackend() common.EigenDABackend
-	VerifyV2Cert(ctx context.Context, certVerifierAddr string, daCommit []byte) (bool, error)
+	VerifyV2Cert(ctx context.Context, daCommit []byte) (bool, error)
 }
 
 // Manager ... storage backend routing layer
@@ -36,8 +31,6 @@ type Manager struct {
 	eigenda          common.GeneratedKeyStore // v0 da commitment version
 	eigendaV2        common.GeneratedKeyStore // v1 da commitment version
 	dispersalBackend atomic.Value             // stores the EigenDABackend to write blobs to
-
-	ethClient eigenda_common.EthClient
 
 	// secondary storage backends (caching and fallbacks)
 	secondary ISecondary
@@ -69,7 +62,6 @@ func NewManager(
 	l logging.Logger,
 	secondary ISecondary,
 	dispersalBackend common.EigenDABackend,
-	ethClient eigenda_common.EthClient,
 ) (*Manager, error) {
 	// Enforce invariants
 	if dispersalBackend == common.V2EigenDABackend && eigenDAV2 == nil {
@@ -203,32 +195,15 @@ func (m *Manager) Put(ctx context.Context, cm commitments.CommitmentMode, key, v
 }
 
 // VerifyV2Cert ... verifies an EigenDA V2 certificate
-func (m *Manager) VerifyV2Cert(ctx context.Context, certVerifierAddr string, daCommit []byte) (bool, error) {
-	certVerifierAddressProvider := verification.NewStaticCertVerifierAddressProvider(
-		geth_common.HexToAddress(certVerifierAddr))
-
-	certVerifier, err := verification.NewCertVerifier(
-		m.log, m.ethClient, certVerifierAddressProvider)
-
-	if err != nil {
-		return false, err
-	}
-
-	var v2Cert *coretypes.EigenDACert
-	err = rlp.DecodeBytes(daCommit, &v2Cert)
-	if err != nil {
-		return false, err
-	}
-
-	err = certVerifier.VerifyCertV2(ctx, v2Cert)
-
-	if err != nil {
-		return true, nil
-	}
-
+func (m *Manager) VerifyV2Cert(ctx context.Context, daCommit []byte) (bool, error) {
 	// TODO: process error code to understand a failed verification vs an
 	// error
-	return false, nil
+	// nolint:nilerr // insecure code atm
+	err := m.eigendaV2.Verify(ctx, daCommit, []byte{})
+	if err != nil {
+		return false, nil
+	}
+	return true, nil
 }
 
 // getVerifyMethod returns the correct verify method based on commitment type

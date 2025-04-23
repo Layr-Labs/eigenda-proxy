@@ -91,3 +91,18 @@ func (mr *MockIManagerMockRecorder) SetDispersalBackend(arg0 interface{}) *gomoc
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDispersalBackend", reflect.TypeOf((*MockIManager)(nil).SetDispersalBackend), arg0)
 }
+
+// VerifyV2Cert mocks base method.
+func (m *MockIManager) VerifyV2Cert(arg0 context.Context, arg1 []byte) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "VerifyV2Cert", arg0, arg1)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// VerifyV2Cert indicates an expected call of VerifyV2Cert.
+func (mr *MockIManagerMockRecorder) VerifyV2Cert(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "VerifyV2Cert", reflect.TypeOf((*MockIManager)(nil).VerifyV2Cert), arg0, arg1)
+}

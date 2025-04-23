@@ -94,7 +94,8 @@ func (svr *Server) RegisterRoutes(r *mux.Router) {
 		"{optional_prefix:(?:0x)?}"+ // commitments can be prefixed with 0x
 		"{"+routingVarNameVersionByteHex+":[0-9a-fA-F]{2}}"+ // should always be 0x00 for now but we let others through to return a 404
 		"{"+routingVarNamePayloadHex+":[0-9a-fA-F]*}",
-		withLogging(withMetrics(svr.handleVerifyCommitment, svr.m, commitments.Standard), svr.log))
+		withLogging(withMetrics(svr.handleVerifyCommitment, svr.m, commitments.Standard), svr.log),
+	).Queries("commitment_mode", "standard")
 	// Only register admin endpoints if explicitly enabled in configuration
 	//
 	// Note: A common pattern for admin endpoints is to generate a random API key on startup for authentication.

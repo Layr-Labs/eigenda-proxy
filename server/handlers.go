@@ -166,15 +166,10 @@ func (svr *Server) handleVerifyCommitment(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		return fmt.Errorf("failed to decode commitment %s: %w", rawCommitmentHex, err)
 	}
-	// Extract the EigenDACertVerifier address from the query parameter
-	eigenDACertVerifier := r.URL.Query().Get(routingQueryParamCertVerifierAddr)
-	if eigenDACertVerifier == "" {
-		http.Error(w, "missing required query parameter: EigenDACertVerifier", http.StatusBadRequest)
-		return fmt.Errorf("missing required query parameter: EigenDACertVerifier")
-	}
 
+	println(fmt.Sprintf("commit: %x", commitment))
 	// Verify the commitment using the V2 backend
-	outcome, err := svr.sm.VerifyV2Cert(r.Context(), eigenDACertVerifier, commitment)
+	outcome, err := svr.sm.VerifyV2Cert(r.Context(), commitment)
 	if err != nil {
 		svr.log.Error("Failed to verify commitment", "error", err)
 		http.Error(w, fmt.Sprintf("commitment verification failed: %v", err), http.StatusBadRequest)
