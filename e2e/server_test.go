@@ -537,7 +537,7 @@ func TestCertEncodingTypesV2(t *testing.T) {
 		// Create client with ABI encoding
 		clientABI := standard_client.New(&standard_client.Config{
 			URL:          ts.Address(),
-			EncodingType: standard_client.ABIVerifyV2CertEncoding,
+			EncodingType: standard_client.ABIEncoding,
 		})
 
 		// Set data with ABI encoding

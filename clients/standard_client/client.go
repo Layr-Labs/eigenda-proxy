@@ -17,6 +17,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/Layr-Labs/eigenda-proxy/commitments"
 )
 
 var (
@@ -24,20 +26,14 @@ var (
 	ErrServiceUnavailable = fmt.Errorf("eigenda service is temporarily unavailable")
 )
 
-// EncodingType represents the serialization format for the certificate
-type EncodingType string
-
-const (
-	// RLPEncoding represents RLP encoding (default)
-	RLPEncoding EncodingType = "rlp"
-	// VerifyCertV2 ABI encoding represents ABI encoding for the verifyCertV2 method
-	// on the EigenDACertVerifier contract
-	// https://github.com/Layr-Labs/eigenda/blob/10d1fcfc44e8c7e35a3e585799fe10447dbec6a8/contracts/src/core/EigenDACertVerifier.sol#L114-L118
-	ABIVerifyV2CertEncoding EncodingType = "abi"
-)
+// EncodingType represents the serialization format for the certificate.
+// We type alias to the proxy's enum to make sure we're always in sync.
+type EncodingType = commitments.EncodingType
+const RLPEncoding = commitments.RLPEncoding
+const ABIEncoding = commitments.ABIVerifyV2CertEncoding
 
 type Config struct {
-	URL         string       // EigenDA proxy REST API URL
+	URL          string       // EigenDA proxy REST API URL
 	EncodingType EncodingType // Certificate encoding type (optional)
 }
 
@@ -137,13 +133,12 @@ func (c *Client) GetData(ctx context.Context, comm []byte) ([]byte, error) {
 // which should be verified within the proxy
 func (c *Client) SetData(ctx context.Context, b []byte) ([]byte, error) {
 	baseURL := fmt.Sprintf("%s/put?commitment_mode=standard", c.cfg.URL)
-	
+
 	// Add encoding type if specified in config
 	url := baseURL
-	if c.cfg.EncodingType != "" {
-		url = fmt.Sprintf("%s&encoding=%s", baseURL, c.cfg.EncodingType)
-	}
-	
+	// TODO: this should only be set for v2 certs right?
+	url = fmt.Sprintf("%s&encoding=%s", baseURL, c.cfg.EncodingType.QueryParamValue())
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(b))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
