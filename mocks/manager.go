@@ -42,7 +42,7 @@ func (m *MockIManager) EXPECT() *MockIManagerMockRecorder {
 }
 
 // Get mocks base method.
-func (m *MockIManager) Get(arg0 context.Context, arg1 []byte, arg2 commitments.CommitmentMode, arg3 common.VerifyArgs) ([]byte, error) {
+func (m *MockIManager) Get(arg0 context.Context, arg1 []byte, arg2 commitments.CommitmentMeta, arg3 common.VerifyArgs) ([]byte, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].([]byte)
@@ -54,6 +54,20 @@ func (m *MockIManager) Get(arg0 context.Context, arg1 []byte, arg2 commitments.C
 func (mr *MockIManagerMockRecorder) Get(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockIManager)(nil).Get), arg0, arg1, arg2, arg3)
+}
+
+// GetDispersalBackend mocks base method.
+func (m *MockIManager) GetDispersalBackend() common.EigenDABackend {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDispersalBackend")
+	ret0, _ := ret[0].(common.EigenDABackend)
+	return ret0
+}
+
+// GetDispersalBackend indicates an expected call of GetDispersalBackend.
+func (mr *MockIManagerMockRecorder) GetDispersalBackend() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDispersalBackend", reflect.TypeOf((*MockIManager)(nil).GetDispersalBackend))
 }
 
 // Put mocks base method.
@@ -69,4 +83,16 @@ func (m *MockIManager) Put(arg0 context.Context, arg1 commitments.CommitmentMode
 func (mr *MockIManagerMockRecorder) Put(arg0, arg1, arg2, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Put", reflect.TypeOf((*MockIManager)(nil).Put), arg0, arg1, arg2, arg3)
+}
+
+// SetDispersalBackend mocks base method.
+func (m *MockIManager) SetDispersalBackend(arg0 common.EigenDABackend) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetDispersalBackend", arg0)
+}
+
+// SetDispersalBackend indicates an expected call of SetDispersalBackend.
+func (mr *MockIManagerMockRecorder) SetDispersalBackend(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetDispersalBackend", reflect.TypeOf((*MockIManager)(nil).SetDispersalBackend), arg0)
 }

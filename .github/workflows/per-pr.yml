@@ -1,0 +1,159 @@
+name: CI # this name appears in the badge on the README
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  GO_VERSION: "1.22"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION}}
+      # TODO: fix the local/ci drift... locally we use `make lint`.
+      # We should probably use mise to install golangci-lint and other dependencies,
+      # and then we could run make commands in CI.
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.61
+          args: --timeout 3m
+
+  # This checks that the flags in .env.exampleV1.holesky, .env.exampleV2.holesky, and .env.exampleV1AndV2.holesky are
+  # valid, and allow the proxy to start.
+  flags:
+    strategy:
+      matrix:
+        env-file: [ .env.exampleV1.holesky, .env.exampleV2.holesky, .env.exampleV1AndV2.holesky]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION}}
+      - name: Run flag test
+        run: ${{ github.workspace }}/scripts/test-proxy-startup-with-env-vars.sh ${{ matrix.env-file }}
+
+  # This ensures that std output generated when running binary with `--help` is reflected in docs/help_out.txt
+  help-output-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - run: make gen-static-help-output && git diff --exit-code
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Install dependencies
+        run: make deps
+      - run: go mod download
+      - run: make test-unit
+
+  e2e-tests-local:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Install dependencies
+        run: make deps
+      - run: go mod download
+      - run: make test-e2e-local
+
+  e2e-tests-testnet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Install dependencies
+        run: make deps
+      - run: go mod download
+      - run: make test-e2e-testnet
+        env:
+          SIGNER_PRIVATE_KEY: ${{ secrets.SIGNER_PRIVATE_KEY }}
+          ETHEREUM_RPC: ${{ secrets.ETHEREUM_RPC }}
+
+  e2e-tests-preprod:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Install dependencies
+        run: make deps
+      - run: go mod download
+      - run: make test-e2e-preprod
+        env:
+          SIGNER_PRIVATE_KEY: ${{ secrets.SIGNER_PRIVATE_KEY }}
+          ETHEREUM_RPC: ${{ secrets.ETHEREUM_RPC }}
+
+  fuzz:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - run: go mod download
+      - run: make test-fuzz
+
+  build-binary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - run: make build
+
+  build-docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: docker/build-push-action@v5
+        with:
+          push: false
+          context: .
+          tags: eigenda-proxy
+      # We also test that the docker container starts up correctly.
+      - name: Run container as background process
+        shell: bash
+        run: |
+          docker run -d \
+          -p 6666:6666 \
+          -e EIGENDA_PROXY_ADDR=0.0.0.0 \
+          -e EIGENDA_PROXY_PORT=6666 \
+          -e EIGENDA_PROXY_MEMSTORE_ENABLED=true \
+          eigenda-proxy
+      - name: Wait for rpc to come up
+        shell: bash
+        run: |
+          ${{ github.workspace }}/scripts/wait-for.sh

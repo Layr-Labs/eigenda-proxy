@@ -4,24 +4,28 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math/big"
+	"strings"
 
+	"github.com/Layr-Labs/eigenda/encoding/kzg"
+	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/ecc/bn254"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fp"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/log"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	grpccommon "github.com/Layr-Labs/eigenda/api/grpc/common"
 	"github.com/Layr-Labs/eigenda/api/grpc/disperser"
-	"github.com/Layr-Labs/eigenda/encoding/kzg"
+	"github.com/Layr-Labs/eigenda/encoding"
 	kzgverifier "github.com/Layr-Labs/eigenda/encoding/kzg/verifier"
 	"github.com/Layr-Labs/eigenda/encoding/rs"
 )
 
+const (
+	HoleskySVCManagerV1Address = "0xD4A7E1Bd8015057293f0D0A557088c286942e84b"
+)
+
 type Config struct {
-	KzgConfig *kzg.KzgConfig
 	// Allowed distance (in L1 blocks) between the eigenDA reference block number (RBN) of the batch the blob is included in,
 	// and the L1 block number at which the blob cert was included in the batcher's inbox.
 	// If batch.RBN + RollupBlobInclusionWindow < cert.L1InclusionBlock, the batch is considered stale and verification will fail.
@@ -36,6 +40,7 @@ type Config struct {
 	SvcManagerAddr       string
 	EthConfirmationDepth uint64
 	WaitForFinalization  bool
+	MaxBlobSizeBytes     uint64
 }
 
 // Custom MarshalJSON function to control what gets included in the JSON output
@@ -56,7 +61,7 @@ func (c Config) MarshalJSON() ([]byte, error) {
 //
 // TODO: right now verification and confirmation depth are tightly coupled. we should decouple them
 type Verifier struct {
-	log log.Logger
+	log logging.Logger
 	// kzgVerifier is needed to commit blobs to the memstore
 	kzgVerifier *kzgverifier.Verifier
 	// When config.VerifyCerts is false, we use a noop verifier that does nothing
@@ -67,23 +72,36 @@ type Verifier struct {
 	// This check is optional and will be skipped when rollupBlobInclusionWindow is set to 0.
 	// Note: if there are more rollup related properties that we need to check in the future, then maybe create a RollupVerifier struct
 	rollupBlobInclusionWindow uint32
+	// holesky is a flag to enable/disable holesky specific checks
+	holesky bool
 }
 
-func NewVerifier(cfg *Config, log log.Logger) (*Verifier, error) {
+func NewVerifier(cfg *Config, kzgConfig kzg.KzgConfig, log logging.Logger) (*Verifier, error) {
 	var cv certVerifier
 	var err error
 
 	if cfg.VerifyCerts {
-		cv, err = newCertVerifier(cfg, log)
+		cv, err = NewCertVerifier(cfg, log)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create cert verifier: %w", err)
 		}
+		log.Info(
+			"Certificate verification against Ethereum state enabled",
+			"confirmation_depth",
+			cfg.EthConfirmationDepth)
 	} else {
-		log.Warn("Certificate verification is disabled")
+		log.Warn("Certificate verification against Ethereum state disabled")
 		cv = &NoopCertVerifier{}
 	}
 
-	kzgVerifier, err := kzgverifier.NewVerifier(cfg.KzgConfig, false)
+	// The verifier doesn't support loading trailing g2 points from a separate file. If LoadG2Points is true, and
+	// the user is using a slimmed down g2 SRS file, the verifier will encounter an error while trying to load g2
+	// points. Since the verifier doesn't actually need g2 points, it's safe to force LoadG2Points to false, to
+	// sidestep the issue entirely.
+	kzgConfig.LoadG2Points = false
+
+	log.Info("Creating blob KZG verifier")
+	kzgVerifier, err := kzgverifier.NewVerifier(&kzgConfig, encoding.DefaultConfig())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create kzg verifier: %w", err)
 	}
@@ -93,6 +111,7 @@ func NewVerifier(cfg *Config, log log.Logger) (*Verifier, error) {
 		kzgVerifier:               kzgVerifier,
 		cv:                        cv,
 		rollupBlobInclusionWindow: cfg.RollupBlobInclusionWindow,
+		holesky:                   isHolesky(cfg.SvcManagerAddr),
 	}, nil
 }
 
@@ -145,7 +164,10 @@ func (v *Verifier) Commit(blob []byte) (*bn254.G1Affine, error) {
 	}
 
 	if len(v.kzgVerifier.Srs.G1) < len(inputFr) {
-		return nil, fmt.Errorf("cannot verify commitment because the number of stored srs in the memory is insufficient, have %v need %v", len(v.kzgVerifier.Srs.G1), len(inputFr))
+		return nil, fmt.Errorf(
+			"cannot verify commitment because the number of stored srs in the memory is insufficient, have %v need %v",
+			len(v.kzgVerifier.Srs.G1),
+			len(inputFr))
 	}
 
 	config := ecc.MultiExpConfig{}
@@ -169,25 +191,28 @@ func (v *Verifier) VerifyCommitment(certCommitment *grpccommon.G1Commitment, blo
 
 	certCommitmentX := &fp.Element{}
 	certCommitmentX.Unmarshal(certCommitment.X)
-
-	// map coordinates to G1 and ensure they are on the curve
-	xAffine := bn254.MapToG1(*certCommitmentX)
-	if !xAffine.IsOnCurve() {
-		return fmt.Errorf("commitment x field element is not on the curve: %x", certCommitmentX.Marshal())
-	}
-
 	certCommitmentY := &fp.Element{}
 	certCommitmentY.Unmarshal(certCommitment.Y)
 
-	yAffine := bn254.MapToG1(*certCommitmentY)
-	if !yAffine.IsOnCurve() {
-		return fmt.Errorf("commitment y field element is not on the curve: %x", certCommitmentY.Marshal())
+	certCommitmentAffine := bn254.G1Affine{
+		X: *certCommitmentX,
+		Y: *certCommitmentY,
+	}
+
+	if !certCommitmentAffine.IsOnCurve() {
+		return fmt.Errorf("commitment (x,y) field elements are not on the BN254 curve")
 	}
 
 	errMsg := ""
 	if !actualCommit.X.Equal(certCommitmentX) || !actualCommit.Y.Equal(certCommitmentY) {
-		errMsg += fmt.Sprintf("field elements do not match, x actual commit: %x, x expected commit: %x, ", actualCommit.X.Marshal(), certCommitmentX.Marshal())
-		errMsg += fmt.Sprintf("y actual commit: %x, y expected commit: %x", actualCommit.Y.Marshal(), certCommitmentY.Marshal())
+		errMsg += fmt.Sprintf(
+			"field elements do not match, x actual commit: %x, x expected commit: %x, ",
+			actualCommit.X.Marshal(),
+			certCommitmentX.Marshal())
+		errMsg += fmt.Sprintf(
+			"y actual commit: %x, y expected commit: %x",
+			actualCommit.Y.Marshal(),
+			certCommitmentY.Marshal())
 		return fmt.Errorf("%s", errMsg)
 	}
 
@@ -201,38 +226,43 @@ func (v *Verifier) verifySecurityParams(blobHeader BlobHeader, batchHeader *disp
 	// require that the security param in each blob is met
 	for i := 0; i < len(blobHeader.QuorumBlobParams); i++ {
 		if batchHeader.QuorumNumbers[i] != blobHeader.QuorumBlobParams[i].QuorumNumber {
-			return fmt.Errorf("quorum number mismatch, expected: %d, got: %d", batchHeader.QuorumNumbers[i], blobHeader.QuorumBlobParams[i].QuorumNumber)
+			return fmt.Errorf(
+				"quorum number mismatch, expected: %d, got: %d",
+				batchHeader.QuorumNumbers[i],
+				blobHeader.QuorumBlobParams[i].QuorumNumber)
 		}
 
-		if blobHeader.QuorumBlobParams[i].AdversaryThresholdPercentage > blobHeader.QuorumBlobParams[i].ConfirmationThresholdPercentage {
-			return fmt.Errorf("adversary threshold percentage must be greater than or equal to confirmation threshold percentage")
+		if blobHeader.QuorumBlobParams[i].AdversaryThresholdPercentage >
+			blobHeader.QuorumBlobParams[i].ConfirmationThresholdPercentage {
+			return fmt.Errorf(
+				"adversary threshold percentage must be greater than or equal to confirmation threshold percentage",
+			)
 		}
-		// we get the quorum adversary threshold at the batch's reference block number. This is not strictly needed right now
-		// since this threshold is hardcoded into the contract: https://github.com/Layr-Labs/eigenda/blob/master/contracts/src/core/EigenDAServiceManagerStorage.sol
+		// we get the quorum adversary threshold at the batch's reference block number. This is not strictly needed
+		// right now since this threshold is hardcoded into the contract:
+		// https://github.com/Layr-Labs/eigenda/blob/master/contracts/src/core/EigenDAServiceManagerStorage.sol
 		// but it is good practice in case the contract changes in the future
-		quorumAdversaryThreshold, err := v.getQuorumAdversaryThreshold(blobHeader.QuorumBlobParams[i].QuorumNumber, int64(batchHeader.ReferenceBlockNumber))
-		if err != nil {
-			v.log.Warn("failed to get quorum adversary threshold", "err", err)
-		}
-
-		if quorumAdversaryThreshold > 0 && blobHeader.QuorumBlobParams[i].AdversaryThresholdPercentage < quorumAdversaryThreshold {
-			return fmt.Errorf("adversary threshold percentage must be greater than or equal to quorum adversary threshold percentage")
+		quorumAdversaryThreshold, ok := v.cv.quorumAdversaryThresholdPercentages(blobHeader.QuorumBlobParams[i].QuorumNumber)
+		if !ok {
+			log.Warn(
+				"CertVerifier.quorumAdversaryThresholds map does not contain quorum number",
+				"quorumNumber",
+				blobHeader.QuorumBlobParams[i].QuorumNumber)
+		} else if blobHeader.QuorumBlobParams[i].AdversaryThresholdPercentage < quorumAdversaryThreshold {
+			return fmt.Errorf("adversary threshold percentage must be >= quorum adversary threshold percentage")
 		}
 
 		if batchHeader.QuorumSignedPercentages[i] < blobHeader.QuorumBlobParams[i].ConfirmationThresholdPercentage {
-			return fmt.Errorf("signed stake for quorum must be greater than or equal to confirmation threshold percentage")
+			return fmt.Errorf(
+				"signed stake for quorum must be >= to confirmation threshold percentage",
+			)
 		}
 
 		confirmedQuorums[blobHeader.QuorumBlobParams[i].QuorumNumber] = true
 	}
 
-	requiredQuorums, err := v.cv.quorumNumbersRequired(&bind.CallOpts{BlockNumber: big.NewInt(int64(batchHeader.ReferenceBlockNumber))})
-	if err != nil {
-		v.log.Warn("failed to get required quorum numbers at block number", "err", err, "referenceBlockNumber", batchHeader.ReferenceBlockNumber)
-	}
-
 	// ensure that required quorums are present in the confirmed ones
-	for _, quorum := range requiredQuorums {
+	for _, quorum := range requiredQuorum(batchHeader.ReferenceBlockNumber, v) {
 		if !confirmedQuorums[quorum] {
 			return fmt.Errorf("quorum %d is required but not present in confirmed quorums", quorum)
 		}
@@ -241,17 +271,19 @@ func (v *Verifier) verifySecurityParams(blobHeader BlobHeader, batchHeader *disp
 	return nil
 }
 
-// getQuorumAdversaryThreshold reads the adversarial threshold percentage for a given quorum number,
-// at a given block number. If the quorum number does not exist, it returns 0.
-func (v *Verifier) getQuorumAdversaryThreshold(quorumNum uint8, blockNumber int64) (uint8, error) {
-	percentages, err := v.cv.quorumAdversaryThresholdPercentages(&bind.CallOpts{BlockNumber: big.NewInt(blockNumber)})
-	if err != nil {
-		return 0, err
+func requiredQuorum(referenceBlockNumber uint32, v *Verifier) []uint8 {
+	// This check is required due to a bug we had when we updated the EigenDAServiceManager in Holesky. For a brief
+	// period of time, the quorum 1 was not
+	// required for the commitment to be confirmed, so the disperser created batches with only quorum 0 signatures.
+	// Archive nodes trying to sync from these stored batches would thus fail validation here since
+	// quorumsRequired is read from the latestBlock, where the bug has been fixed and both quorums are required.
+	// This check is only for testnet and for a specific block range.
+	if v.holesky && referenceBlockNumber >= 2950000 && referenceBlockNumber < 2960000 {
+		return []uint8{0}
 	}
+	return v.cv.quorumNumbersRequired()
+}
 
-	if len(percentages) > int(quorumNum) {
-		return percentages[quorumNum], nil
-	}
-
-	return 0, nil
+func isHolesky(svcAddress string) bool {
+	return strings.EqualFold(strings.TrimPrefix(svcAddress, "0x"), strings.TrimPrefix(HoleskySVCManagerV1Address, "0x"))
 }

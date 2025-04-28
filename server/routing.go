@@ -1,3 +1,4 @@
+//nolint:lll // long lines are expected in this file
 package server
 
 import (
@@ -5,22 +6,23 @@ import (
 	"net/http"
 
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
+	"github.com/Layr-Labs/eigenda-proxy/config"
 	"github.com/gorilla/mux"
 )
 
 const (
-	routingVarNameRawCommitmentHex  = "raw_commitment_hex"
+	routingVarNamePayloadHex        = "payload_hex"
 	routingVarNameVersionByteHex    = "version_byte_hex"
 	routingVarNameCommitTypeByteHex = "commit_type_byte_hex"
 )
 
-func (svr *Server) registerRoutes(r *mux.Router) {
+func (svr *Server) RegisterRoutes(r *mux.Router) {
 	subrouterGET := r.Methods("GET").PathPrefix("/get").Subrouter()
 	// std commitments (for nitro)
 	subrouterGET.HandleFunc("/"+
 		"{optional_prefix:(?:0x)?}"+ // commitments can be prefixed with 0x
 		"{"+routingVarNameVersionByteHex+":[0-9a-fA-F]{2}}"+ // should always be 0x00 for now but we let others through to return a 404
-		"{"+routingVarNameRawCommitmentHex+":[0-9a-fA-F]*}",
+		"{"+routingVarNamePayloadHex+":[0-9a-fA-F]*}",
 		withLogging(withMetrics(svr.handleGetStdCommitment, svr.m, commitments.Standard), svr.log),
 	).Queries("commitment_mode", "standard")
 	// op keccak256 commitments (write to S3)
@@ -29,8 +31,9 @@ func (svr *Server) registerRoutes(r *mux.Router) {
 		"{"+routingVarNameCommitTypeByteHex+":00}"+ // 00 for keccak256 commitments
 		// we don't use version_byte for keccak commitments, because not expecting keccak commitments to change,
 		// but perhaps we should (in case we want a v2 to use another hash for eg?)
-		// "{version_byte_hex:[0-9a-fA-F]{2}}"+ // should always be 0x00 for now but we let others through to return a 404
-		"{"+routingVarNameRawCommitmentHex+"}",
+		// "{version_byte_hex:[0-9a-fA-F]{2}}"+ // should always be 0x00 for now but we let others through to return a
+		// 404
+		"{"+routingVarNamePayloadHex+"}",
 		withLogging(withMetrics(svr.handleGetOPKeccakCommitment, svr.m, commitments.OptimismKeccak), svr.log),
 	)
 	// op generic commitments (write to EigenDA)
@@ -39,7 +42,7 @@ func (svr *Server) registerRoutes(r *mux.Router) {
 		"{"+routingVarNameCommitTypeByteHex+":01}"+ // 01 for generic commitments
 		"{da_layer_byte:[0-9a-fA-F]{2}}"+ // should always be 0x00 for eigenDA but we let others through to return a 404
 		"{"+routingVarNameVersionByteHex+":[0-9a-fA-F]{2}}"+ // should always be 0x00 for now but we let others through to return a 404
-		"{"+routingVarNameRawCommitmentHex+"}",
+		"{"+routingVarNamePayloadHex+"}",
 		withLogging(withMetrics(svr.handleGetOPGenericCommitment, svr.m, commitments.OptimismGeneric), svr.log),
 	)
 	// unrecognized op commitment type (not 00 or 01)
@@ -47,7 +50,11 @@ func (svr *Server) registerRoutes(r *mux.Router) {
 		"{optional_prefix:(?:0x)?}"+ // commitments can be prefixed with 0x
 		"{"+routingVarNameCommitTypeByteHex+":[0-9a-fA-F]{2}}",
 		func(w http.ResponseWriter, r *http.Request) {
-			svr.log.Info("unsupported commitment type", routingVarNameCommitTypeByteHex, mux.Vars(r)[routingVarNameCommitTypeByteHex])
+			svr.log.Info(
+				"unsupported commitment type",
+				routingVarNameCommitTypeByteHex,
+				mux.Vars(r)[routingVarNameCommitTypeByteHex],
+			)
 			commitType := mux.Vars(r)[routingVarNameCommitTypeByteHex]
 			http.Error(w, fmt.Sprintf("unsupported commitment type %s", commitType), http.StatusBadRequest)
 		},
@@ -65,8 +72,9 @@ func (svr *Server) registerRoutes(r *mux.Router) {
 		"{"+routingVarNameCommitTypeByteHex+":00}"+ // 00 for keccak256 commitments
 		// we don't use version_byte for keccak commitments, because not expecting keccak commitments to change,
 		// but perhaps we should (in case we want a v2 to use another hash for eg?)
-		// "{version_byte_hex:[0-9a-fA-F]{2}}"+ // should always be 0x00 for now but we let others through to return a 404
-		"{"+routingVarNameRawCommitmentHex+"}",
+		// "{version_byte_hex:[0-9a-fA-F]{2}}"+ // should always be 0x00 for now but we let others through to return a
+		// 404
+		"{"+routingVarNamePayloadHex+"}",
 		withLogging(withMetrics(svr.handlePostOPKeccakCommitment, svr.m, commitments.OptimismKeccak), svr.log),
 	)
 	// op generic commitments (write to EigenDA)
@@ -78,6 +86,23 @@ func (svr *Server) registerRoutes(r *mux.Router) {
 	)
 
 	r.HandleFunc("/health", withLogging(svr.handleHealth, svr.log)).Methods("GET")
+
+	// this is done to explicitly log capture potential redirect errors
+	r.HandleFunc("/put", withLogging(svr.logDispersalGetError, svr.log)).Methods("GET")
+
+	// Only register admin endpoints if explicitly enabled in configuration
+	//
+	// Note: A common pattern for admin endpoints is to generate a random API key on startup for authentication.
+	// Since the proxy isn't meant to be exposed publicly, we haven't implemented this here, but it's something
+	// that might be done in the future.
+	if svr.config.IsAPIEnabled(config.AdminAPIType) {
+		svr.log.Warn("Admin API endpoints are enabled")
+		// Admin endpoints to check and set EigenDA backend used for dispersal
+		r.HandleFunc("/admin/eigenda-dispersal-backend",
+			withLogging(svr.handleGetEigenDADispersalBackend, svr.log)).Methods("GET")
+		r.HandleFunc("/admin/eigenda-dispersal-backend",
+			withLogging(svr.handleSetEigenDADispersalBackend, svr.log)).Methods("PUT")
+	}
 }
 
 func notCommitmentModeStandard(r *http.Request, _ *mux.RouteMatch) bool {

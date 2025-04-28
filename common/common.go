@@ -6,6 +6,12 @@ import (
 	"strings"
 )
 
+const GlobalPrefix = "EIGENDA_PROXY"
+
+func PrefixEnvVar(prefix, suffix string) []string {
+	return []string{prefix + "_" + suffix}
+}
+
 // Helper utility functions //
 
 func ContainsDuplicates[P comparable](s []P) bool {
@@ -72,5 +78,39 @@ func ParseBytesAmount(s string) (uint64, error) {
 		return uint64(num * 1000 * 1000 * 1000 * 1000), nil // Decimal terabyte
 	default:
 		return 0, fmt.Errorf("unsupported unit: %s", unit)
+	}
+}
+
+// EigenDABackend is an enum representing various eigenDA backends
+type EigenDABackend uint8
+
+const (
+	V1EigenDABackend EigenDABackend = iota + 1
+	V2EigenDABackend
+)
+
+// StringToEigenDABackend converts a string to EigenDABackend enum
+func StringToEigenDABackend(inputString string) (EigenDABackend, error) {
+	inputString = strings.ToUpper(strings.TrimSpace(inputString))
+
+	switch inputString {
+	case "V1":
+		return V1EigenDABackend, nil
+	case "V2":
+		return V2EigenDABackend, nil
+	default:
+		return 0, fmt.Errorf("invalid backend option: %s", inputString)
+	}
+}
+
+// EigenDABackendToString converts an EigenDABackend enum to its string representation
+func EigenDABackendToString(backend EigenDABackend) string {
+	switch backend {
+	case V1EigenDABackend:
+		return "V1"
+	case V2EigenDABackend:
+		return "V2"
+	default:
+		return "unknown"
 	}
 }

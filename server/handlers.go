@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -17,10 +18,23 @@ import (
 const (
 	// limit requests to only 32 mib to mitigate potential DoS attacks
 	maxRequestBodySize int64 = 1024 * 1024 * 32
+
+	// HTTP headers
+	headerContentType = "Content-Type"
+
+	// Content types
+	contentTypeJSON = "application/json"
 )
 
 func (svr *Server) handleHealth(w http.ResponseWriter, _ *http.Request) error {
 	w.WriteHeader(http.StatusOK)
+	return nil
+}
+
+func (svr *Server) logDispersalGetError(w http.ResponseWriter, _ *http.Request) error {
+	svr.log.Warn(`GET method invoked on /put/ endpoint.
+		This can occur due to 303 redirects when using incorrect slash ticks.`)
+	w.WriteHeader(http.StatusMethodNotAllowed)
 	return nil
 }
 
@@ -35,11 +49,11 @@ func (svr *Server) handleGetStdCommitment(w http.ResponseWriter, r *http.Request
 		return fmt.Errorf("error parsing version byte: %w", err)
 	}
 	commitmentMeta := commitments.CommitmentMeta{
-		Mode:        commitments.Standard,
-		CertVersion: versionByte,
+		Mode:    commitments.Standard,
+		Version: commitments.EigenDACommitmentType(versionByte),
 	}
 
-	rawCommitmentHex, ok := mux.Vars(r)[routingVarNameRawCommitmentHex]
+	rawCommitmentHex, ok := mux.Vars(r)[routingVarNamePayloadHex]
 	if !ok {
 		return fmt.Errorf("commitment not found in path: %s", r.URL.Path)
 	}
@@ -61,11 +75,11 @@ func (svr *Server) handleGetOPKeccakCommitment(w http.ResponseWriter, r *http.Re
 	// 	return err
 	// }
 	commitmentMeta := commitments.CommitmentMeta{
-		Mode:        commitments.OptimismKeccak,
-		CertVersion: byte(commitments.CertV0),
+		Mode:    commitments.OptimismKeccak,
+		Version: commitments.CertV0,
 	}
 
-	rawCommitmentHex, ok := mux.Vars(r)[routingVarNameRawCommitmentHex]
+	rawCommitmentHex, ok := mux.Vars(r)[routingVarNamePayloadHex]
 	if !ok {
 		return fmt.Errorf("commitment not found in path: %s", r.URL.Path)
 	}
@@ -84,11 +98,11 @@ func (svr *Server) handleGetOPGenericCommitment(w http.ResponseWriter, r *http.R
 		return fmt.Errorf("error parsing version byte: %w", err)
 	}
 	commitmentMeta := commitments.CommitmentMeta{
-		Mode:        commitments.OptimismGeneric,
-		CertVersion: versionByte,
+		Mode:    commitments.OptimismGeneric,
+		Version: commitments.EigenDACommitmentType(versionByte),
 	}
 
-	rawCommitmentHex, ok := mux.Vars(r)[routingVarNameRawCommitmentHex]
+	rawCommitmentHex, ok := mux.Vars(r)[routingVarNamePayloadHex]
 	if !ok {
 		return fmt.Errorf("commitment not found in path: %s", r.URL.Path)
 	}
@@ -114,7 +128,7 @@ func (svr *Server) handleGetShared(ctx context.Context, w http.ResponseWriter, r
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return err
 	}
-	input, err := svr.sm.Get(ctx, comm, meta.Mode, common.VerifyArgs{RollupL1InclusionBlockNum: l1InclusionBlockNum})
+	input, err := svr.sm.Get(ctx, comm, meta, common.VerifyArgs{RollupL1InclusionBlockNum: l1InclusionBlockNum})
 	if err != nil {
 		err = MetaError{
 			Err:  fmt.Errorf("get request failed with commitment %v: %w", commitmentHex, err),
@@ -151,6 +165,29 @@ func parseBatchInclusionL1BlockNumQueryParam(r *http.Request) (int64, error) {
 	return -1, nil
 }
 
+// handleGetEigenDADispersalBackend handles the GET request to check the current EigenDA backend used for dispersal.
+// This endpoint returns which EigenDA backend version (v1 or v2) is currently being used for blob dispersal.
+func (svr *Server) handleGetEigenDADispersalBackend(w http.ResponseWriter, _ *http.Request) error {
+	w.Header().Set(headerContentType, contentTypeJSON)
+	w.WriteHeader(http.StatusOK)
+
+	backend := svr.sm.GetDispersalBackend()
+	backendString := common.EigenDABackendToString(backend)
+
+	response := struct {
+		EigenDADispersalBackend string `json:"eigenDADispersalBackend"`
+	}{
+		EigenDADispersalBackend: backendString,
+	}
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, fmt.Sprintf("failed to encode response: %v", err), http.StatusInternalServerError)
+		return err
+	}
+
+	return nil
+}
+
 // =================================================================================================
 // POST ROUTES
 // =================================================================================================
@@ -158,9 +195,14 @@ func parseBatchInclusionL1BlockNumQueryParam(r *http.Request) (int64, error) {
 // handlePostStdCommitment handles the POST request for std commitments.
 func (svr *Server) handlePostStdCommitment(w http.ResponseWriter, r *http.Request) error {
 	commitmentMeta := commitments.CommitmentMeta{
-		Mode:        commitments.Standard,
-		CertVersion: byte(commitments.CertV0), // TODO: hardcoded for now
+		Mode:    commitments.Standard,
+		Version: commitments.CertV0,
 	}
+
+	if svr.sm.GetDispersalBackend() == common.V2EigenDABackend {
+		commitmentMeta.Version = commitments.CertV1
+	}
+
 	return svr.handlePostShared(w, r, nil, commitmentMeta)
 }
 
@@ -174,11 +216,11 @@ func (svr *Server) handlePostOPKeccakCommitment(w http.ResponseWriter, r *http.R
 	// 	return err
 	// }
 	commitmentMeta := commitments.CommitmentMeta{
-		Mode:        commitments.OptimismKeccak,
-		CertVersion: byte(commitments.CertV0),
+		Mode:    commitments.OptimismKeccak,
+		Version: commitments.CertV0,
 	}
 
-	rawCommitmentHex, ok := mux.Vars(r)[routingVarNameRawCommitmentHex]
+	rawCommitmentHex, ok := mux.Vars(r)[routingVarNamePayloadHex]
 	if !ok {
 		return fmt.Errorf("commitment not found in path: %s", r.URL.Path)
 	}
@@ -193,14 +235,24 @@ func (svr *Server) handlePostOPKeccakCommitment(w http.ResponseWriter, r *http.R
 // handlePostOPGenericCommitment handles the POST request for optimism generic commitments.
 func (svr *Server) handlePostOPGenericCommitment(w http.ResponseWriter, r *http.Request) error {
 	commitmentMeta := commitments.CommitmentMeta{
-		Mode:        commitments.OptimismGeneric,
-		CertVersion: byte(commitments.CertV0), // TODO: hardcoded for now
+		Mode:    commitments.OptimismGeneric,
+		Version: commitments.CertV0,
 	}
+
+	if svr.sm.GetDispersalBackend() == common.V2EigenDABackend {
+		commitmentMeta.Version = commitments.CertV1
+	}
+
 	return svr.handlePostShared(w, r, nil, commitmentMeta)
 }
 
-func (svr *Server) handlePostShared(w http.ResponseWriter, r *http.Request, comm []byte, meta commitments.CommitmentMeta) error {
-	svr.log.Info("Processing POST request", "commitment", hex.EncodeToString(comm), "commitmentMeta", meta)
+func (svr *Server) handlePostShared(
+	w http.ResponseWriter,
+	r *http.Request,
+	comm []byte,
+	meta commitments.CommitmentMeta,
+) error {
+	svr.log.Info("Processing POST request", "commitment", hex.EncodeToString(comm), "meta", meta)
 	input, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxRequestBodySize))
 	if err != nil {
 		err = MetaError{
@@ -231,7 +283,7 @@ func (svr *Server) handlePostShared(w http.ResponseWriter, r *http.Request, comm
 		return err
 	}
 
-	responseCommit, err := commitments.EncodeCommitment(commitment, meta.Mode)
+	responseCommit, err := commitments.EncodeCommitment(commitment, meta.Mode, meta.Version)
 	if err != nil {
 		err = MetaError{
 			Err:  fmt.Errorf("failed to encode commitment %v (commitment mode %v): %w", commitment, meta.Mode, err),
@@ -246,5 +298,55 @@ func (svr *Server) handlePostShared(w http.ResponseWriter, r *http.Request, comm
 	if meta.Mode != commitments.OptimismKeccak {
 		svr.writeResponse(w, responseCommit)
 	}
+	return nil
+}
+
+// handleSetEigenDADispersalBackend handles the PUT request to set the EigenDA backend used for dispersal.
+// This endpoint configures which EigenDA backend version (v1 or v2) will be used for blob dispersal.
+func (svr *Server) handleSetEigenDADispersalBackend(w http.ResponseWriter, r *http.Request) error {
+	// Read request body to get the new value
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1024)) // Small limit since we only expect a string
+	if err != nil {
+		http.Error(w, fmt.Sprintf("failed to read request body: %v", err), http.StatusBadRequest)
+		return err
+	}
+
+	// Parse the backend string value
+	var setRequest struct {
+		EigenDADispersalBackend string `json:"eigenDADispersalBackend"`
+	}
+
+	if err := json.Unmarshal(body, &setRequest); err != nil {
+		http.Error(w, fmt.Sprintf("failed to parse JSON request: %v", err), http.StatusBadRequest)
+		return err
+	}
+
+	// Convert the string to EigenDABackend enum
+	backend, err := common.StringToEigenDABackend(setRequest.EigenDADispersalBackend)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("invalid eigenDADispersalBackend value: %v", err), http.StatusBadRequest)
+		return err
+	}
+
+	svr.SetDispersalBackend(backend)
+
+	// Return the current value in the response
+	w.Header().Set(headerContentType, contentTypeJSON)
+	w.WriteHeader(http.StatusOK)
+
+	currentBackend := svr.sm.GetDispersalBackend()
+	backendString := common.EigenDABackendToString(currentBackend)
+
+	response := struct {
+		EigenDADispersalBackend string `json:"eigenDADispersalBackend"`
+	}{
+		EigenDADispersalBackend: backendString,
+	}
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, fmt.Sprintf("failed to encode response: %v", err), http.StatusInternalServerError)
+		return err
+	}
+
 	return nil
 }

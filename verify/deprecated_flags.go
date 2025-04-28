@@ -3,7 +3,7 @@ package verify
 import (
 	"fmt"
 
-	"github.com/Layr-Labs/eigenda-proxy/flags/eigendaflags"
+	"github.com/Layr-Labs/eigenda-proxy/config/eigendaflags"
 	"github.com/urfave/cli/v2"
 )
 
@@ -11,10 +11,9 @@ import (
 // if we upstream the changes before removing the deprecated flags
 var (
 	// cert verification flags
-	DeprecatedCertVerificationEnabledFlagName = withDeprecatedFlagPrefix("cert-verification-enabled")
-	DeprecatedEthRPCFlagName                  = withDeprecatedFlagPrefix("eth-rpc")
-	DeprecatedSvcManagerAddrFlagName          = withDeprecatedFlagPrefix("svc-manager-addr")
-	DeprecatedEthConfirmationDepthFlagName    = withDeprecatedFlagPrefix("eth-confirmation-depth")
+	DeprecatedEthRPCFlagName               = withDeprecatedFlagPrefix("eth-rpc")
+	DeprecatedSvcManagerAddrFlagName       = withDeprecatedFlagPrefix("svc-manager-addr")
+	DeprecatedEthConfirmationDepthFlagName = withDeprecatedFlagPrefix("eth-confirmation-depth")
 
 	// kzg flags
 	DeprecatedG1PathFlagName        = withDeprecatedFlagPrefix("g1-path")
@@ -45,6 +44,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 					eigendaflags.EthRPCURLFlagName, withEnvPrefix(envPrefix, "ETH_RPC"))
 			},
 			Category: category,
+			Hidden:   true,
 		},
 		&cli.StringFlag{
 			Name:    DeprecatedSvcManagerAddrFlagName,
@@ -56,6 +56,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 					eigendaflags.SvcManagerAddrFlagName, withEnvPrefix(envPrefix, "SERVICE_MANAGER_ADDR"))
 			},
 			Category: category,
+			Hidden:   true,
 		},
 		&cli.Uint64Flag{
 			Name:    DeprecatedEthConfirmationDepthFlagName,
@@ -63,19 +64,25 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 			EnvVars: []string{withDeprecatedEnvPrefix(envPrefix, "ETH_CONFIRMATION_DEPTH")},
 			Value:   0,
 			Action: func(_ *cli.Context, _ uint64) error {
-				return fmt.Errorf("flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
-					DeprecatedEthConfirmationDepthFlagName, withDeprecatedEnvPrefix(envPrefix, "ETH_CONFIRMATION_DEPTH"),
-					eigendaflags.ConfirmationDepthFlagName, withEnvPrefix(envPrefix, "CONFIRMATION_DEPTH"))
+				return fmt.Errorf(
+					"flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
+					DeprecatedEthConfirmationDepthFlagName,
+					withDeprecatedEnvPrefix(envPrefix, "ETH_CONFIRMATION_DEPTH"),
+					eigendaflags.ConfirmationDepthFlagName,
+					withEnvPrefix(envPrefix, "CONFIRMATION_DEPTH"),
+				)
 			},
 			Category: category,
+			Hidden:   true,
 		},
 		// kzg flags
 		&cli.StringFlag{
 			Name:    DeprecatedG1PathFlagName,
-			Usage:   "Directory path to g1.point file.",
+			Usage:   "path to g1.point file.",
 			EnvVars: []string{withDeprecatedEnvPrefix(envPrefix, "TARGET_KZG_G1_PATH")},
 			// we use a relative path so that the path works for both the binary and the docker container
-			// aka we assume the binary is run from root dir, and that the resources/ dir is copied into the working dir of the container
+			// aka we assume the binary is run from root dir, and that the resources/ dir is copied into the working dir
+			// of the container
 			Value: "resources/g1.point",
 			Action: func(_ *cli.Context, _ string) error {
 				return fmt.Errorf("flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
@@ -83,27 +90,30 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 					G1PathFlagName, withEnvPrefix(envPrefix, "TARGET_KZG_G1_PATH"))
 			},
 			Category: category,
+			Hidden:   true,
 		},
 		&cli.StringFlag{
 			Name:    DeprecatedG2TauFlagName,
-			Usage:   "Directory path to g2.point.powerOf2 file.",
+			Usage:   "path to g2.point.powerOf2 file.",
 			EnvVars: []string{withDeprecatedEnvPrefix(envPrefix, "TARGET_G2_TAU_PATH")},
 			// we use a relative path so that the path works for both the binary and the docker container
-			// aka we assume the binary is run from root dir, and that the resources/ dir is copied into the working dir of the container
+			// aka we assume the binary is run from root dir, and that the resources/ dir is copied into the working dir
+			// of the container
 			Value: "resources/g2.point.powerOf2",
 			Action: func(_ *cli.Context, _ string) error {
-				return fmt.Errorf("flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
-					DeprecatedG2TauFlagName, withDeprecatedEnvPrefix(envPrefix, "TARGET_G2_TAU_PATH"),
-					G2PowerOf2PathFlagName, withEnvPrefix(envPrefix, "TARGET_KZG_G2_POWER_OF_2_PATH"))
+				return fmt.Errorf("flag --%s (env var %s) is deprecated",
+					DeprecatedG2TauFlagName, withDeprecatedEnvPrefix(envPrefix, "TARGET_G2_TAU_PATH"))
 			},
 			Category: category,
+			Hidden:   true,
 		},
 		&cli.StringFlag{
 			Name:    DeprecatedCachePathFlagName,
-			Usage:   "Directory path to SRS tables for caching.",
+			Usage:   "path to SRS tables for caching.",
 			EnvVars: []string{withDeprecatedEnvPrefix(envPrefix, "TARGET_CACHE_PATH")},
 			// we use a relative path so that the path works for both the binary and the docker container
-			// aka we assume the binary is run from root dir, and that the resources/ dir is copied into the working dir of the container
+			// aka we assume the binary is run from root dir, and that the resources/ dir is copied into the working dir
+			// of the container
 			Value: "resources/SRSTables/",
 			Action: func(_ *cli.Context, _ string) error {
 				return fmt.Errorf("flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
@@ -111,6 +121,7 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 					CachePathFlagName, withEnvPrefix(envPrefix, "TARGET_CACHE_PATH"))
 			},
 			Category: category,
+			Hidden:   true,
 		},
 		// TODO: can we use a genericFlag for this, and automatically parse the string into a uint64?
 		&cli.StringFlag{
@@ -121,11 +132,12 @@ func DeprecatedCLIFlags(envPrefix, category string) []cli.Flag {
 			Action: func(_ *cli.Context, _ string) error {
 				return fmt.Errorf("flag --%s (env var %s) is deprecated, use --%s (env var %s) instead",
 					DeprecatedMaxBlobLengthFlagName, withDeprecatedEnvPrefix(envPrefix, "MAX_BLOB_LENGTH"),
-					MaxBlobLengthFlagName, withEnvPrefix(envPrefix, "MAX_BLOB_LENGTH"))
+					eigendaflags.MaxBlobLengthFlagName, withEnvPrefix(envPrefix, "MAX_BLOB_LENGTH"))
 			},
 			// we also use this flag for memstore.
 			// should we duplicate the flag? Or is there a better way to handle this?
 			Category: category,
+			Hidden:   true,
 		},
 	}
 }

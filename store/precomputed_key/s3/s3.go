@@ -21,6 +21,7 @@ import (
 const (
 	CredentialTypeStatic  CredentialType = "static"
 	CredentialTypeIAM     CredentialType = "iam"
+	CredentialTypePublic  CredentialType = "public"
 	CredentialTypeUnknown CredentialType = "unknown"
 )
 
@@ -30,6 +31,8 @@ func StringToCredentialType(s string) CredentialType {
 		return CredentialTypeStatic
 	case "iam":
 		return CredentialTypeIAM
+	case "public":
+		return CredentialTypePublic
 	default:
 		return CredentialTypeUnknown
 	}
@@ -76,7 +79,8 @@ func isGoogleEndpoint(endpoint string) bool {
 func NewStore(cfg Config) (*Store, error) {
 	putObjectOptions := minio.PutObjectOptions{}
 	if isGoogleEndpoint(cfg.Endpoint) {
-		putObjectOptions.DisableContentSha256 = true // Avoid chunk signatures on GCS: https://github.com/minio/minio-go/issues/1922
+		// Avoid chunk signatures on GCS: https://github.com/minio/minio-go/issues/1922
+		putObjectOptions.DisableContentSha256 = true
 	}
 
 	client, err := minio.New(cfg.Endpoint, &minio.Options{
@@ -95,7 +99,12 @@ func NewStore(cfg Config) (*Store, error) {
 }
 
 func (s *Store) Get(ctx context.Context, key []byte) ([]byte, error) {
-	result, err := s.client.GetObject(ctx, s.cfg.Bucket, path.Join(s.cfg.Path, hex.EncodeToString(key)), minio.GetObjectOptions{})
+	result, err := s.client.GetObject(
+		ctx,
+		s.cfg.Bucket,
+		path.Join(s.cfg.Path, hex.EncodeToString(key)),
+		minio.GetObjectOptions{},
+	)
 	if err != nil {
 		errResponse := minio.ToErrorResponse(err)
 		if errResponse.Code == "NoSuchKey" {
@@ -113,7 +122,14 @@ func (s *Store) Get(ctx context.Context, key []byte) ([]byte, error) {
 }
 
 func (s *Store) Put(ctx context.Context, key []byte, value []byte) error {
-	_, err := s.client.PutObject(ctx, s.cfg.Bucket, path.Join(s.cfg.Path, hex.EncodeToString(key)), bytes.NewReader(value), int64(len(value)), s.putObjectOptions)
+	_, err := s.client.PutObject(
+		ctx,
+		s.cfg.Bucket,
+		path.Join(s.cfg.Path, hex.EncodeToString(key)),
+		bytes.NewReader(value),
+		int64(len(value)),
+		s.putObjectOptions,
+	)
 	if err != nil {
 		return err
 	}
@@ -137,6 +153,9 @@ func (s *Store) BackendType() common.BackendType {
 func creds(cfg Config) *credentials.Credentials {
 	if cfg.CredentialType == CredentialTypeIAM {
 		return credentials.NewIAM("")
+	}
+	if cfg.CredentialType == CredentialTypePublic {
+		return nil
 	}
 	return credentials.NewStaticV4(cfg.AccessKeyID, cfg.AccessKeySecret, "")
 }

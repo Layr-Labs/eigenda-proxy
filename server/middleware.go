@@ -9,7 +9,7 @@ import (
 
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/Layr-Labs/eigensdk-go/logging"
 )
 
 // Used to capture the status code of the response, so that we can use it in middlewares.
@@ -54,7 +54,7 @@ func withMetrics(
 			var metaErr MetaError
 			if errors.As(err, &metaErr) {
 				commitMode = string(metaErr.Meta.Mode)
-				certVersion = string(metaErr.Meta.CertVersion)
+				certVersion = string(metaErr.Meta.Version)
 			}
 			recordDur(strconv.Itoa(scw.status), commitMode, certVersion)
 			return err
@@ -75,7 +75,7 @@ func withMetrics(
 // TODO: implement a ResponseWriter wrapper that saves the status code: see https://github.com/golang/go/issues/18997
 func withLogging(
 	handleFn func(http.ResponseWriter, *http.Request) error,
-	log log.Logger,
+	log logging.Logger,
 ) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -91,7 +91,7 @@ func withLogging(
 		}
 		var metaErr MetaError
 		if errors.As(err, &metaErr) {
-			args = append(args, "commitment_mode", metaErr.Meta.Mode, "cert_version", metaErr.Meta.CertVersion)
+			args = append(args, "commitment_mode", metaErr.Meta.Mode, "cert_version", metaErr.Meta.Version)
 		}
 		log.Info("request", args...)
 	}

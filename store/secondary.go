@@ -8,6 +8,7 @@ import (
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
+	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/ethereum-optimism/optimism/op-service/retry"
 	"github.com/ethereum/go-ethereum/crypto"
 
@@ -37,7 +38,7 @@ type ISecondary interface {
 	WriteSubscriptionLoop(ctx context.Context)
 }
 
-// PutNotify ... notification received by primary router to perform insertion across
+// PutNotify ... notification received by primary manager to perform insertion across
 // secondary storage backends
 type PutNotify struct {
 	Commitment []byte
@@ -46,7 +47,7 @@ type PutNotify struct {
 
 // SecondaryManager ... routing abstraction for secondary storage backends
 type SecondaryManager struct {
-	log log.Logger
+	log logging.Logger
 	m   metrics.Metricer
 
 	caches    []common.PrecomputedKeyStore
@@ -57,10 +58,17 @@ type SecondaryManager struct {
 	concurrentWrites bool
 }
 
-// NewSecondaryManager ... creates a new secondary storage router
-func NewSecondaryManager(log log.Logger, m metrics.Metricer, caches []common.PrecomputedKeyStore, fallbacks []common.PrecomputedKeyStore) ISecondary {
+// NewSecondaryManager ... creates a new secondary storage manager
+func NewSecondaryManager(
+	log logging.Logger,
+	m metrics.Metricer,
+	caches []common.PrecomputedKeyStore,
+	fallbacks []common.PrecomputedKeyStore,
+) ISecondary {
 	return &SecondaryManager{
-		topic:      make(chan PutNotify), // channel is un-buffered which dispersing consumption across routines helps alleviate
+		topic: make(
+			chan PutNotify,
+		), // channel is un-buffered which dispersing consumption across routines helps alleviate
 		log:        log,
 		m:          m,
 		caches:     caches,
@@ -86,7 +94,7 @@ func (sm *SecondaryManager) FallbackEnabled() bool {
 	return len(sm.fallbacks) > 0
 }
 
-// handleRedundantWrites ... writes to both sets of backends (i.e, fallback, cache)
+// HandleRedundantWrites ... writes to both sets of backends (i.e, fallback, cache)
 // and returns an error if NONE of them succeed
 func (sm *SecondaryManager) HandleRedundantWrites(ctx context.Context, commitment []byte, value []byte) error {
 	sources := sm.caches
@@ -96,12 +104,17 @@ func (sm *SecondaryManager) HandleRedundantWrites(ctx context.Context, commitmen
 	successes := 0
 
 	for _, src := range sources {
+		sm.log.Debug("Attempting to write to secondary storage", "backend", src.BackendType())
 		cb := sm.m.RecordSecondaryRequest(src.BackendType().String(), http.MethodPut)
 
 		// for added safety - we retry the insertion 5x using a default exponential backoff
 		_, err := retry.Do[any](ctx, 5, retry.Exponential(),
 			func() (any, error) {
-				return 0, src.Put(ctx, key, value) // this implementation assumes that all secondary clients are thread safe
+				return 0, src.Put(
+					ctx,
+					key,
+					value,
+				) // this implementation assumes that all secondary clients are thread safe
 			})
 		if err != nil {
 			sm.log.Warn("Failed to write to redundant target", "backend", src.BackendType(), "err", err)
@@ -119,12 +132,12 @@ func (sm *SecondaryManager) HandleRedundantWrites(ctx context.Context, commitmen
 	return nil
 }
 
-// AsyncWriteEntry ... subscribes to put notifications posted to shared topic with primary router
+// AsyncWriteEntry ... subscribes to put notifications posted to shared topic with primary manager
 func (sm *SecondaryManager) AsyncWriteEntry() bool {
 	return sm.concurrentWrites
 }
 
-// WriteSubscriptionLoop ... subscribes to put notifications posted to shared topic with primary router
+// WriteSubscriptionLoop ... subscribes to put notifications posted to shared topic with primary manager
 func (sm *SecondaryManager) WriteSubscriptionLoop(ctx context.Context) {
 	sm.concurrentWrites = true
 
@@ -145,11 +158,15 @@ func (sm *SecondaryManager) WriteSubscriptionLoop(ctx context.Context) {
 
 // MultiSourceRead ... reads from a set of backends and returns the first successfully read blob
 // NOTE: - this can also be parallelized when reading from multiple sources and discarding connections that fail
-//   - for complete optimization we can profile secondary storage backends to determine the fastest / most reliable and always rout to it first
+// - for complete optimization we can profile secondary storage backends to determine the fastest / most reliable and
+// always route to it first
 func (sm *SecondaryManager) MultiSourceRead(
-	ctx context.Context, commitment []byte, fallback bool,
+	ctx context.Context,
+	commitment []byte,
+	fallback bool,
 	// verifyOpts are passed to the verification function
-	verify func(context.Context, []byte, []byte, common.VerifyArgs) error, verifyOpts common.VerifyArgs,
+	verify func(context.Context, []byte, []byte, common.VerifyArgs) error,
+	verifyOpts common.VerifyArgs,
 ) ([]byte, error) {
 	var sources []common.PrecomputedKeyStore
 	if fallback {

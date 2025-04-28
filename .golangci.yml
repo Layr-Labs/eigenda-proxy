@@ -61,18 +61,20 @@ linters-settings:
         # Whether to skip (*x).method() calls where x is a pointer receiver.
         # Default: true
         skipRecvDeref: false
+  lll:
+    # Make sure `golines` formatter command in the Makefile matches this.
+    line-length: 120
 
   # gomnd:
   #   # List of function regex patterns to exclude from analysis.
   #   # Default: []
   #   ignored-functions:
-  #     - 
+  #     -
   gomodguard:
     blocked:
       # List of blocked modules.
       # Default: []
-      modules:
-        - 
+      modules: []
   govet:
     # Enable all analyzers.
     # Default: false
@@ -97,7 +99,7 @@ linters-settings:
   nolintlint:
     # Exclude following linters from requiring an explanation.
     # Default: []
-    allow-no-explanation: [ funlen, gocognit, lll, whitespace ]
+    allow-no-explanation: [funlen, gocognit, lll, whitespace]
     # Enable to require an explanation of nonzero length after each nolint directive.
     # Default: false
     require-explanation: true
@@ -110,7 +112,6 @@ linters-settings:
     # Otherwise, only methods that take `*testing.T`, `*testing.B`, and `testing.TB` as arguments are checked.
     # Default: false
     all: true
-
 
 linters:
   disable-all: true
@@ -133,10 +134,8 @@ linters:
     - durationcheck # checks for two durations multiplied together
     - errname # checks that sentinel errors are prefixed with the Err and error types are suffixed with the Error
     - errorlint # finds code that will cause problems with the error wrapping scheme introduced in Go 1.13
-    - execinquery # checks query string in Query function which reads your Go src files and warning it finds
     - exhaustive # checks exhaustiveness of enum switch statements
-    - exportloopref # checks for pointers to enclosing loop variables
-    - forbidigo # forbids identifiers
+    - copyloopvar # checks for pointers to enclosing loop variables
     - funlen # tool for detection of long functions
     - gocheckcompilerdirectives # validates go compiler directive comments (//go:)
     # - gochecknoinits # checks that no init functions are present in Go code
@@ -149,6 +148,7 @@ linters:
     - gofmt
     - gomodguard # allow and block lists linter for direct Go module dependencies. This is different from depguard where there are different block types for example version constraints and module recommendations
     - goprintffuncname # checks that printf-like functions are named with f at the end
+    - lll # checks line length
     - loggercheck # checks key value pairs for common logger libraries (kitlog,klog,logr,zap)
     - makezero # finds slice declarations with non-zero initial length
     - misspell # Ensures real english is used within strings
@@ -163,7 +163,6 @@ linters:
     - predeclared # finds code that shadows one of Go's predeclared identifiers
     - promlinter # checks Prometheus metrics naming via promlint
     - reassign # checks that package variables are not reassigned
-    - revive # fast, configurable, extensible, flexible, and beautiful linter for Go, drop-in replacement of golint
     - rowserrcheck # checks whether Err of rows is checked successfully
     - sqlclosecheck # checks that sql.Rows and sql.Stmt are closed
     - stylecheck # is a replacement for golint
@@ -202,11 +201,17 @@ issues:
 
   exclude-rules:
     - source: "(noinspection|TODO)"
-      linters: [ godot ]
+      linters: [godot]
     - source: "// noinspection"
       linters:
         - gocritic
         - unparam
+
+    # Allow certain patterns to be ignored by lll (long lines)
+    - source: '".{120,}"' # Ignores double-quoted strings longer than 120 chars
+      linters: [lll]
+    - source: '// https?://' # This pattern matches comments containing URLs
+      linters: [lll]
 
     - path: "_test\\.go"
       linters:
@@ -220,6 +225,4 @@ issues:
         - gosec
         - noctx
         - wrapcheck
-        - lll
         - whitespace
-

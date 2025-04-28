@@ -11,9 +11,12 @@ import (
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/commitments"
+	"github.com/Layr-Labs/eigenda-proxy/common"
+	"github.com/Layr-Labs/eigenda-proxy/config"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/store"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
+	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/gorilla/mux"
 )
 
@@ -21,29 +24,29 @@ var (
 	ErrNotFound = errors.New("not found")
 )
 
-const (
-	Put = "put"
-
-	CommitmentModeKey = "commitment_mode"
-)
-
 type Server struct {
-	log        log.Logger
+	log        logging.Logger
 	endpoint   string
 	sm         store.IManager
 	m          metrics.Metricer
 	httpServer *http.Server
 	listener   net.Listener
+	config     config.ServerConfig
 }
 
-func NewServer(host string, port int, sm store.IManager, log log.Logger,
-	m metrics.Metricer) *Server {
-	endpoint := net.JoinHostPort(host, strconv.Itoa(port))
+func NewServer(
+	cfg config.ServerConfig,
+	sm store.IManager,
+	log logging.Logger,
+	m metrics.Metricer,
+) *Server {
+	endpoint := net.JoinHostPort(cfg.Host, strconv.Itoa(cfg.Port))
 	return &Server{
 		m:        m,
 		log:      log,
 		endpoint: endpoint,
 		sm:       sm,
+		config:   cfg,
 		httpServer: &http.Server{
 			Addr:              endpoint,
 			ReadHeaderTimeout: 10 * time.Second,
@@ -53,9 +56,47 @@ func NewServer(host string, port int, sm store.IManager, log log.Logger,
 	}
 }
 
-func (svr *Server) Start() error {
-	r := mux.NewRouter()
-	svr.registerRoutes(r)
+// BuildAndStartProxyServer constructs a new proxy server, and starts it
+func BuildAndStartProxyServer(
+	ctx context.Context,
+	logger logging.Logger,
+	metrics metrics.Metricer,
+	appConfig config.AppConfig,
+) (*Server, error) {
+	storageManager, err := store.NewStorageManagerBuilder(
+		ctx,
+		logger,
+		metrics,
+		appConfig.EigenDAConfig.StorageConfig,
+		appConfig.EigenDAConfig.MemstoreConfig,
+		appConfig.EigenDAConfig.MemstoreEnabled,
+		appConfig.EigenDAConfig.KzgConfig,
+		appConfig.EigenDAConfig.ClientConfigV1,
+		appConfig.EigenDAConfig.VerifierConfigV1,
+		appConfig.EigenDAConfig.ClientConfigV2,
+		appConfig.SecretConfig,
+	).Build(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create store: %w", err)
+	}
+
+	proxyServer := NewServer(appConfig.EigenDAConfig.ServerConfig, storageManager, logger, metrics)
+	router := mux.NewRouter()
+	proxyServer.RegisterRoutes(router)
+	if appConfig.EigenDAConfig.MemstoreEnabled {
+		memconfig.NewHandlerHTTP(logger, appConfig.EigenDAConfig.MemstoreConfig).RegisterMemstoreConfigHandlers(router)
+	}
+
+	if err := proxyServer.Start(router); err != nil {
+		return nil, fmt.Errorf("failed to start the DA server: %w", err)
+	}
+
+	logger.Info("Started EigenDA proxy server")
+
+	return proxyServer, nil
+}
+
+func (svr *Server) Start(r *mux.Router) error {
 	svr.httpServer.Handler = r
 
 	listener, err := net.Listen("tcp", svr.endpoint)
@@ -100,6 +141,11 @@ func (svr *Server) Stop() error {
 	return nil
 }
 
+// SetDispersalBackend configures which version of eigenDA the server disperses to
+func (svr *Server) SetDispersalBackend(backend common.EigenDABackend) {
+	svr.sm.SetDispersalBackend(backend)
+}
+
 func (svr *Server) writeResponse(w http.ResponseWriter, data []byte) {
 	if _, err := w.Write(data); err != nil {
 		http.Error(w, fmt.Sprintf("failed to write response: %v", err), http.StatusInternalServerError)
@@ -122,8 +168,6 @@ func parseVersionByte(w http.ResponseWriter, r *http.Request) (byte, error) {
 	// and then just reconstruct the full commitment in the handlers?
 	versionByteHex, isGETRoute := vars[routingVarNameVersionByteHex]
 	if !isGETRoute {
-		// v0 is hardcoded in POST routes for now (see handlers.go that also have this hardcoded)
-		// TODO: change this once we introduce v1/v2 certs
 		return byte(commitments.CertV0), nil
 	}
 	versionByte, err := hex.DecodeString(versionByteHex)
@@ -134,8 +178,9 @@ func parseVersionByte(w http.ResponseWriter, r *http.Request) (byte, error) {
 		return 0, fmt.Errorf("version byte is not a single byte: %s", versionByteHex)
 	}
 	switch versionByte[0] {
-	case byte(commitments.CertV0):
+	case byte(commitments.CertV0), byte(commitments.CertV1):
 		return versionByte[0], nil
+
 	default:
 		http.Error(w, fmt.Sprintf("unsupported version byte %x", versionByte), http.StatusBadRequest)
 		return 0, fmt.Errorf("unsupported version byte %x", versionByte)

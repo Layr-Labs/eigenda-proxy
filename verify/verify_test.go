@@ -16,7 +16,6 @@ import (
 	"github.com/Layr-Labs/eigenda/api/grpc/disperser"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	"github.com/Layr-Labs/eigenda/encoding/rs"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -37,9 +36,10 @@ func TestCommitmentVerification(t *testing.T) {
 		Y: y,
 	}
 
-	kzgConfig := &kzg.KzgConfig{
+	kzgConfig := kzg.KzgConfig{
 		G1Path:          "../resources/g1.point",
-		G2PowerOf2Path:  "../resources/g2.point.powerOf2",
+		G2Path:          "../resources/g2.point",
+		G2TrailingPath:  "../resources/g2.trailing.point",
 		CacheDir:        "../resources/SRSTables",
 		SRSOrder:        3000,
 		SRSNumberToLoad: 3000,
@@ -48,10 +48,9 @@ func TestCommitmentVerification(t *testing.T) {
 
 	cfg := &Config{
 		VerifyCerts: false,
-		KzgConfig:   kzgConfig,
 	}
 
-	v, err := NewVerifier(cfg, log.New())
+	v, err := NewVerifier(cfg, kzgConfig, nil)
 	require.NoError(t, err)
 
 	// Happy path verification
@@ -75,9 +74,10 @@ func TestCommitmentWithTooLargeBlob(t *testing.T) {
 	require.NoError(t, err)
 	data := dataRand[:]
 
-	kzgConfig := &kzg.KzgConfig{
+	kzgConfig := kzg.KzgConfig{
 		G1Path:          "../resources/g1.point",
-		G2PowerOf2Path:  "../resources/g2.point.powerOf2",
+		G2Path:          "../resources/g2.point",
+		G2TrailingPath:  "../resources/g2.trailing.point",
 		CacheDir:        "../resources/SRSTables",
 		SRSOrder:        3000,
 		SRSNumberToLoad: 3000,
@@ -86,10 +86,9 @@ func TestCommitmentWithTooLargeBlob(t *testing.T) {
 
 	cfg := &Config{
 		VerifyCerts: false,
-		KzgConfig:   kzgConfig,
 	}
 
-	v, err := NewVerifier(cfg, log.New())
+	v, err := NewVerifier(cfg, kzgConfig, nil)
 	require.NoError(t, err)
 
 	// Some wrong commitment just to pass in function
@@ -113,7 +112,11 @@ func TestCommitmentWithTooLargeBlob(t *testing.T) {
 	require.NoError(t, err)
 
 	err = v.VerifyCommitment(c, blob)
-	msg := fmt.Sprintf("cannot verify commitment because the number of stored srs in the memory is insufficient, have %v need %v", kzgConfig.SRSNumberToLoad, len(inputFr))
+	msg := fmt.Sprintf(
+		"cannot verify commitment because the number of stored srs in the memory is insufficient, have %v need %v",
+		kzgConfig.SRSNumberToLoad,
+		len(inputFr),
+	)
 	require.EqualError(t, err, msg)
 
 }
@@ -130,9 +133,8 @@ func TestVerifyCertRollupBlobInclusionWindow(t *testing.T) {
 	cfg := &Config{
 		VerifyCerts:               false,
 		RollupBlobInclusionWindow: 100,
-		KzgConfig:                 kzgConfig,
 	}
-	verifier, err := NewVerifier(cfg, log.New())
+	verifier, err := NewVerifier(cfg, *kzgConfig, nil)
 	require.NoError(t, err)
 
 	// contains a BlobInfo, which was obtained from dispersing a blob and retrieving its blob status
