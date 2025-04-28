@@ -26,14 +26,17 @@ const (
 )
 
 type Config struct {
-	// Allowed distance (in L1 blocks) between the eigenDA reference block number (RBN) of the batch the blob is included in,
-	// and the L1 block number at which the blob cert was included in the batcher's inbox.
-	// If batch.RBN + RollupBlobInclusionWindow < cert.L1InclusionBlock, the batch is considered stale and verification will fail.
+	// Allowed distance (in L1 blocks) between the eigenDA reference block number (RBN)
+	// of the batch the blob is included in, and the L1 block number at which the blob cert
+	// was included in the batcher's inbox.
+	// If batch.RBN + RollupBlobInclusionWindow < cert.L1InclusionBlock, the batch is considered
+	// stale and verification will fail.
 	// This check is optional and will be skipped when RollupBlobInclusionWindow is set to 0.
 	RollupBlobInclusionWindow uint32
 	// Cert verification is optional, and verifies certs retrieved from eigenDA when turned on.
 	// It is optional because it requires making calls to the blockchain, which is not necessarily always possible.
-	// For eg, some rollups are running on sepolia testnet which doesn't have an eigenlayer/eigenda contracts deployment.
+	// For eg, some rollups are running on sepolia testnet which doesn't have an eigenlayer/eigenda contracts
+	// deployment.
 	VerifyCerts bool
 	// below fields are only required if VerifyCerts is true
 	RPCURL               string
@@ -57,7 +60,8 @@ func (c Config) MarshalJSON() ([]byte, error) {
 // Verifier verifies the integrity of a blob and its certificate. There are 3 main categories of verification:
 //  1. Blob: properties localized to a single blob, most specifically its commitment
 //  2. Batch: properties wrt the EigenDA network: signatures, quorum thresholds, onchain inclusion, etc.
-//  3. Rollup: properties wrt the rollup chain: block at which the cert was included in the batcher's inbox (make sure its not too stale trying to game fraud proof windows)
+//  3. Rollup: properties wrt the rollup chain: block at which the cert was included in the batcher's inbox
+//     (make sure its not too stale trying to game fraud proof windows)
 //
 // TODO: right now verification and confirmation depth are tightly coupled. we should decouple them
 type Verifier struct {
@@ -66,11 +70,14 @@ type Verifier struct {
 	kzgVerifier *kzgverifier.Verifier
 	// When config.VerifyCerts is false, we use a noop verifier that does nothing
 	cv certVerifier
-	// Allowed distance (in L1 blocks) between the eigenDA reference block number (RBN) of the batch the blob is included in,
-	// and the L1 block number at which the blob cert was included in the batcher's inbox.
+	// Allowed distance (in L1 blocks) between the eigenDA reference block number (RBN) of the batch the blob is
+	// included in, and the L1 block number at which the blob cert was included in the batcher's inbox.
 	// Invariant to maintain: batch.RBN < rollupBlobInclusionBlock <= batch.RBN + rollupBlobInclusionWindow
-	// This check is optional and will be skipped when rollupBlobInclusionBlock or rollupBlobInclusionWindow are set to 0.
-	// Note: if there are more rollup related properties that we need to check in the future, then maybe create a RollupVerifier struct.
+	// This check is optional and will be skipped when rollupBlobInclusionBlock
+	// or rollupBlobInclusionWindow are set to 0.
+	//
+	// Note: if there are more rollup related
+	// properties that we need to check in the future, then maybe create a RollupVerifier struct.
 	rollupBlobInclusionWindow uint32
 	// holesky is a flag to enable/disable holesky specific checks
 	holesky bool
@@ -123,24 +130,38 @@ func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate, args commo
 		return fmt.Errorf("failed to verify batch: %w", err)
 	}
 
-	// 2 - verify that the blob cert was submitted to the rollup's batch inbox within the allowed RollupBlobInclusionWindow window.
-	// This is to prevent timing attacks where a rollup batcher could try to game the fraud proof window by including an old DA blob that is about to expire on the DA layer
-	// and is hence not retrievable.
-	if args.RollupL1InclusionBlockNum >= 0 && v.rollupBlobInclusionWindow > 0 {
+	// 2 - verify that the blob cert was submitted to the rollup's batch inbox within the allowed
+	// RollupBlobInclusionWindow window. This is to prevent timing attacks where a rollup batcher
+	// could try to game the fraud proof window by including an old DA blob that is about to expire
+	// on the DA layer and is hence not retrievable.
+	if args.RollupL1InclusionBlockNum > 0 && v.rollupBlobInclusionWindow > 0 {
 		batchRBN := uint64(cert.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber)
 		rollupInclusionBlock := args.RollupL1InclusionBlockNum
 		// We need batchRBN < rollupInclusionBlock <= batch.RBN + rollupBlobInclusionWindow
 		if !(batchRBN < rollupInclusionBlock) {
-			return fmt.Errorf("eigenda batch reference block number (%d) needs to be < rollup inclusion block number (%d); this is a serious bug, please report it.", batchRBN, rollupInclusionBlock)
+			return fmt.Errorf(
+				"eigenda batch reference block number (%d) needs to be < rollup inclusion block number (%d): this is a serious bug, please report it",
+				batchRBN,
+				rollupInclusionBlock,
+			)
 		}
 		if !(rollupInclusionBlock <= batchRBN+uint64(v.rollupBlobInclusionWindow)) {
-			return fmt.Errorf("rollup inclusion block number (%d) needs to be <= eigenda batch reference block number (%d) + rollupBlobInclusionWindow (%d)",
-				rollupInclusionBlock, batchRBN, v.rollupBlobInclusionWindow)
+			return fmt.Errorf(
+				"rollup inclusion block number (%d) needs to be <= eigenda batch reference block number (%d) + rollupBlobInclusionWindow (%d)",
+				rollupInclusionBlock,
+				batchRBN,
+				v.rollupBlobInclusionWindow,
+			)
 		}
 	}
 
 	// 3 - verify merkle inclusion proof
-	err = v.cv.verifyMerkleProof(cert.Proof().GetInclusionProof(), cert.BatchHeaderRoot(), cert.Proof().GetBlobIndex(), cert.ReadBlobHeader())
+	err = v.cv.verifyMerkleProof(
+		cert.Proof().GetInclusionProof(),
+		cert.BatchHeaderRoot(),
+		cert.Proof().GetBlobIndex(),
+		cert.ReadBlobHeader(),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to verify merkle proof: %w", err)
 	}
@@ -241,7 +262,9 @@ func (v *Verifier) verifySecurityParams(blobHeader BlobHeader, batchHeader *disp
 		// right now since this threshold is hardcoded into the contract:
 		// https://github.com/Layr-Labs/eigenda/blob/master/contracts/src/core/EigenDAServiceManagerStorage.sol
 		// but it is good practice in case the contract changes in the future
-		quorumAdversaryThreshold, ok := v.cv.quorumAdversaryThresholdPercentages(blobHeader.QuorumBlobParams[i].QuorumNumber)
+		quorumAdversaryThreshold, ok := v.cv.quorumAdversaryThresholdPercentages(
+			blobHeader.QuorumBlobParams[i].QuorumNumber,
+		)
 		if !ok {
 			log.Warn(
 				"CertVerifier.quorumAdversaryThresholds map does not contain quorum number",

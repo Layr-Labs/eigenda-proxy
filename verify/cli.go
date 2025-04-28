@@ -120,7 +120,12 @@ func ReadKzgConfig(ctx *cli.Context, maxBlobSizeBytes uint64) kzg.KzgConfig {
 func ReadConfig(ctx *cli.Context, clientConfigV1 common.ClientConfigV1) Config {
 	rollupBlobInclusionWindowUint := ctx.Uint(RollupBlobInclusionWindowFlagName)
 	if rollupBlobInclusionWindowUint > math.MaxUint32 {
-		panic(fmt.Sprintf("RollupBlobInclusionWindow value (%d) too large for uint32", ctx.Uint(RollupBlobInclusionWindowFlagName)))
+		panic(
+			fmt.Sprintf(
+				"RollupBlobInclusionWindow value (%d) too large for uint32",
+				ctx.Uint(RollupBlobInclusionWindowFlagName),
+			),
+		)
 	}
 	return Config{
 		VerifyCerts:               !ctx.Bool(CertVerificationDisabledFlagName),

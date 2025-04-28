@@ -85,7 +85,12 @@ func NewManager(
 }
 
 // Get ... fetches a value from a storage backend based on the (commitment mode, type)
-func (m *Manager) Get(ctx context.Context, key []byte, cm commitments.CommitmentMeta, verifyOpts common.VerifyArgs) ([]byte, error) {
+func (m *Manager) Get(
+	ctx context.Context,
+	key []byte,
+	cm commitments.CommitmentMeta,
+	verifyOpts common.VerifyArgs,
+) ([]byte, error) {
 	switch cm.Mode {
 	case commitments.OptimismKeccak:
 

@@ -114,7 +114,13 @@ func (svr *Server) handleGetOPGenericCommitment(w http.ResponseWriter, r *http.R
 	return svr.handleGetShared(r.Context(), w, r, commitment, commitmentMeta)
 }
 
-func (svr *Server) handleGetShared(ctx context.Context, w http.ResponseWriter, r *http.Request, comm []byte, meta commitments.CommitmentMeta) error {
+func (svr *Server) handleGetShared(
+	ctx context.Context,
+	w http.ResponseWriter,
+	r *http.Request,
+	comm []byte,
+	meta commitments.CommitmentMeta,
+) error {
 	commitmentHex := hex.EncodeToString(comm)
 	svr.log.Info("Processing GET request", "commitment", commitmentHex, "commitmentMeta", meta)
 	l1InclusionBlockNum, err := parseBatchInclusionL1BlockNumQueryParam(r)
