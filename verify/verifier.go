@@ -134,6 +134,13 @@ func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate, args commo
 	// RollupBlobInclusionWindow window. This is to prevent timing attacks where a rollup batcher
 	// could try to game the fraud proof window by including an old DA blob that is about to expire
 	// on the DA layer and is hence not retrievable.
+	//
+	// Note that for a secure integration, this same check needs to be verified onchain.
+	// There are 2 approaches to doing this:
+	//  1. Pessimistic approach: use a smart batcher inbox to dissalow stale blobs from even beign included
+	//   in the batcher inbox (see https://github.com/ethereum-optimism/design-docs/pull/229)
+	//  2. Optimistic approach: verify the check in op-program or hokulea (kona)'s derivation pipeline. See
+	// https://github.com/Layr-Labs/hokulea/blob/8c4c89bc4f35d56a3cec2220575a9681d987105c/crates/eigenda/src/eigenda.rs#L90
 	if args.RollupL1InclusionBlockNum > 0 && v.rollupBlobInclusionWindow > 0 {
 		batchRBN := uint64(cert.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber)
 		rollupInclusionBlock := args.RollupL1InclusionBlockNum
