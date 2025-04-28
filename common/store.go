@@ -75,13 +75,17 @@ type Store interface {
 
 type VerifyArgs struct {
 	// L1 block number at which the rollup batch was submitted to the batcher inbox.
-	// This is optional, and should be set to -1 to mean to not verify the reference block number distance check.
+	// This is optional, and should be set to 0 to mean to not verify the reference block number distance check.
+	// Its impossible for a batch inbox tx to have been included in the genesis block,
+	// so we are free to give this special meaning to the zero value.
 	//
 	// Used to determine the validity of the eigenDA batch.
-	// The eigenDA batch header contains a reference block number (RBN) which is used to pin the stake of the eigenda operators at that specific block.
-	// The rollup batch containing the eigenDA cert is only valid if it was included within a certain number of blocks after the RBN.
-	// validity condition is: RBN < l1_inclusion_block_number < RBN + some_delta
-	RollupL1InclusionBlockNum int64
+	// The eigenDA batch header contains a reference block number (RBN) which is used
+	// to lookup the stake of the eigenda operators before verifying signature thresholds.
+	// The rollup batch containing the eigenDA cert is only valid if it was included
+	// within a certain number of blocks after the RBN.
+	// validity condition is: RBN < l1_inclusion_block_number < RBN + rollup_blob_inclusion_window
+	RollupL1InclusionBlockNum uint64
 }
 
 type GeneratedKeyStore interface {

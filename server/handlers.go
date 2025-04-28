@@ -151,18 +151,18 @@ func (svr *Server) handleGetShared(ctx context.Context, w http.ResponseWriter, r
 //   - if the l1_inclusion_block_number is provided, it returns the parsed value.
 //
 // Unhappy paths:
-//   - if the l1_inclusion_block_number is not provided, it returns -1.
-//   - if the l1_inclusion_block_number is provided but isn't a valid integer, it returns an error and -1.
-func parseBatchInclusionL1BlockNumQueryParam(r *http.Request) (int64, error) {
+//   - if the l1_inclusion_block_number is not provided, it returns 0 (whose meaning is to skip the check).
+//   - if the l1_inclusion_block_number is provided but isn't a valid integer, it returns an error.
+func parseBatchInclusionL1BlockNumQueryParam(r *http.Request) (uint64, error) {
 	l1BlockNumStr := r.URL.Query().Get("l1_inclusion_block_number")
 	if l1BlockNumStr != "" {
-		l1BlockNum, err := strconv.ParseInt(l1BlockNumStr, 10, 64)
+		l1BlockNum, err := strconv.ParseUint(l1BlockNumStr, 10, 64)
 		if err != nil {
-			return -1, fmt.Errorf("invalid l1_inclusion_block_number: %w", err)
+			return 0, fmt.Errorf("invalid l1_inclusion_block_number: %w", err)
 		}
 		return l1BlockNum, nil
 	}
-	return -1, nil
+	return 0, nil
 }
 
 // handleGetEigenDADispersalBackend handles the GET request to check the current EigenDA backend used for dispersal.
