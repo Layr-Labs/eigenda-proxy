@@ -49,7 +49,7 @@ func (svr *Server) handleGetStdCommitment(w http.ResponseWriter, r *http.Request
 	}
 	commitmentMeta := commitments.CommitmentMeta{
 		Mode:    commitments.Standard,
-		Version: commitments.EigenDACommitmentType(versionByte),
+		Version: commitments.EigenDACertVersion(versionByte),
 	}
 
 	rawCommitmentHex, ok := mux.Vars(r)[routingVarNamePayloadHex]
@@ -98,7 +98,7 @@ func (svr *Server) handleGetOPGenericCommitment(w http.ResponseWriter, r *http.R
 	}
 	commitmentMeta := commitments.CommitmentMeta{
 		Mode:    commitments.OptimismGeneric,
-		Version: commitments.EigenDACommitmentType(versionByte),
+		Version: commitments.EigenDACertVersion(versionByte),
 	}
 
 	rawCommitmentHex, ok := mux.Vars(r)[routingVarNamePayloadHex]

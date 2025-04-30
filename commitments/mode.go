@@ -7,7 +7,7 @@ import (
 type CommitmentMeta struct {
 	Mode CommitmentMode
 	// version is shared for all modes and denotes version of the EigenDA certificate
-	Version EigenDACommitmentType
+	Version EigenDACertVersion
 }
 
 type CommitmentMode string
@@ -34,20 +34,20 @@ func StringToCommitmentMode(s string) (CommitmentMode, error) {
 func EncodeCommitment(
 	bytes []byte,
 	commitmentMode CommitmentMode,
-	commitmentType EigenDACommitmentType,
+	certVersion EigenDACertVersion,
 ) ([]byte, error) {
 	switch commitmentMode {
 	case OptimismKeccak:
 		return Keccak256Commitment(bytes).Encode(), nil
 
 	case OptimismGeneric:
-		certCommit := NewEigenDACommitment(bytes, commitmentType).Encode()
+		certCommit := NewEigenDAVersionedCert(bytes, certVersion).Encode()
 		svcCommit := EigenDASvcCommitment(certCommit).Encode()
 		altDACommit := NewGenericCommitment(svcCommit).Encode()
 		return altDACommit, nil
 
 	case Standard:
-		return NewEigenDACommitment(bytes, commitmentType).Encode(), nil
+		return NewEigenDAVersionedCert(bytes, certVersion).Encode(), nil
 	}
 
 	return nil, fmt.Errorf("unknown commitment mode")

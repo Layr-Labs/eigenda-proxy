@@ -194,7 +194,7 @@ func (m *Manager) Put(ctx context.Context, cm commitments.CommitmentMode, key, v
 }
 
 // getVerifyMethod returns the correct verify method based on commitment type
-func (m *Manager) getVerifyMethod(commitmentType commitments.EigenDACommitmentType) (
+func (m *Manager) getVerifyMethod(commitmentType commitments.EigenDACertVersion) (
 	func(context.Context, []byte, []byte) error,
 	error,
 ) {
@@ -235,7 +235,7 @@ func (m *Manager) putEigenDAMode(ctx context.Context, value []byte) ([]byte, err
 
 func (m *Manager) getEigenDAMode(
 	ctx context.Context,
-	commitmentType commitments.EigenDACommitmentType,
+	commitmentType commitments.EigenDACertVersion,
 	key []byte,
 ) ([]byte, error) {
 	switch commitmentType {
