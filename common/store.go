@@ -72,15 +72,15 @@ type Store interface {
 	// BackendType returns the backend type provider of the store.
 	BackendType() BackendType
 	// Verify verifies the given key-value pair.
-	Verify(ctx context.Context, key []byte, value []byte) error
+	Verify(ctx context.Context, serializedCert []byte, payload []byte) error
 }
 
 type GeneratedKeyStore interface {
 	Store
-	// Get retrieves the given key if it's present in the key-value data store.
-	Get(ctx context.Context, key []byte) ([]byte, error)
-	// Put inserts the given value into the key-value data store.
-	Put(ctx context.Context, value []byte) (key []byte, err error)
+	// Get retrieves the given key if it's present in the key-value (serializedCert-payload) data store.
+	Get(ctx context.Context, serializedCert []byte) (payload []byte, err error)
+	// Put inserts the given value into the key-value (serializedCert-payload) data store.
+	Put(ctx context.Context, payload []byte) (serializedCert []byte, err error)
 }
 
 type PrecomputedKeyStore interface {

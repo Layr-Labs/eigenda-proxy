@@ -159,7 +159,7 @@ func (svr *Server) Port() int {
 	return port
 }
 
-func parseVersionByte(w http.ResponseWriter, r *http.Request) (byte, error) {
+func parseCertVersion(w http.ResponseWriter, r *http.Request) (commitments.EigenDACertVersion, error) {
 	vars := mux.Vars(r)
 	// only GET routes use gorilla parsed vars to separate header bytes from the raw commitment bytes.
 	// POST routes parse them by hand because they neeed to send the entire
@@ -168,7 +168,8 @@ func parseVersionByte(w http.ResponseWriter, r *http.Request) (byte, error) {
 	// and then just reconstruct the full commitment in the handlers?
 	versionByteHex, isGETRoute := vars[routingVarNameVersionByteHex]
 	if !isGETRoute {
-		return byte(commitments.CertV0), nil
+		// TODO: this seems like a bug... used in metrics for POST route, so we'll just always return v0??
+		return commitments.CertV0, nil
 	}
 	versionByte, err := hex.DecodeString(versionByteHex)
 	if err != nil {
@@ -178,9 +179,10 @@ func parseVersionByte(w http.ResponseWriter, r *http.Request) (byte, error) {
 		return 0, fmt.Errorf("version byte is not a single byte: %s", versionByteHex)
 	}
 	switch versionByte[0] {
-	case byte(commitments.CertV0), byte(commitments.CertV1):
-		return versionByte[0], nil
-
+	case byte(commitments.CertV0):
+		return commitments.CertV0, nil
+	case byte(commitments.CertV1):
+		return commitments.CertV1, nil
 	default:
 		http.Error(w, fmt.Sprintf("unsupported version byte %x", versionByte), http.StatusBadRequest)
 		return 0, fmt.Errorf("unsupported version byte %x", versionByte)

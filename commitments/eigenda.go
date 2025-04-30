@@ -10,20 +10,20 @@ const (
 )
 
 type EigenDAVersionedCert struct {
-	certVersion    EigenDACertVersion
-	serializedCert []byte
+	CertVersion    EigenDACertVersion
+	SerializedCert []byte
 }
 
 // NewEigenDAVersionedCert creates a new EigenDAVersionedCert that holds the certVersion
 // and a serialized certificate of that version.
 func NewEigenDAVersionedCert(serializedCert []byte, certVersion EigenDACertVersion) EigenDAVersionedCert {
 	return EigenDAVersionedCert{
-		certVersion:    certVersion,
-		serializedCert: serializedCert,
+		CertVersion:    certVersion,
+		SerializedCert: serializedCert,
 	}
 }
 
 // Encode adds a commitment type prefix self describing the commitment.
 func (c EigenDAVersionedCert) Encode() []byte {
-	return append([]byte{byte(c.certVersion)}, c.serializedCert...)
+	return append([]byte{byte(c.CertVersion)}, c.SerializedCert...)
 }

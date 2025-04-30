@@ -214,15 +214,15 @@ func (e Store) BackendType() common.BackendType {
 
 // Key is used to recover certificate fields and that verifies blob
 // against commitment to ensure data is valid and non-tampered.
-func (e Store) Verify(ctx context.Context, key []byte, value []byte) error {
+func (e Store) Verify(ctx context.Context, serializedCert []byte, payload []byte) error {
 	var cert verify.Certificate
-	err := rlp.DecodeBytes(key, &cert)
+	err := rlp.DecodeBytes(serializedCert, &cert)
 	if err != nil {
 		return fmt.Errorf("failed to decode DA cert to RLP format: %w", err)
 	}
 
 	// re-encode blob for verification
-	encodedBlob, err := e.client.GetCodec().EncodeBlob(value)
+	encodedBlob, err := e.client.GetCodec().EncodeBlob(payload)
 	if err != nil {
 		return fmt.Errorf("EigenDA client failed to re-encode blob: %w", err)
 	}
