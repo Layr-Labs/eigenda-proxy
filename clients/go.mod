@@ -7,34 +7,42 @@
 //    In some cases, it might make sense to have an api or clientapi or similar directory with its own go.mod, or to separate out that clientapi into its own repository.
 module github.com/Layr-Labs/eigenda-proxy/clients
 
-go 1.22
+go 1.22.0
 
 toolchain go1.22.7
 
-require github.com/testcontainers/testcontainers-go v0.35.0
+require (
+	github.com/Layr-Labs/eigenda-proxy v1.7.0
+	github.com/testcontainers/testcontainers-go v0.35.0
+)
+
+replace github.com/Layr-Labs/eigenda-proxy => ..
 
 require (
 	dario.cat/mergo v1.0.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
-	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
+	github.com/btcsuite/btcd/btcec/v2 v2.3.4 // indirect
+	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/containerd/containerd v1.7.18 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/platforms v0.2.1 // indirect
 	github.com/cpuguy83/dockercfg v0.3.2 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/docker v27.1.1+incompatible // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
+	github.com/ethereum/go-ethereum v1.14.11 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/go-logr/logr v1.4.1 // indirect
+	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-ole/go-ole v1.2.6 // indirect
+	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/klauspost/compress v1.17.4 // indirect
-	github.com/kr/text v0.2.0 // indirect
+	github.com/holiman/uint256 v1.3.1 // indirect
+	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
@@ -46,7 +54,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/shirou/gopsutil/v3 v3.23.12 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
@@ -65,10 +73,8 @@ require (
 )
 
 // See https://go.dev/ref/mod#go-mod-file-retract for more information about the retract directive.
-retract (
-	// We published a `clients/v1.0.1` tag by mistake, which got picked up by pkg.go.dev, and now
-	// the latest version of the docs (pointed to in our README) leads to https://pkg.go.dev/github.com/Layr-Labs/eigenda-proxy/clients@v1.0.1/standard_client.
-	// This directive retracts that version, such that the docs (and go commands) no longer point to this version (at this point v0.2.0 is the latest).
-	// Once we reach semver v1.0.1, we can possibly remove this retract directive (??), or just skip this number and go to v1.0.2.
-    v1.0.1
-)
+// We published a `clients/v1.0.1` tag by mistake, which got picked up by pkg.go.dev, and now
+// the latest version of the docs (pointed to in our README) leads to https://pkg.go.dev/github.com/Layr-Labs/eigenda-proxy/clients@v1.0.1/standard_client.
+// This directive retracts that version, such that the docs (and go commands) no longer point to this version (at this point v0.2.0 is the latest).
+// Once we reach semver v1.0.1, we can possibly remove this retract directive (??), or just skip this number and go to v1.0.2.
+retract v1.0.1
