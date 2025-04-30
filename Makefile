@@ -76,8 +76,11 @@ gen-static-help-output: build
 	@echo "Storing binary output to docs/help_out.txt"
 	@./bin/eigenda-proxy --help | sed '/^VERSION:/ {N;d;}' > docs/help_out.txt
 
+# We use the deprecated https://github.com/golang/mock library
+# instead of the maintained https://github.com/uber-go/mock for some reason.
 go-gen-mocks:
 	@echo "generating go mocks..."
+	@go install github.com/golang/mock/mockgen@v1.6.0
 	@GO111MODULE=on go generate --run "mockgen*" ./...
 
 op-devnet-allocs:
