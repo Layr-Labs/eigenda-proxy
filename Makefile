@@ -48,27 +48,13 @@ test-fuzz:
 
 .PHONY: lint
 lint:
-	@if ! command -v golangci-lint  &> /dev/null; \
-	then \
-    	echo "golangci-lint command could not be found...."; \
-		echo "You can install via 'go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest'"; \
-		echo "or visit https://golangci-lint.run/welcome/install/ for other installation methods."; \
-    	exit 1; \
-	fi
-	@golangci-lint run
+	golangci-lint run
 
 .PHONY: format
 format:
 	# We also format line lengths. The length here should match that in the lll linter in .golangci.yml
-	@if ! command -v golines  &> /dev/null; \
-	then \
-    	echo "golines command could not be found...."; \
-		echo "You can install via 'go install github.com/segmentio/golines@latest'"; \
-		echo "or visit https://github.com/segmentio/golines for other installation methods."; \
-    	exit 1; \
-	fi
-	@go fmt ./...
-	@golines --write-output --shorten-comments --max-len 120 .
+	go fmt ./...
+	golines --write-output --shorten-comments --max-len 120 .
 
 ## calls --help on binary and routes output to file while ignoring dynamic fields specific
 ## to indivdual builds (e.g, version)
