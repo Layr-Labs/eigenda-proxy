@@ -76,7 +76,7 @@ gen-static-help-output: build
 	@echo "Storing binary output to docs/help_out.txt"
 	@./bin/eigenda-proxy --help | sed '/^VERSION:/ {N;d;}' > docs/help_out.txt
 
-go-gen-mocks:
+mocks:
 	@echo "generating go mocks..."
 	@GO111MODULE=on go generate --run "mockgen*" ./...
 
@@ -90,4 +90,4 @@ benchmark:
 deps:
 	mise install
 
-.PHONY: build clean docker-build test lint format benchmark deps
+.PHONY: build clean docker-build test lint format benchmark deps mocks
