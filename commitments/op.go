@@ -18,7 +18,7 @@ var ErrCommitmentMismatch = errors.New("commitment mismatch")
 type OPCommitmentType byte
 
 // CommitmentType describes the binary format of the commitment.
-// KeccakCommitmentStringType is the default commitment type for the centralized DA storage.
+// KeccakCommitmentStringType is the default commitment type for optimism's centralized DA storage.
 // GenericCommitmentType indicates an opaque bytestring that the op-node never opens.
 const (
 	Keccak256CommitmentType OPCommitmentType = 0
