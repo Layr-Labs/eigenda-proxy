@@ -75,18 +75,22 @@ type Store interface {
 	Verify(ctx context.Context, serializedCert []byte, payload []byte) error
 }
 
-type GeneratedKeyStore interface {
+// EigenDAStore is the interface for an EigenDA data store, which stores payloads that are retrievable
+// from a DACert. Implementations include EigenDA V1 and V2, as well as their memstore versions for testing.
+type EigenDAStore interface {
 	Store
-	// Get retrieves the given key if it's present in the key-value (serializedCert-payload) data store.
-	Get(ctx context.Context, serializedCert []byte) (payload []byte, err error)
 	// Put inserts the given value into the key-value (serializedCert-payload) data store.
 	Put(ctx context.Context, payload []byte) (serializedCert []byte, err error)
+	// Get retrieves the given key if it's present in the key-value (serializedCert-payload) data store.
+	Get(ctx context.Context, serializedCert []byte) (payload []byte, err error)
 }
 
+// PrecomputedKeyStore is the interface for a key-value data store that uses keccak(value) as the key.
+// It is used for Optimism altda keccak commitments, as well as for caching EigenDAStore entries.
 type PrecomputedKeyStore interface {
 	Store
-	// Get retrieves the given key if it's present in the key-value data store.
-	Get(ctx context.Context, key []byte) ([]byte, error)
 	// Put inserts the given value into the key-value data store.
 	Put(ctx context.Context, key []byte, value []byte) error
+	// Get retrieves the given key if it's present in the key-value data store.
+	Get(ctx context.Context, key []byte) ([]byte, error)
 }

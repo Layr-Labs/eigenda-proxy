@@ -27,9 +27,9 @@ type Manager struct {
 
 	s3 common.PrecomputedKeyStore // for op keccak256 commitment
 	// For op generic commitments & standard commitments
-	eigenda          common.GeneratedKeyStore // v0 da commitment version
-	eigendaV2        common.GeneratedKeyStore // v1 da commitment version
-	dispersalBackend atomic.Value             // stores the EigenDABackend to write blobs to
+	eigenda          common.EigenDAStore // v0 da commitment version
+	eigendaV2        common.EigenDAStore // v1 da commitment version
+	dispersalBackend atomic.Value        // stores the EigenDABackend to write blobs to
 
 	// secondary storage backends (caching and fallbacks)
 	secondary ISecondary
@@ -55,8 +55,8 @@ func (m *Manager) SetDispersalBackend(backend common.EigenDABackend) {
 
 // NewManager ... Init
 func NewManager(
-	eigenda common.GeneratedKeyStore,
-	eigenDAV2 common.GeneratedKeyStore,
+	eigenda common.EigenDAStore,
+	eigenDAV2 common.EigenDAStore,
 	s3 common.PrecomputedKeyStore,
 	l logging.Logger,
 	secondary ISecondary,

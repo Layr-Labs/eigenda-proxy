@@ -43,7 +43,7 @@ type Store struct {
 	log      logging.Logger
 }
 
-var _ common.GeneratedKeyStore = (*Store)(nil)
+var _ common.EigenDAStore = (*Store)(nil)
 
 // NewStoreConfig creates a new StoreConfig with validation for PutTries.
 // PutTries==0 is not permitted, and will return an error
