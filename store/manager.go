@@ -95,8 +95,8 @@ func (m *Manager) Get(ctx context.Context,
 
 		// 1 - read blob from S3 backend
 		m.log.Debug("Retrieving data from S3 backend")
-		// TODO: using SerializedCert as the key to not change current behavior,
-		// but feels like we should be using the entire versionedCert (meaning including the version byte)?
+		// Using only the serialized cert without the version byte, since that is how we originally
+		// implemented this feature before we had versioned certs, and need to remain backwards compatible.
 		value, err := m.s3.Get(ctx, versionedCert.SerializedCert)
 		if err != nil {
 			return nil, err
