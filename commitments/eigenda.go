@@ -1,5 +1,7 @@
 package commitments
 
+import "fmt"
+
 type EigenDACertVersion byte
 
 const (
@@ -8,6 +10,17 @@ const (
 	// EigenDA V2
 	CertV1
 )
+
+func ByteToEigenDACertVersion(b byte) (EigenDACertVersion, error) {
+	switch b {
+	case byte(CertV0):
+		return CertV0, nil
+	case byte(CertV1):
+		return CertV1, nil
+	default:
+		return 0, fmt.Errorf("unknown EigenDA cert version: %d", b)
+	}
+}
 
 type EigenDAVersionedCert struct {
 	CertVersion    EigenDACertVersion
