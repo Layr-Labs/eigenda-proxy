@@ -42,7 +42,7 @@ func EncodeCommitment(
 		altDACommit := NewGenericCommitment(svcCommit).Encode()
 		// Proxy returns an altDACommitment, which doesn't contain the first op version_byte
 		// (from https://specs.optimism.io/experimental/alt-da.html#example-commitments)
-		// This is because its added by op-alt-da when calling TxData() right before submitting the tx:
+		// This is because it's added by op-alt-da when calling TxData() right before submitting the tx:
 		// https://github.com/Layr-Labs/optimism/blob/89ac40d0fddba2e06854b253b9f0266f36350af2/op-alt-da/commitment.go#L158-L160
 		return altDACommit, nil
 
