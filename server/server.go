@@ -180,7 +180,7 @@ func parseCertVersion(w http.ResponseWriter, r *http.Request) (commitments.Eigen
 	}
 	certVersion, err := commitments.ByteToEigenDACertVersion(versionByte[0])
 	if err != nil {
-		errWithHexContext := fmt.Errorf("unsupported version byte %x: %w", versionByte[0], err)
+		errWithHexContext := fmt.Errorf("unsupported version byte %x: %w", versionByte, err)
 		http.Error(w, errWithHexContext.Error(), http.StatusBadRequest)
 		return 0, errWithHexContext
 	}
