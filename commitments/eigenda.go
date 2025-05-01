@@ -7,7 +7,7 @@ type EigenDACertVersion byte
 const (
 	// EigenDA V1
 	CertV0 EigenDACertVersion = iota
-	// EigenDA V2
+	// All future CertVersions will be against EigenDA V2 Blazar (https://docs.eigenda.xyz/releases/blazar)
 	CertV1
 )
 
