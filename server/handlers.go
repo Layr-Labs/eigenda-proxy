@@ -112,12 +112,12 @@ func (svr *Server) handleGetShared(
 ) error {
 	commitmentHex := hex.EncodeToString(versionedCert.SerializedCert)
 	svr.log.Info("Processing GET request", "commitmentMode", mode,
-		"certVersion", versionedCert.CertVersion, "commitment", commitmentHex)
+		"certVersion", versionedCert.Version, "commitment", commitmentHex)
 	input, err := svr.sm.Get(ctx, versionedCert, mode)
 	if err != nil {
 		err = NewGETError(
 			fmt.Errorf("get request failed with commitment %v: %w", commitmentHex, err),
-			versionedCert.CertVersion,
+			versionedCert.Version,
 			mode,
 		)
 		if errors.Is(err, ErrNotFound) {

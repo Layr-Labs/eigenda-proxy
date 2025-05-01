@@ -30,7 +30,7 @@ func EncodeCommitment(
 	commitmentMode CommitmentMode,
 ) ([]byte, error) {
 	serializedCert := versionedCert.SerializedCert
-	certVersion := versionedCert.CertVersion
+	certVersion := versionedCert.Version
 
 	switch commitmentMode {
 	case OptimismKeccakCommitmentMode:

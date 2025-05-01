@@ -110,14 +110,14 @@ func (m *Manager) Get(ctx context.Context,
 		return value, nil
 
 	case commitments.StandardCommitmentMode, commitments.OptimismGenericCommitmentMode:
-		if versionedCert.CertVersion == commitments.CertV0 && m.eigenda == nil {
+		if versionedCert.Version == commitments.CertV0 && m.eigenda == nil {
 			return nil, errors.New("expected EigenDA V1 backend for DA commitment type with CertV0")
 		}
-		if versionedCert.CertVersion == commitments.CertV1 && m.eigendaV2 == nil {
+		if versionedCert.Version == commitments.CertV1 && m.eigendaV2 == nil {
 			return nil, errors.New("expected EigenDA V2 backend for DA commitment type with CertV1")
 		}
 
-		verifyMethod, err := m.getVerifyMethod(versionedCert.CertVersion)
+		verifyMethod, err := m.getVerifyMethod(versionedCert.Version)
 		if err != nil {
 			return nil, fmt.Errorf("get verify method: %w", err)
 		}
@@ -241,7 +241,7 @@ func (m *Manager) getFromCorrectEigenDABackend(
 	ctx context.Context,
 	versionedCert commitments.EigenDAVersionedCert,
 ) ([]byte, error) {
-	switch versionedCert.CertVersion {
+	switch versionedCert.Version {
 	case commitments.CertV0:
 		m.log.Debug("Reading blob from EigenDAV1 backend")
 		data, err := m.eigenda.Get(ctx, versionedCert.SerializedCert)
@@ -272,7 +272,7 @@ func (m *Manager) getFromCorrectEigenDABackend(
 
 		return data, nil
 	default:
-		return nil, fmt.Errorf("cert version unknown: %b", versionedCert.CertVersion)
+		return nil, fmt.Errorf("cert version unknown: %b", versionedCert.Version)
 	}
 }
 

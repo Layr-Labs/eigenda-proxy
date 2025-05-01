@@ -23,7 +23,7 @@ func ByteToEigenDACertVersion(b byte) (EigenDACertVersion, error) {
 }
 
 type EigenDAVersionedCert struct {
-	CertVersion    EigenDACertVersion
+	Version        EigenDACertVersion
 	SerializedCert []byte
 }
 
@@ -31,12 +31,12 @@ type EigenDAVersionedCert struct {
 // and a serialized certificate of that version.
 func NewEigenDAVersionedCert(serializedCert []byte, certVersion EigenDACertVersion) EigenDAVersionedCert {
 	return EigenDAVersionedCert{
-		CertVersion:    certVersion,
+		Version:        certVersion,
 		SerializedCert: serializedCert,
 	}
 }
 
 // Encode adds a commitment type prefix self describing the commitment.
 func (c EigenDAVersionedCert) Encode() []byte {
-	return append([]byte{byte(c.CertVersion)}, c.SerializedCert...)
+	return append([]byte{byte(c.Version)}, c.SerializedCert...)
 }
