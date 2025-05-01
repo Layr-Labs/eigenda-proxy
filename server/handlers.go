@@ -47,15 +47,15 @@ func (svr *Server) handleGetStdCommitment(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		return fmt.Errorf("error parsing version byte: %w", err)
 	}
-	rawCommitmentHex, ok := mux.Vars(r)[routingVarNamePayloadHex]
+	serializedCertHex, ok := mux.Vars(r)[routingVarNamePayloadHex]
 	if !ok {
-		return fmt.Errorf("commitment not found in path: %s", r.URL.Path)
+		return fmt.Errorf("serializedDACert not found in path: %s", r.URL.Path)
 	}
-	commitment, err := hex.DecodeString(rawCommitmentHex)
+	serializedCert, err := hex.DecodeString(serializedCertHex)
 	if err != nil {
-		return fmt.Errorf("failed to decode commitment %s: %w", rawCommitmentHex, err)
+		return fmt.Errorf("failed to decode from hex serializedDACert %s: %w", serializedCertHex, err)
 	}
-	versionedCert := commitments.NewEigenDAVersionedCert(commitment, certVersion)
+	versionedCert := commitments.NewEigenDAVersionedCert(serializedCert, certVersion)
 
 	return svr.handleGetShared(r.Context(), w, versionedCert, commitments.StandardCommitmentMode)
 }
@@ -76,7 +76,7 @@ func (svr *Server) handleGetOPKeccakCommitment(w http.ResponseWriter, r *http.Re
 	}
 	commitment, err := hex.DecodeString(rawCommitmentHex)
 	if err != nil {
-		return fmt.Errorf("failed to decode commitment %s: %w", rawCommitmentHex, err)
+		return fmt.Errorf("failed to decode hex commitment %s: %w", rawCommitmentHex, err)
 	}
 	// We use certV0 arbitrarily here, as it isn't used. Keccak commitments are not versioned.
 	// TODO: We should probably create a new route for this which doesn't require a versionedCert.
@@ -93,11 +93,11 @@ func (svr *Server) handleGetOPGenericCommitment(w http.ResponseWriter, r *http.R
 	}
 	serializedCertHex, ok := mux.Vars(r)[routingVarNamePayloadHex]
 	if !ok {
-		return fmt.Errorf("commitment not found in path: %s", r.URL.Path)
+		return fmt.Errorf("serializedDACert not found in path: %s", r.URL.Path)
 	}
 	commitment, err := hex.DecodeString(serializedCertHex)
 	if err != nil {
-		return fmt.Errorf("failed to decode commitment %s: %w", serializedCertHex, err)
+		return fmt.Errorf("failed to decode from hex serializedDACert %s: %w", serializedCertHex, err)
 	}
 	versionedCert := commitments.NewEigenDAVersionedCert(commitment, certVersion)
 
@@ -110,13 +110,13 @@ func (svr *Server) handleGetShared(
 	versionedCert commitments.EigenDAVersionedCert,
 	mode commitments.CommitmentMode,
 ) error {
-	commitmentHex := hex.EncodeToString(versionedCert.SerializedCert)
+	serializedCertHex := hex.EncodeToString(versionedCert.SerializedCert)
 	svr.log.Info("Processing GET request", "commitmentMode", mode,
-		"certVersion", versionedCert.Version, "commitment", commitmentHex)
+		"certVersion", versionedCert.Version, "serializedCert", serializedCertHex)
 	input, err := svr.sm.Get(ctx, versionedCert, mode)
 	if err != nil {
 		err = NewGETError(
-			fmt.Errorf("get request failed with commitment %v: %w", commitmentHex, err),
+			fmt.Errorf("get request failed with serializedCert %v: %w", serializedCertHex, err),
 			versionedCert.Version,
 			mode,
 		)
@@ -186,7 +186,7 @@ func (svr *Server) handlePostOPGenericCommitment(w http.ResponseWriter, r *http.
 func (svr *Server) handlePostShared(
 	w http.ResponseWriter,
 	r *http.Request,
-	comm []byte,
+	comm []byte, // only non-nil for OPKeccak commitments
 	mode commitments.CommitmentMode,
 ) error {
 	svr.log.Info("Processing POST request", "commitment", hex.EncodeToString(comm), "mode", mode)
@@ -227,7 +227,7 @@ func (svr *Server) handlePostShared(
 
 	responseCommit, err := commitments.EncodeCommitment(versionedCert, mode)
 	if err != nil {
-		err = NewPOSTError(fmt.Errorf("failed to encode commitment %v: %w", serializedCert, err), mode)
+		err = NewPOSTError(fmt.Errorf("failed to encode serializedCert %v: %w", serializedCert, err), mode)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return err
 	}
