@@ -88,6 +88,6 @@ benchmark:
 	go test -benchmem -run=^$ -bench . ./benchmark -test.parallel 4
 
 deps:
-	go install gotest.tools/gotestsum@latest
+	mise install
 
 .PHONY: build clean docker-build test lint format benchmark deps
