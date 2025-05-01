@@ -19,6 +19,13 @@ type POSTError struct {
 	Mode commitments.CommitmentMode
 }
 
+func NewPOSTError(err error, mode commitments.CommitmentMode) POSTError {
+	return POSTError{
+		Err:  err,
+		Mode: mode,
+	}
+}
+
 func (me POSTError) Error() string {
 	return fmt.Sprintf("Error in PUT route (Mode: %s): %s",
 		me.Mode,
@@ -36,6 +43,14 @@ type GETError struct {
 	Err         error
 	CertVersion commitments.EigenDACertVersion
 	Mode        commitments.CommitmentMode
+}
+
+func NewGETError(err error, certVersion commitments.EigenDACertVersion, mode commitments.CommitmentMode) GETError {
+	return GETError{
+		Err:         err,
+		CertVersion: certVersion,
+		Mode:        mode,
+	}
 }
 
 func (me GETError) Error() string {

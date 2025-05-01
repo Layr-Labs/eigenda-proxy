@@ -115,10 +115,11 @@ func (svr *Server) handleGetShared(
 		"certVersion", versionedCert.CertVersion, "commitment", commitmentHex)
 	input, err := svr.sm.Get(ctx, versionedCert, mode)
 	if err != nil {
-		err = GETError{
-			Err:  fmt.Errorf("get request failed with commitment %v: %w", commitmentHex, err),
-			Mode: mode,
-		}
+		err = NewGETError(
+			fmt.Errorf("get request failed with commitment %v: %w", commitmentHex, err),
+			versionedCert.CertVersion,
+			mode,
+		)
 		if errors.Is(err, ErrNotFound) {
 			http.Error(w, err.Error(), http.StatusNotFound)
 		} else {
@@ -191,20 +192,14 @@ func (svr *Server) handlePostShared(
 	svr.log.Info("Processing POST request", "commitment", hex.EncodeToString(comm), "mode", mode)
 	input, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxRequestBodySize))
 	if err != nil {
-		err = POSTError{
-			Err:  fmt.Errorf("failed to read request body: %w", err),
-			Mode: mode,
-		}
+		err = NewPOSTError(fmt.Errorf("failed to read request body: %w", err), mode)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return err
 	}
 
 	serializedCert, err := svr.sm.Put(r.Context(), mode, comm, input)
 	if err != nil {
-		err = POSTError{
-			Err:  fmt.Errorf("post request failed with commitment %v: %w", comm, err),
-			Mode: mode,
-		}
+		err = NewPOSTError(fmt.Errorf("post request failed with commitment %v: %w", comm, err), mode)
 		switch {
 		case is400(err):
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -232,10 +227,7 @@ func (svr *Server) handlePostShared(
 
 	responseCommit, err := commitments.EncodeCommitment(versionedCert, mode)
 	if err != nil {
-		err = POSTError{
-			Err:  fmt.Errorf("failed to encode commitment %v: %w", serializedCert, err),
-			Mode: mode,
-		}
+		err = NewPOSTError(fmt.Errorf("failed to encode commitment %v: %w", serializedCert, err), mode)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return err
 	}
