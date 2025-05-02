@@ -85,7 +85,41 @@ The source of truth for the routes is defined by our gorilla mux router in [./se
 
 #### Standard Routes
 
-TODO
+The proxy offers standard routes for interacting with EigenDA dispersal and retrieval:
+
+```text
+Request:
+  POST /put?commitment_mode=standard
+  Content-Type: application/octet-stream
+  Body: <preimage_bytes>
+
+Response:
+  200 OK
+  Content-Type: application/octet-stream
+  Body: <commitment_bytes>
+```
+
+```text
+Request:
+  GET /get/<hex_encoded_commitment>?commitment_mode=standard
+
+Response:
+  200 OK
+  Content-Type: application/octet-stream
+  Body: <preimage_bytes>
+```
+
+```text
+Request:
+  GET /verify/<hex_encoded_commitment>?commitment_mode=standard
+
+Response:
+  200 OK
+  Content-Type: application/json
+  Body: {"outcome": boolean}
+```
+
+The `/verify` endpoint allows clients to verify a DA commitment without retrieving the associated data. This endpoint currently only supports standard commitments (`commitment_mode=standard`) and the EigenDA V2 backend. The response field `outcome` indicates whether the commitment was successfully verified (true) or not (false).
 
 #### Optimism Routes
 

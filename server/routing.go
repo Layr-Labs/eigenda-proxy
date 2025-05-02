@@ -11,9 +11,10 @@ import (
 )
 
 const (
-	routingVarNamePayloadHex        = "payload_hex"
-	routingVarNameVersionByteHex    = "version_byte_hex"
-	routingVarNameCommitTypeByteHex = "commit_type_byte_hex"
+	routingVarNamePayloadHex          = "payload_hex"
+	routingVarNameVersionByteHex      = "version_byte_hex"
+	routingVarNameCommitTypeByteHex   = "commit_type_byte_hex"
+	routingQueryParamCertVerifierAddr = "cert_verifier_address"
 )
 
 func (svr *Server) RegisterRoutes(r *mux.Router) {
@@ -86,6 +87,15 @@ func (svr *Server) RegisterRoutes(r *mux.Router) {
 	)
 
 	r.HandleFunc("/health", withLogging(svr.handleHealth, svr.log)).Methods("GET")
+
+	subrouterVERIFY := r.Methods("GET").PathPrefix("/verify").Subrouter()
+	// std commitments (for nitro)
+	subrouterVERIFY.HandleFunc("/"+
+		"{optional_prefix:(?:0x)?}"+ // commitments can be prefixed with 0x
+		"{"+routingVarNameVersionByteHex+":[0-9a-fA-F]{2}}"+ // should always be 0x00 for now but we let others through to return a 404
+		"{"+routingVarNamePayloadHex+":[0-9a-fA-F]*}",
+		withLogging(withMetrics(svr.handleVerifyCommitment, svr.m, commitments.Standard), svr.log),
+	).Queries("commitment_mode", "standard")
 
 	// this is done to explicitly log capture potential redirect errors
 	r.HandleFunc("/put", withLogging(svr.logDispersalGetError, svr.log)).Methods("GET")

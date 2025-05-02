@@ -155,6 +155,46 @@ func (svr *Server) handleGetEigenDADispersalBackend(w http.ResponseWriter, _ *ht
 	return nil
 }
 
+// handleVerifyCommitment verifies a DA commitment using the V2 storage backend
+func (svr *Server) handleVerifyCommitment(w http.ResponseWriter, r *http.Request) error {
+	// Parse the DA commitment from the request body
+	rawCommitmentHex, ok := mux.Vars(r)[routingVarNamePayloadHex]
+	if !ok {
+		return fmt.Errorf("commitment not found in path: %s", r.URL.Path)
+	}
+	commitment, err := hex.DecodeString(rawCommitmentHex)
+	if err != nil {
+		return fmt.Errorf("failed to decode commitment %s: %w", rawCommitmentHex, err)
+	}
+
+	println(fmt.Sprintf("commit: %x", commitment))
+	// Verify the commitment using the V2 backend
+	outcome, err := svr.sm.VerifyV2Cert(r.Context(), commitment)
+	if err != nil {
+		svr.log.Error("Failed to verify commitment", "error", err)
+		http.Error(w, fmt.Sprintf("commitment verification failed: %v", err), http.StatusBadRequest)
+		return err
+	}
+
+	// Return successful verification response
+	w.Header().Set(headerContentType, contentTypeJSON)
+	w.WriteHeader(http.StatusOK)
+
+	// Return JSON response with verification outcome
+	response := struct {
+		Outcome bool `json:"outcome"`
+	}{
+		Outcome: outcome,
+	}
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, fmt.Sprintf("failed to encode response: %v", err), http.StatusInternalServerError)
+		return err
+	}
+
+	return nil
+}
+
 // =================================================================================================
 // POST ROUTES
 // =================================================================================================

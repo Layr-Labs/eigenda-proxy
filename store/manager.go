@@ -19,6 +19,7 @@ type IManager interface {
 	Put(ctx context.Context, cm commitments.CommitmentMode, key, value []byte) ([]byte, error)
 	SetDispersalBackend(backend common.EigenDABackend)
 	GetDispersalBackend() common.EigenDABackend
+	VerifyV2Cert(ctx context.Context, daCommit []byte) (bool, error)
 }
 
 // Manager ... storage backend routing layer
@@ -195,6 +196,18 @@ func (m *Manager) Put(ctx context.Context, cm commitments.CommitmentMode, key, v
 	}
 
 	return commit, nil
+}
+
+// VerifyV2Cert ... verifies an EigenDA V2 certificate
+func (m *Manager) VerifyV2Cert(ctx context.Context, daCommit []byte) (bool, error) {
+	// TODO: process error code to understand a failed verification vs an
+	// error
+	// nolint:nilerr // insecure code atm
+	err := m.eigendaV2.Verify(ctx, daCommit, []byte{})
+	if err != nil {
+		return false, nil
+	}
+	return true, nil
 }
 
 // getVerifyMethod returns the correct verify method based on commitment type

@@ -14,6 +14,7 @@ package standard_client
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -85,6 +86,50 @@ func (c *Client) Health() error {
 	}
 
 	return nil
+}
+
+// Verify verifies the DA commitment by invoking /verify on proxy
+func (c *Client) Verify(ctx context.Context, comm []byte) (bool, error) {
+	url := fmt.Sprintf("%s/verify/0x%x?commitment_mode=standard", c.cfg.URL, comm)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return false, fmt.Errorf("failed to construct http request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/octet-stream")
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return false, err
+	}
+
+	defer resp.Body.Close()
+
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return false, fmt.Errorf(
+			"received error response when reading from eigenda-proxy, code=%d, msg = %s",
+			resp.StatusCode,
+			string(b),
+		)
+	}
+
+	type respBody struct {
+		Outcome bool `json:"outcome"`
+	}
+
+	var rb respBody
+
+	err = json.Unmarshal(b, &rb)
+	if err != nil {
+		return false, err
+	}
+
+	return rb.Outcome, nil
 }
 
 // GetData fetches blob data associated with a DA certificate
