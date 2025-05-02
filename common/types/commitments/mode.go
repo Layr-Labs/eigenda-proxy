@@ -2,6 +2,7 @@ package commitments
 
 import (
 	"fmt"
+
 	"github.com/Layr-Labs/eigenda-proxy/common/types/certs"
 )
 
@@ -14,7 +15,7 @@ const (
 )
 
 func EncodeCommitment(
-	versionedCert certs.EigenDAVersionedCert,
+	versionedCert certs.VersionedCert,
 	commitmentMode CommitmentMode,
 ) ([]byte, error) {
 	switch commitmentMode {

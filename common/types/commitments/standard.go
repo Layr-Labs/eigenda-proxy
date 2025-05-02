@@ -8,11 +8,11 @@ import (
 // and any stack that doesn't need any specific bytes prefix.
 // Its encoding simply returns the serialized versionedCert.
 type StandardCommitment struct {
-	versionedCert certs.EigenDAVersionedCert
+	versionedCert certs.VersionedCert
 }
 
 // NewOPEigenDAGenericCommitment creates a new commitment from the given input.
-func NewStandardCommitment(versionedCert certs.EigenDAVersionedCert) StandardCommitment {
+func NewStandardCommitment(versionedCert certs.VersionedCert) StandardCommitment {
 	return StandardCommitment{versionedCert}
 }
 func (c StandardCommitment) Encode() []byte {

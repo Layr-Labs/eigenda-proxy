@@ -16,7 +16,7 @@ import (
 
 // IManager ... read/write interface
 type IManager interface {
-	Get(ctx context.Context, versionedCert certs.EigenDAVersionedCert, cm commitments.CommitmentMode) ([]byte, error)
+	Get(ctx context.Context, versionedCert certs.VersionedCert, cm commitments.CommitmentMode) ([]byte, error)
 	Put(ctx context.Context, cm commitments.CommitmentMode, key, value []byte) ([]byte, error)
 	SetDispersalBackend(backend common.EigenDABackend)
 	GetDispersalBackend() common.EigenDABackend
@@ -85,7 +85,7 @@ func NewManager(
 
 // Get ... fetches a value from a storage backend based on the (commitment mode, type)
 func (m *Manager) Get(ctx context.Context,
-	versionedCert certs.EigenDAVersionedCert,
+	versionedCert certs.VersionedCert,
 	cm commitments.CommitmentMode,
 ) ([]byte, error) {
 	switch cm {
@@ -240,7 +240,7 @@ func (m *Manager) putEigenDAMode(ctx context.Context, value []byte) ([]byte, err
 
 func (m *Manager) getFromCorrectEigenDABackend(
 	ctx context.Context,
-	versionedCert certs.EigenDAVersionedCert,
+	versionedCert certs.VersionedCert,
 ) ([]byte, error) {
 	switch versionedCert.Version {
 	case certs.V0VersionByte:

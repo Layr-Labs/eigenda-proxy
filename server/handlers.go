@@ -56,7 +56,7 @@ func (svr *Server) handleGetStdCommitment(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		return fmt.Errorf("failed to decode from hex serializedDACert %s: %w", serializedCertHex, err)
 	}
-	versionedCert := certs.NewEigenDAVersionedCert(serializedCert, certVersion)
+	versionedCert := certs.NewVersionedCert(serializedCert, certVersion)
 
 	return svr.handleGetShared(r.Context(), w, versionedCert, commitments.StandardCommitmentMode)
 }
@@ -81,7 +81,7 @@ func (svr *Server) handleGetOPKeccakCommitment(w http.ResponseWriter, r *http.Re
 	}
 	// We use certV0 arbitrarily here, as it isn't used. Keccak commitments are not versioned.
 	// TODO: We should probably create a new route for this which doesn't require a versionedCert.
-	versionedCert := certs.NewEigenDAVersionedCert(commitment, certs.V0VersionByte)
+	versionedCert := certs.NewVersionedCert(commitment, certs.V0VersionByte)
 
 	return svr.handleGetShared(r.Context(), w, versionedCert, commitments.OptimismKeccakCommitmentMode)
 }
@@ -100,7 +100,7 @@ func (svr *Server) handleGetOPGenericCommitment(w http.ResponseWriter, r *http.R
 	if err != nil {
 		return fmt.Errorf("failed to decode from hex serializedDACert %s: %w", serializedCertHex, err)
 	}
-	versionedCert := certs.NewEigenDAVersionedCert(commitment, certVersion)
+	versionedCert := certs.NewVersionedCert(commitment, certVersion)
 
 	return svr.handleGetShared(r.Context(), w, versionedCert, commitments.OptimismGenericCommitmentMode)
 }
@@ -108,7 +108,7 @@ func (svr *Server) handleGetOPGenericCommitment(w http.ResponseWriter, r *http.R
 func (svr *Server) handleGetShared(
 	ctx context.Context,
 	w http.ResponseWriter,
-	versionedCert certs.EigenDAVersionedCert,
+	versionedCert certs.VersionedCert,
 	mode commitments.CommitmentMode,
 ) error {
 	serializedCertHex := hex.EncodeToString(versionedCert.SerializedCert)
@@ -224,7 +224,7 @@ func (svr *Server) handlePostShared(
 	default:
 		return fmt.Errorf("unknown dispersal backend: %v", svr.sm.GetDispersalBackend())
 	}
-	versionedCert := certs.NewEigenDAVersionedCert(serializedCert, certVersion)
+	versionedCert := certs.NewVersionedCert(serializedCert, certVersion)
 
 	responseCommit, err := commitments.EncodeCommitment(versionedCert, mode)
 	if err != nil {

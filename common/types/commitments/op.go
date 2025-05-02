@@ -36,11 +36,11 @@ func (c OPKeccak256Commitment) Encode() []byte {
 
 // OPEigenDAGenericCommitment is an implementation of OPCommitment that treats the commitment as an opaque bytestring.
 type OPEigenDAGenericCommitment struct {
-	versionedCert certs.EigenDAVersionedCert
+	versionedCert certs.VersionedCert
 }
 
 // NewOPEigenDAGenericCommitment creates a new commitment from the given input.
-func NewOPEigenDAGenericCommitment(versionedCert certs.EigenDAVersionedCert) OPEigenDAGenericCommitment {
+func NewOPEigenDAGenericCommitment(versionedCert certs.VersionedCert) OPEigenDAGenericCommitment {
 	return OPEigenDAGenericCommitment{versionedCert}
 }
 
