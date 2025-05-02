@@ -34,6 +34,6 @@ jobs:
         go-version: '1.21.13'
         
     - name: Run shared CodeQL scan
-      uses: Layr-Labs/security-shared-workflows/actions/codeql-scans/golang.yaml@v0.0.1
+      uses: Layr-Labs/security-shared-workflows/actions/codeql-scans/action.yaml@v0.0.1
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
