@@ -25,6 +25,7 @@ var (
 	DisperseBlobTimeoutFlagName       = withFlagPrefix("disperse-blob-timeout")
 	BlobCertifiedTimeoutFlagName      = withFlagPrefix("blob-certified-timeout")
 	CertVerifierAddrFlagName          = withFlagPrefix("cert-verifier-addr")
+	CertVerifierRouterAddrFlagName    = withFlagPrefix("cert-verifier-router-addr")
 	ServiceManagerAddrFlagName        = withFlagPrefix("service-manager-addr")
 	BLSOperatorStateRetrieverFlagName = withFlagPrefix("bls-operator-state-retriever-addr")
 	RelayTimeoutFlagName              = withFlagPrefix("relay-timeout")
@@ -106,6 +107,22 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.StringFlag{
 			Name: CertVerifierAddrFlagName,
 			Usage: "Address of the EigenDACertVerifier contract. " +
+				"Required for performing eth_calls to verify EigenDA certificates.",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "CERT_VERIFIER_ADDR")},
+			Category: category,
+			Required: false,
+		},
+		&cli.StringFlag{
+			Name: CertVerifierAddrFlagName,
+			Usage: "Address of the EigenDACertVerifier contract. " +
+				"Required for performing eth_calls to verify EigenDA certificates.",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "CERT_VERIFIER_ADDR")},
+			Category: category,
+			Required: false,
+		},
+		&cli.StringFlag{
+			Name: CertVerifierRouterAddrFlagName,
+			Usage: "Address of the EigenDACertVerifierRouter contract. " +
 				"Required for performing eth_calls to verify EigenDA certificates.",
 			EnvVars:  []string{withEnvPrefix(envPrefix, "CERT_VERIFIER_ADDR")},
 			Category: category,
@@ -236,15 +253,6 @@ func ReadClientConfigV2(ctx *cli.Context) (common.ClientConfigV2, error) {
 		}
 	}
 
-	certVerifierAddress := ctx.String(CertVerifierAddrFlagName)
-	if certVerifierAddress == "" {
-		certVerifierAddress, err = eigenDANetwork.GetCertVerifierAddress()
-		if err != nil {
-			return common.ClientConfigV2{}, fmt.Errorf(
-				"cert verifier address wasn't specified, and failed to get it from the specified network: %w", err)
-		}
-	}
-
 	return common.ClientConfigV2{
 		DisperserClientCfg:            disperserConfig,
 		PayloadDisperserCfg:           readPayloadDisperserCfg(ctx),
@@ -252,7 +260,8 @@ func ReadClientConfigV2(ctx *cli.Context) (common.ClientConfigV2, error) {
 		ValidatorPayloadRetrieverCfg:  readValidatorRetrievalConfig(ctx),
 		PutTries:                      ctx.Int(PutRetriesFlagName),
 		MaxBlobSizeBytes:              maxBlobLengthBytes,
-		EigenDACertVerifierAddress:    certVerifierAddress,
+		EigenDACertVerifierAddress:    ctx.String(CertVerifierAddrFlagName),
+		EigenDACertVerifierRouterAddress: ctx.String(CertVerifierRouterAddrFlagName),
 		BLSOperatorStateRetrieverAddr: blsOperatorStateRetrieverAddress,
 		EigenDAServiceManagerAddr:     serviceManagerAddress,
 		// we don't expose this configuration to users, as all production use cases should have

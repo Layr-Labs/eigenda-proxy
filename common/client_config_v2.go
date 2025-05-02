@@ -25,7 +25,8 @@ type ClientConfigV2 struct {
 	// - If = 0: Not permitted
 	PutTries                   int
 	MaxBlobSizeBytes           uint64
-	EigenDACertVerifierAddress string
+	EigenDACertVerifierAddress string // V2 cert
+	EigenDACertVerifierRouterAddress string // >= V3 cert
 
 	// Fields required for validator payload retrieval
 	BLSOperatorStateRetrieverAddr string
@@ -38,15 +39,19 @@ type ClientConfigV2 struct {
 // Check checks config invariants, and returns an error if there is a problem with the config struct
 func (cfg *ClientConfigV2) Check() error {
 	if cfg.DisperserClientCfg.Hostname == "" {
-		return fmt.Errorf("disperser hostname is required for using EigenDA V2 backend")
+		return fmt.Errorf("EigenDA disperser hostname is required for using EigenDA V2 backend")
 	}
 
 	if cfg.DisperserClientCfg.Port == "" {
-		return fmt.Errorf("disperser port is required for using EigenDA V2 backend")
+		return fmt.Errorf("EigenDA disperser port is required for using EigenDA V2 backend")
 	}
 
-	if cfg.EigenDACertVerifierAddress == "" {
-		return fmt.Errorf("cert verifier address is required for using EigenDA V2 backend")
+	if cfg.EigenDACertVerifierAddress == "" && cfg.EigenDACertVerifierRouterAddress == "" {
+		return fmt.Errorf("immutable cert verifier address or dynamic router address is required for using EigenDA V2 backend")
+	}
+
+	if cfg.EigenDACertVerifierAddress != "" && cfg.EigenDACertVerifierRouterAddress != "" {
+		return fmt.Errorf("both immutable cert verifier address and dynamic router address cannot be set at once when using EigenDA V2 backend")
 	}
 
 	if cfg.MaxBlobSizeBytes == 0 {
