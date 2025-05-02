@@ -1,35 +1,36 @@
-package commitments
+package certs
 
 import "fmt"
 
-type EigenDACertVersion byte
+// Version byte that prefixes serialized EigenDACert to identify their type.
+type VersionByte byte
 
 const (
 	// EigenDA V1
-	CertV0 EigenDACertVersion = iota
+	V0VersionByte VersionByte = iota
 	// All future CertVersions will be against EigenDA V2 Blazar (https://docs.eigenda.xyz/releases/blazar)
-	CertV1
+	V1VersionByte
 )
 
-func ByteToEigenDACertVersion(b byte) (EigenDACertVersion, error) {
+func ByteToVersion(b byte) (VersionByte, error) {
 	switch b {
-	case byte(CertV0):
-		return CertV0, nil
-	case byte(CertV1):
-		return CertV1, nil
+	case byte(V0VersionByte):
+		return V0VersionByte, nil
+	case byte(V1VersionByte):
+		return V1VersionByte, nil
 	default:
 		return 0, fmt.Errorf("unknown EigenDA cert version: %d", b)
 	}
 }
 
 type EigenDAVersionedCert struct {
-	Version        EigenDACertVersion
+	Version        VersionByte
 	SerializedCert []byte
 }
 
 // NewEigenDAVersionedCert creates a new EigenDAVersionedCert that holds the certVersion
 // and a serialized certificate of that version.
-func NewEigenDAVersionedCert(serializedCert []byte, certVersion EigenDACertVersion) EigenDAVersionedCert {
+func NewEigenDAVersionedCert(serializedCert []byte, certVersion VersionByte) EigenDAVersionedCert {
 	return EigenDAVersionedCert{
 		Version:        certVersion,
 		SerializedCert: serializedCert,

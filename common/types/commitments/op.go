@@ -1,6 +1,7 @@
 package commitments
 
 import (
+	"github.com/Layr-Labs/eigenda-proxy/common/types/certs"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
@@ -35,11 +36,11 @@ func (c OPKeccak256Commitment) Encode() []byte {
 
 // OPEigenDAGenericCommitment is an implementation of OPCommitment that treats the commitment as an opaque bytestring.
 type OPEigenDAGenericCommitment struct {
-	versionedCert EigenDAVersionedCert
+	versionedCert certs.EigenDAVersionedCert
 }
 
 // NewOPEigenDAGenericCommitment creates a new commitment from the given input.
-func NewOPEigenDAGenericCommitment(versionedCert EigenDAVersionedCert) OPEigenDAGenericCommitment {
+func NewOPEigenDAGenericCommitment(versionedCert certs.EigenDAVersionedCert) OPEigenDAGenericCommitment {
 	return OPEigenDAGenericCommitment{versionedCert}
 }
 

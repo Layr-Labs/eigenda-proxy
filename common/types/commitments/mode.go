@@ -2,6 +2,7 @@ package commitments
 
 import (
 	"fmt"
+	"github.com/Layr-Labs/eigenda-proxy/common/types/certs"
 )
 
 type CommitmentMode string
@@ -13,7 +14,7 @@ const (
 )
 
 func EncodeCommitment(
-	versionedCert EigenDAVersionedCert,
+	versionedCert certs.EigenDAVersionedCert,
 	commitmentMode CommitmentMode,
 ) ([]byte, error) {
 	switch commitmentMode {
@@ -29,17 +30,4 @@ func EncodeCommitment(
 		return NewStandardCommitment(versionedCert).Encode(), nil
 	}
 	return nil, fmt.Errorf("unknown commitment mode")
-}
-
-type DAServiceOPCommitmentType byte
-
-const (
-	EigenDAOPCommitmentType DAServiceOPCommitmentType = 0
-)
-
-type EigenDASvcCommitment []byte
-
-// Encode adds a commitment type prefix self describing the commitment.
-func (c EigenDASvcCommitment) Encode() []byte {
-	return append([]byte{byte(EigenDAOPCommitmentType)}, c...)
 }
