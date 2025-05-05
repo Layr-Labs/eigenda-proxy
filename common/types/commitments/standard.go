@@ -11,7 +11,6 @@ type StandardCommitment struct {
 	versionedCert certs.VersionedCert
 }
 
-// NewOPEigenDAGenericCommitment creates a new commitment from the given input.
 func NewStandardCommitment(versionedCert certs.VersionedCert) StandardCommitment {
 	return StandardCommitment{versionedCert}
 }
