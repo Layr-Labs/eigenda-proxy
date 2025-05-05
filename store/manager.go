@@ -279,7 +279,8 @@ func (m *Manager) getFromCorrectEigenDABackend(
 	}
 }
 
-// PutOPKeccakPairInS3 puts a key/value pair, where key=keccak(value), into S3
+// PutOPKeccakPairInS3 puts a key/value pair, where key=keccak(value), into S3.
+// If key!=keccak(value), a Keccak256KeyValueMismatchError is returned.
 // This is only used for OP keccak256 commitments.
 func (m *Manager) PutOPKeccakPairInS3(ctx context.Context, key []byte, value []byte) error {
 	if m.s3 == nil {

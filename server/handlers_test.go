@@ -320,7 +320,7 @@ func TestHandlerPutKeccakErrors(t *testing.T) {
 		{
 			// only 400s are due to oversized blobs right now
 			name:                         "Failure - BadRequest 400",
-			mockStorageMgrPutReturnedErr: s3.Keccak256KeyValueMismatchError{Key: "key", Value: "value"},
+			mockStorageMgrPutReturnedErr: s3.Keccak256KeyValueMismatchError{Key: "key", KeccakedValue: "value"},
 			expectedHTTPCode:             http.StatusBadRequest,
 		},
 	}

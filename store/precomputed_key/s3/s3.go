@@ -138,11 +138,11 @@ func (s *Store) Put(ctx context.Context, key []byte, value []byte) error {
 
 // TODO: this should probably live elsewhere, it's related to op keccak commitments, not to S3.
 func (s *Store) Verify(_ context.Context, key []byte, value []byte) error {
-	h := crypto.Keccak256Hash(value)
-	if !bytes.Equal(h[:], key) {
+	keccakedValue := crypto.Keccak256Hash(value)
+	if !bytes.Equal(key, keccakedValue[:]) {
 		return NewKeccak256KeyValueMismatchErr(
 			hex.EncodeToString(key),
-			h.Hex(),
+			keccakedValue.Hex(),
 		)
 	}
 	return nil
