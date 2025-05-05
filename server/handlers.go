@@ -179,7 +179,7 @@ func (svr *Server) handlePostOPKeccakCommitment(w http.ResponseWriter, r *http.R
 	err = svr.sm.PutOPKeccakPairInS3(r.Context(), keccakCommitment, payload)
 	if err != nil {
 		err = NewPOSTError(
-			fmt.Errorf("keccak POST request failed for commitment %v: %w", keccakCommitment, err),
+			fmt.Errorf("keccak POST request failed for commitment %v: %w", keccakCommitmentHex, err),
 			commitments.OptimismKeccakCommitmentMode)
 		var keyValueMismatchErr s3.Keccak256KeyValueMismatchError
 		if errors.As(err, &keyValueMismatchErr) {
