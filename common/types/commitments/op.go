@@ -17,7 +17,7 @@ const (
 )
 
 // See https://specs.optimism.io/experimental/alt-da.html#example-commitments
-const EigenDADALayerByte = byte(0)
+const EigenDALayerByte = byte(0)
 
 // OPKeccak256Commitment is an implementation of OPCommitment that uses Keccak256 as the commitment function.
 type OPKeccak256Commitment []byte
@@ -49,5 +49,5 @@ func NewOPEigenDAGenericCommitment(versionedCert certs.VersionedCert) OPEigenDAG
 // Encoding is thus [ commitment_type_byte | da_layer_byte | eigenda_commitment ]
 // which for eigenda is [ 0x01 | 0x00 | serialized_versioned_cert ]
 func (c OPEigenDAGenericCommitment) Encode() []byte {
-	return append([]byte{byte(OPGenericCommitmentByte), EigenDADALayerByte}, c.versionedCert.Encode()...)
+	return append([]byte{byte(OPGenericCommitmentByte), EigenDALayerByte}, c.versionedCert.Encode()...)
 }
