@@ -259,8 +259,8 @@ func (svr *Server) handlePostShared(
 	svr.log.Info(fmt.Sprintf("response commitment: %x\n", responseCommit))
 	// We write the commitment as bytes directly instead of hex encoded.
 	// The spec https://specs.optimism.io/experimental/alt-da.html#da-server says it should be hex-encoded,
-	// but the client (https://github.com/Layr-Labs/optimism/blob/89ac40d0fddba2e06854b253b9f0266f36350af2/op-alt-da/daclient.go#L151)
-	// expects it to be raw bytes.
+	// but the client expects it to be raw bytes.
+	// See https://github.com/Layr-Labs/optimism/blob/89ac40d0fddba2e06854b253b9f0266f36350af2/op-alt-da/daclient.go#L151
 	svr.writeResponse(w, responseCommit)
 	return nil
 }
