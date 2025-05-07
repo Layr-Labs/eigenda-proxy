@@ -24,14 +24,14 @@ jobs:
         with:
           submodules: recursive
 
-    - name: Install golang
-      uses: jdx/mise-action@v2
-      with:
-          version: ${{ env.MISE_VERSION }}
-          experimental: true
+      - name: Install golang
+        uses: jdx/mise-action@v2
+        with:
+            version: ${{ env.MISE_VERSION }}
+            experimental: true
         
-    - name: Run shared CodeQL scan
-      uses: Layr-Labs/security-shared-workflows/actions/codeql-scans@418d735c1c4e5cc650c8addaeb8909b36b9dca27
-      with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run shared CodeQL scan
+        uses: Layr-Labs/security-shared-workflows/actions/codeql-scans@418d735c1c4e5cc650c8addaeb8909b36b9dca27
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
