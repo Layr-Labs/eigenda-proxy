@@ -9,6 +9,9 @@ on:
   schedule:
     - cron: "0 9 * * *"
 
+env:
+  MISE_VERSION: 2024.12.14
+  
 jobs:
   CodeQL-Scanning:
     runs-on: ubuntu-latest
