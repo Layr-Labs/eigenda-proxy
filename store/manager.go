@@ -276,11 +276,11 @@ func (m *Manager) PutOPKeccakPairInS3(ctx context.Context, key []byte, value []b
 	}
 	err := m.s3.Verify(ctx, key, value)
 	if err != nil {
-		return fmt.Errorf("PutOPKeccakPairInS3: %w", err)
+		return fmt.Errorf("s3 verify: %w", err)
 	}
 	err = m.s3.Put(ctx, key, value)
 	if err != nil {
-		return fmt.Errorf("PutOPKeccakPairInS3: %w", err)
+		return fmt.Errorf("s3 put: %w", err)
 	}
 	return nil
 }
