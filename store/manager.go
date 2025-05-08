@@ -20,7 +20,8 @@ type IManager interface {
 	// See [Manager.Put]
 	Put(ctx context.Context, cm commitments.CommitmentMode, key, value []byte) ([]byte, error)
 	// See [Manager.Get]
-	Get(ctx context.Context, versionedCert certs.VersionedCert, cm commitments.CommitmentMode, verifyOpts common.VerifyOpts) ([]byte, error)
+	Get(ctx context.Context, versionedCert certs.VersionedCert,
+		cm commitments.CommitmentMode, verifyOpts common.VerifyOpts) ([]byte, error)
 	// See [Manager.SetDispersalBackend]
 	SetDispersalBackend(backend common.EigenDABackend)
 	// See [Manager.GetDispersalBackend]
