@@ -43,7 +43,7 @@ type Store struct {
 	log      logging.Logger
 }
 
-var _ common.GeneratedKeyStore = (*Store)(nil)
+var _ common.EigenDAStore = (*Store)(nil)
 
 // NewStoreConfig creates a new StoreConfig with validation for PutTries.
 // PutTries==0 is not permitted, and will return an error
@@ -218,15 +218,15 @@ func (e Store) BackendType() common.BackendType {
 // Key is used to recover certificate fields and that verifies blob
 // against commitment to ensure data is valid and non-tampered.
 // l1InclusionBlockNum is optional and used to validate the certificate: negative number means don't verify this check
-func (e Store) Verify(ctx context.Context, key []byte, value []byte, opts common.VerifyArgs) error {
+func (e Store) Verify(ctx context.Context, serializedCert []byte, payload []byte, opts common.VerifyArgs) error {
 	var cert verify.Certificate
-	err := rlp.DecodeBytes(key, &cert)
+	err := rlp.DecodeBytes(serializedCert, &cert)
 	if err != nil {
 		return fmt.Errorf("failed to decode DA cert to RLP format: %w", err)
 	}
 
 	// re-encode blob for verification
-	encodedBlob, err := e.client.GetCodec().EncodeBlob(value)
+	encodedBlob, err := e.client.GetCodec().EncodeBlob(payload)
 	if err != nil {
 		return fmt.Errorf("EigenDA client failed to re-encode blob: %w", err)
 	}

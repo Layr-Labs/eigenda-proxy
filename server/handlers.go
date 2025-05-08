@@ -10,14 +10,16 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Layr-Labs/eigenda-proxy/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/common"
+	"github.com/Layr-Labs/eigenda-proxy/common/types/certs"
+	"github.com/Layr-Labs/eigenda-proxy/common/types/commitments"
+	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/gorilla/mux"
 )
 
 const (
-	// limit requests to only 32 mib to mitigate potential DoS attacks
-	maxRequestBodySize int64 = 1024 * 1024 * 32
+	// limit requests to only 32 MiB to mitigate potential DoS attacks
+	maxPOSTRequestBodySize int64 = 1024 * 1024 * 32
 
 	// HTTP headers
 	headerContentType = "Content-Type"
@@ -44,102 +46,95 @@ func (svr *Server) logDispersalGetError(w http.ResponseWriter, _ *http.Request) 
 
 // handleGetStdCommitment handles the GET request for std commitments.
 func (svr *Server) handleGetStdCommitment(w http.ResponseWriter, r *http.Request) error {
-	versionByte, err := parseVersionByte(w, r)
+	certVersion, err := parseCertVersion(w, r)
 	if err != nil {
 		return fmt.Errorf("error parsing version byte: %w", err)
 	}
-	commitmentMeta := commitments.CommitmentMeta{
-		Mode:    commitments.Standard,
-		Version: commitments.EigenDACommitmentType(versionByte),
-	}
-
-	rawCommitmentHex, ok := mux.Vars(r)[routingVarNamePayloadHex]
+	serializedCertHex, ok := mux.Vars(r)[routingVarNamePayloadHex]
 	if !ok {
-		return fmt.Errorf("commitment not found in path: %s", r.URL.Path)
+		return fmt.Errorf("serializedDACert not found in path: %s", r.URL.Path)
 	}
-	commitment, err := hex.DecodeString(rawCommitmentHex)
+	serializedCert, err := hex.DecodeString(serializedCertHex)
 	if err != nil {
-		return fmt.Errorf("failed to decode commitment %s: %w", rawCommitmentHex, err)
+		return fmt.Errorf("failed to decode from hex serializedDACert %s: %w", serializedCertHex, err)
 	}
+	versionedCert := certs.NewVersionedCert(serializedCert, certVersion)
 
-	return svr.handleGetShared(r.Context(), w, r, commitment, commitmentMeta)
+	return svr.handleGetShared(r.Context(), w, r, versionedCert, commitments.StandardCommitmentMode)
 }
 
-// handleGetOPKeccakCommitment handles the GET request for optimism keccak commitments.
+// handleGetOPKeccakCommitment handles GET requests for optimism keccak commitments.
 func (svr *Server) handleGetOPKeccakCommitment(w http.ResponseWriter, r *http.Request) error {
-	// TODO: do we use a version byte in OPKeccak commitments? README seems to say so, but server_test didn't
-	// versionByte, err := parseVersionByte(r)
-	// if err != nil {
-	// 	err = fmt.Errorf("error parsing version byte: %w", err)
-	// 	http.Error(w, err.Error(), http.StatusBadRequest)
-	// 	return err
-	// }
-	commitmentMeta := commitments.CommitmentMeta{
-		Mode:    commitments.OptimismKeccak,
-		Version: commitments.CertV0,
-	}
-
-	rawCommitmentHex, ok := mux.Vars(r)[routingVarNamePayloadHex]
+	keccakCommitmentHex, ok := mux.Vars(r)[routingVarNameKeccakCommitmentHex]
 	if !ok {
-		return fmt.Errorf("commitment not found in path: %s", r.URL.Path)
+		return fmt.Errorf("keccak commitment not found in path: %s", r.URL.Path)
 	}
-	commitment, err := hex.DecodeString(rawCommitmentHex)
+	keccakCommitment, err := hex.DecodeString(keccakCommitmentHex)
 	if err != nil {
-		return fmt.Errorf("failed to decode commitment %s: %w", rawCommitmentHex, err)
+		return fmt.Errorf("failed to decode hex keccak commitment %s: %w", keccakCommitmentHex, err)
+	}
+	svr.log.Info("Processing GET request", "commitmentMode", commitments.OptimismKeccakCommitmentMode,
+		"keccakCommitment", keccakCommitmentHex)
+	payload, err := svr.sm.GetOPKeccakValueFromS3(r.Context(), keccakCommitment)
+	if err != nil {
+		err = fmt.Errorf("GET keccakCommitment %v: %w", keccakCommitmentHex, err)
+		if errors.Is(err, ErrNotFound) {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return err
 	}
 
-	return svr.handleGetShared(r.Context(), w, r, commitment, commitmentMeta)
+	svr.writeResponse(w, payload)
+	return nil
 }
 
 // handleGetOPGenericCommitment handles the GET request for optimism generic commitments.
 func (svr *Server) handleGetOPGenericCommitment(w http.ResponseWriter, r *http.Request) error {
-	versionByte, err := parseVersionByte(w, r)
+	certVersion, err := parseCertVersion(w, r)
 	if err != nil {
 		return fmt.Errorf("error parsing version byte: %w", err)
 	}
-	commitmentMeta := commitments.CommitmentMeta{
-		Mode:    commitments.OptimismGeneric,
-		Version: commitments.EigenDACommitmentType(versionByte),
-	}
-
-	rawCommitmentHex, ok := mux.Vars(r)[routingVarNamePayloadHex]
+	serializedCertHex, ok := mux.Vars(r)[routingVarNamePayloadHex]
 	if !ok {
-		return fmt.Errorf("commitment not found in path: %s", r.URL.Path)
+		return fmt.Errorf("serializedDACert not found in path: %s", r.URL.Path)
 	}
-	commitment, err := hex.DecodeString(rawCommitmentHex)
+	commitment, err := hex.DecodeString(serializedCertHex)
 	if err != nil {
-		return fmt.Errorf("failed to decode commitment %s: %w", rawCommitmentHex, err)
+		return fmt.Errorf("failed to decode from hex serializedDACert %s: %w", serializedCertHex, err)
 	}
+	versionedCert := certs.NewVersionedCert(commitment, certVersion)
 
-	return svr.handleGetShared(r.Context(), w, r, commitment, commitmentMeta)
+	return svr.handleGetShared(r.Context(), w, r, versionedCert, commitments.OptimismGenericCommitmentMode)
 }
 
 func (svr *Server) handleGetShared(
 	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
-	comm []byte,
-	meta commitments.CommitmentMeta,
+	versionedCert certs.VersionedCert,
+	mode commitments.CommitmentMode,
 ) error {
-	commitmentHex := hex.EncodeToString(comm)
-	svr.log.Info("Processing GET request", "commitment", commitmentHex, "commitmentMeta", meta)
-	l1InclusionBlockNum, err := parseBatchInclusionL1BlockNumQueryParam(r)
+	serializedCertHex := hex.EncodeToString(versionedCert.SerializedCert)
+	svr.log.Info("Processing GET request", "commitmentMode", mode,
+		"certVersion", versionedCert.Version, "serializedCert", serializedCertHex)
+
+	l1InclusionBlockNum, err := parseCommitmentInclusionL1BlockNumQueryParam(r)
 	if err != nil {
-		err = MetaError{
-			Err:  fmt.Errorf("invalid l1_block_number: %w", err),
-			Meta: meta,
-		}
+		err = NewGETError(
+			fmt.Errorf("invalid l1_block_number: %w", err),
+			versionedCert.Version, mode)
 		// the inclusion block query param is optional, but if it is provided and invalid, we return a 400 error
 		// to let the client know that they probably have a bug.
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return err
 	}
-	input, err := svr.sm.Get(ctx, comm, meta, common.VerifyArgs{RollupL1InclusionBlockNum: l1InclusionBlockNum})
+	input, err := svr.sm.Get(ctx, versionedCert, mode, common.VerifyArgs{RollupL1InclusionBlockNum: l1InclusionBlockNum})
 	if err != nil {
-		err = MetaError{
-			Err:  fmt.Errorf("get request failed with commitment %v: %w", commitmentHex, err),
-			Meta: meta,
-		}
+		err = NewGETError(
+			fmt.Errorf("get request failed with serializedCert %v: %w", serializedCertHex, err),
+			versionedCert.Version, mode)
 		if errors.Is(err, ErrNotFound) {
 			http.Error(w, err.Error(), http.StatusNotFound)
 		} else {
@@ -159,7 +154,7 @@ func (svr *Server) handleGetShared(
 // Unhappy paths:
 //   - if the l1_inclusion_block_number is not provided, it returns 0 (whose meaning is to skip the check).
 //   - if the l1_inclusion_block_number is provided but isn't a valid integer, it returns an error.
-func parseBatchInclusionL1BlockNumQueryParam(r *http.Request) (uint64, error) {
+func parseCommitmentInclusionL1BlockNumQueryParam(r *http.Request) (uint64, error) {
 	l1BlockNumStr := r.URL.Query().Get("l1_inclusion_block_number")
 	if l1BlockNumStr != "" {
 		l1BlockNum, err := strconv.ParseUint(l1BlockNumStr, 10, 64)
@@ -200,81 +195,65 @@ func (svr *Server) handleGetEigenDADispersalBackend(w http.ResponseWriter, _ *ht
 
 // handlePostStdCommitment handles the POST request for std commitments.
 func (svr *Server) handlePostStdCommitment(w http.ResponseWriter, r *http.Request) error {
-	commitmentMeta := commitments.CommitmentMeta{
-		Mode:    commitments.Standard,
-		Version: commitments.CertV0,
-	}
-
-	if svr.sm.GetDispersalBackend() == common.V2EigenDABackend {
-		commitmentMeta.Version = commitments.CertV1
-	}
-
-	return svr.handlePostShared(w, r, nil, commitmentMeta)
+	return svr.handlePostShared(w, r, nil, commitments.StandardCommitmentMode)
 }
 
 // handlePostOPKeccakCommitment handles the POST request for optimism keccak commitments.
 func (svr *Server) handlePostOPKeccakCommitment(w http.ResponseWriter, r *http.Request) error {
-	// TODO: do we use a version byte in OPKeccak commitments? README seems to say so, but server_test didn't
-	// versionByte, err := parseVersionByte(r)
-	// if err != nil {
-	// 	err = fmt.Errorf("error parsing version byte: %w", err)
-	// 	http.Error(w, err.Error(), http.StatusBadRequest)
-	// 	return err
-	// }
-	commitmentMeta := commitments.CommitmentMeta{
-		Mode:    commitments.OptimismKeccak,
-		Version: commitments.CertV0,
-	}
-
-	rawCommitmentHex, ok := mux.Vars(r)[routingVarNamePayloadHex]
+	keccakCommitmentHex, ok := mux.Vars(r)[routingVarNameKeccakCommitmentHex]
 	if !ok {
-		return fmt.Errorf("commitment not found in path: %s", r.URL.Path)
+		return fmt.Errorf("keccak commitment not found in path: %s", r.URL.Path)
 	}
-	commitment, err := hex.DecodeString(rawCommitmentHex)
+	keccakCommitment, err := hex.DecodeString(keccakCommitmentHex)
 	if err != nil {
-		return fmt.Errorf("failed to decode commitment %s: %w", rawCommitmentHex, err)
+		return fmt.Errorf("failed to decode hex keccak commitment %s: %w", keccakCommitmentHex, err)
 	}
-
-	return svr.handlePostShared(w, r, commitment, commitmentMeta)
+	svr.log.Info("Processing Keccak Commitment POST request",
+		"mode", commitments.OptimismKeccakCommitmentMode, "commitment", keccakCommitmentHex)
+	payload, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxPOSTRequestBodySize))
+	if err != nil {
+		err = NewPOSTError(fmt.Errorf("failed to read request body: %w", err), commitments.OptimismKeccakCommitmentMode)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return err
+	}
+	err = svr.sm.PutOPKeccakPairInS3(r.Context(), keccakCommitment, payload)
+	if err != nil {
+		err = NewPOSTError(
+			fmt.Errorf("keccak POST request failed for commitment %v: %w", keccakCommitmentHex, err),
+			commitments.OptimismKeccakCommitmentMode)
+		var keyValueMismatchErr s3.Keccak256KeyValueMismatchError
+		if errors.As(err, &keyValueMismatchErr) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}
+	return nil
 }
 
 // handlePostOPGenericCommitment handles the POST request for optimism generic commitments.
 func (svr *Server) handlePostOPGenericCommitment(w http.ResponseWriter, r *http.Request) error {
-	commitmentMeta := commitments.CommitmentMeta{
-		Mode:    commitments.OptimismGeneric,
-		Version: commitments.CertV0,
-	}
-
-	if svr.sm.GetDispersalBackend() == common.V2EigenDABackend {
-		commitmentMeta.Version = commitments.CertV1
-	}
-
-	return svr.handlePostShared(w, r, nil, commitmentMeta)
+	return svr.handlePostShared(w, r, nil, commitments.OptimismGenericCommitmentMode)
 }
 
+// This is a shared function for handling POST requests for
 func (svr *Server) handlePostShared(
 	w http.ResponseWriter,
 	r *http.Request,
-	comm []byte,
-	meta commitments.CommitmentMeta,
+	comm []byte, // only non-nil for OPKeccak commitments
+	mode commitments.CommitmentMode,
 ) error {
-	svr.log.Info("Processing POST request", "commitment", hex.EncodeToString(comm), "meta", meta)
-	input, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxRequestBodySize))
+	svr.log.Info("Processing POST request", "commitment", hex.EncodeToString(comm), "mode", mode)
+	payload, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxPOSTRequestBodySize))
 	if err != nil {
-		err = MetaError{
-			Err:  fmt.Errorf("failed to read request body: %w", err),
-			Meta: meta,
-		}
+		err = NewPOSTError(fmt.Errorf("failed to read request body: %w", err), mode)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return err
 	}
 
-	commitment, err := svr.sm.Put(r.Context(), meta.Mode, comm, input)
+	serializedCert, err := svr.sm.Put(r.Context(), mode, comm, payload)
 	if err != nil {
-		err = MetaError{
-			Err:  fmt.Errorf("put request failed with commitment %v (commitment mode %v): %w", comm, meta.Mode, err),
-			Meta: meta,
-		}
+		err = NewPOSTError(fmt.Errorf("post request failed with commitment %v: %w", comm, err), mode)
 		switch {
 		case is400(err):
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -289,21 +268,30 @@ func (svr *Server) handlePostShared(
 		return err
 	}
 
-	responseCommit, err := commitments.EncodeCommitment(commitment, meta.Mode, meta.Version)
+	var certVersion certs.VersionByte
+	switch svr.sm.GetDispersalBackend() {
+	case common.V1EigenDABackend:
+		certVersion = certs.V0VersionByte
+	case common.V2EigenDABackend:
+		certVersion = certs.V1VersionByte
+	default:
+		return fmt.Errorf("unknown dispersal backend: %v", svr.sm.GetDispersalBackend())
+	}
+	versionedCert := certs.NewVersionedCert(serializedCert, certVersion)
+
+	responseCommit, err := commitments.EncodeCommitment(versionedCert, mode)
 	if err != nil {
-		err = MetaError{
-			Err:  fmt.Errorf("failed to encode commitment %v (commitment mode %v): %w", commitment, meta.Mode, err),
-			Meta: meta,
-		}
+		err = NewPOSTError(fmt.Errorf("failed to encode serializedCert %v: %w", serializedCert, err), mode)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return err
 	}
 
 	svr.log.Info(fmt.Sprintf("response commitment: %x\n", responseCommit))
-	// write commitment to resp body if not in OptimismKeccak mode
-	if meta.Mode != commitments.OptimismKeccak {
-		svr.writeResponse(w, responseCommit)
-	}
+	// We write the commitment as bytes directly instead of hex encoded.
+	// The spec https://specs.optimism.io/experimental/alt-da.html#da-server says it should be hex-encoded,
+	// but the client expects it to be raw bytes.
+	// See https://github.com/Layr-Labs/optimism/blob/89ac40d0fddba2e06854b253b9f0266f36350af2/op-alt-da/daclient.go#L151
+	svr.writeResponse(w, responseCommit)
 	return nil
 }
 

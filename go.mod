@@ -5,7 +5,7 @@ go 1.22.0
 toolchain go1.22.7
 
 require (
-	github.com/Layr-Labs/eigenda v0.9.0
+	github.com/Layr-Labs/eigenda v0.9.1-0.20250411174037-b6b545d7cbf6
 	github.com/Layr-Labs/eigenda-proxy/clients v0.0.0-00010101000000-000000000000
 	github.com/Layr-Labs/eigensdk-go v0.2.0-beta.1.0.20250118004418-2a25f31b3b28
 	github.com/avast/retry-go/v4 v4.6.0
@@ -13,7 +13,6 @@ require (
 	github.com/ethereum-optimism/optimism v1.9.5
 	github.com/ethereum/go-ethereum v1.14.11
 	github.com/go-redis/redis/v8 v8.11.5
-	github.com/golang/mock v1.2.0
 	github.com/gorilla/mux v1.8.0
 	github.com/joho/godotenv v1.5.1
 	github.com/minio/minio-go/v7 v7.0.80
