@@ -66,8 +66,9 @@ type Verifier struct {
 	log logging.Logger
 	// kzgVerifier is needed to commit blobs to the memstore
 	kzgVerifier *kzgverifier.Verifier
-	// When config.VerifyCerts is false, we use a noop verifier that does nothing
-	cv certVerifier
+	// cert verification is optional, and verifies certs retrieved from eigenDA when turned on
+	verifyCerts bool
+	cv          *CertVerifier
 	// Allowed distance (in L1 blocks) between the eigenDA reference block number (RBN) of the batch the blob is
 	// included in, and the L1 block number at which the blob cert was included in the batcher's inbox.
 	// Invariant to maintain: batch.RBN < rollupBlobInclusionBlock <= batch.RBN + rollupBlobInclusionWindow
@@ -106,14 +107,11 @@ func NewVerifier(cfg *Config, kzgVerifier *kzgverifier.Verifier, l logging.Logge
 }
 
 // verifies V0 eigenda certificate type
-func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate, args common.VerifyArgs) error {
-	// 1 - verify batch in the cert is confirmed onchain
-	err := v.cv.verifyBatchConfirmedOnChain(ctx, cert.Proof().GetBatchId(), cert.Proof().GetBatchMetadata())
-	if err != nil {
-		return fmt.Errorf("failed to verify batch: %w", err)
-	}
+func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate, args common.VerifyOpts) error {
+	// We always perform this first check even when verifyCerts is false, because it doesn't require
+	// any external calls to the blockchain. This is a sanity check that should always be performed.
 
-	// 2 - verify that the blob cert was submitted to the rollup's batch inbox within the allowed
+	// 1 - verify that the blob cert was submitted to the rollup's batch inbox within the allowed
 	// RollupBlobInclusionWindow window. This is to prevent timing attacks where a rollup batcher
 	// could try to game the fraud proof window by including an old DA blob that is about to expire
 	// on the DA layer and is hence not retrievable.
@@ -125,24 +123,35 @@ func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate, args commo
 	//  2. Optimistic approach: verify the check in op-program or hokulea (kona)'s derivation pipeline. See
 	// https://github.com/Layr-Labs/hokulea/blob/8c4c89bc4f35d56a3cec2220575a9681d987105c/crates/eigenda/src/eigenda.rs#L90
 	if args.RollupL1InclusionBlockNum > 0 && v.rollupBlobInclusionWindow > 0 {
-		batchRBN := uint64(cert.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber)
+		certRBN := uint64(cert.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber)
 		rollupInclusionBlock := args.RollupL1InclusionBlockNum
 		// We need batchRBN < rollupInclusionBlock <= batch.RBN + rollupBlobInclusionWindow
-		if !(batchRBN < rollupInclusionBlock) {
+		if !(certRBN < rollupInclusionBlock) {
 			return fmt.Errorf(
 				"eigenda batch reference block number (%d) needs to be < rollup inclusion block number (%d): this is a serious bug, please report it",
-				batchRBN,
+				certRBN,
 				rollupInclusionBlock,
 			)
 		}
-		if !(rollupInclusionBlock <= batchRBN+uint64(v.rollupBlobInclusionWindow)) {
+		if !(rollupInclusionBlock <= certRBN+uint64(v.rollupBlobInclusionWindow)) {
 			return fmt.Errorf(
-				"rollup inclusion block number (%d) needs to be <= eigenda batch reference block number (%d) + rollupBlobInclusionWindow (%d)",
+				"rollup inclusion block number (%d) needs to be <= eigenda cert reference block number (%d) + rollupBlobInclusionWindow (%d)",
 				rollupInclusionBlock,
-				batchRBN,
+				certRBN,
 				v.rollupBlobInclusionWindow,
 			)
 		}
+	}
+
+	// Skip the below checks if cert verification is disabled
+	if !v.verifyCerts {
+		return nil
+	}
+
+	// 2 - verify batch in the cert is confirmed onchain
+	err := v.cv.verifyBatchConfirmedOnChain(ctx, cert.Proof().GetBatchId(), cert.Proof().GetBatchMetadata())
+	if err != nil {
+		return fmt.Errorf("failed to verify batch: %w", err)
 	}
 
 	// 3 - verify merkle inclusion proof

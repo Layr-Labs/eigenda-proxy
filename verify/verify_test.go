@@ -131,15 +131,17 @@ func TestCommitmentWithTooLargeBlob(t *testing.T) {
 }
 
 func TestVerifyCertRollupBlobInclusionWindow(t *testing.T) {
-	kzgConfig := &kzg.KzgConfig{
+	kzgConfig := kzg.KzgConfig{
 		G1Path:          "../resources/g1.point",
-		G2PowerOf2Path:  "../resources/g2.point.powerOf2",
+		G2Path:          "../resources/g2.point",
+		G2TrailingPath:  "../resources/g2.trailing.point",
 		CacheDir:        "../resources/SRSTables",
 		SRSOrder:        3000,
 		SRSNumberToLoad: 3000,
 		NumWorker:       uint64(runtime.GOMAXPROCS(0)),
+		LoadG2Points:    false,
 	}
-	kzgVerifier, err := kzgverifier.NewVerifier(kzgConfig, nil)
+	kzgVerifier, err := kzgverifier.NewVerifier(&kzgConfig, nil)
 	require.NoError(t, err)
 	cfg := &Config{
 		VerifyCerts:               false,
@@ -161,32 +163,32 @@ func TestVerifyCertRollupBlobInclusionWindow(t *testing.T) {
 	// 0 means to skip the test, so we expect no error to be caught
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	err = verifier.VerifyCert(ctx, &cert, common.VerifyArgs{RollupL1InclusionBlockNum: 0})
+	err = verifier.VerifyCert(ctx, &cert, common.VerifyOpts{RollupL1InclusionBlockNum: 0})
 	require.NoError(t, err)
 
 	// 50 < RollupBlobInclusionWindow, so we expect no error to be caught
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	err = verifier.VerifyCert(ctx, &cert, common.VerifyArgs{RollupL1InclusionBlockNum: uint64(
+	err = verifier.VerifyCert(ctx, &cert, common.VerifyOpts{RollupL1InclusionBlockNum: uint64(
 		blobInfo.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber) + 50})
 	require.NoError(t, err)
 
 	// 200 > RollupBlobInclusionWindow, so we expect an error to be caught
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	err = verifier.VerifyCert(ctx, &cert, common.VerifyArgs{RollupL1InclusionBlockNum: uint64(
+	err = verifier.VerifyCert(ctx, &cert, common.VerifyOpts{RollupL1InclusionBlockNum: uint64(
 		blobInfo.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber) + 200})
 	require.EqualError(
 		t,
 		err,
-		"rollup inclusion block number (3106502) needs to be <= eigenda batch reference block number (3106302) + rollupBlobInclusionWindow (100)",
+		"rollup inclusion block number (3106502) needs to be <= eigenda cert reference block number (3106302) + rollupBlobInclusionWindow (100)",
 	)
 
 	// RBN-50 < RBN, so we expect an error to be caught
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	err = verifier.VerifyCert(ctx, &cert, common.VerifyArgs{RollupL1InclusionBlockNum: uint64(
+	err = verifier.VerifyCert(ctx, &cert, common.VerifyOpts{RollupL1InclusionBlockNum: uint64(
 		blobInfo.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber) - 50})
 	require.EqualError(t, err,
-		"eigenda batch reference block number (3106302) needs to be < rollup inclusion block number (3106252)")
+		"eigenda batch reference block number (3106302) needs to be < rollup inclusion block number (3106252): this is a serious bug, please report it")
 }

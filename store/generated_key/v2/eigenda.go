@@ -20,12 +20,20 @@ import (
 
 // Store does storage interactions and verifications for blobs with the EigenDA V2 protocol.
 type Store struct {
+	log logging.Logger
+
 	// Number of times to try blob dispersals:
 	// - If > 0: Try N times total
 	// - If < 0: Retry indefinitely until success
 	// - If = 0: Not permitted
 	putTries int
-	log      logging.Logger
+	// Allowed distance (in L1 blocks) between the eigenDA reference block number (RBN)
+	// of the batch the blob is included in, and the L1 block number at which the blob cert
+	// was included in the batcher's inbox.
+	// If batch.RBN + rollupBlobInclusionWindow < cert.L1InclusionBlock, the batch is considered
+	// stale and verification will fail.
+	// This check is optional and will be skipped when rollupBlobInclusionWindow is set to 0.
+	rollupBlobInclusionWindow uint32
 
 	disperser  *payloaddispersal.PayloadDisperser
 	retrievers []clients.PayloadRetriever
@@ -141,13 +149,50 @@ func (e Store) BackendType() common.BackendType {
 //
 // Since v2 methods for fetching a payload are responsible for verifying the received bytes against the certificate,
 // this Verify method only needs to check the cert on chain. That is why the third parameter is ignored.
-func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte, verifyOpts common.VerifyArgs) error {
-	// TODO: implement staleness check using verifyOpts (DON'T MERGE THIS PR WITHOUT THIS)
+func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte, opts common.VerifyOpts) error {
 	var eigenDACert coretypes.EigenDACert
 	err := rlp.DecodeBytes(certBytes, &eigenDACert)
 	if err != nil {
 		return fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
 	}
+	err = e.verifyPunctualityCheck(eigenDACert.BatchHeader.ReferenceBlockNumber, opts)
+	if err != nil {
+		return fmt.Errorf("punctuality check failed: %w", err)
+	}
 
 	return e.verifier.VerifyCertV2(ctx, &eigenDACert)
+}
+
+func (e Store) verifyPunctualityCheck(certRBN uint32, opts common.VerifyOpts) error {
+	// 2 - verify that the blob cert was submitted to the rollup's batch inbox within the allowed
+	// RollupBlobInclusionWindow window. This is to prevent timing attacks where a rollup batcher
+	// could try to game the fraud proof window by including an old DA blob that is about to expire
+	// on the DA layer and is hence not retrievable.
+	//
+	// Note that for a secure integration, this same check needs to be verified onchain.
+	// There are 2 approaches to doing this:
+	//  1. Pessimistic approach: use a smart batcher inbox to dissalow stale blobs from even beign included
+	//   in the batcher inbox (see https://github.com/ethereum-optimism/design-docs/pull/229)
+	//  2. Optimistic approach: verify the check in op-program or hokulea (kona)'s derivation pipeline. See
+	// https://github.com/Layr-Labs/hokulea/blob/8c4c89bc4f35d56a3cec2220575a9681d987105c/crates/eigenda/src/eigenda.rs#L90
+	if opts.RollupL1InclusionBlockNum > 0 && e.rollupBlobInclusionWindow > 0 {
+		rollupInclusionBlock := opts.RollupL1InclusionBlockNum
+		// We need batchRBN < rollupInclusionBlock <= batch.RBN + rollupBlobInclusionWindow
+		if !(uint64(certRBN) < rollupInclusionBlock) {
+			return fmt.Errorf(
+				"eigenda batch reference block number (%d) needs to be < rollup inclusion block number (%d): this is a serious bug, please report it",
+				certRBN,
+				rollupInclusionBlock,
+			)
+		}
+		if !(rollupInclusionBlock <= uint64(certRBN+e.rollupBlobInclusionWindow)) {
+			return fmt.Errorf(
+				"rollup inclusion block number (%d) needs to be <= eigenda cert reference block number (%d) + rollupBlobInclusionWindow (%d)",
+				rollupInclusionBlock,
+				certRBN,
+				e.rollupBlobInclusionWindow,
+			)
+		}
+	}
+	return nil
 }

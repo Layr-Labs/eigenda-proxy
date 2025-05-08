@@ -73,7 +73,7 @@ type Store interface {
 	BackendType() BackendType
 }
 
-type VerifyArgs struct {
+type VerifyOpts struct {
 	// L1 block number at which the rollup batch was submitted to the batcher inbox.
 	// This is optional, and should be set to 0 to mean to not verify the reference block number distance check.
 	// Its impossible for a batch inbox tx to have been included in the genesis block,
@@ -97,7 +97,7 @@ type EigenDAStore interface {
 	// Get retrieves the given key if it's present in the key-value (serializedCert-payload) data store.
 	Get(ctx context.Context, serializedCert []byte) (payload []byte, err error)
 	// Verify verifies the given key-value pair.
-	Verify(ctx context.Context, serializedCert []byte, payload []byte, opts VerifyArgs) error
+	Verify(ctx context.Context, serializedCert []byte, payload []byte, opts VerifyOpts) error
 }
 
 // PrecomputedKeyStore is the interface for a key-value data store that uses keccak(value) as the key.

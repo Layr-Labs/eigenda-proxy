@@ -106,7 +106,7 @@ func TestHandlerGet(t *testing.T) {
 			url:  fmt.Sprintf("/get/0x010000%s?l1_inclusion_block_number=100", testCommitStr),
 			mockBehavior: func() {
 				mockStorageMgr.EXPECT().
-					Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(common.VerifyArgs{RollupL1InclusionBlockNum: 100})).
+					Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(common.VerifyOpts{RollupL1InclusionBlockNum: 100})).
 					Return([]byte(testCommitStr), nil)
 			},
 			expectedCode: http.StatusOK,
