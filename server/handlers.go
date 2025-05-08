@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/common/types/certs"
@@ -59,7 +60,7 @@ func (svr *Server) handleGetStdCommitment(w http.ResponseWriter, r *http.Request
 	}
 	versionedCert := certs.NewVersionedCert(serializedCert, certVersion)
 
-	return svr.handleGetShared(r.Context(), w, versionedCert, commitments.StandardCommitmentMode)
+	return svr.handleGetShared(r.Context(), w, r, versionedCert, commitments.StandardCommitmentMode)
 }
 
 // handleGetOPKeccakCommitment handles GET requests for optimism keccak commitments.
@@ -105,25 +106,35 @@ func (svr *Server) handleGetOPGenericCommitment(w http.ResponseWriter, r *http.R
 	}
 	versionedCert := certs.NewVersionedCert(commitment, certVersion)
 
-	return svr.handleGetShared(r.Context(), w, versionedCert, commitments.OptimismGenericCommitmentMode)
+	return svr.handleGetShared(r.Context(), w, r, versionedCert, commitments.OptimismGenericCommitmentMode)
 }
 
 func (svr *Server) handleGetShared(
 	ctx context.Context,
 	w http.ResponseWriter,
+	r *http.Request,
 	versionedCert certs.VersionedCert,
 	mode commitments.CommitmentMode,
 ) error {
 	serializedCertHex := hex.EncodeToString(versionedCert.SerializedCert)
 	svr.log.Info("Processing GET request", "commitmentMode", mode,
 		"certVersion", versionedCert.Version, "serializedCert", serializedCertHex)
-	input, err := svr.sm.Get(ctx, versionedCert, mode)
+
+	l1InclusionBlockNum, err := parseCommitmentInclusionL1BlockNumQueryParam(r)
+	if err != nil {
+		err = NewGETError(
+			fmt.Errorf("invalid l1_block_number: %w", err),
+			versionedCert.Version, mode)
+		// the inclusion block query param is optional, but if it is provided and invalid, we return a 400 error
+		// to let the client know that they probably have a bug.
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return err
+	}
+	input, err := svr.sm.Get(ctx, versionedCert, mode, common.VerifyOpts{RollupL1InclusionBlockNum: l1InclusionBlockNum})
 	if err != nil {
 		err = NewGETError(
 			fmt.Errorf("get request failed with serializedCert %v: %w", serializedCertHex, err),
-			versionedCert.Version,
-			mode,
-		)
+			versionedCert.Version, mode)
 		if errors.Is(err, ErrNotFound) {
 			http.Error(w, err.Error(), http.StatusNotFound)
 		} else {
@@ -134,6 +145,25 @@ func (svr *Server) handleGetShared(
 
 	svr.writeResponse(w, input)
 	return nil
+}
+
+// Parses the l1_inclusion_block_number query param from the request.
+// Happy path:
+//   - if the l1_inclusion_block_number is provided, it returns the parsed value.
+//
+// Unhappy paths:
+//   - if the l1_inclusion_block_number is not provided, it returns 0 (whose meaning is to skip the check).
+//   - if the l1_inclusion_block_number is provided but isn't a valid integer, it returns an error.
+func parseCommitmentInclusionL1BlockNumQueryParam(r *http.Request) (uint64, error) {
+	l1BlockNumStr := r.URL.Query().Get("l1_inclusion_block_number")
+	if l1BlockNumStr != "" {
+		l1BlockNum, err := strconv.ParseUint(l1BlockNumStr, 10, 64)
+		if err != nil {
+			return 0, fmt.Errorf("invalid l1_inclusion_block_number: %w", err)
+		}
+		return l1BlockNum, nil
+	}
+	return 0, nil
 }
 
 // handleGetEigenDADispersalBackend handles the GET request to check the current EigenDA backend used for dispersal.

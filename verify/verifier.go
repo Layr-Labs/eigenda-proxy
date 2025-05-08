@@ -12,7 +12,8 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/bn254/fp"
 	"github.com/ethereum/go-ethereum/log"
 
-	"github.com/Layr-Labs/eigenda/api/grpc/common"
+	"github.com/Layr-Labs/eigenda-proxy/common"
+	grpccommon "github.com/Layr-Labs/eigenda/api/grpc/common"
 	"github.com/Layr-Labs/eigenda/api/grpc/disperser"
 	kzgverifier "github.com/Layr-Labs/eigenda/encoding/kzg/verifier"
 	"github.com/Layr-Labs/eigenda/encoding/rs"
@@ -23,6 +24,17 @@ const (
 )
 
 type Config struct {
+	// Allowed distance (in L1 blocks) between the eigenDA reference block number (RBN)
+	// of the batch the blob is included in, and the L1 block number at which the blob cert
+	// was included in the batcher's inbox.
+	// If batch.RBN + RollupBlobInclusionWindow < cert.L1InclusionBlock, the batch is considered
+	// stale and verification will fail.
+	// This check is optional and will be skipped when RollupBlobInclusionWindow is set to 0.
+	RollupBlobInclusionWindow uint32
+	// Cert verification is optional, and verifies certs retrieved from eigenDA when turned on.
+	// It is optional because it requires making calls to the blockchain, which is not necessarily always possible.
+	// For eg, some rollups are running on sepolia testnet which doesn't have an eigenlayer/eigenda contracts
+	// deployment.
 	VerifyCerts bool
 	// below fields are only required if VerifyCerts is true
 	RPCURL               string
@@ -43,13 +55,29 @@ func (c Config) MarshalJSON() ([]byte, error) {
 	return json.Marshal(aux)
 }
 
+// Verifier verifies the integrity of a blob and its certificate. There are 3 main categories of verification:
+//  1. Blob: properties localized to a single blob, most specifically its commitment
+//  2. Batch: properties wrt the EigenDA network: signatures, quorum thresholds, onchain inclusion, etc.
+//  3. Rollup: properties wrt the rollup chain: block at which the cert was included in the batcher's inbox
+//     (make sure its not too stale trying to game fraud proof windows)
+//
 // TODO: right now verification and confirmation depth are tightly coupled. we should decouple them
 type Verifier struct {
+	log logging.Logger
 	// kzgVerifier is needed to commit blobs to the memstore
 	kzgVerifier *kzgverifier.Verifier
 	// cert verification is optional, and verifies certs retrieved from eigenDA when turned on
 	verifyCerts bool
 	cv          *CertVerifier
+	// Allowed distance (in L1 blocks) between the eigenDA reference block number (RBN) of the batch the blob is
+	// included in, and the L1 block number at which the blob cert was included in the batcher's inbox.
+	// Invariant to maintain: batch.RBN < rollupBlobInclusionBlock <= batch.RBN + rollupBlobInclusionWindow
+	// This check is optional and will be skipped when rollupBlobInclusionBlock
+	// or rollupBlobInclusionWindow are set to 0.
+	//
+	// Note: if there are more rollup related
+	// properties that we need to check in the future, then maybe create a RollupVerifier struct.
+	rollupBlobInclusionWindow uint32
 	// holesky is a flag to enable/disable holesky specific checks
 	holesky bool
 }
@@ -61,47 +89,83 @@ func NewVerifier(cfg *Config, kzgVerifier *kzgverifier.Verifier, l logging.Logge
 	if cfg.VerifyCerts {
 		cv, err = NewCertVerifier(cfg, l)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create cert verifier: %w", err)
+			return nil, fmt.Errorf("new cert verifier: %w", err)
 		}
-		log.Info(
-			"Certificate verification against Ethereum state enabled",
-			"confirmation_depth",
-			cfg.EthConfirmationDepth)
+		log.Info("Certificate verification against Ethereum state enabled",
+			"confirmation_depth", cfg.EthConfirmationDepth)
 	} else {
 		log.Warn("Certificate verification against Ethereum state disabled")
 	}
 
 	return &Verifier{
-		kzgVerifier: kzgVerifier,
-		verifyCerts: cfg.VerifyCerts,
-		cv:          cv,
-		holesky:     isHolesky(cfg.SvcManagerAddr),
+		log:                       l,
+		kzgVerifier:               kzgVerifier,
+		cv:                        cv,
+		rollupBlobInclusionWindow: cfg.RollupBlobInclusionWindow,
+		holesky:                   isHolesky(cfg.SvcManagerAddr),
 	}, nil
 }
 
 // verifies V0 eigenda certificate type
-func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate) error {
+func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate, args common.VerifyOpts) error {
+	// We always perform this first check even when verifyCerts is false, because it doesn't require
+	// any external calls to the blockchain. This is a sanity check that should always be performed.
+
+	// 1 - verify that the blob cert was submitted to the rollup's batch inbox within the allowed
+	// RollupBlobInclusionWindow window. This is to prevent timing attacks where a rollup batcher
+	// could try to game the fraud proof window by including an old DA blob that is about to expire
+	// on the DA layer and is hence not retrievable.
+	//
+	// Note that for a secure integration, this same check needs to be verified onchain.
+	// There are 2 approaches to doing this:
+	//  1. Pessimistic approach: use a smart batcher inbox to dissalow stale blobs from even beign included
+	//   in the batcher inbox (see https://github.com/ethereum-optimism/design-docs/pull/229)
+	//  2. Optimistic approach: verify the check in op-program or hokulea (kona)'s derivation pipeline. See
+	// https://github.com/Layr-Labs/hokulea/blob/8c4c89bc4f35d56a3cec2220575a9681d987105c/crates/eigenda/src/eigenda.rs#L90
+	if args.RollupL1InclusionBlockNum > 0 && v.rollupBlobInclusionWindow > 0 {
+		certRBN := uint64(cert.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber)
+		rollupInclusionBlock := args.RollupL1InclusionBlockNum
+		// We need batchRBN < rollupInclusionBlock <= batch.RBN + rollupBlobInclusionWindow
+		if !(certRBN < rollupInclusionBlock) {
+			return fmt.Errorf(
+				"eigenda batch reference block number (%d) needs to be < rollup inclusion block number (%d): this is a serious bug, please report it",
+				certRBN,
+				rollupInclusionBlock,
+			)
+		}
+		if !(rollupInclusionBlock <= certRBN+uint64(v.rollupBlobInclusionWindow)) {
+			return fmt.Errorf(
+				"rollup inclusion block number (%d) needs to be <= eigenda cert reference block number (%d) + rollupBlobInclusionWindow (%d)",
+				rollupInclusionBlock,
+				certRBN,
+				v.rollupBlobInclusionWindow,
+			)
+		}
+	}
+
+	// Skip the below checks if cert verification is disabled
 	if !v.verifyCerts {
 		return nil
 	}
 
-	// 1 - verify batch in the cert is confirmed onchain
+	// 2 - verify batch in the cert is confirmed onchain
 	err := v.cv.verifyBatchConfirmedOnChain(ctx, cert.Proof().GetBatchId(), cert.Proof().GetBatchMetadata())
 	if err != nil {
 		return fmt.Errorf("failed to verify batch: %w", err)
 	}
 
-	// 2 - verify merkle inclusion proof
+	// 3 - verify merkle inclusion proof
 	err = v.cv.verifyMerkleProof(
 		cert.Proof().GetInclusionProof(),
 		cert.BatchHeaderRoot(),
 		cert.Proof().GetBlobIndex(),
-		cert.ReadBlobHeader())
+		cert.ReadBlobHeader(),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to verify merkle proof: %w", err)
 	}
 
-	// 3 - verify security parameters
+	// 4 - verify security parameters
 	batchHeader := cert.Proof().GetBatchMetadata().GetBatchHeader()
 	err = v.verifySecurityParams(cert.ReadBlobHeader(), batchHeader)
 	if err != nil {
@@ -138,7 +202,7 @@ func (v *Verifier) Commit(blob []byte) (*bn254.G1Affine, error) {
 // Verify regenerates a commitment from the blob and asserts equivalence
 // to the commitment in the certificate
 // TODO: Optimize implementation by opening a point on the commitment instead
-func (v *Verifier) VerifyCommitment(certCommitment *common.G1Commitment, blob []byte) error {
+func (v *Verifier) VerifyCommitment(certCommitment *grpccommon.G1Commitment, blob []byte) error {
 	actualCommit, err := v.Commit(blob)
 	if err != nil {
 		return err
@@ -197,7 +261,9 @@ func (v *Verifier) verifySecurityParams(blobHeader BlobHeader, batchHeader *disp
 		// right now since this threshold is hardcoded into the contract:
 		// https://github.com/Layr-Labs/eigenda/blob/master/contracts/src/core/EigenDAServiceManagerStorage.sol
 		// but it is good practice in case the contract changes in the future
-		quorumAdversaryThreshold, ok := v.cv.quorumAdversaryThresholds[blobHeader.QuorumBlobParams[i].QuorumNumber]
+		quorumAdversaryThreshold, ok := v.cv.quorumAdversaryThresholdPercentages(
+			blobHeader.QuorumBlobParams[i].QuorumNumber,
+		)
 		if !ok {
 			log.Warn(
 				"CertVerifier.quorumAdversaryThresholds map does not contain quorum number",
@@ -236,7 +302,7 @@ func requiredQuorum(referenceBlockNumber uint32, v *Verifier) []uint8 {
 	if v.holesky && referenceBlockNumber >= 2950000 && referenceBlockNumber < 2960000 {
 		return []uint8{0}
 	}
-	return v.cv.quorumsRequired
+	return v.cv.quorumNumbersRequired()
 }
 
 func isHolesky(svcAddress string) bool {

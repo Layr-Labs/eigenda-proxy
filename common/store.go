@@ -71,8 +71,21 @@ func StringToBackendType(s string) BackendType {
 type Store interface {
 	// BackendType returns the backend type provider of the store.
 	BackendType() BackendType
-	// Verify verifies the given key-value pair.
-	Verify(ctx context.Context, serializedCert []byte, payload []byte) error
+}
+
+type VerifyOpts struct {
+	// L1 block number at which the rollup batch was submitted to the batcher inbox.
+	// This is optional, and should be set to 0 to mean to not verify the reference block number distance check.
+	// Its impossible for a batch inbox tx to have been included in the genesis block,
+	// so we are free to give this special meaning to the zero value.
+	//
+	// Used to determine the validity of the eigenDA batch.
+	// The eigenDA batch header contains a reference block number (RBN) which is used
+	// to lookup the stake of the eigenda operators before verifying signature thresholds.
+	// The rollup batch containing the eigenDA cert is only valid if it was included
+	// within a certain number of blocks after the RBN.
+	// validity condition is: RBN < l1_inclusion_block_number < RBN + rollup_blob_inclusion_window
+	RollupL1InclusionBlockNum uint64
 }
 
 // EigenDAStore is the interface for an EigenDA data store, which stores payloads that are retrievable
@@ -83,6 +96,8 @@ type EigenDAStore interface {
 	Put(ctx context.Context, payload []byte) (serializedCert []byte, err error)
 	// Get retrieves the given key if it's present in the key-value (serializedCert-payload) data store.
 	Get(ctx context.Context, serializedCert []byte) (payload []byte, err error)
+	// Verify verifies the given key-value pair.
+	Verify(ctx context.Context, serializedCert []byte, payload []byte, opts VerifyOpts) error
 }
 
 // PrecomputedKeyStore is the interface for a key-value data store that uses keccak(value) as the key.
@@ -93,4 +108,6 @@ type PrecomputedKeyStore interface {
 	Put(ctx context.Context, key []byte, value []byte) error
 	// Get retrieves the given key if it's present in the key-value data store.
 	Get(ctx context.Context, key []byte) ([]byte, error)
+	// Verify verifies the given key-value pair.
+	Verify(ctx context.Context, key []byte, value []byte) error
 }

@@ -1,18 +1,24 @@
 package verify
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"os"
 	"runtime"
 	"testing"
+	"time"
 
+	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda/api/clients/codecs"
-	"github.com/Layr-Labs/eigenda/api/grpc/common"
+	grpccommon "github.com/Layr-Labs/eigenda/api/grpc/common"
+	"github.com/Layr-Labs/eigenda/api/grpc/disperser"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	kzgverifier "github.com/Layr-Labs/eigenda/encoding/kzg/verifier"
 	"github.com/Layr-Labs/eigenda/encoding/rs"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func TestCommitmentVerification(t *testing.T) {
@@ -26,7 +32,7 @@ func TestCommitmentVerification(t *testing.T) {
 	y, err := hex.DecodeString("02efa5a7813233ae13f32bae9b8f48252fa45c1b06a5d70bed471a9bea8d98ae")
 	require.NoError(t, err)
 
-	c := &common.G1Commitment{
+	c := &grpccommon.G1Commitment{
 		X: x,
 		Y: y,
 	}
@@ -101,7 +107,7 @@ func TestCommitmentWithTooLargeBlob(t *testing.T) {
 	y, err := hex.DecodeString("02efa5a7813233ae13f32bae9b8f48252fa45c1b06a5d70bed471a9bea8d98ae")
 	require.NoError(t, err)
 
-	c := &common.G1Commitment{
+	c := &grpccommon.G1Commitment{
 		X: x,
 		Y: y,
 	}
@@ -122,4 +128,67 @@ func TestCommitmentWithTooLargeBlob(t *testing.T) {
 	)
 	require.EqualError(t, err, msg)
 
+}
+
+func TestVerifyCertRollupBlobInclusionWindow(t *testing.T) {
+	kzgConfig := kzg.KzgConfig{
+		G1Path:          "../resources/g1.point",
+		G2Path:          "../resources/g2.point",
+		G2TrailingPath:  "../resources/g2.trailing.point",
+		CacheDir:        "../resources/SRSTables",
+		SRSOrder:        3000,
+		SRSNumberToLoad: 3000,
+		NumWorker:       uint64(runtime.GOMAXPROCS(0)),
+		LoadG2Points:    false,
+	}
+	kzgVerifier, err := kzgverifier.NewVerifier(&kzgConfig, nil)
+	require.NoError(t, err)
+	cfg := &Config{
+		VerifyCerts:               false,
+		RollupBlobInclusionWindow: 100,
+	}
+	verifier, err := NewVerifier(cfg, kzgVerifier, nil)
+	require.NoError(t, err)
+
+	// contains a BlobInfo, which was obtained from dispersing a blob and retrieving its blob status
+	// using the grpcurl methods described in https://docs.eigenda.xyz/integrations-guides/dispersal/quick-start
+	data, err := os.ReadFile("./.testdata/blob_info.json")
+	require.NoError(t, err)
+
+	var blobInfo disperser.BlobInfo
+	err = protojson.Unmarshal(data, &blobInfo)
+	require.NoError(t, err)
+	cert := Certificate(blobInfo)
+
+	// 0 means to skip the test, so we expect no error to be caught
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err = verifier.VerifyCert(ctx, &cert, common.VerifyOpts{RollupL1InclusionBlockNum: 0})
+	require.NoError(t, err)
+
+	// 50 < RollupBlobInclusionWindow, so we expect no error to be caught
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err = verifier.VerifyCert(ctx, &cert, common.VerifyOpts{RollupL1InclusionBlockNum: uint64(
+		blobInfo.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber) + 50})
+	require.NoError(t, err)
+
+	// 200 > RollupBlobInclusionWindow, so we expect an error to be caught
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err = verifier.VerifyCert(ctx, &cert, common.VerifyOpts{RollupL1InclusionBlockNum: uint64(
+		blobInfo.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber) + 200})
+	require.EqualError(
+		t,
+		err,
+		"rollup inclusion block number (3106502) needs to be <= eigenda cert reference block number (3106302) + rollupBlobInclusionWindow (100)",
+	)
+
+	// RBN-50 < RBN, so we expect an error to be caught
+	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err = verifier.VerifyCert(ctx, &cert, common.VerifyOpts{RollupL1InclusionBlockNum: uint64(
+		blobInfo.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber) - 50})
+	require.EqualError(t, err,
+		"eigenda batch reference block number (3106302) needs to be < rollup inclusion block number (3106252): this is a serious bug, please report it")
 }

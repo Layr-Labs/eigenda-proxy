@@ -2,6 +2,7 @@ package verify
 
 import (
 	"fmt"
+	"math"
 	"runtime"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
@@ -20,6 +21,9 @@ var (
 	G2PathFlagName                   = withFlagPrefix("g2-path")
 	G2TrailingPathFlagName           = withFlagPrefix("g2-path-trailing")
 	CachePathFlagName                = withFlagPrefix("cache-path")
+
+	// rollup related flags
+	RollupBlobInclusionWindowFlagName = withFlagPrefix("rollup-blob-inclusion-window")
 )
 
 // we keep the eigenda prefix like eigenda client flags, because we
@@ -114,8 +118,18 @@ func ReadKzgConfig(ctx *cli.Context, maxBlobSizeBytes uint64) kzg.KzgConfig {
 // ReadConfig takes an eigendaClientConfig as input because the verifier config reuses some configs that are already
 // defined in the client config
 func ReadConfig(ctx *cli.Context, clientConfigV1 common.ClientConfigV1) Config {
+	rollupBlobInclusionWindowUint := ctx.Uint(RollupBlobInclusionWindowFlagName)
+	if rollupBlobInclusionWindowUint > math.MaxUint32 {
+		panic(
+			fmt.Sprintf(
+				"RollupBlobInclusionWindow value (%d) too large for uint32",
+				ctx.Uint(RollupBlobInclusionWindowFlagName),
+			),
+		)
+	}
 	return Config{
-		VerifyCerts: !ctx.Bool(CertVerificationDisabledFlagName),
+		VerifyCerts:               !ctx.Bool(CertVerificationDisabledFlagName),
+		RollupBlobInclusionWindow: uint32(rollupBlobInclusionWindowUint),
 		// reuse some configs from the eigenda client
 		RPCURL:               clientConfigV1.EdaClientCfg.EthRpcUrl,
 		SvcManagerAddr:       clientConfigV1.EdaClientCfg.SvcManagerAddr,

@@ -181,7 +181,10 @@ func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to verify commitment: %w", err)
 	}
 
-	err = e.verifier.VerifyCert(ctx, cert)
+	// we set RollupL1InclusionBlockNum to -1 to skip the check, as it is meaningless in the PUT route.
+	// The cert will only be included in the batcher's inbox after
+	// the proxy returns the verified cert to the batcher.
+	err = e.verifier.VerifyCert(ctx, cert, common.VerifyOpts{RollupL1InclusionBlockNum: 0})
 	if err != nil {
 		if errors.Is(err, verify.ErrBatchMetadataHashMismatch) {
 			// This error might have been caused by an L1 reorg.
@@ -214,7 +217,8 @@ func (e Store) BackendType() common.BackendType {
 
 // Key is used to recover certificate fields and that verifies blob
 // against commitment to ensure data is valid and non-tampered.
-func (e Store) Verify(ctx context.Context, serializedCert []byte, payload []byte) error {
+// l1InclusionBlockNum is optional and used to validate the certificate: negative number means don't verify this check
+func (e Store) Verify(ctx context.Context, serializedCert []byte, payload []byte, opts common.VerifyOpts) error {
 	var cert verify.Certificate
 	err := rlp.DecodeBytes(serializedCert, &cert)
 	if err != nil {
@@ -234,7 +238,7 @@ func (e Store) Verify(ctx context.Context, serializedCert []byte, payload []byte
 	}
 
 	// verify DA certificate against EigenDA's batch metadata that's bridged to Ethereum
-	err = e.verifier.VerifyCert(ctx, &cert)
+	err = e.verifier.VerifyCert(ctx, &cert, opts)
 	if errors.Is(err, verify.ErrBatchMetadataHashMismatch) {
 		// This error might have been caused by an L1 reorg.
 		// See https://github.com/Layr-Labs/eigenda-proxy/blob/main/docs/troubleshooting_v1.md#batch-hash-mismatch-error

@@ -22,7 +22,15 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-// CertVerifier verifies the DA certificate against on-chain EigenDA contracts
+type certVerifier interface {
+	verifyBatchConfirmedOnChain(ctx context.Context, batchID uint32, batchMetadata *disperser.BatchMetadata) error
+	verifyMerkleProof(inclusionProof []byte, root []byte, index uint32, blobHeader BlobHeader) error
+	// getters for the cached quorum parameters
+	quorumNumbersRequired() []uint8
+	quorumAdversaryThresholdPercentages(quorum uint8) (percentage uint8, ok bool)
+}
+
+// certVerification verifies the DA certificate against on-chain EigenDA contracts
 // to ensure disperser returned fields haven't been tampered with
 type CertVerifier struct {
 	log logging.Logger
@@ -44,6 +52,7 @@ type CertVerifier struct {
 }
 
 func NewCertVerifier(cfg *Config, log logging.Logger) (*CertVerifier, error) {
+	log.Info("Enabling certificate verification", "confirmation_depth", cfg.EthConfirmationDepth)
 	if cfg.EthConfirmationDepth >= uint64(consts.EthHappyPathFinalizationDepthBlocks) {
 		// We keep this low (<128) to avoid requiring an archive node.
 		return nil, fmt.Errorf(
@@ -186,9 +195,9 @@ func (cv *CertVerifier) getConfDeepBlockNumber(ctx context.Context) (*big.Int, e
 	return new(big.Int).SetUint64(blockNumber - cv.ethConfirmationDepth), nil
 }
 
-// retrieveBatchMetadataHash retrieves the batch metadata hash stored on-chain at a specific blockNumber for a given
-// batchID
-// returns an error if some problem calling the contract happens, or the hash is not found.
+// retrieveBatchMetadataHash retrieves the batch metadata hash stored on-chain
+// at a specific blockNumber for a given batchID.
+// Returns an error if some problem calling the contract happens, or the hash is not found.
 // We make an eth_call to the EigenDAServiceManager at the given blockNumber to retrieve the hash.
 // Therefore, make sure that blockNumber is <128 blocks behind the latest block, to avoid requiring an archive node.
 // This is currently enforced by having EthConfirmationDepth be <64.
@@ -212,6 +221,33 @@ func (cv *CertVerifier) retrieveBatchMetadataHash(
 		)
 	}
 	return onchainHash, nil
+}
+
+func (cv *CertVerifier) quorumNumbersRequired() []uint8 {
+	return cv.quorumsRequired
+}
+
+func (cv *CertVerifier) quorumAdversaryThresholdPercentages(quorum uint8) (uint8, bool) {
+	threshold, ok := cv.quorumAdversaryThresholds[quorum]
+	return threshold, ok
+}
+
+// NoopCertVerifier is used in place of CertVerification when certificate verification is disabled
+type NoopCertVerifier struct{}
+
+var _ certVerifier = (*NoopCertVerifier)(nil)
+
+func (*NoopCertVerifier) verifyBatchConfirmedOnChain(_ context.Context, _ uint32, _ *disperser.BatchMetadata) error {
+	return nil
+}
+func (*NoopCertVerifier) verifyMerkleProof(_ []byte, _ []byte, _ uint32, _ BlobHeader) error {
+	return nil
+}
+func (*NoopCertVerifier) quorumNumbersRequired() []uint8 {
+	return nil
+}
+func (*NoopCertVerifier) quorumAdversaryThresholdPercentages(_ uint8) (uint8, bool) {
+	return 0, true
 }
 
 // getQuorumParametersAtLatestBlock fetches the required quorums and quorum adversary thresholds
