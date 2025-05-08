@@ -139,11 +139,13 @@ func TestVerifyCertRollupBlobInclusionWindow(t *testing.T) {
 		SRSNumberToLoad: 3000,
 		NumWorker:       uint64(runtime.GOMAXPROCS(0)),
 	}
+	kzgVerifier, err := kzgverifier.NewVerifier(kzgConfig, nil)
+	require.NoError(t, err)
 	cfg := &Config{
 		VerifyCerts:               false,
 		RollupBlobInclusionWindow: 100,
 	}
-	verifier, err := NewVerifier(cfg, *kzgConfig, nil)
+	verifier, err := NewVerifier(cfg, kzgVerifier, nil)
 	require.NoError(t, err)
 
 	// contains a BlobInfo, which was obtained from dispersing a blob and retrieving its blob status
