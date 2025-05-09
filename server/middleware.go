@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/common/types/commitments"
+	"github.com/Layr-Labs/eigenda-proxy/config"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 )
@@ -100,5 +102,62 @@ func withLogging(
 			args = append(args, "commitment_mode", getErr.Mode, "cert_version", getErr.CertVersion)
 		}
 		log.Info("request", args...)
+	}
+}
+
+// withCORS is a middleware that adds CORS headers to responses.
+// It intercepts OPTIONS requests for handling CORS preflight requests.
+func withCORS(
+	handleFn func(http.ResponseWriter, *http.Request),
+	corsConfig config.ServerConfig,
+	log logging.Logger,
+) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// If CORS is not enabled, just call the handler
+		if !corsConfig.CORSEnabled {
+			handleFn(w, r)
+			return
+		}
+
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			// Not a CORS request
+			handleFn(w, r)
+			return
+		}
+
+		// Check if origin is allowed
+		allowOrigin := "*"
+		if len(corsConfig.CORSAllowedDomains) > 0 {
+			allowed := false
+			for _, domain := range corsConfig.CORSAllowedDomains {
+				if strings.TrimSpace(domain) == origin || 
+				   strings.HasSuffix(origin, strings.TrimSpace(domain)) {
+					allowed = true
+					break
+				}
+			}
+			if !allowed {
+				log.Info("CORS rejected", "origin", origin)
+				handleFn(w, r)
+				return
+			}
+			allowOrigin = origin
+		}
+
+		// Set CORS headers
+		w.Header().Set("Access-Control-Allow-Origin", allowOrigin)
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", 
+			"Content-Type, Accept, Content-Length, Accept-Encoding, Authorization")
+
+		// Handle preflight request
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		// Call the actual handler
+		handleFn(w, r)
 	}
 }

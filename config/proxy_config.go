@@ -76,9 +76,11 @@ func ReadProxyConfig(ctx *cli.Context) (ProxyConfig, error) {
 
 	cfg := ProxyConfig{
 		ServerConfig: ServerConfig{
-			Host:        ctx.String(ListenAddrFlagName),
-			Port:        ctx.Int(PortFlagName),
-			EnabledAPIs: ctx.StringSlice(APIsEnabledFlagName),
+			Host:               ctx.String(ListenAddrFlagName),
+			Port:               ctx.Int(PortFlagName),
+			EnabledAPIs:        ctx.StringSlice(APIsEnabledFlagName),
+			CORSEnabled:        ctx.Bool(CORSEnabledFlagName),
+			CORSAllowedDomains: ctx.StringSlice(CORSAllowedDomainsFlagName),
 		},
 		ClientConfigV1:   clientConfigV1,
 		VerifierConfigV1: verifierConfigV1,
