@@ -237,11 +237,18 @@ func (smb *StorageManagerBuilder) buildEigenDAV2Backend(
 		return nil, fmt.Errorf("build eth client: %w", err)
 	}
 
-	certVerifierAddressProvider := verification.NewStaticCertVerifierAddressProvider(
-		geth_common.HexToAddress(smb.v2ClientCfg.EigenDACertVerifierAddress))
+	var provider clients_v2.CertVerifierAddressProvider
+	if smb.v2ClientCfg.EigenDACertVerifierAddress != "" {
+		provider = verification.NewStaticCertVerifierAddressProvider(
+			geth_common.HexToAddress(smb.v2ClientCfg.EigenDACertVerifierAddress))
+	} else { // V3 cert
+		// TODO: initialize here
+		panic("cert verifier router support is currently not enabled")
+	}
+
 
 	certVerifier, err := verification.NewCertVerifier(
-		smb.log, ethClient, certVerifierAddressProvider)
+		smb.log, ethClient, provider)
 	if err != nil {
 		return nil, fmt.Errorf("new cert verifier: %w", err)
 	}
