@@ -97,7 +97,26 @@ func BuildAndStartProxyServer(
 }
 
 func (svr *Server) Start(r *mux.Router) error {
-	svr.httpServer.Handler = r
+	// Apply CORS middleware if enabled
+	var handler http.Handler = r
+	if svr.config.CORSEnabled {
+		svr.log.Info("CORS is enabled", "allowed_domains", svr.config.CORSAllowedDomains)
+		corsRouter := mux.NewRouter()
+		// Handle OPTIONS requests for all routes
+		corsRouter.PathPrefix("/").Methods("OPTIONS").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		})
+		
+		// Copy all routes from the original router
+		corsRouter.PathPrefix("/").Handler(r)
+		
+		// Wrap the router with CORS middleware
+		handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			withCORS(corsRouter.ServeHTTP, svr.config, svr.log)(w, r)
+		})
+	}
+	
+	svr.httpServer.Handler = handler
 
 	listener, err := net.Listen("tcp", svr.endpoint)
 	if err != nil {
