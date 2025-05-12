@@ -29,10 +29,10 @@ type Store struct {
 	putTries int
 	// Allowed distance (in L1 blocks) between the eigenDA cert's reference block number (RBN)
 	// and the L1 block number at which the cert was included in the rollup's batch inbox.
-	// If batch.RBN + recencyWindowSize < cert.L1InclusionBlock, the batch is considered
+	// If batch.RBN + rbnRecencyWindowSize < cert.L1InclusionBlock, the batch is considered
 	// stale and verification will fail.
-	// This check is optional and will be skipped when recencyWindowSize is set to 0.
-	recencyWindowSize uint32
+	// This check is optional and will be skipped when rbnRecencyWindowSize is set to 0.
+	rbnRecencyWindowSize uint64
 
 	disperser  *payloaddispersal.PayloadDisperser
 	retrievers []clients.PayloadRetriever
@@ -44,6 +44,7 @@ var _ common.EigenDAStore = (*Store)(nil)
 func NewStore(
 	log logging.Logger,
 	putTries int,
+	rbnRecencyWindowSize uint64,
 	disperser *payloaddispersal.PayloadDisperser,
 	retrievers []clients.PayloadRetriever,
 	verifier clients.ICertVerifier,
@@ -176,9 +177,6 @@ func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte, opts comm
 //     does not represent the actual stake distribution. Operators that withdrew a lot of stake would
 //     not be slashable anymore, even though because of the old RBN their signature would count for a lot of stake.
 //
-// EigenDA V1 verified RBN recency while bridging batches to the ServiceManager, but EigenDA V2
-// does not bridge pessimistically, so this check needs to be performed by rollups themselves.
-//
 // Note that for a secure integration, this same check needs to be verified onchain.
 // There are 2 approaches to doing this:
 //  1. Pessimistic approach: use a smart batcher inbox to dissalow stale blobs from even beign included
@@ -187,7 +185,7 @@ func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte, opts comm
 //
 // https://github.com/Layr-Labs/hokulea/blob/8c4c89bc4f35d56a3cec2220575a9681d987105c/crates/eigenda/src/eigenda.rs#L90
 func (e Store) verifyRBNRecencyCheck(certRBN uint32, opts common.VerifyOpts) error {
-	if opts.RollupL1InclusionBlockNum > 0 && e.recencyWindowSize > 0 {
+	if opts.RollupL1InclusionBlockNum > 0 && e.rbnRecencyWindowSize > 0 {
 		rollupInclusionBlock := opts.RollupL1InclusionBlockNum
 		if !(uint64(certRBN) < rollupInclusionBlock) {
 			return fmt.Errorf(
@@ -196,12 +194,12 @@ func (e Store) verifyRBNRecencyCheck(certRBN uint32, opts common.VerifyOpts) err
 				rollupInclusionBlock,
 			)
 		}
-		if !(rollupInclusionBlock <= uint64(certRBN+e.recencyWindowSize)) {
+		if !(rollupInclusionBlock <= uint64(certRBN)+e.rbnRecencyWindowSize) {
 			return fmt.Errorf(
-				"rollup inclusion block number (%d) needs to be <= eigenda cert reference block number (%d) + RBNRecencyWindowSize (%d)",
+				"rollup inclusion block number (%d) needs to be <= eigenda cert.RBN (%d) + RBNRecencyWindowSize (%d)",
 				rollupInclusionBlock,
 				certRBN,
-				e.recencyWindowSize,
+				e.rbnRecencyWindowSize,
 			)
 		}
 	}

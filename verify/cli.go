@@ -2,7 +2,6 @@ package verify
 
 import (
 	"fmt"
-	"math"
 	"runtime"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
@@ -118,18 +117,9 @@ func ReadKzgConfig(ctx *cli.Context, maxBlobSizeBytes uint64) kzg.KzgConfig {
 // ReadConfig takes an eigendaClientConfig as input because the verifier config reuses some configs that are already
 // defined in the client config
 func ReadConfig(ctx *cli.Context, clientConfigV1 common.ClientConfigV1) Config {
-	rbnRecencyWindowSizeUint := ctx.Uint(RBNRecencyWindowSizeFlagName)
-	if rbnRecencyWindowSizeUint > math.MaxUint32 {
-		panic(
-			fmt.Sprintf(
-				"rbnRecencyWindowSize value (%d) too large for uint32",
-				ctx.Uint(RBNRecencyWindowSizeFlagName),
-			),
-		)
-	}
 	return Config{
 		VerifyCerts:          !ctx.Bool(CertVerificationDisabledFlagName),
-		RBNRecencyWindowSize: uint32(rbnRecencyWindowSizeUint),
+		RBNRecencyWindowSize: ctx.Uint64(RBNRecencyWindowSizeFlagName),
 		// reuse some configs from the eigenda client
 		RPCURL:               clientConfigV1.EdaClientCfg.EthRpcUrl,
 		SvcManagerAddr:       clientConfigV1.EdaClientCfg.SvcManagerAddr,

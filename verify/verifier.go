@@ -29,7 +29,7 @@ type Config struct {
 	// If cert.RBN + RBNRecencyWindowSize < cert.L1InclusionBlock, the cert is considered
 	// stale and discarded.
 	// This check is optional and will be skipped when RBNRecencyWindowSize is set to 0.
-	RBNRecencyWindowSize uint32
+	RBNRecencyWindowSize uint64
 	// Cert verification is optional, and verifies certs retrieved from eigenDA when turned on.
 	// It is optional because it requires making calls to the blockchain, which is not necessarily always possible.
 	// For eg, some rollups are running on sepolia testnet which doesn't have an eigenlayer/eigenda contracts
@@ -76,7 +76,7 @@ type Verifier struct {
 	//
 	// Note: if there are more rollup related
 	// properties that we need to check in the future, then maybe create a RollupVerifier struct.
-	rbnRecencyWindowSize uint32
+	rbnRecencyWindowSize uint64
 	// holesky is a flag to enable/disable holesky specific checks
 	holesky bool
 }

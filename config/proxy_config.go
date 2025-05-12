@@ -37,6 +37,9 @@ func ReadProxyConfig(ctx *cli.Context) (ProxyConfig, error) {
 		return ProxyConfig{}, fmt.Errorf("read storage config: %w", err)
 	}
 
+	// Rollup related flags
+	// rbnRecencyWindowSize := ctx.Uint64(RBNRecencyWindowSizeFlagName)
+
 	var clientConfigV1 common.ClientConfigV1
 	var verifierConfigV1 verify.Config
 	if slices.Contains(storageConfig.BackendsToEnable, common.V1EigenDABackend) {

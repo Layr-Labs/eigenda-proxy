@@ -28,6 +28,7 @@ const (
 	VerifierCategory        = "Cert Verifier (V1 only)"
 	KZGCategory             = "KZG"
 	ProxyServerCategory     = "Proxy Server"
+	RollupCategory          = "Rollups"
 )
 
 const (
@@ -35,6 +36,9 @@ const (
 	PortFlagName        = "port"
 	APIsEnabledFlagName = "api-enabled"
 	AdminAPIType        = "admin"
+
+	// Rollup related flags
+	RBNRecencyWindowSizeFlagName = "rbn-recency-window-size"
 )
 
 func CLIFlags(envPrefix string, category string) []cli.Flag {
@@ -66,11 +70,29 @@ func CLIFlags(envPrefix string, category string) []cli.Flag {
 	return flags
 }
 
+func RollupFlags(envPrefix string, category string) []cli.Flag {
+	flags := []cli.Flag{
+		&cli.Uint64Flag{
+			Name: RBNRecencyWindowSizeFlagName,
+			Usage: `Allowed distance (in L1 blocks) between the eigenDA cert's reference 
+block number (RBN) and the L1 block number at which the cert was included 
+in the rollup's batch inbox. If batch.RBN + recencyWindowSize < cert.L1InclusionBlock, 
+the batch is considered stale and verification will fail. This check is 
+optional and will be skipped when rbnRecencyWindowSize=0.`,
+			Value:    0,
+			EnvVars:  common.PrefixEnvVar(envPrefix, "RBN_RECENCY_WINDOW_SIZE"),
+			Category: category,
+		},
+	}
+	return flags
+}
+
 // Flags contains the list of configuration options available to the binary.
 var Flags = []cli.Flag{}
 
 func init() {
 	Flags = CLIFlags(common.GlobalPrefix, ProxyServerCategory)
+	Flags = append(Flags, RollupFlags(common.GlobalPrefix, RollupCategory)...)
 	Flags = append(Flags, logging.CLIFlags(common.GlobalPrefix, LoggingFlagsCategory)...)
 	Flags = append(Flags, metrics.CLIFlags(common.GlobalPrefix, MetricsFlagCategory)...)
 	Flags = append(Flags, eigendaflags.CLIFlags(common.GlobalPrefix, EigenDAClientCategory)...)
