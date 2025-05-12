@@ -132,9 +132,9 @@ func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate, args commo
 				rollupInclusionBlock,
 			)
 		}
-		if !(rollupInclusionBlock <= certRBN+uint64(v.rbnRecencyWindowSize)) {
+		if !(rollupInclusionBlock <= certRBN+v.rbnRecencyWindowSize) {
 			return fmt.Errorf(
-				"rollup inclusion block number (%d) needs to be <= eigenda cert reference block number (%d) + rbnRecencyWindowSize (%d)",
+				"rollup inclusion block number (%d) needs to be <= eigenda cert.RBN (%d) + rbnRecencyWindowSize (%d)",
 				rollupInclusionBlock,
 				certRBN,
 				v.rbnRecencyWindowSize,
