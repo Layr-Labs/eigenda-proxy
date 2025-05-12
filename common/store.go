@@ -74,17 +74,17 @@ type Store interface {
 }
 
 type VerifyOpts struct {
-	// L1 block number at which the rollup batch was submitted to the batcher inbox.
-	// This is optional, and should be set to 0 to mean to not verify the reference block number distance check.
+	// L1 block number at which the rollup batch was included in the batcher inbox.
+	// This is optional, and should be set to 0 to mean to not verify the reference block number recency check.
 	// Its impossible for a batch inbox tx to have been included in the genesis block,
 	// so we are free to give this special meaning to the zero value.
 	//
 	// Used to determine the validity of the eigenDA batch.
-	// The eigenDA batch header contains a reference block number (RBN) which is used
+	// The eigenDA cert contains a reference block number (RBN) which is used
 	// to lookup the stake of the eigenda operators before verifying signature thresholds.
-	// The rollup batch containing the eigenDA cert is only valid if it was included
+	// The rollup commitment containing the eigenDA cert is only valid if it was included
 	// within a certain number of blocks after the RBN.
-	// validity condition is: RBN < l1_inclusion_block_number < RBN + rollup_blob_inclusion_window
+	// validity condition is: RBN < l1_inclusion_block_number < RBN + recency_window__size
 	RollupL1InclusionBlockNum uint64
 }
 

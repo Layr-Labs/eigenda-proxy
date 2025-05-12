@@ -27,13 +27,12 @@ type Store struct {
 	// - If < 0: Retry indefinitely until success
 	// - If = 0: Not permitted
 	putTries int
-	// Allowed distance (in L1 blocks) between the eigenDA reference block number (RBN)
-	// of the batch the blob is included in, and the L1 block number at which the blob cert
-	// was included in the batcher's inbox.
-	// If batch.RBN + rollupBlobInclusionWindow < cert.L1InclusionBlock, the batch is considered
+	// Allowed distance (in L1 blocks) between the eigenDA cert's reference block number (RBN)
+	// and the L1 block number at which the cert was included in the rollup's batch inbox.
+	// If batch.RBN + recencyWindowSize < cert.L1InclusionBlock, the batch is considered
 	// stale and verification will fail.
-	// This check is optional and will be skipped when rollupBlobInclusionWindow is set to 0.
-	rollupBlobInclusionWindow uint32
+	// This check is optional and will be skipped when recencyWindowSize is set to 0.
+	recencyWindowSize uint32
 
 	disperser  *payloaddispersal.PayloadDisperser
 	retrievers []clients.PayloadRetriever
@@ -163,21 +162,32 @@ func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte, opts comm
 	return e.verifier.VerifyCertV2(ctx, &eigenDACert)
 }
 
+// Certs in the rollup batcher-inbox that do not respect the below equation are discarded.
+//
+//	cert.ReferenceBlockNumber < cert.L1InclusionBlock <= cert.ReferenceBlockNumber + rollupBlobInclusionWindow
+//
+// where ReferenceBlockNumber is the block number at which operator stakes are used to verify the signature thresholds,
+// and L1InclusionBlock is the block at which the cert was included in the L1 block.
+//
+// This check serves 2 purposes:
+//  1. liveness: prevents derivation pipeline from stalling on blobs that are no longer availeble on the DA layer
+//  2. safety: prevents a malicious EigenDA sequencer from using a very stale RBN whose operator distribution
+//     does not represent the actual stake distribution. Operators that withdrew a lot of stake would
+//     not be slashable anymore, even though because of the old RBN their signature would could for a lot of stake.
+//
+// EigenDA V1 verified (2) while bridging batches to the ServiceManager, but EigenDA V2 does not bridge pessimistically,
+// so this check needs to be performed per-rollup.
+//
+// Note that for a secure integration, this same check needs to be verified onchain.
+// There are 2 approaches to doing this:
+//  1. Pessimistic approach: use a smart batcher inbox to dissalow stale blobs from even beign included
+//     in the batcher inbox (see https://github.com/ethereum-optimism/design-docs/pull/229)
+//  2. Optimistic approach: verify the check in op-program or hokulea (kona)'s derivation pipeline. See
+//
+// https://github.com/Layr-Labs/hokulea/blob/8c4c89bc4f35d56a3cec2220575a9681d987105c/crates/eigenda/src/eigenda.rs#L90
 func (e Store) verifyPunctualityCheck(certRBN uint32, opts common.VerifyOpts) error {
-	// 2 - verify that the blob cert was submitted to the rollup's batch inbox within the allowed
-	// RollupBlobInclusionWindow window. This is to prevent timing attacks where a rollup batcher
-	// could try to game the fraud proof window by including an old DA blob that is about to expire
-	// on the DA layer and is hence not retrievable.
-	//
-	// Note that for a secure integration, this same check needs to be verified onchain.
-	// There are 2 approaches to doing this:
-	//  1. Pessimistic approach: use a smart batcher inbox to dissalow stale blobs from even beign included
-	//   in the batcher inbox (see https://github.com/ethereum-optimism/design-docs/pull/229)
-	//  2. Optimistic approach: verify the check in op-program or hokulea (kona)'s derivation pipeline. See
-	// https://github.com/Layr-Labs/hokulea/blob/8c4c89bc4f35d56a3cec2220575a9681d987105c/crates/eigenda/src/eigenda.rs#L90
-	if opts.RollupL1InclusionBlockNum > 0 && e.rollupBlobInclusionWindow > 0 {
+	if opts.RollupL1InclusionBlockNum > 0 && e.recencyWindowSize > 0 {
 		rollupInclusionBlock := opts.RollupL1InclusionBlockNum
-		// We need batchRBN < rollupInclusionBlock <= batch.RBN + rollupBlobInclusionWindow
 		if !(uint64(certRBN) < rollupInclusionBlock) {
 			return fmt.Errorf(
 				"eigenda batch reference block number (%d) needs to be < rollup inclusion block number (%d): this is a serious bug, please report it",
@@ -185,12 +195,12 @@ func (e Store) verifyPunctualityCheck(certRBN uint32, opts common.VerifyOpts) er
 				rollupInclusionBlock,
 			)
 		}
-		if !(rollupInclusionBlock <= uint64(certRBN+e.rollupBlobInclusionWindow)) {
+		if !(rollupInclusionBlock <= uint64(certRBN+e.recencyWindowSize)) {
 			return fmt.Errorf(
 				"rollup inclusion block number (%d) needs to be <= eigenda cert reference block number (%d) + rollupBlobInclusionWindow (%d)",
 				rollupInclusionBlock,
 				certRBN,
-				e.rollupBlobInclusionWindow,
+				e.recencyWindowSize,
 			)
 		}
 	}
