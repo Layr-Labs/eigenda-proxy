@@ -181,7 +181,7 @@ func TestVerifyCertRBNRecencyWindowSize(t *testing.T) {
 	require.EqualError(
 		t,
 		err,
-		"rollup inclusion block number (3106502) needs to be <= eigenda cert reference block number (3106302) + rbnRecencyWindowSize (100)",
+		"rollup inclusion block number (3106502) needs to be <= eigenda cert.RBN (3106302) + rbnRecencyWindowSize (100)",
 	)
 
 	// RBN-50 < RBN, so we expect an error to be caught
