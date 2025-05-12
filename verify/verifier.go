@@ -24,13 +24,12 @@ const (
 )
 
 type Config struct {
-	// Allowed distance (in L1 blocks) between the eigenDA reference block number (RBN)
-	// of the batch the blob is included in, and the L1 block number at which the blob cert
-	// was included in the batcher's inbox.
-	// If batch.RBN + RollupBlobInclusionWindow < cert.L1InclusionBlock, the batch is considered
-	// stale and verification will fail.
-	// This check is optional and will be skipped when RollupBlobInclusionWindow is set to 0.
-	RollupBlobInclusionWindow uint32
+	// Allowed distance (in L1 blocks) between the eigenDA cert's reference block number (RBN)
+	// and the L1 block number at which the cert was included in the rollup's batch inbox.
+	// If cert.RBN + RBNRecencyWindowSize < cert.L1InclusionBlock, the cert is considered
+	// stale and discarded.
+	// This check is optional and will be skipped when RBNRecencyWindowSize is set to 0.
+	RBNRecencyWindowSize uint32
 	// Cert verification is optional, and verifies certs retrieved from eigenDA when turned on.
 	// It is optional because it requires making calls to the blockchain, which is not necessarily always possible.
 	// For eg, some rollups are running on sepolia testnet which doesn't have an eigenlayer/eigenda contracts
@@ -71,13 +70,13 @@ type Verifier struct {
 	cv          *CertVerifier
 	// Allowed distance (in L1 blocks) between the eigenDA reference block number (RBN) of the batch the blob is
 	// included in, and the L1 block number at which the blob cert was included in the batcher's inbox.
-	// Invariant to maintain: batch.RBN < rollupBlobInclusionBlock <= batch.RBN + rollupBlobInclusionWindow
+	// Invariant to maintain: batch.RBN < rollupBlobInclusionBlock <= batch.RBN + rbnRecencyWindowSize
 	// This check is optional and will be skipped when rollupBlobInclusionBlock
-	// or rollupBlobInclusionWindow are set to 0.
+	// or rbnRecencyWindowSize are set to 0.
 	//
 	// Note: if there are more rollup related
 	// properties that we need to check in the future, then maybe create a RollupVerifier struct.
-	rollupBlobInclusionWindow uint32
+	rbnRecencyWindowSize uint32
 	// holesky is a flag to enable/disable holesky specific checks
 	holesky bool
 }
@@ -98,11 +97,11 @@ func NewVerifier(cfg *Config, kzgVerifier *kzgverifier.Verifier, l logging.Logge
 	}
 
 	return &Verifier{
-		log:                       l,
-		kzgVerifier:               kzgVerifier,
-		cv:                        cv,
-		rollupBlobInclusionWindow: cfg.RollupBlobInclusionWindow,
-		holesky:                   isHolesky(cfg.SvcManagerAddr),
+		log:                  l,
+		kzgVerifier:          kzgVerifier,
+		cv:                   cv,
+		rbnRecencyWindowSize: cfg.RBNRecencyWindowSize,
+		holesky:              isHolesky(cfg.SvcManagerAddr),
 	}, nil
 }
 
@@ -112,7 +111,7 @@ func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate, args commo
 	// any external calls to the blockchain. This is a sanity check that should always be performed.
 
 	// 1 - verify that the blob cert was submitted to the rollup's batch inbox within the allowed
-	// RollupBlobInclusionWindow window. This is to prevent timing attacks where a rollup batcher
+	// window of size RBNRecencyWindowSize. This is to prevent timing attacks where a rollup batcher
 	// could try to game the fraud proof window by including an old DA blob that is about to expire
 	// on the DA layer and is hence not retrievable.
 	//
@@ -122,10 +121,10 @@ func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate, args commo
 	//   in the batcher inbox (see https://github.com/ethereum-optimism/design-docs/pull/229)
 	//  2. Optimistic approach: verify the check in op-program or hokulea (kona)'s derivation pipeline. See
 	// https://github.com/Layr-Labs/hokulea/blob/8c4c89bc4f35d56a3cec2220575a9681d987105c/crates/eigenda/src/eigenda.rs#L90
-	if args.RollupL1InclusionBlockNum > 0 && v.rollupBlobInclusionWindow > 0 {
+	if args.RollupL1InclusionBlockNum > 0 && v.rbnRecencyWindowSize > 0 {
 		certRBN := uint64(cert.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber)
 		rollupInclusionBlock := args.RollupL1InclusionBlockNum
-		// We need batchRBN < rollupInclusionBlock <= batch.RBN + rollupBlobInclusionWindow
+		// We need batchRBN < rollupInclusionBlock <= batch.RBN + RBNRecencyWindowSize
 		if !(certRBN < rollupInclusionBlock) {
 			return fmt.Errorf(
 				"eigenda batch reference block number (%d) needs to be < rollup inclusion block number (%d): this is a serious bug, please report it",
@@ -133,12 +132,12 @@ func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate, args commo
 				rollupInclusionBlock,
 			)
 		}
-		if !(rollupInclusionBlock <= certRBN+uint64(v.rollupBlobInclusionWindow)) {
+		if !(rollupInclusionBlock <= certRBN+uint64(v.rbnRecencyWindowSize)) {
 			return fmt.Errorf(
-				"rollup inclusion block number (%d) needs to be <= eigenda cert reference block number (%d) + rollupBlobInclusionWindow (%d)",
+				"rollup inclusion block number (%d) needs to be <= eigenda cert reference block number (%d) + rbnRecencyWindowSize (%d)",
 				rollupInclusionBlock,
 				certRBN,
-				v.rollupBlobInclusionWindow,
+				v.rbnRecencyWindowSize,
 			)
 		}
 	}

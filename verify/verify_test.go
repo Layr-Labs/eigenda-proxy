@@ -130,7 +130,7 @@ func TestCommitmentWithTooLargeBlob(t *testing.T) {
 
 }
 
-func TestVerifyCertRollupBlobInclusionWindow(t *testing.T) {
+func TestVerifyCertRBNRecencyWindowSize(t *testing.T) {
 	kzgConfig := kzg.KzgConfig{
 		G1Path:          "../resources/g1.point",
 		G2Path:          "../resources/g2.point",
@@ -144,8 +144,8 @@ func TestVerifyCertRollupBlobInclusionWindow(t *testing.T) {
 	kzgVerifier, err := kzgverifier.NewVerifier(&kzgConfig, nil)
 	require.NoError(t, err)
 	cfg := &Config{
-		VerifyCerts:               false,
-		RollupBlobInclusionWindow: 100,
+		VerifyCerts:          false,
+		RBNRecencyWindowSize: 100,
 	}
 	verifier, err := NewVerifier(cfg, kzgVerifier, nil)
 	require.NoError(t, err)
@@ -166,14 +166,14 @@ func TestVerifyCertRollupBlobInclusionWindow(t *testing.T) {
 	err = verifier.VerifyCert(ctx, &cert, common.VerifyOpts{RollupL1InclusionBlockNum: 0})
 	require.NoError(t, err)
 
-	// 50 < RollupBlobInclusionWindow, so we expect no error to be caught
+	// 50 < RBNRecencyWindowSize, so we expect no error to be caught
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	err = verifier.VerifyCert(ctx, &cert, common.VerifyOpts{RollupL1InclusionBlockNum: uint64(
 		blobInfo.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber) + 50})
 	require.NoError(t, err)
 
-	// 200 > RollupBlobInclusionWindow, so we expect an error to be caught
+	// 200 > RBNRecencyWindowSize, so we expect an error to be caught
 	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	err = verifier.VerifyCert(ctx, &cert, common.VerifyOpts{RollupL1InclusionBlockNum: uint64(
@@ -181,7 +181,7 @@ func TestVerifyCertRollupBlobInclusionWindow(t *testing.T) {
 	require.EqualError(
 		t,
 		err,
-		"rollup inclusion block number (3106502) needs to be <= eigenda cert reference block number (3106302) + rollupBlobInclusionWindow (100)",
+		"rollup inclusion block number (3106502) needs to be <= eigenda cert reference block number (3106302) + rbnRecencyWindowSize (100)",
 	)
 
 	// RBN-50 < RBN, so we expect an error to be caught

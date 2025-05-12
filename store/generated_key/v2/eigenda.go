@@ -154,7 +154,7 @@ func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte, opts comm
 	if err != nil {
 		return fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
 	}
-	err = e.verifyPunctualityCheck(eigenDACert.BatchHeader.ReferenceBlockNumber, opts)
+	err = e.verifyRBNRecencyCheck(eigenDACert.BatchHeader.ReferenceBlockNumber, opts)
 	if err != nil {
 		return fmt.Errorf("punctuality check failed: %w", err)
 	}
@@ -164,19 +164,20 @@ func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte, opts comm
 
 // Certs in the rollup batcher-inbox that do not respect the below equation are discarded.
 //
-//	cert.ReferenceBlockNumber < cert.L1InclusionBlock <= cert.ReferenceBlockNumber + rollupBlobInclusionWindow
+//	cert.RBN < cert.L1InclusionBlock <= cert.RBN + RBNRecencyWindowSize
 //
-// where ReferenceBlockNumber is the block number at which operator stakes are used to verify the signature thresholds,
-// and L1InclusionBlock is the block at which the cert was included in the L1 block.
+// where ReferenceBlockNumber (RBN) is the block number at which operator stakes are referenced
+// to verify the signature thresholds, and L1InclusionBlock is the block at which the cert
+// was included in the L1 block.
 //
 // This check serves 2 purposes:
 //  1. liveness: prevents derivation pipeline from stalling on blobs that are no longer availeble on the DA layer
 //  2. safety: prevents a malicious EigenDA sequencer from using a very stale RBN whose operator distribution
 //     does not represent the actual stake distribution. Operators that withdrew a lot of stake would
-//     not be slashable anymore, even though because of the old RBN their signature would could for a lot of stake.
+//     not be slashable anymore, even though because of the old RBN their signature would count for a lot of stake.
 //
-// EigenDA V1 verified (2) while bridging batches to the ServiceManager, but EigenDA V2 does not bridge pessimistically,
-// so this check needs to be performed per-rollup.
+// EigenDA V1 verified RBN recency while bridging batches to the ServiceManager, but EigenDA V2
+// does not bridge pessimistically, so this check needs to be performed by rollups themselves.
 //
 // Note that for a secure integration, this same check needs to be verified onchain.
 // There are 2 approaches to doing this:
@@ -185,7 +186,7 @@ func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte, opts comm
 //  2. Optimistic approach: verify the check in op-program or hokulea (kona)'s derivation pipeline. See
 //
 // https://github.com/Layr-Labs/hokulea/blob/8c4c89bc4f35d56a3cec2220575a9681d987105c/crates/eigenda/src/eigenda.rs#L90
-func (e Store) verifyPunctualityCheck(certRBN uint32, opts common.VerifyOpts) error {
+func (e Store) verifyRBNRecencyCheck(certRBN uint32, opts common.VerifyOpts) error {
 	if opts.RollupL1InclusionBlockNum > 0 && e.recencyWindowSize > 0 {
 		rollupInclusionBlock := opts.RollupL1InclusionBlockNum
 		if !(uint64(certRBN) < rollupInclusionBlock) {
@@ -197,7 +198,7 @@ func (e Store) verifyPunctualityCheck(certRBN uint32, opts common.VerifyOpts) er
 		}
 		if !(rollupInclusionBlock <= uint64(certRBN+e.recencyWindowSize)) {
 			return fmt.Errorf(
-				"rollup inclusion block number (%d) needs to be <= eigenda cert reference block number (%d) + rollupBlobInclusionWindow (%d)",
+				"rollup inclusion block number (%d) needs to be <= eigenda cert reference block number (%d) + RBNRecencyWindowSize (%d)",
 				rollupInclusionBlock,
 				certRBN,
 				e.recencyWindowSize,
