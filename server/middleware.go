@@ -174,7 +174,7 @@ func withCORS(
 			"Content-Type, Accept, Content-Length, Accept-Encoding, Authorization")
 
 		// Handle preflight request (OPTIONS method is used for preflight CORS requests)
-		if r.Method == "OPTIONS" {
+		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
