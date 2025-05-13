@@ -31,10 +31,11 @@ const (
 )
 
 const (
-	ListenAddrFlagName  = "addr"
-	PortFlagName        = "port"
-	APIsEnabledFlagName = "api-enabled"
-	AdminAPIType        = "admin"
+	ListenAddrFlagName         = "addr"
+	PortFlagName               = "port"
+	APIsEnabledFlagName        = "api-enabled"
+	CORSAllowedDomainsFlagName = "cors-allowed-domains"
+	AdminAPIType               = "admin"
 )
 
 func CLIFlags(envPrefix string, category string) []cli.Flag {
@@ -59,6 +60,13 @@ func CLIFlags(envPrefix string, category string) []cli.Flag {
 			Usage:    "List of API types to enable (e.g. admin)",
 			Value:    cli.NewStringSlice(),
 			EnvVars:  common.PrefixEnvVar(envPrefix, "API_ENABLED"),
+			Category: category,
+		},
+		&cli.StringSliceFlag{
+			Name:     CORSAllowedDomainsFlagName,
+			Usage:    "List of domains allowed for CORS (e.g. google.com,localhost:4157). Use '*' to allow all origins.",
+			Value:    cli.NewStringSlice(),
+			EnvVars:  common.PrefixEnvVar(envPrefix, "CORS_ALLOWED_DOMAINS"),
 			Category: category,
 		},
 	}

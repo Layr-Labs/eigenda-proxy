@@ -296,6 +296,28 @@ In the event that the EigenDA disperser or network is down, the proxy will retur
 
 This behavior is turned on by default, but configurable via the `--eigenda.confirmation-timeout` flag (set to 15 mins by default currently). If a blob is not confirmed within this time, the proxy will return a 503 status code. This should be set long enough to accomodate for the disperser's batching interval (typically 10 minutes), signature gathering, and onchain submission.
 
+#### CORS Support <!-- omit from toc -->
+The proxy can be configured to support Cross-Origin Resource Sharing (CORS), enabling web applications to make requests to the proxy server from different origins. This is useful for JavaScript clients or web applications that need to interact with the proxy directly from the browser.
+
+To enable CORS, use the following CLI flag:
+- `--cors-allowed-domains`: A comma-separated list of domains to allow CORS from (e.g., `google.com,localhost:4157`). Use `*` to allow all origins.
+
+Example usage:
+```bash
+# Allow CORS from any origin
+./bin/eigenda-proxy --cors-allowed-domains="*"
+
+# Allow CORS only from specific domains
+./bin/eigenda-proxy --cors-allowed-domains="myapp.com,localhost:3000"
+```
+
+When CORS is enabled, the proxy will:
+1. Respond to preflight OPTIONS requests with appropriate CORS headers
+2. Add CORS headers to all API responses
+3. Allow browsers to make cross-origin requests to the proxy API endpoints
+
+OPTIONS requests (known as "preflight requests") are a crucial part of the CORS security model. For more information on this part of the CORS model, see the following [resource](http://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS#preflighted_requests).
+
 ### Requirements / Dependencies
 
 #### Authn/Authz/Payments
