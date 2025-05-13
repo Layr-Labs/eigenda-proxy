@@ -314,7 +314,7 @@ Example usage:
 When CORS is enabled, the proxy will:
 1. Respond to preflight OPTIONS requests with appropriate CORS headers
 2. Add CORS headers to all API responses
-3. Properly handle credentials and custom headers in cross-origin requests
+3. Allow browsers to make cross-origin requests to the proxy API endpoints
 
 OPTIONS requests are required by browsers to handle custom headers and non-simple HTTP methods according to the CORS specification. The proxy handles these preflight requests automatically.
 
