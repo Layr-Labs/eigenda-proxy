@@ -144,16 +144,12 @@ func withCORS(
 		if allowAllOrigins {
 			allowOrigin = "*"
 		} else {
-			// Check for specific domain match
+			// Check for specific domain match - exact matches only
 			allowed := false
 			for _, domain := range corsConfig.CORSAllowedDomains {
 				trimmedDomain := strings.TrimSpace(domain)
-				// Exact match or domain match (subdomain handling)
-				if trimmedDomain == origin ||
-					// Match pattern like "example.com" against "subdomain.example.com"
-					strings.HasSuffix(origin, "."+trimmedDomain) ||
-					// Match exact subdomain like "app.example.com" against "app.example.com"
-					origin == trimmedDomain {
+				// Only match exact domains
+				if trimmedDomain == origin {
 					allowed = true
 					allowOrigin = origin // Use the actual origin for specific domain matches
 					break
