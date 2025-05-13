@@ -316,13 +316,7 @@ When CORS is enabled, the proxy will:
 2. Add CORS headers to all API responses
 3. Allow browsers to make cross-origin requests to the proxy API endpoints
 
-OPTIONS requests (known as "preflight requests") are a crucial part of the CORS security model. When a web application makes certain types of cross-origin requests (like those using certain HTTP methods or custom headers), browsers automatically send an OPTIONS request first to check if the server allows the actual request. This is a security mechanism built into browsers that:
-
-1. Helps protect servers from unexpected cross-origin requests
-2. Allows servers to specify which origins, methods, and headers are permitted
-3. Prevents potentially harmful operations from being executed without server approval
-
-For example, when a JavaScript client on website A.com tries to make a POST request with JSON data to our proxy on B.com, the browser first sends an OPTIONS request to verify that this cross-origin POST is allowed. Our proxy needs to respond appropriately to these OPTIONS requests for browser-based clients to work correctly.
+OPTIONS requests (known as "preflight requests") are a crucial part of the CORS security model. For more information on this part of the CORS model, see the following [resource](http://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CORS#preflighted_requests).
 
 ### Requirements / Dependencies
 
