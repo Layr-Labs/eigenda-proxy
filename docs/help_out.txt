@@ -108,9 +108,10 @@ optional and will be skipped when set to 0. (default: 0) [$EIGENDA_PROXY_EIGENDA
 
    Proxy Server
 
-   --addr value                                 Server listening address (default: "0.0.0.0") [$EIGENDA_PROXY_ADDR]
-   --api-enabled value [ --api-enabled value ]  List of API types to enable (e.g. admin) [$EIGENDA_PROXY_API_ENABLED]
-   --port value                                 Server listening port (default: 3100) [$EIGENDA_PROXY_PORT]
+   --addr value                                                   Server listening address (default: "0.0.0.0") [$EIGENDA_PROXY_ADDR]
+   --api-enabled value [ --api-enabled value ]                    List of API types to enable (e.g. admin) [$EIGENDA_PROXY_API_ENABLED]
+   --cors-allowed-domains value [ --cors-allowed-domains value ]  List of domains allowed for CORS (e.g. google.com,localhost:4157). Use '*' to allow all origins. [$EIGENDA_PROXY_CORS_ALLOWED_DOMAINS]
+   --port value                                                   Server listening port (default: 3100) [$EIGENDA_PROXY_PORT]
 
    Redis Cache/Fallback
 
