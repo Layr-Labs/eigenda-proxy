@@ -76,7 +76,7 @@ type Store interface {
 type VerifyOpts struct {
 	// L1 block number at which the rollup batch was included in the batcher inbox.
 	// This is optional, and should be set to 0 to mean to not verify the reference block number recency check.
-	// Its impossible for a batch inbox tx to have been included in the genesis block,
+	// It is impossible for a batch inbox tx to have been included in the genesis block,
 	// so we are free to give this special meaning to the zero value.
 	//
 	// Used to determine the validity of the eigenDA batch.

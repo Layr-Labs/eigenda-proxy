@@ -157,7 +157,7 @@ func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte, opts comm
 	}
 	err = e.verifyRBNRecencyCheck(eigenDACert.BatchHeader.ReferenceBlockNumber, opts)
 	if err != nil {
-		return fmt.Errorf("punctuality check failed: %w", err)
+		return fmt.Errorf("rbn recency check failed: %w", err)
 	}
 
 	return e.verifier.VerifyCertV2(ctx, &eigenDACert)
@@ -172,7 +172,7 @@ func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte, opts comm
 // was included in the L1 block.
 //
 // This check serves 2 purposes:
-//  1. liveness: prevents derivation pipeline from stalling on blobs that are no longer availeble on the DA layer
+//  1. liveness: prevents derivation pipeline from stalling on blobs that are no longer available on the DA layer
 //  2. safety: prevents a malicious EigenDA sequencer from using a very stale RBN whose operator distribution
 //     does not represent the actual stake distribution. Operators that withdrew a lot of stake would
 //     not be slashable anymore, even though because of the old RBN their signature would count for a lot of stake.

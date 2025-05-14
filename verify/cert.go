@@ -30,7 +30,7 @@ type certVerifier interface {
 	quorumAdversaryThresholdPercentages(quorum uint8) (percentage uint8, ok bool)
 }
 
-// certVerification verifies the DA certificate against on-chain EigenDA contracts
+// CertVerifier verifies the DA certificate against on-chain EigenDA contracts
 // to ensure disperser returned fields haven't been tampered with
 type CertVerifier struct {
 	log logging.Logger

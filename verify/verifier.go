@@ -117,7 +117,7 @@ func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate, args commo
 	//
 	// Note that for a secure integration, this same check needs to be verified onchain.
 	// There are 2 approaches to doing this:
-	//  1. Pessimistic approach: use a smart batcher inbox to dissalow stale blobs from even beign included
+	//  1. Pessimistic approach: use a smart batcher inbox to dissalow stale blobs from even being included
 	//   in the batcher inbox (see https://github.com/ethereum-optimism/design-docs/pull/229)
 	//  2. Optimistic approach: verify the check in op-program or hokulea (kona)'s derivation pipeline. See
 	// https://github.com/Layr-Labs/hokulea/blob/8c4c89bc4f35d56a3cec2220575a9681d987105c/crates/eigenda/src/eigenda.rs#L90

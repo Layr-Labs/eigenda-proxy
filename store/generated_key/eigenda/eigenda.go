@@ -181,7 +181,7 @@ func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to verify commitment: %w", err)
 	}
 
-	// we set RollupL1InclusionBlockNum to -1 to skip the check, as it is meaningless in the PUT route.
+	// we set RollupL1InclusionBlockNum to 0 to skip the check, as it is meaningless in the PUT route.
 	// The cert will only be included in the batcher's inbox after
 	// the proxy returns the verified cert to the batcher.
 	err = e.verifier.VerifyCert(ctx, cert, common.VerifyOpts{RollupL1InclusionBlockNum: 0})
@@ -217,7 +217,7 @@ func (e Store) BackendType() common.BackendType {
 
 // Key is used to recover certificate fields and that verifies blob
 // against commitment to ensure data is valid and non-tampered.
-// l1InclusionBlockNum is optional and used to validate the certificate: negative number means don't verify this check
+// l1InclusionBlockNum is optional and used to validate the certificate: 0 means don't verify this check
 func (e Store) Verify(ctx context.Context, serializedCert []byte, payload []byte, opts common.VerifyOpts) error {
 	var cert verify.Certificate
 	err := rlp.DecodeBytes(serializedCert, &cert)
