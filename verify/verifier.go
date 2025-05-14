@@ -12,7 +12,6 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/bn254/fp"
 	"github.com/ethereum/go-ethereum/log"
 
-	"github.com/Layr-Labs/eigenda-proxy/common"
 	grpccommon "github.com/Layr-Labs/eigenda/api/grpc/common"
 	"github.com/Layr-Labs/eigenda/api/grpc/disperser"
 	kzgverifier "github.com/Layr-Labs/eigenda/encoding/kzg/verifier"
@@ -88,7 +87,7 @@ func NewVerifier(cfg *Config, kzgVerifier *kzgverifier.Verifier, l logging.Logge
 }
 
 // verifies V0 eigenda certificate type
-func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate, args common.VerifyOpts) error {
+func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate) error {
 	// Skip the below checks if cert verification is disabled
 	if !v.verifyCerts {
 		return nil

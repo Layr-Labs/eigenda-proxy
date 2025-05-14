@@ -159,7 +159,7 @@ func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte, opts comm
 	if err != nil {
 		return fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
 	}
-	err = e.verifyRBNRecencyCheck(eigenDACert.BatchHeader.ReferenceBlockNumber, opts)
+	err = verifyCertRBNRecencyCheck(eigenDACert.BatchHeader.ReferenceBlockNumber, opts.RollupL1InclusionBlockNum, e.rbnRecencyWindowSize)
 	if err != nil {
 		return fmt.Errorf("rbn recency check failed: %w", err)
 	}
@@ -167,13 +167,18 @@ func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte, opts comm
 	return e.verifier.VerifyCertV2(ctx, &eigenDACert)
 }
 
+// verifyCertRBNRecencyCheck arguments:
+//   - certRBN: ReferenceBlockNumber included in the cert iself at which operator stakes are referenced
+//     when verifying that a cert's signature meets the required quorum thresholds.
+//   - certL1IBN: InclusionBlockNumber at which the EigenDA cert was included in the rollup batcher inbox.
+//     Unlike the RBN, the IBN is not part of the cert itself, and is received as an optional query param on GET requests.
+//     0 means to skip the check (return nil).
+//   - rbnRecencyWindowSize: distance allowed between the RBN and IBN. See below for more details.
+//     Value should be set by proxy operator as a flag. 0 means to skip the check (return nil).
+//
 // Certs in the rollup batcher-inbox that do not respect the below equation are discarded.
 //
-//	cert.RBN < cert.L1InclusionBlock <= cert.RBN + RBNRecencyWindowSize
-//
-// where ReferenceBlockNumber (RBN) is the block number at which operator stakes are referenced
-// to verify the signature thresholds, and L1InclusionBlock is the block at which the cert
-// was included in the L1 block.
+//	certRBN < certL1IBN <= certRBN + RBNRecencyWindowSize
 //
 // This check serves 2 purposes:
 //  1. liveness: prevents derivation pipeline from stalling on blobs that are no longer available on the DA layer
@@ -186,28 +191,29 @@ func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte, opts comm
 //  1. Pessimistic approach: use a smart batcher inbox to dissalow stale blobs from even beign included
 //     in the batcher inbox (see https://github.com/ethereum-optimism/design-docs/pull/229)
 //  2. Optimistic approach: verify the check in op-program or hokulea (kona)'s derivation pipeline. See
-//
-// https://github.com/Layr-Labs/hokulea/blob/8c4c89bc4f35d56a3cec2220575a9681d987105c/crates/eigenda/src/eigenda.rs#L90
-func (e Store) verifyRBNRecencyCheck(certRBN uint32, opts common.VerifyOpts) error {
-	// Verification is optional and can be skipped by setting either of these params to 0.
-	if opts.RollupL1InclusionBlockNum == 0 || e.rbnRecencyWindowSize == 0 {
+//     https://github.com/Layr-Labs/hokulea/blob/8c4c89bc4f/crates/eigenda/src/eigenda.rs#L90
+func verifyCertRBNRecencyCheck(certRBN uint32, certL1IBN uint64, rbnRecencyWindowSize uint64) error {
+	if certL1IBN == 0 || rbnRecencyWindowSize == 0 {
 		return nil
 	}
+	if certRBN == 0 {
+		return fmt.Errorf("certRBN should never be 0, this is likely a bug")
+	}
 
-	rollupInclusionBlock := opts.RollupL1InclusionBlockNum
-	if !(uint64(certRBN) < rollupInclusionBlock) {
+	if !(uint64(certRBN) < certL1IBN) {
 		return fmt.Errorf(
-			"eigenda batch reference block number (%d) needs to be < rollup inclusion block number (%d): this is a serious bug, please report it",
+			"cert reference block number (%d) needs to be < l1 inclusion block number (%d):"+
+				" this is a serious bug, please report it",
 			certRBN,
-			rollupInclusionBlock,
+			certL1IBN,
 		)
 	}
-	if !(rollupInclusionBlock <= uint64(certRBN)+e.rbnRecencyWindowSize) {
+	if !(certL1IBN <= uint64(certRBN)+rbnRecencyWindowSize) {
 		return fmt.Errorf(
-			"rollup inclusion block number (%d) needs to be <= eigenda cert.RBN (%d) + RBNRecencyWindowSize (%d)",
-			rollupInclusionBlock,
+			"cert L1 inclusion block number (%d) needs to be <= cert.RBN (%d) + RBNRecencyWindowSize (%d)",
+			certL1IBN,
 			certRBN,
-			e.rbnRecencyWindowSize,
+			rbnRecencyWindowSize,
 		)
 	}
 	return nil

@@ -96,7 +96,7 @@ type EigenDAStore interface {
 	Put(ctx context.Context, payload []byte) (serializedCert []byte, err error)
 	// Get retrieves the given key if it's present in the key-value (serializedCert-payload) data store.
 	Get(ctx context.Context, serializedCert []byte) (payload []byte, err error)
-	// Verify verifies the given key-value pair.
+	// Verify verifies the given key-value pair. opts is only used for EigenDA V2.
 	Verify(ctx context.Context, serializedCert []byte, payload []byte, opts VerifyOpts) error
 }
 
