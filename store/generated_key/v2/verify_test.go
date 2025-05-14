@@ -59,9 +59,11 @@ func TestVerifyCertRBNRecencyCheck(t *testing.T) {
 			certL1IBN:            201,
 			rbnRecencyWindowSize: 100,
 			expectError:          true,
-			// TODO: we should return a structured error instead of this formatted error
-			expectedErrorContains: "cert L1 inclusion block number (201) needs to be <=" +
-				" cert.RBN (100) + RBNRecencyWindowSize (100)",
+			expectedErrorContains: RBNRecencyCheckFailedError{
+				certRBN:              100,
+				certL1IBN:            201,
+				rbnRecencyWindowSize: 100,
+			}.Error(),
 		},
 	}
 
