@@ -29,7 +29,7 @@ type Store struct {
 	putTries int
 	// Allowed distance (in L1 blocks) between the eigenDA cert's reference block number (RBN)
 	// and the L1 block number at which the cert was included in the rollup's batch inbox.
-	// If batch.RBN + rbnRecencyWindowSize < cert.L1InclusionBlock, the batch is considered
+	// If cert.L1InclusionBlock > batch.RBN + rbnRecencyWindowSize, the batch is considered
 	// stale and verification will fail.
 	// This check is optional and will be skipped when rbnRecencyWindowSize is set to 0.
 	rbnRecencyWindowSize uint64
