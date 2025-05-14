@@ -62,7 +62,6 @@ func (c Config) MarshalJSON() ([]byte, error) {
 //
 // TODO: right now verification and confirmation depth are tightly coupled. we should decouple them
 type Verifier struct {
-	log logging.Logger
 	// kzgVerifier is needed to commit blobs to the memstore
 	kzgVerifier *kzgverifier.Verifier
 	// cert verification is optional, and verifies certs retrieved from eigenDA when turned on
@@ -97,7 +96,6 @@ func NewVerifier(cfg *Config, kzgVerifier *kzgverifier.Verifier, l logging.Logge
 	}
 
 	return &Verifier{
-		log:                  l,
 		kzgVerifier:          kzgVerifier,
 		cv:                   cv,
 		rbnRecencyWindowSize: cfg.RBNRecencyWindowSize,
