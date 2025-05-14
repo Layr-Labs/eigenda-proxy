@@ -160,7 +160,7 @@ func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte, opts comm
 		return fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
 	}
 	err = verifyCertRBNRecencyCheck(eigenDACert.BatchHeader.ReferenceBlockNumber,
-		opts.RollupL1InclusionBlockNum, e.rbnRecencyWindowSize)
+		opts.CertL1InclusionBlockNum, e.rbnRecencyWindowSize)
 	if err != nil {
 		return fmt.Errorf("rbn recency check failed: %w", err)
 	}

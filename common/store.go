@@ -69,8 +69,8 @@ func StringToBackendType(s string) BackendType {
 }
 
 type VerifyOpts struct {
-	// L1 block number at which the rollup batch was included in the batcher inbox.
-	// This is optional, and should be set to 0 to mean to not verify the reference block number recency check.
+	// L1 block number at which the cert was included in the rollup batcher inbox.
+	// This is optional, and should be set to 0 to mean to skip the RBN recency check.
 	// It is impossible for a batch inbox tx to have been included in the genesis block,
 	// so we are free to give this special meaning to the zero value.
 	//
@@ -79,8 +79,8 @@ type VerifyOpts struct {
 	// to lookup the stake of the eigenda operators before verifying signature thresholds.
 	// The rollup commitment containing the eigenDA cert is only valid if it was included
 	// within a certain number of blocks after the RBN.
-	// validity condition is: RBN < l1_inclusion_block_number < RBN + recency_window__size
-	RollupL1InclusionBlockNum uint64
+	// validity condition is: certRBN < CertL1InclusionBlockNum < RBN + RBNRecencyWindowSize
+	CertL1InclusionBlockNum uint64
 }
 
 type Store interface {
