@@ -78,7 +78,7 @@ func (svr *Server) handleGetOPKeccakCommitment(w http.ResponseWriter, r *http.Re
 	payload, err := svr.sm.GetOPKeccakValueFromS3(r.Context(), keccakCommitment)
 	if err != nil {
 		err = fmt.Errorf("GET keccakCommitment %v: %w", keccakCommitmentHex, err)
-		if errors.Is(err, ErrNotFound) {
+		if errors.Is(err, s3.ErrKeccakKeyNotFound) {
 			http.Error(w, err.Error(), http.StatusNotFound)
 		} else {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
