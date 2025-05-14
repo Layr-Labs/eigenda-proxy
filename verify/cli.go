@@ -20,9 +20,6 @@ var (
 	G2PathFlagName                   = withFlagPrefix("g2-path")
 	G2TrailingPathFlagName           = withFlagPrefix("g2-path-trailing")
 	CachePathFlagName                = withFlagPrefix("cache-path")
-
-	// rollup related flags
-	RBNRecencyWindowSizeFlagName = withFlagPrefix("rbn-recency-window-size")
 )
 
 // we keep the eigenda prefix like eigenda client flags, because we
@@ -118,8 +115,7 @@ func ReadKzgConfig(ctx *cli.Context, maxBlobSizeBytes uint64) kzg.KzgConfig {
 // defined in the client config
 func ReadConfig(ctx *cli.Context, clientConfigV1 common.ClientConfigV1) Config {
 	return Config{
-		VerifyCerts:          !ctx.Bool(CertVerificationDisabledFlagName),
-		RBNRecencyWindowSize: ctx.Uint64(RBNRecencyWindowSizeFlagName),
+		VerifyCerts: !ctx.Bool(CertVerificationDisabledFlagName),
 		// reuse some configs from the eigenda client
 		RPCURL:               clientConfigV1.EdaClientCfg.EthRpcUrl,
 		SvcManagerAddr:       clientConfigV1.EdaClientCfg.SvcManagerAddr,

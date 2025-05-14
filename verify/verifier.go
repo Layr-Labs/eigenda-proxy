@@ -24,12 +24,6 @@ const (
 )
 
 type Config struct {
-	// Allowed distance (in L1 blocks) between the eigenDA cert's reference block number (RBN)
-	// and the L1 block number at which the cert was included in the rollup's batch inbox.
-	// If cert.RBN + RBNRecencyWindowSize < cert.L1InclusionBlock, the cert is considered
-	// stale and discarded.
-	// This check is optional and will be skipped when RBNRecencyWindowSize is set to 0.
-	RBNRecencyWindowSize uint64
 	// Cert verification is optional, and verifies certs retrieved from eigenDA when turned on.
 	// It is optional because it requires making calls to the blockchain, which is not necessarily always possible.
 	// For eg, some rollups are running on sepolia testnet which doesn't have an eigenlayer/eigenda contracts
@@ -67,15 +61,6 @@ type Verifier struct {
 	// cert verification is optional, and verifies certs retrieved from eigenDA when turned on
 	verifyCerts bool
 	cv          *CertVerifier
-	// Allowed distance (in L1 blocks) between the eigenDA reference block number (RBN) of the batch the blob is
-	// included in, and the L1 block number at which the blob cert was included in the batcher's inbox.
-	// Invariant to maintain: batch.RBN < rollupBlobInclusionBlock <= batch.RBN + rbnRecencyWindowSize
-	// This check is optional and will be skipped when rollupBlobInclusionBlock
-	// or rbnRecencyWindowSize are set to 0.
-	//
-	// Note: if there are more rollup related
-	// properties that we need to check in the future, then maybe create a RollupVerifier struct.
-	rbnRecencyWindowSize uint64
 	// holesky is a flag to enable/disable holesky specific checks
 	holesky bool
 }
@@ -96,62 +81,26 @@ func NewVerifier(cfg *Config, kzgVerifier *kzgverifier.Verifier, l logging.Logge
 	}
 
 	return &Verifier{
-		kzgVerifier:          kzgVerifier,
-		cv:                   cv,
-		rbnRecencyWindowSize: cfg.RBNRecencyWindowSize,
-		holesky:              isHolesky(cfg.SvcManagerAddr),
+		kzgVerifier: kzgVerifier,
+		cv:          cv,
+		holesky:     isHolesky(cfg.SvcManagerAddr),
 	}, nil
 }
 
 // verifies V0 eigenda certificate type
 func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate, args common.VerifyOpts) error {
-	// We always perform this first check even when verifyCerts is false, because it doesn't require
-	// any external calls to the blockchain. This is a sanity check that should always be performed.
-
-	// 1 - verify that the blob cert was submitted to the rollup's batch inbox within the allowed
-	// window of size RBNRecencyWindowSize. This is to prevent timing attacks where a rollup batcher
-	// could try to game the fraud proof window by including an old DA blob that is about to expire
-	// on the DA layer and is hence not retrievable.
-	//
-	// Note that for a secure integration, this same check needs to be verified onchain.
-	// There are 2 approaches to doing this:
-	//  1. Pessimistic approach: use a smart batcher inbox to dissalow stale blobs from even being included
-	//   in the batcher inbox (see https://github.com/ethereum-optimism/design-docs/pull/229)
-	//  2. Optimistic approach: verify the check in op-program or hokulea (kona)'s derivation pipeline. See
-	// https://github.com/Layr-Labs/hokulea/blob/8c4c89bc4f35d56a3cec2220575a9681d987105c/crates/eigenda/src/eigenda.rs#L90
-	if args.RollupL1InclusionBlockNum > 0 && v.rbnRecencyWindowSize > 0 {
-		certRBN := uint64(cert.BlobVerificationProof.BatchMetadata.BatchHeader.ReferenceBlockNumber)
-		rollupInclusionBlock := args.RollupL1InclusionBlockNum
-		// We need batchRBN < rollupInclusionBlock <= batch.RBN + RBNRecencyWindowSize
-		if !(certRBN < rollupInclusionBlock) {
-			return fmt.Errorf(
-				"eigenda batch reference block number (%d) needs to be < rollup inclusion block number (%d): this is a serious bug, please report it",
-				certRBN,
-				rollupInclusionBlock,
-			)
-		}
-		if !(rollupInclusionBlock <= certRBN+v.rbnRecencyWindowSize) {
-			return fmt.Errorf(
-				"rollup inclusion block number (%d) needs to be <= eigenda cert.RBN (%d) + rbnRecencyWindowSize (%d)",
-				rollupInclusionBlock,
-				certRBN,
-				v.rbnRecencyWindowSize,
-			)
-		}
-	}
-
 	// Skip the below checks if cert verification is disabled
 	if !v.verifyCerts {
 		return nil
 	}
 
-	// 2 - verify batch in the cert is confirmed onchain
+	// 1 - verify batch in the cert is confirmed onchain
 	err := v.cv.verifyBatchConfirmedOnChain(ctx, cert.Proof().GetBatchId(), cert.Proof().GetBatchMetadata())
 	if err != nil {
 		return fmt.Errorf("failed to verify batch: %w", err)
 	}
 
-	// 3 - verify merkle inclusion proof
+	// 2 - verify merkle inclusion proof
 	err = v.cv.verifyMerkleProof(
 		cert.Proof().GetInclusionProof(),
 		cert.BatchHeaderRoot(),
@@ -162,7 +111,7 @@ func (v *Verifier) VerifyCert(ctx context.Context, cert *Certificate, args commo
 		return fmt.Errorf("failed to verify merkle proof: %w", err)
 	}
 
-	// 4 - verify security parameters
+	// 3 - verify security parameters
 	batchHeader := cert.Proof().GetBatchMetadata().GetBatchHeader()
 	err = v.verifySecurityParams(cert.ReadBlobHeader(), batchHeader)
 	if err != nil {

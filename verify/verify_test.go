@@ -145,7 +145,6 @@ func TestVerifyCertRBNRecencyWindowSize(t *testing.T) {
 	require.NoError(t, err)
 	cfg := &Config{
 		VerifyCerts:          false,
-		RBNRecencyWindowSize: 100,
 	}
 	verifier, err := NewVerifier(cfg, kzgVerifier, nil)
 	require.NoError(t, err)
