@@ -13,6 +13,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/common/types/certs"
 	"github.com/Layr-Labs/eigenda-proxy/common/types/commitments"
+	eigendav2store "github.com/Layr-Labs/eigenda-proxy/store/generated_key/v2"
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/gorilla/mux"
 )
@@ -140,8 +141,13 @@ func (svr *Server) handleGetShared(
 		err = NewGETError(
 			fmt.Errorf("get request failed with serializedCert %v: %w", serializedCertHex, err),
 			versionedCert.Version, mode)
-		if errors.Is(err, ErrNotFound) {
-			http.Error(w, err.Error(), http.StatusNotFound)
+		var rbnRecencyCheckFailedErr eigendav2store.RBNRecencyCheckFailedError
+		if errors.As(err, &rbnRecencyCheckFailedErr) {
+			// We return a 418 TEAPOT error for any cert validation error.
+			// Rollup derivation pipeline should drop any certs that return this error.
+			// See https://github.com/Layr-Labs/optimism/pull/45 for how this is
+			// used in optimism's derivation pipeline.
+			http.Error(w, err.Error(), http.StatusTeapot)
 		} else {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}

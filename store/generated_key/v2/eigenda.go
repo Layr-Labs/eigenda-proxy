@@ -18,6 +18,20 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type RBNRecencyCheckFailedError struct {
+	certRBN              uint32
+	certL1IBN            uint64
+	rbnRecencyWindowSize uint64
+}
+
+func (e RBNRecencyCheckFailedError) Error() string {
+	return fmt.Sprintf(
+		"Invalid cert (rbn recency check failed): "+
+			"certL1InclusionBlockNumber (%d) > cert.RBN (%d) + RBNRecencyWindowSize (%d)",
+		e.certL1IBN, e.certRBN, e.rbnRecencyWindowSize,
+	)
+}
+
 // Store does storage interactions and verifications for blobs with the EigenDA V2 protocol.
 type Store struct {
 	log logging.Logger
@@ -194,13 +208,13 @@ func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte, opts comm
 //  2. Optimistic approach: verify the check in op-program or hokulea (kona)'s derivation pipeline. See
 //     https://github.com/Layr-Labs/hokulea/blob/8c4c89bc4f/crates/eigenda/src/eigenda.rs#L90
 func verifyCertRBNRecencyCheck(certRBN uint32, certL1IBN uint64, rbnRecencyWindowSize uint64) error {
+	// Input Validation
 	if certL1IBN == 0 || rbnRecencyWindowSize == 0 {
 		return nil
 	}
 	if certRBN == 0 {
 		return fmt.Errorf("certRBN should never be 0, this is likely a bug")
 	}
-
 	if !(uint64(certRBN) < certL1IBN) {
 		return fmt.Errorf(
 			"cert reference block number (%d) needs to be < l1 inclusion block number (%d):"+
@@ -209,13 +223,14 @@ func verifyCertRBNRecencyCheck(certRBN uint32, certL1IBN uint64, rbnRecencyWindo
 			certL1IBN,
 		)
 	}
+
+	// Actual Recency Check
 	if !(certL1IBN <= uint64(certRBN)+rbnRecencyWindowSize) {
-		return fmt.Errorf(
-			"cert L1 inclusion block number (%d) needs to be <= cert.RBN (%d) + RBNRecencyWindowSize (%d)",
-			certL1IBN,
-			certRBN,
-			rbnRecencyWindowSize,
-		)
+		return RBNRecencyCheckFailedError{
+			certRBN:              certRBN,
+			certL1IBN:            certL1IBN,
+			rbnRecencyWindowSize: rbnRecencyWindowSize,
+		}
 	}
 	return nil
 }
