@@ -216,7 +216,6 @@ func (e Store) BackendType() common.BackendType {
 
 // Key is used to recover certificate fields and that verifies blob
 // against commitment to ensure data is valid and non-tampered.
-// l1InclusionBlockNum is optional and used to validate the certificate: 0 means don't verify this check
 func (e Store) Verify(ctx context.Context, serializedCert []byte, payload []byte, _ common.CertVerificationOpts) error {
 	var cert verify.Certificate
 	err := rlp.DecodeBytes(serializedCert, &cert)
