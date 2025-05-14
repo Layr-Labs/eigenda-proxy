@@ -68,7 +68,7 @@ func StringToBackendType(s string) BackendType {
 	}
 }
 
-type VerifyOpts struct {
+type CertVerificationOpts struct {
 	// L1 block number at which the cert was included in the rollup batcher inbox.
 	// This is optional, and should be set to 0 to mean to skip the RBN recency check.
 	// It is impossible for a batch inbox tx to have been included in the genesis block,
@@ -79,8 +79,8 @@ type VerifyOpts struct {
 	// to lookup the stake of the eigenda operators before verifying signature thresholds.
 	// The rollup commitment containing the eigenDA cert is only valid if it was included
 	// within a certain number of blocks after the RBN.
-	// validity condition is: certRBN < CertL1InclusionBlockNum < RBN + RBNRecencyWindowSize
-	CertL1InclusionBlockNum uint64
+	// validity condition is: certRBN < L1InclusionBlockNum < RBN + RBNRecencyWindowSize
+	L1InclusionBlockNum uint64
 }
 
 type Store interface {
@@ -97,7 +97,7 @@ type EigenDAStore interface {
 	// Get retrieves the given key if it's present in the key-value (serializedCert-payload) data store.
 	Get(ctx context.Context, serializedCert []byte) (payload []byte, err error)
 	// Verify verifies the given key-value pair. opts is only used for EigenDA V2.
-	Verify(ctx context.Context, serializedCert []byte, payload []byte, opts VerifyOpts) error
+	Verify(ctx context.Context, serializedCert []byte, payload []byte, opts CertVerificationOpts) error
 }
 
 // PrecomputedKeyStore is the interface for a key-value data store that uses keccak(value) as the key.

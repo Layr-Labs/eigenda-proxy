@@ -21,7 +21,7 @@ type IManager interface {
 	Put(ctx context.Context, cm commitments.CommitmentMode, key, value []byte) ([]byte, error)
 	// See [Manager.Get]
 	Get(ctx context.Context, versionedCert certs.VersionedCert,
-		cm commitments.CommitmentMode, verifyOpts common.VerifyOpts) ([]byte, error)
+		cm commitments.CommitmentMode, verifyOpts common.CertVerificationOpts) ([]byte, error)
 	// See [Manager.SetDispersalBackend]
 	SetDispersalBackend(backend common.EigenDABackend)
 	// See [Manager.GetDispersalBackend]
@@ -98,7 +98,7 @@ func NewManager(
 func (m *Manager) Get(ctx context.Context,
 	versionedCert certs.VersionedCert,
 	cm commitments.CommitmentMode,
-	verifyOpts common.VerifyOpts,
+	verifyOpts common.CertVerificationOpts,
 ) ([]byte, error) {
 	switch cm {
 	case commitments.StandardCommitmentMode, commitments.OptimismGenericCommitmentMode:
@@ -193,7 +193,7 @@ func (m *Manager) Put(ctx context.Context, cm commitments.CommitmentMode, key, v
 
 // getVerifyMethod returns the correct verify method based on commitment type
 func (m *Manager) getVerifyMethod(commitmentType certs.VersionByte) (
-	func(context.Context, []byte, []byte, common.VerifyOpts) error,
+	func(context.Context, []byte, []byte, common.CertVerificationOpts) error,
 	error,
 ) {
 	switch commitmentType {
@@ -234,7 +234,7 @@ func (m *Manager) putToCorrectEigenDABackend(ctx context.Context, value []byte) 
 func (m *Manager) getFromCorrectEigenDABackend(
 	ctx context.Context,
 	versionedCert certs.VersionedCert,
-	verifyOpts common.VerifyOpts,
+	verifyOpts common.CertVerificationOpts,
 ) ([]byte, error) {
 	switch versionedCert.Version {
 	case certs.V0VersionByte:

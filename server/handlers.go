@@ -130,7 +130,7 @@ func (svr *Server) handleGetShared(
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return err
 	}
-	input, err := svr.sm.Get(ctx, versionedCert, mode, common.VerifyOpts{CertL1InclusionBlockNum: l1InclusionBlockNum})
+	input, err := svr.sm.Get(ctx, versionedCert, mode, common.CertVerificationOpts{L1InclusionBlockNum: l1InclusionBlockNum})
 	if err != nil {
 		err = NewGETError(
 			fmt.Errorf("get request failed with serializedCert %v: %w", serializedCertHex, err),

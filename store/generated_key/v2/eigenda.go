@@ -153,14 +153,14 @@ func (e Store) BackendType() common.BackendType {
 // TODO: this whole function should be upstreamed to a new eigenda VerifyingPayloadRetrieval client
 // that would verify certs, and then retrieve the payloads (from relay with fallback to eigenda validators if needed).
 // Then proxy could remain a very thing server wrapper around eigenda clients.
-func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte, opts common.VerifyOpts) error {
+func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte, opts common.CertVerificationOpts) error {
 	var eigenDACert coretypes.EigenDACert
 	err := rlp.DecodeBytes(certBytes, &eigenDACert)
 	if err != nil {
 		return fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
 	}
 	err = verifyCertRBNRecencyCheck(eigenDACert.BatchHeader.ReferenceBlockNumber,
-		opts.CertL1InclusionBlockNum, e.rbnRecencyWindowSize)
+		opts.L1InclusionBlockNum, e.rbnRecencyWindowSize)
 	if err != nil {
 		return fmt.Errorf("rbn recency check failed: %w", err)
 	}
