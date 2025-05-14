@@ -68,11 +68,6 @@ func StringToBackendType(s string) BackendType {
 	}
 }
 
-type Store interface {
-	// BackendType returns the backend type provider of the store.
-	BackendType() BackendType
-}
-
 type VerifyOpts struct {
 	// L1 block number at which the rollup batch was included in the batcher inbox.
 	// This is optional, and should be set to 0 to mean to not verify the reference block number recency check.
@@ -86,6 +81,11 @@ type VerifyOpts struct {
 	// within a certain number of blocks after the RBN.
 	// validity condition is: RBN < l1_inclusion_block_number < RBN + recency_window__size
 	RollupL1InclusionBlockNum uint64
+}
+
+type Store interface {
+	// BackendType returns the backend type provider of the store.
+	BackendType() BackendType
 }
 
 // EigenDAStore is the interface for an EigenDA data store, which stores payloads that are retrievable
