@@ -159,7 +159,8 @@ func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte, opts comm
 	if err != nil {
 		return fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
 	}
-	err = verifyCertRBNRecencyCheck(eigenDACert.BatchHeader.ReferenceBlockNumber, opts.RollupL1InclusionBlockNum, e.rbnRecencyWindowSize)
+	err = verifyCertRBNRecencyCheck(eigenDACert.BatchHeader.ReferenceBlockNumber,
+		opts.RollupL1InclusionBlockNum, e.rbnRecencyWindowSize)
 	if err != nil {
 		return fmt.Errorf("rbn recency check failed: %w", err)
 	}
@@ -171,7 +172,7 @@ func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte, opts comm
 //   - certRBN: ReferenceBlockNumber included in the cert iself at which operator stakes are referenced
 //     when verifying that a cert's signature meets the required quorum thresholds.
 //   - certL1IBN: InclusionBlockNumber at which the EigenDA cert was included in the rollup batcher inbox.
-//     Unlike the RBN, the IBN is not part of the cert itself, and is received as an optional query param on GET requests.
+//     The IBN is not part of the cert. It is received as an optional query param on GET requests.
 //     0 means to skip the check (return nil).
 //   - rbnRecencyWindowSize: distance allowed between the RBN and IBN. See below for more details.
 //     Value should be set by proxy operator as a flag. 0 means to skip the check (return nil).
