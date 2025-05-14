@@ -130,7 +130,12 @@ func (svr *Server) handleGetShared(
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return err
 	}
-	input, err := svr.sm.Get(ctx, versionedCert, mode, common.CertVerificationOpts{L1InclusionBlockNum: l1InclusionBlockNum})
+	input, err := svr.sm.Get(
+		ctx,
+		versionedCert,
+		mode,
+		common.CertVerificationOpts{L1InclusionBlockNum: l1InclusionBlockNum},
+	)
 	if err != nil {
 		err = NewGETError(
 			fmt.Errorf("get request failed with serializedCert %v: %w", serializedCertHex, err),
@@ -290,7 +295,8 @@ func (svr *Server) handlePostShared(
 	// We write the commitment as bytes directly instead of hex encoded.
 	// The spec https://specs.optimism.io/experimental/alt-da.html#da-server says it should be hex-encoded,
 	// but the client expects it to be raw bytes.
-	// See https://github.com/Layr-Labs/optimism/blob/89ac40d0fddba2e06854b253b9f0266f36350af2/op-alt-da/daclient.go#L151
+	// See
+	// https://github.com/Layr-Labs/optimism/blob/89ac40d0fddba2e06854b253b9f0266f36350af2/op-alt-da/daclient.go#L151
 	svr.writeResponse(w, responseCommit)
 	return nil
 }

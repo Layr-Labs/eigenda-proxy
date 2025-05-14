@@ -49,9 +49,10 @@ func (c Config) MarshalJSON() ([]byte, error) {
 
 // Verifier verifies the integrity of a blob and its certificate. There are 3 main categories of verification:
 //  1. Blob: properties localized to a single blob, most specifically its commitment
-//  2. Batch: properties wrt the EigenDA network: signatures, quorum thresholds, onchain inclusion, etc.
-//  3. Rollup: properties wrt the rollup chain: block at which the cert was included in the batcher's inbox
-//     (make sure its not too stale trying to game fraud proof windows)
+//  2. Cert: properties wrt the EigenDA network: signatures, quorum thresholds, onchain inclusion, etc.
+//  3. RBN Recency: make sure a cert's l1 inclusion block is not too old.
+//     This check is not currently supported for EigenDA V1. We are only building fully secure
+//     integrations on EigenDA V2.
 //
 // TODO: right now verification and confirmation depth are tightly coupled. we should decouple them
 type Verifier struct {
@@ -206,9 +207,7 @@ func (v *Verifier) verifySecurityParams(blobHeader BlobHeader, batchHeader *disp
 		// right now since this threshold is hardcoded into the contract:
 		// https://github.com/Layr-Labs/eigenda/blob/master/contracts/src/core/EigenDAServiceManagerStorage.sol
 		// but it is good practice in case the contract changes in the future
-		quorumAdversaryThreshold, ok := v.cv.quorumAdversaryThresholdPercentages(
-			blobHeader.QuorumBlobParams[i].QuorumNumber,
-		)
+		quorumAdversaryThreshold, ok := v.cv.quorumAdversaryThresholds[blobHeader.QuorumBlobParams[i].QuorumNumber]
 		if !ok {
 			log.Warn(
 				"CertVerifier.quorumAdversaryThresholds map does not contain quorum number",
@@ -247,7 +246,7 @@ func requiredQuorum(referenceBlockNumber uint32, v *Verifier) []uint8 {
 	if v.holesky && referenceBlockNumber >= 2950000 && referenceBlockNumber < 2960000 {
 		return []uint8{0}
 	}
-	return v.cv.quorumNumbersRequired()
+	return v.cv.quorumsRequired
 }
 
 func isHolesky(svcAddress string) bool {

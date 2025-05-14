@@ -22,14 +22,6 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-type certVerifier interface {
-	verifyBatchConfirmedOnChain(ctx context.Context, batchID uint32, batchMetadata *disperser.BatchMetadata) error
-	verifyMerkleProof(inclusionProof []byte, root []byte, index uint32, blobHeader BlobHeader) error
-	// getters for the cached quorum parameters
-	quorumNumbersRequired() []uint8
-	quorumAdversaryThresholdPercentages(quorum uint8) (percentage uint8, ok bool)
-}
-
 // CertVerifier verifies the DA certificate against on-chain EigenDA contracts
 // to ensure disperser returned fields haven't been tampered with
 type CertVerifier struct {
@@ -221,33 +213,6 @@ func (cv *CertVerifier) retrieveBatchMetadataHash(
 		)
 	}
 	return onchainHash, nil
-}
-
-func (cv *CertVerifier) quorumNumbersRequired() []uint8 {
-	return cv.quorumsRequired
-}
-
-func (cv *CertVerifier) quorumAdversaryThresholdPercentages(quorum uint8) (uint8, bool) {
-	threshold, ok := cv.quorumAdversaryThresholds[quorum]
-	return threshold, ok
-}
-
-// NoopCertVerifier is used in place of CertVerification when certificate verification is disabled
-type NoopCertVerifier struct{}
-
-var _ certVerifier = (*NoopCertVerifier)(nil)
-
-func (*NoopCertVerifier) verifyBatchConfirmedOnChain(_ context.Context, _ uint32, _ *disperser.BatchMetadata) error {
-	return nil
-}
-func (*NoopCertVerifier) verifyMerkleProof(_ []byte, _ []byte, _ uint32, _ BlobHeader) error {
-	return nil
-}
-func (*NoopCertVerifier) quorumNumbersRequired() []uint8 {
-	return nil
-}
-func (*NoopCertVerifier) quorumAdversaryThresholdPercentages(_ uint8) (uint8, bool) {
-	return 0, true
 }
 
 // getQuorumParametersAtLatestBlock fetches the required quorums and quorum adversary thresholds

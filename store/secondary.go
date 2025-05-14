@@ -33,7 +33,8 @@ type ISecondary interface {
 	// verify fn signature has to match that of common/store.go's GeneratedKeyStore.Verify fn.
 	MultiSourceRead(
 		ctx context.Context, commitment []byte, fallback bool,
-		verify func(context.Context, []byte, []byte, common.CertVerificationOpts) error, verifyOpts common.CertVerificationOpts,
+		verify func(context.Context, []byte, []byte, common.CertVerificationOpts) error,
+		verifyOpts common.CertVerificationOpts,
 	) ([]byte, error)
 	WriteSubscriptionLoop(ctx context.Context)
 }

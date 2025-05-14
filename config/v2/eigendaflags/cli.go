@@ -44,6 +44,8 @@ func withFlagPrefix(s string) string {
 func withEnvPrefix(envPrefix, s string) string {
 	return envPrefix + "_EIGENDA_V2_" + s
 }
+
+// nolint: funlen
 func CLIFlags(envPrefix, category string) []cli.Flag {
 	return []cli.Flag{
 		&cli.StringFlag{
