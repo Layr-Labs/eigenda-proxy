@@ -189,23 +189,26 @@ func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte, opts comm
 //
 // https://github.com/Layr-Labs/hokulea/blob/8c4c89bc4f35d56a3cec2220575a9681d987105c/crates/eigenda/src/eigenda.rs#L90
 func (e Store) verifyRBNRecencyCheck(certRBN uint32, opts common.VerifyOpts) error {
-	if opts.RollupL1InclusionBlockNum > 0 && e.rbnRecencyWindowSize > 0 {
-		rollupInclusionBlock := opts.RollupL1InclusionBlockNum
-		if !(uint64(certRBN) < rollupInclusionBlock) {
-			return fmt.Errorf(
-				"eigenda batch reference block number (%d) needs to be < rollup inclusion block number (%d): this is a serious bug, please report it",
-				certRBN,
-				rollupInclusionBlock,
-			)
-		}
-		if !(rollupInclusionBlock <= uint64(certRBN)+e.rbnRecencyWindowSize) {
-			return fmt.Errorf(
-				"rollup inclusion block number (%d) needs to be <= eigenda cert.RBN (%d) + RBNRecencyWindowSize (%d)",
-				rollupInclusionBlock,
-				certRBN,
-				e.rbnRecencyWindowSize,
-			)
-		}
+	// Verification is optional and can be skipped by setting either of these params to 0.
+	if opts.RollupL1InclusionBlockNum == 0 || e.rbnRecencyWindowSize == 0 {
+		return nil
+	}
+
+	rollupInclusionBlock := opts.RollupL1InclusionBlockNum
+	if !(uint64(certRBN) < rollupInclusionBlock) {
+		return fmt.Errorf(
+			"eigenda batch reference block number (%d) needs to be < rollup inclusion block number (%d): this is a serious bug, please report it",
+			certRBN,
+			rollupInclusionBlock,
+		)
+	}
+	if !(rollupInclusionBlock <= uint64(certRBN)+e.rbnRecencyWindowSize) {
+		return fmt.Errorf(
+			"rollup inclusion block number (%d) needs to be <= eigenda cert.RBN (%d) + RBNRecencyWindowSize (%d)",
+			rollupInclusionBlock,
+			certRBN,
+			e.rbnRecencyWindowSize,
+		)
 	}
 	return nil
 }
