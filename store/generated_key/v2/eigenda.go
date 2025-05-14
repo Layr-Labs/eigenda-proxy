@@ -18,6 +18,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// Returned when `cert.L1InclusionBlock > batch.RBN + rbnRecencyWindowSize`,
+// to indicate that the cert should be discarded from rollups' derivation pipeline.
+// This should get converted by the proxy to an HTTP 418 TEAPOT error code.
 type RBNRecencyCheckFailedError struct {
 	certRBN              uint32
 	certL1IBN            uint64
