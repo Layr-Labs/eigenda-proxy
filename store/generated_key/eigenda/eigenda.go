@@ -181,7 +181,6 @@ func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to verify commitment: %w", err)
 	}
 
-	// we set RollupL1InclusionBlockNum to 0 to skip the check, as it is meaningless in the PUT route.
 	// The cert will only be included in the batcher's inbox after
 	// the proxy returns the verified cert to the batcher.
 	err = e.verifier.VerifyCert(ctx, cert)
