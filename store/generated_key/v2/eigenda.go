@@ -184,7 +184,7 @@ func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte, opts comm
 }
 
 // verifyCertRBNRecencyCheck arguments:
-//   - certRBN: ReferenceBlockNumber included in the cert iself at which operator stakes are referenced
+//   - certRBN: ReferenceBlockNumber included in the cert itself at which operator stakes are referenced
 //     when verifying that a cert's signature meets the required quorum thresholds.
 //   - certL1IBN: InclusionBlockNumber at which the EigenDA cert was included in the rollup batcher inbox.
 //     The IBN is not part of the cert. It is received as an optional query param on GET requests.
