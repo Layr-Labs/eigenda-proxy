@@ -9,9 +9,9 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/config/eigendaflags"
 	eigendaflags_v2 "github.com/Layr-Labs/eigenda-proxy/config/v2/eigendaflags"
 	"github.com/Layr-Labs/eigenda-proxy/store"
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/eigenda/verify"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
-	"github.com/Layr-Labs/eigenda-proxy/verify"
 	"github.com/Layr-Labs/eigenda/encoding/kzg"
 	"github.com/urfave/cli/v2"
 )

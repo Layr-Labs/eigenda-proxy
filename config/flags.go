@@ -4,7 +4,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/config/eigendaflags"
 	eigenda_v2_flags "github.com/Layr-Labs/eigenda-proxy/config/v2/eigendaflags"
 	"github.com/Layr-Labs/eigenda-proxy/store"
-	"github.com/Layr-Labs/eigenda-proxy/verify"
+	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/eigenda/verify"
 
 	"github.com/Layr-Labs/eigenda-proxy/logging"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
