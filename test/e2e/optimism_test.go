@@ -5,7 +5,7 @@ import (
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/common/types/commitments"
-	"github.com/Layr-Labs/eigenda-proxy/testutils"
+	"github.com/Layr-Labs/eigenda-proxy/test/testutils"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	e2econfig "github.com/ethereum-optimism/optimism/op-e2e/config"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils"

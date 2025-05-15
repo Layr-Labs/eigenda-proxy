@@ -1,5 +1,3 @@
-//go:generate mockgen -package mocks --destination ../mocks/manager.go . IManager
-
 package store
 
 import (
@@ -14,6 +12,8 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 )
+
+//go:generate mockgen -package mocks --destination ../test/mocks/manager.go . IManager
 
 // IManager ... read/write interface
 type IManager interface {

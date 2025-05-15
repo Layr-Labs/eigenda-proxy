@@ -301,10 +301,10 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 			MaxBlobSizeBytes:     maxBlobLengthBytes,
 		},
 		KzgConfig: kzg.KzgConfig{
-			G1Path:          "../resources/g1.point",
-			G2Path:          "../resources/g2.point",
-			G2TrailingPath:  "../resources/g2.trailing.point",
-			CacheDir:        "../resources/SRSTables",
+			G1Path:          "../../resources/g1.point",
+			G2Path:          "../../resources/g2.point",
+			G2TrailingPath:  "../../resources/g2.trailing.point",
+			CacheDir:        "../../resources/SRSTables",
 			SRSOrder:        eigendaflags.SrsOrder,
 			SRSNumberToLoad: maxBlobLengthBytes / 32,
 			NumWorker:       uint64(runtime.GOMAXPROCS(0)), // #nosec G115

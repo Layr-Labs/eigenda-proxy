@@ -12,7 +12,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/common/types/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/store"
-	"github.com/Layr-Labs/eigenda-proxy/testutils"
+	"github.com/Layr-Labs/eigenda-proxy/test/testutils"
 	"github.com/Layr-Labs/eigenda/common/testutils/random"
 	"github.com/Layr-Labs/eigenda/encoding/utils/codec"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
