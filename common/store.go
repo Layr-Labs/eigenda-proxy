@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
+
+	"github.com/Layr-Labs/eigenda/api/clients/v2/coretypes"
 )
 
 // BackendType ... Storage backend type
@@ -71,8 +73,6 @@ func StringToBackendType(s string) BackendType {
 type Store interface {
 	// BackendType returns the backend type provider of the store.
 	BackendType() BackendType
-	// Verify verifies the given key-value pair.
-	Verify(ctx context.Context, serializedCert []byte, payload []byte) error
 }
 
 // EigenDAStore is the interface for an EigenDA data store, which stores payloads that are retrievable
@@ -83,6 +83,18 @@ type EigenDAStore interface {
 	Put(ctx context.Context, payload []byte) (serializedCert []byte, err error)
 	// Get retrieves the given key if it's present in the key-value (serializedCert-payload) data store.
 	Get(ctx context.Context, serializedCert []byte) (payload []byte, err error)
+	// Verify verifies the given key-value pair.
+	Verify(ctx context.Context, serializedCert []byte, payload []byte) error
+}
+
+type EigenDAV2Store interface {
+	Store
+	// Put inserts the given value into the key-value (serializedCert-payload) data store.
+	Put(ctx context.Context, payload []byte) (serializedCert []byte, err error)
+	// Get retrieves the given key if it's present in the key-value (serializedCert-payload) data store.
+	Get(ctx context.Context, serializedCert []byte) (payload []byte, err error)
+	// Verify verifies the given key-value pair.
+	Verify(context.Context, coretypes.CertificateVersion, []byte) error
 }
 
 // PrecomputedKeyStore is the interface for a key-value data store that uses keccak(value) as the key.
@@ -93,4 +105,6 @@ type PrecomputedKeyStore interface {
 	Put(ctx context.Context, key []byte, value []byte) error
 	// Get retrieves the given key if it's present in the key-value data store.
 	Get(ctx context.Context, key []byte) ([]byte, error)
+	// Verify verifies the given key-value pair.
+	Verify(ctx context.Context, serializedCert []byte, payload []byte) error
 }

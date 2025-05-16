@@ -11,6 +11,7 @@ import (
 	"github.com/Layr-Labs/eigenda/api/clients/v2"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/coretypes"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/payloaddispersal"
+	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/avast/retry-go/v4"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -27,19 +28,22 @@ type Store struct {
 	putTries int
 	log      logging.Logger
 
-	disperser  *payloaddispersal.PayloadDisperser
-	retrievers []clients.PayloadRetriever
-	verifier   clients.ICertVerifier
+	disperser          *payloaddispersal.PayloadDisperser
+	retrievers         []clients.PayloadRetriever
+	certVerifier       *verification.CertVerifier
+	legacyCertVerifier *verification.LegacyCertVerifier
 }
 
-var _ common.EigenDAStore = (*Store)(nil)
+var _ common.EigenDAV2Store = (*Store)(nil)
 
 func NewStore(
 	log logging.Logger,
 	putTries int,
 	disperser *payloaddispersal.PayloadDisperser,
 	retrievers []clients.PayloadRetriever,
-	verifier clients.ICertVerifier,
+	certVerifier *verification.CertVerifier,
+	legacyCertVerifier *verification.LegacyCertVerifier,
+
 ) (*Store, error) {
 	if putTries == 0 {
 		return nil, fmt.Errorf(
@@ -47,11 +51,12 @@ func NewStore(
 	}
 
 	return &Store{
-		log:        log,
-		putTries:   putTries,
-		disperser:  disperser,
-		retrievers: retrievers,
-		verifier:   verifier,
+		log:                log,
+		putTries:           putTries,
+		disperser:          disperser,
+		retrievers:         retrievers,
+		certVerifier:       certVerifier,
+		legacyCertVerifier: legacyCertVerifier,
 	}, nil
 }
 
@@ -67,7 +72,7 @@ func (e Store) Get(ctx context.Context, key []byte) ([]byte, error) {
 	// Try each retriever in sequence until one succeeds
 	var errs []error
 	for _, retriever := range e.retrievers {
-		payload, err := retriever.GetPayload(ctx, &cert)
+		payload, err := retriever.GetPayload(ctx, cert)
 		if err == nil {
 			return payload.Serialize(), nil
 		}
@@ -90,7 +95,7 @@ func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 	payload := coretypes.NewPayload(value)
 
 	cert, err := retry.DoWithData(
-		func() (*coretypes.EigenDACert, error) {
+		func() (coretypes.EigenDACert, error) {
 			return e.disperser.SendPayload(ctx, payload)
 		},
 		retry.RetryIf(
@@ -141,12 +146,30 @@ func (e Store) BackendType() common.BackendType {
 //
 // Since v2 methods for fetching a payload are responsible for verifying the received bytes against the certificate,
 // this Verify method only needs to check the cert on chain. That is why the third parameter is ignored.
-func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte) error {
-	var eigenDACert coretypes.EigenDACert
-	err := rlp.DecodeBytes(certBytes, &eigenDACert)
-	if err != nil {
-		return fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
+func (e Store) Verify(ctx context.Context, certVersion coretypes.CertificateVersion, certBytes []byte) error {
+
+	switch certVersion {
+	case coretypes.VersionTwoCert:
+		var eigenDACert coretypes.EigenDACertV2
+		err := rlp.DecodeBytes(certBytes, &eigenDACert)
+		if err != nil {
+			return fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
+		}
+
+		return e.legacyCertVerifier.VerifyCertV2(ctx, &eigenDACert)
+
+	case coretypes.VersionThreeCert:
+		var eigenDACert coretypes.EigenDACertV3
+		err := rlp.DecodeBytes(certBytes, &eigenDACert)
+		if err != nil {
+			return fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
+		}
+
+		// NOTE: Doing RRN extraction here feels incorrect
+		return e.certVerifier.CheckDACert(ctx, eigenDACert.ReferenceBlockNumber(), certBytes)
+
+	default:
+		return fmt.Errorf("unsupported EigenDA cert version: %d", certVersion)
 	}
 
-	return e.verifier.VerifyCertV2(ctx, &eigenDACert)
 }

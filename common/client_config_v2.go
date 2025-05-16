@@ -7,6 +7,7 @@ import (
 	clients_v2 "github.com/Layr-Labs/eigenda/api/clients/v2"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/payloaddispersal"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/payloadretrieval"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 // ClientConfigV2 contains all non-sensitive configuration to construct V2 clients
@@ -23,9 +24,10 @@ type ClientConfigV2 struct {
 	// - If > 0: Try N times total
 	// - If < 0: Retry indefinitely until success
 	// - If = 0: Not permitted
-	PutTries                   int
-	MaxBlobSizeBytes           uint64
-	EigenDACertVerifierAddress string // V2 cert
+	PutTries                         int
+	MaxBlobSizeBytes                 uint64
+	EigenDALegacyCertVerifierAddress string
+	EigenDACertVerifierAddress       string // V2 cert
 	EigenDACertVerifierRouterAddress string // >= V3 cert
 
 	// Fields required for validator payload retrieval
@@ -40,6 +42,10 @@ type ClientConfigV2 struct {
 func (cfg *ClientConfigV2) Check() error {
 	if cfg.DisperserClientCfg.Hostname == "" {
 		return fmt.Errorf("EigenDA disperser hostname is required for using EigenDA V2 backend")
+	}
+
+	if cfg.EigenDALegacyCertVerifierAddress == "" {
+		log.Warn("EigenDA legacy cert verifier address is not set. This is required for migrating existing V2 testnets. If you are not migrating an existing EigenDA V2 integration, you can ignore this warning.")
 	}
 
 	if cfg.DisperserClientCfg.Port == "" {

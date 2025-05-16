@@ -1,6 +1,10 @@
 package certs
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/Layr-Labs/eigenda/api/clients/v2/coretypes"
+)
 
 // Version byte that prefixes serialized EigenDACert to identify their type.
 type VersionByte byte
@@ -10,6 +14,7 @@ const (
 	V0VersionByte VersionByte = iota
 	// All future CertVersions will be against EigenDA V2 Blazar (https://docs.eigenda.xyz/releases/blazar)
 	V1VersionByte
+	V2VersionByte
 )
 
 func ByteToVersion(b byte) (VersionByte, error) {
@@ -40,4 +45,19 @@ func NewVersionedCert(serializedCert []byte, certVersion VersionByte) VersionedC
 // Encode adds a commitment type prefix self describing the commitment.
 func (c VersionedCert) Encode() []byte {
 	return append([]byte{byte(c.Version)}, c.SerializedCert...)
+}
+
+func (c VersionedCert) ToCoreCertType() (coretypes.CertificateVersion, error) {
+	switch c.Version {
+	case V0VersionByte:
+		// TODO: Fix
+		return coretypes.VersionTwoCert, nil
+	case V1VersionByte:
+		return coretypes.VersionTwoCert, nil
+	case V2VersionByte:
+		return coretypes.VersionThreeCert, nil
+
+	default:
+		return coretypes.VersionTwoCert, fmt.Errorf("unknown EigenDA cert version: %d", c.Version)
+	}
 }

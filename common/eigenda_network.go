@@ -34,7 +34,6 @@ func (n EigenDANetwork) GetDisperserAddress() (string, error) {
 	}
 }
 
-
 // GetBLSOperatorStateRetrieverAddress returns, as a string, the address of the OperatorStateRetriever contract for the
 // network
 func (n EigenDANetwork) GetBLSOperatorStateRetrieverAddress() (string, error) {
