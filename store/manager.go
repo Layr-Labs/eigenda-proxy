@@ -37,9 +37,9 @@ type Manager struct {
 
 	s3 *s3.Store // for op keccak256 commitment
 	// For op generic commitments & standard commitments
-	eigenda          common.EigenDAStore // v0 da commitment version
-	eigendaV2        common.EigenDAStore // v1 da commitment version
-	dispersalBackend atomic.Value        // stores the EigenDABackend to write blobs to
+	eigenda          common.EigenDAStore   // v0 da commitment version
+	eigendaV2        common.EigenDAV2Store // v1 da commitment version
+	dispersalBackend atomic.Value          // stores the EigenDABackend to write blobs to
 
 	// secondary storage backends (caching and fallbacks)
 	secondary ISecondary
@@ -66,7 +66,7 @@ func (m *Manager) SetDispersalBackend(backend common.EigenDABackend) {
 // NewManager ... Init
 func NewManager(
 	eigenda common.EigenDAStore,
-	eigenDAV2 common.EigenDAStore,
+	eigenDAV2 common.EigenDAV2Store,
 	s3 *s3.Store,
 	l logging.Logger,
 	secondary ISecondary,
@@ -193,11 +193,19 @@ func (m *Manager) getVerifyMethod(commitmentType certs.VersionByte) (
 	func(context.Context, []byte, []byte) error,
 	error,
 ) {
+	v2VerifyWrapper := func(ctx context.Context, cert []byte, payload []byte) error {
+		coreCertVersion, err := certs.NewVersionedCert(cert, certs.V1VersionByte).ToCoreCertType()
+		if err != nil {
+			return fmt.Errorf("get core cert version: %w", err)
+		}
+		return m.eigendaV2.Verify(ctx, coreCertVersion, payload)
+	}
+
 	switch commitmentType {
 	case certs.V0VersionByte:
 		return m.eigenda.Verify, nil
 	case certs.V1VersionByte:
-		return m.eigendaV2.Verify, nil
+		return v2VerifyWrapper, nil
 	default:
 		return nil, fmt.Errorf("commitment version unknown: %b", commitmentType)
 	}
@@ -247,10 +255,15 @@ func (m *Manager) getFromCorrectEigenDABackend(
 
 		return nil, err
 
-	case certs.V1VersionByte:
+	case certs.V1VersionByte, certs.V2VersionByte:
+		coreCertVersion, err := versionedCert.ToCoreCertType()
+		if err != nil {
+			return nil, fmt.Errorf("get core cert version: %w", err)
+		}
+
 		// The cert must be verified before attempting to get the data, since the GET logic
 		// assumes the cert is valid. Verify v2 doesn't require a payload.
-		err := m.eigendaV2.Verify(ctx, versionedCert.SerializedCert, nil)
+		err = m.eigendaV2.Verify(ctx, coreCertVersion, versionedCert.SerializedCert)
 		if err != nil {
 			return nil, fmt.Errorf("verify EigenDACert: %w", err)
 		}

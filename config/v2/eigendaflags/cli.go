@@ -24,9 +24,12 @@ var (
 	SignerPaymentKeyHexFlagName       = withFlagPrefix("signer-payment-key-hex")
 	DisperseBlobTimeoutFlagName       = withFlagPrefix("disperse-blob-timeout")
 	BlobCertifiedTimeoutFlagName      = withFlagPrefix("blob-certified-timeout")
-	CertVerifierAddrFlagName          = withFlagPrefix("cert-verifier-addr")
+	CertVerifierLegacyAddrFlagName    = withFlagPrefix("cert-verifier-addr")
+	CertVerifierAddrFlagName          = withFlagPrefix("cert-verifier-generic-addr")
+	CertVerifierRouterAddrFlagName    = withFlagPrefix("cert-verifier-router-addr")
 	ServiceManagerAddrFlagName        = withFlagPrefix("service-manager-addr")
 	BLSOperatorStateRetrieverFlagName = withFlagPrefix("bls-operator-state-retriever-addr")
+	RegistryCoordinatorAddrFlagName   = withFlagPrefix("registry-coordinator-addr")
 	RelayTimeoutFlagName              = withFlagPrefix("relay-timeout")
 	ValidatorTimeoutFlagName          = withFlagPrefix("validator-timeout")
 	ContractCallTimeoutFlagName       = withFlagPrefix("contract-call-timeout")
@@ -104,8 +107,24 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Value:    time.Second * 30,
 		},
 		&cli.StringFlag{
+			Name: CertVerifierLegacyAddrFlagName,
+			Usage: "Address of the legacy EigenDACertVerifier contract. " +
+				"Required for performing eth_calls to verify EigenDA certificates during derivation. This code path will be deprecated in a future release.",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "CERT_VERIFIER_ADDR")},
+			Category: category,
+			Required: false,
+		},
+		&cli.StringFlag{
 			Name: CertVerifierAddrFlagName,
-			Usage: "Address of the EigenDACertVerifier contract. " +
+			Usage: "Address of the generic EigenDACertVerifier contract. " +
+				"Required for performing eth_calls to verify EigenDA certificates.",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "CERT_VERIFIER_ADDR")},
+			Category: category,
+			Required: false,
+		},
+		&cli.StringFlag{
+			Name: CertVerifierRouterAddrFlagName,
+			Usage: "Address of the EigenDACertVerifierRouter contract. " +
 				"Required for performing eth_calls to verify EigenDA certificates.",
 			EnvVars:  []string{withEnvPrefix(envPrefix, "CERT_VERIFIER_ADDR")},
 			Category: category,
@@ -122,6 +141,13 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Name:     BLSOperatorStateRetrieverFlagName,
 			Usage:    "Address of the BLS operator state retriever contract.",
 			EnvVars:  []string{withEnvPrefix(envPrefix, "BLS_OPERATOR_STATE_RETRIEVER_ADDR")},
+			Category: category,
+			Required: false,
+		},
+		&cli.StringFlag{
+			Name:     RegistryCoordinatorAddrFlagName,
+			Usage:    "Address of the registry coordinator contract.",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "REGISTRY_COORDINATOR_ADDR")},
 			Category: category,
 			Required: false,
 		},
@@ -236,25 +262,17 @@ func ReadClientConfigV2(ctx *cli.Context) (common.ClientConfigV2, error) {
 		}
 	}
 
-	certVerifierAddress := ctx.String(CertVerifierAddrFlagName)
-	if certVerifierAddress == "" {
-		certVerifierAddress, err = eigenDANetwork.GetCertVerifierAddress()
-		if err != nil {
-			return common.ClientConfigV2{}, fmt.Errorf(
-				"cert verifier address wasn't specified, and failed to get it from the specified network: %w", err)
-		}
-	}
-
 	return common.ClientConfigV2{
-		DisperserClientCfg:            disperserConfig,
-		PayloadDisperserCfg:           readPayloadDisperserCfg(ctx),
-		RelayPayloadRetrieverCfg:      readRelayRetrievalConfig(ctx),
-		ValidatorPayloadRetrieverCfg:  readValidatorRetrievalConfig(ctx),
-		PutTries:                      ctx.Int(PutRetriesFlagName),
-		MaxBlobSizeBytes:              maxBlobLengthBytes,
-		EigenDACertVerifierAddress:    certVerifierAddress,
-		BLSOperatorStateRetrieverAddr: blsOperatorStateRetrieverAddress,
-		EigenDAServiceManagerAddr:     serviceManagerAddress,
+		DisperserClientCfg:               disperserConfig,
+		PayloadDisperserCfg:              readPayloadDisperserCfg(ctx),
+		RelayPayloadRetrieverCfg:         readRelayRetrievalConfig(ctx),
+		ValidatorPayloadRetrieverCfg:     readValidatorRetrievalConfig(ctx),
+		PutTries:                         ctx.Int(PutRetriesFlagName),
+		MaxBlobSizeBytes:                 maxBlobLengthBytes,
+		EigenDACertVerifierAddress:       ctx.String(CertVerifierAddrFlagName),
+		EigenDACertVerifierRouterAddress: ctx.String(CertVerifierRouterAddrFlagName),
+		BLSOperatorStateRetrieverAddr:    blsOperatorStateRetrieverAddress,
+		EigenDAServiceManagerAddr:        serviceManagerAddress,
 		// we don't expose this configuration to users, as all production use cases should have
 		// both retrieval methods enabled. This could be exposed in the future, if necessary.
 		// Note the order of these retrievers, which is significant: the relay retriever will be
