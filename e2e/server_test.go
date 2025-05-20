@@ -31,24 +31,6 @@ func requireDispersalRetrievalEigenDA(t *testing.T, cm *metrics.CountMap, mode c
 	require.True(t, readCount > 0)
 }
 
-// requireDispersalRetrievalEigenDACounts ensures that blob were successfully dispersed/read to/from EigenDA, the
-// expected number of times
-func requireDispersalRetrievalEigenDACounts(
-	t *testing.T,
-	cm *metrics.CountMap,
-	mode commitments.CommitmentMode,
-	expectedWriteCount uint64,
-	expectedReadCount uint64,
-) {
-	actualWriteCount, err := cm.Get(string(mode), http.MethodPost)
-	require.NoError(t, err)
-	require.Equal(t, expectedWriteCount, actualWriteCount)
-
-	actualReadCount, err := cm.Get(string(mode), http.MethodGet)
-	require.NoError(t, err)
-	require.Equal(t, expectedReadCount, actualReadCount)
-}
-
 // requireWriteReadSecondary ... ensure that secondary backend was successfully written/read to/from
 func requireWriteReadSecondary(t *testing.T, cm *metrics.CountMap, bt common.BackendType) {
 	writeCount, err := cm.Get(http.MethodPut, store.Success, bt.String())
