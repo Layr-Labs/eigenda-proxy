@@ -219,10 +219,12 @@ func verifyCertRBNRecencyCheck(certRBN uint32, certL1IBN uint64, rbnRecencyWindo
 	if certRBN == 0 {
 		return fmt.Errorf("certRBN should never be 0, this is likely a bug")
 	}
-	if !(uint64(certRBN) < certL1IBN) {
+	if certL1IBN <= uint64(certRBN) {
 		return fmt.Errorf(
-			"cert reference block number (%d) needs to be < l1 inclusion block number (%d):"+
-				" this is a serious bug, please report it",
+			"cert's l1 inclusion block number (%d) <= cert reference block number (%d), but this is physically impossible "+
+				"since the cert has to be signed by all eigenda validators before being submitted to the batcher inbox, "+
+				"and validators will only sign a batchRoot (contained in certs) if the RBN is in the past. "+
+				"This is a serious bug, please report it",
 			certRBN,
 			certL1IBN,
 		)
