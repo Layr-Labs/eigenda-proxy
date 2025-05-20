@@ -10,6 +10,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/testutils"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -66,7 +67,7 @@ func testOpClientKeccak256MalformedInputs(t *testing.T, dispersalBackend common.
 
 			// The below test panics silently.
 			input := altda.NewGenericCommitment([]byte(""))
-			_, err = daClientPcFalse.GetInput(ts.Ctx, input)
+			_, err = daClientPcFalse.GetInput(ts.Ctx, input, eth.L1BlockRef{})
 			require.Error(t, err)
 
 			// Should not fail on slice bounds out of range. This needs to be fixed by OP.
