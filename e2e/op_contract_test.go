@@ -8,9 +8,8 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/common/types/commitments"
 	"github.com/Layr-Labs/eigenda-proxy/testutils"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/coretypes"
-	contractEigenDACertVerifier "github.com/Layr-Labs/eigenda/contracts/bindings/EigenDACertVerifier"
+	contractEigenDACertVerifierV2 "github.com/Layr-Labs/eigenda/contracts/bindings/EigenDACertVerifierV2"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
-	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/stretchr/testify/require"
 )
@@ -93,7 +92,7 @@ func TestOPContractTestRBNRecentyCheck(t *testing.T) {
 
 			// Build + Serialize (empty) cert with the given RBN
 			certV2 := coretypes.EigenDACert{
-				BatchHeader: contractEigenDACertVerifier.BatchHeaderV2{
+				BatchHeader: contractEigenDACertVerifierV2.EigenDATypesV2BatchHeaderV2{
 					ReferenceBlockNumber: tt.certRBN,
 				},
 			}
@@ -109,7 +108,7 @@ func TestOPContractTestRBNRecentyCheck(t *testing.T) {
 			require.NoError(t, err)
 
 			daClient := altda.NewDAClient(ts.Address(), false, false)
-			_, err = daClient.GetInput(ts.Ctx, commitmentData, eth.L1BlockRef{Number: tt.certL1IBN})
+			_, err = daClient.GetInput(ts.Ctx, commitmentData, tt.certL1IBN)
 			tt.requireErrorFn(t, err)
 		})
 	}

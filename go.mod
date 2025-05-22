@@ -30,7 +30,7 @@ require (
 // TODO: Remove this after we have published v0.1.0 of the new clients module.
 replace github.com/Layr-Labs/eigenda-proxy/clients => ./clients/
 
-replace github.com/ethereum-optimism/optimism => github.com/Layr-Labs/optimism v0.0.0-20250513173453-646c8857f4b7
+replace github.com/ethereum-optimism/optimism => github.com/Layr-Labs/optimism v0.0.0-20250522074124-9251a34831a7
 
 // This is copied over from op's go.mod file.
 // https://github.com/ethereum-optimism/optimism/blob/5662448279e4fb16e073e00baeb6e458b12a59b2/go.mod#L253C90-L253C106

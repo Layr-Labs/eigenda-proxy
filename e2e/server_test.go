@@ -16,7 +16,6 @@ import (
 	"github.com/Layr-Labs/eigenda/common/testutils/random"
 	"github.com/Layr-Labs/eigenda/encoding/utils/codec"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
-	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -68,7 +67,7 @@ func requireOPClientSetGet(t *testing.T, ts testutils.TestSuite, blob []byte, pr
 	commit, err := daClient.SetInput(ts.Ctx, blob)
 	require.NoError(t, err)
 
-	preimage, err := daClient.GetInput(ts.Ctx, commit, eth.L1BlockRef{})
+	preimage, err := daClient.GetInput(ts.Ctx, commit, 0)
 	require.NoError(t, err)
 	require.Equal(t, blob, preimage)
 }
