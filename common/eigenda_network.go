@@ -46,6 +46,8 @@ func (n EigenDANetwork) GetCertVerifierAddress() (string, error) {
 		return "0xFe52fE1940858DCb6e12153E2104aD0fDFbE1162", nil
 	case HoleskyPreprodEigenDANetwork:
 		return "0xd973fA62E22BC2779F8489258F040C0344B03C21", nil
+	case SepoliaTestnetEigenDANetwork:
+		return "0x73818fed0743085c4557a736a7630447fb57c662", nil
 	default:
 		return "", fmt.Errorf("unknown network type: %s", n)
 	}
