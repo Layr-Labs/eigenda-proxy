@@ -17,6 +17,10 @@ import (
 // RBN Recency Check is only available for V2
 // Contract Test here refers to https://pactflow.io/blog/what-is-contract-testing/, not evm contracts.
 func TestOPContractTestRBNRecentyCheck(t *testing.T) {
+	t.Parallel()
+	if testutils.GetBackend() == testutils.MemstoreBackend {
+		t.Skip("Don't run for memstore backend, since rbn recency check is only implemented for eigenda v2 backend")
+	}
 
 	var testTable = []struct {
 		name                 string
@@ -74,15 +78,12 @@ func TestOPContractTestRBNRecentyCheck(t *testing.T) {
 		},
 	}
 
-	t.Parallel()
 	for _, tt := range testTable {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			t.Log("Running test: ", tt.name)
-			// We check that the cert gets discarded, so preprod or testnet backend doesn't matter.
-			// We just choose one arbitrarily.
 			testCfg := testutils.NewTestConfig(
-				testutils.TestnetBackend,
+				testutils.GetBackend(),
 				common.V2EigenDABackend,
 				[]common.EigenDABackend{common.V2EigenDABackend})
 			tsConfig := testutils.BuildTestSuiteConfig(testCfg)
