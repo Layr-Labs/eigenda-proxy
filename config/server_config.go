@@ -13,6 +13,10 @@ type ServerConfig struct {
 	// Example: If it contains "admin", administrative endpoints like
 	// /admin/eigenda-dispersal-backend will be available.
 	EnabledAPIs []string
+	// CORSAllowedDomains is a list of domains allowed for CORS requests.
+	// When list contains "*", all origins are allowed.
+	// When empty, CORS is disabled.
+	CORSAllowedDomains []string
 }
 
 // IsAPIEnabled checks if a specific API type is enabled
