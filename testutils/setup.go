@@ -230,6 +230,7 @@ func createS3Config(storeConfig store.Config) store.Config {
 	return storeConfig
 }
 
+// nolint: funlen
 func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 	useMemory := testCfg.Backend == MemstoreBackend
 	pk := os.Getenv(privateKeyEnvVar)
