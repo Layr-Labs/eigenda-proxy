@@ -12,6 +12,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/config"
 	"github.com/Layr-Labs/eigenda-proxy/config/eigendaflags"
 	proxy_metrics "github.com/Layr-Labs/eigenda-proxy/metrics"
+	"github.com/Layr-Labs/eigenda-proxy/server"
 	"github.com/Layr-Labs/eigenda-proxy/store"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/eigenda/verify"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
@@ -275,10 +276,6 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 		BlobVersion:           0,
 	}
 	proxyConfig := config.ProxyConfig{
-		ServerConfig: config.ServerConfig{
-			Host: host,
-			Port: 0,
-		},
 		ClientConfigV1: common.ClientConfigV1{
 			EdaClientCfg: clients.EigenDAClientConfig{
 				RPC:                      disperserHostname + ":" + disperserPort,
@@ -371,6 +368,10 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 		EigenDAConfig: proxyConfig,
 		SecretConfig:  secretConfig,
 		MetricsConfig: proxy_metrics.Config{},
+		ServerConfig: server.Config{
+			Host: host,
+			Port: 0,
+		},
 	}
 }
 func createS3Bucket(bucketName string) {

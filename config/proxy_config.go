@@ -19,7 +19,6 @@ import (
 // ProxyConfig ... Higher order config which bundles all configs for orchestrating
 // the proxy server with necessary client context
 type ProxyConfig struct {
-	ServerConfig     ServerConfig
 	ClientConfigV1   common.ClientConfigV1
 	VerifierConfigV1 verify.Config
 	KzgConfig        kzg.KzgConfig
@@ -75,11 +74,6 @@ func ReadProxyConfig(ctx *cli.Context) (ProxyConfig, error) {
 	}
 
 	cfg := ProxyConfig{
-		ServerConfig: ServerConfig{
-			Host:        ctx.String(ListenAddrFlagName),
-			Port:        ctx.Int(PortFlagName),
-			EnabledAPIs: ctx.StringSlice(APIsEnabledFlagName),
-		},
 		ClientConfigV1:   clientConfigV1,
 		VerifierConfigV1: verifierConfigV1,
 		KzgConfig:        kzgConfig,

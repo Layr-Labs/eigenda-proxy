@@ -7,6 +7,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/config/v2/eigendaflags"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
+	"github.com/Layr-Labs/eigenda-proxy/server"
 	"github.com/urfave/cli/v2"
 )
 
@@ -14,6 +15,7 @@ import (
 type AppConfig struct {
 	EigenDAConfig ProxyConfig
 	SecretConfig  common.SecretConfigV2
+	ServerConfig  server.Config
 	MetricsConfig metrics.Config
 }
 
@@ -41,11 +43,10 @@ func ReadCLIConfig(ctx *cli.Context) (AppConfig, error) {
 		return AppConfig{}, fmt.Errorf("read proxy config: %w", err)
 	}
 
-	secretConfig := eigendaflags.ReadSecretConfigV2(ctx)
-
 	return AppConfig{
 		EigenDAConfig: proxyConfig,
-		SecretConfig:  secretConfig,
+		SecretConfig:  eigendaflags.ReadSecretConfigV2(ctx),
+		ServerConfig:  server.ReadConfig(ctx),
 		MetricsConfig: metrics.ReadConfig(ctx),
 	}, nil
 }
