@@ -215,19 +215,6 @@ func (smb *StorageManagerBuilder) buildSecondaries(
 	return stores
 }
 
-func (smb *StorageManagerBuilder) getRegistryCoordinatorAddress() (geth_common.Address, error) {
-	if smb.v2ClientCfg.EigenDAServiceManagerAddr == "" {
-		return geth_common.Address{}, fmt.Errorf("EigenDAServiceManagerAddr not set")
-	}
-
-	registryCoordinatorAddress := geth_common.HexToAddress(smb.v2ClientCfg.EigenDAServiceManagerAddr)
-	if registryCoordinatorAddress == (geth_common.Address{}) {
-		return geth_common.Address{}, fmt.Errorf("invalid EigenDAServiceManagerAddr: %s", smb.v2ClientCfg.EigenDAServiceManagerAddr)
-	}
-
-	return registryCoordinatorAddress, nil
-}
-
 // buildEigenDAV2Backend ... Builds EigenDA V2 storage backend
 func (smb *StorageManagerBuilder) buildEigenDAV2Backend(
 	ctx context.Context,
@@ -274,7 +261,7 @@ func (smb *StorageManagerBuilder) buildEigenDAV2Backend(
 	if err != nil {
 		return nil, fmt.Errorf("build eth reader: %w", err)
 	}
-	certVerifier, err := verification.NewGenericCertVerifier(
+	certVerifier, err := verification.NewCertVerifier(
 		smb.log,
 		ethClient,
 		provider,
@@ -529,15 +516,10 @@ func (smb *StorageManagerBuilder) buildPayloadDisperser(
 		return nil, fmt.Errorf("new block number monitor: %w", err)
 	}
 
-	registryCoordinatorAddress, err := smb.getRegistryCoordinatorAddress()
-	if err != nil {
-		return nil, fmt.Errorf("get registry coordinator address: %w", err)
-	}
-
 	certBuilder, err := clients_v2.NewCertBuilder(
 		smb.log,
 		geth_common.HexToAddress(smb.v2ClientCfg.BLSOperatorStateRetrieverAddr),
-		registryCoordinatorAddress,
+		geth_common.HexToAddress(smb.v2ClientCfg.EigenDARegistryCoordinatorAddr),
 		ethClient,
 	)
 

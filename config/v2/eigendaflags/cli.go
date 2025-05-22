@@ -262,6 +262,16 @@ func ReadClientConfigV2(ctx *cli.Context) (common.ClientConfigV2, error) {
 		}
 	}
 
+	registryCoordinatorAddress := ctx.String(RegistryCoordinatorAddrFlagName)
+	if registryCoordinatorAddress == "" {
+		registryCoordinatorAddress, err = eigenDANetwork.GetRegistryCoordinatorAddress()
+		if err != nil {
+			return common.ClientConfigV2{}, fmt.Errorf(
+				`registry coordinator address wasn't specified, and failed to get it from the
+							specified network : %w`, err)
+		}
+	}
+
 	return common.ClientConfigV2{
 		DisperserClientCfg:               disperserConfig,
 		PayloadDisperserCfg:              readPayloadDisperserCfg(ctx),
@@ -273,6 +283,7 @@ func ReadClientConfigV2(ctx *cli.Context) (common.ClientConfigV2, error) {
 		EigenDACertVerifierRouterAddress: ctx.String(CertVerifierRouterAddrFlagName),
 		BLSOperatorStateRetrieverAddr:    blsOperatorStateRetrieverAddress,
 		EigenDAServiceManagerAddr:        serviceManagerAddress,
+		EigenDARegistryCoordinatorAddr:   registryCoordinatorAddress,
 		// we don't expose this configuration to users, as all production use cases should have
 		// both retrieval methods enabled. This could be exposed in the future, if necessary.
 		// Note the order of these retrievers, which is significant: the relay retriever will be

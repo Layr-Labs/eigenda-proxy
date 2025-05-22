@@ -155,14 +155,14 @@ func testProxyClientMalformedInputCases(t *testing.T, dispersalBackend common.Ei
 				URL: ts.Address(),
 			}
 			daClient := standard_client.New(cfg)
-			testCert := []byte{2}
+			testCert := []byte{69}
 			_, err := daClient.GetData(ts.Ctx, testCert)
 			require.Error(t, err)
 			assert.True(
 				t,
 				strings.Contains(
 					err.Error(),
-					"unsupported version byte 02") && !isNilPtrDerefPanic(err.Error()))
+					"unsupported version byte 69") && !isNilPtrDerefPanic(err.Error()))
 		})
 
 	// TODO: what exactly is this test testing? What is the edge case?

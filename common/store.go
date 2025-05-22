@@ -92,9 +92,9 @@ type EigenDAV2Store interface {
 	// Put inserts the given value into the key-value (serializedCert-payload) data store.
 	Put(ctx context.Context, payload []byte) (serializedCert []byte, err error)
 	// Get retrieves the given key if it's present in the key-value (serializedCert-payload) data store.
-	Get(ctx context.Context, serializedCert []byte) (payload []byte, err error)
+	Get(ctx context.Context, version coretypes.CertificateVersion, serializedCert []byte) (payload []byte, err error)
 	// Verify verifies the given key-value pair.
-	Verify(context.Context, coretypes.CertificateVersion, []byte) error
+	Verify(ctx context.Context, version coretypes.CertificateVersion, serializedCert []byte) error
 }
 
 // PrecomputedKeyStore is the interface for a key-value data store that uses keccak(value) as the key.

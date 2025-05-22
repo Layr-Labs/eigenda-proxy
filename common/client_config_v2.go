@@ -31,8 +31,9 @@ type ClientConfigV2 struct {
 	EigenDACertVerifierRouterAddress string // >= V3 cert
 
 	// Fields required for validator payload retrieval
-	BLSOperatorStateRetrieverAddr string
-	EigenDAServiceManagerAddr     string
+	BLSOperatorStateRetrieverAddr  string
+	EigenDARegistryCoordinatorAddr string
+	EigenDAServiceManagerAddr      string
 
 	// RetrieversToEnable specifies which retrievers should be enabled
 	RetrieversToEnable []RetrieverType

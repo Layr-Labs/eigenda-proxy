@@ -194,7 +194,7 @@ func (m *Manager) getVerifyMethod(commitmentType certs.VersionByte) (
 	error,
 ) {
 	v2VerifyWrapper := func(ctx context.Context, cert []byte, payload []byte) error {
-		coreCertVersion, err := certs.NewVersionedCert(cert, certs.V1VersionByte).ToCoreCertType()
+		coreCertVersion, err := certs.NewVersionedCert(cert, commitmentType).ToCoreCertType()
 		if err != nil {
 			return fmt.Errorf("get core cert version: %w", err)
 		}
@@ -204,7 +204,7 @@ func (m *Manager) getVerifyMethod(commitmentType certs.VersionByte) (
 	switch commitmentType {
 	case certs.V0VersionByte:
 		return m.eigenda.Verify, nil
-	case certs.V1VersionByte:
+	case certs.V1VersionByte, certs.V2VersionByte:
 		return v2VerifyWrapper, nil
 	default:
 		return nil, fmt.Errorf("commitment version unknown: %b", commitmentType)
@@ -269,7 +269,7 @@ func (m *Manager) getFromCorrectEigenDABackend(
 		}
 
 		m.log.Debug("Reading blob from EigenDAV2 backend")
-		data, err := m.eigendaV2.Get(ctx, versionedCert.SerializedCert)
+		data, err := m.eigendaV2.Get(ctx, coreCertVersion, versionedCert.SerializedCert)
 		if err != nil {
 			return nil, fmt.Errorf("get data from V2 backend: %w", err)
 		}

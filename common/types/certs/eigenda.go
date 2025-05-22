@@ -23,6 +23,8 @@ func ByteToVersion(b byte) (VersionByte, error) {
 		return V0VersionByte, nil
 	case byte(V1VersionByte):
 		return V1VersionByte, nil
+	case byte(V2VersionByte):
+		return V2VersionByte, nil
 	default:
 		return 0, fmt.Errorf("unknown EigenDA cert version: %d", b)
 	}

@@ -62,11 +62,30 @@ func NewStore(
 
 // Get fetches a blob from DA using certificate fields and verifies blob
 // against commitment to ensure data is valid and non-tampered.
-func (e Store) Get(ctx context.Context, key []byte) ([]byte, error) {
+func (e Store) Get(ctx context.Context, version coretypes.CertificateVersion, key []byte) ([]byte, error) {
 	var cert coretypes.EigenDACert
-	err := rlp.DecodeBytes(key, &cert)
-	if err != nil {
-		return nil, fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
+
+	switch version {
+	case coretypes.VersionTwoCert:
+		var v2Cert coretypes.EigenDACertV2
+		err := rlp.DecodeBytes(key, &v2Cert)
+		if err != nil {
+			return nil, fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
+		}
+
+		cert = &v2Cert
+	case coretypes.VersionThreeCert:
+		var v3Cert coretypes.EigenDACertV3
+		err := rlp.DecodeBytes(key, &v3Cert)
+		if err != nil {
+			return nil, fmt.Errorf("RLP decoding EigenDA v3 cert: %w", err)
+		}
+
+		cert = &v3Cert
+
+	default:
+		return nil, fmt.Errorf("unknown certificate version: %d", version)
+
 	}
 
 	// Try each retriever in sequence until one succeeds
@@ -134,7 +153,8 @@ func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	return rlp.EncodeToBytes(cert)
+	// TODO: type filter on the cert version and prefix encoding byte
+	return cert.Serialize(coretypes.CertSerializationRLP)
 }
 
 // BackendType returns the backend type for EigenDA Store
@@ -162,11 +182,10 @@ func (e Store) Verify(ctx context.Context, certVersion coretypes.CertificateVers
 		var eigenDACert coretypes.EigenDACertV3
 		err := rlp.DecodeBytes(certBytes, &eigenDACert)
 		if err != nil {
-			return fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
+			return fmt.Errorf("RLP decoding EigenDA v3 cert: %w", err)
 		}
 
-		// NOTE: Doing RRN extraction here feels incorrect
-		return e.certVerifier.CheckDACert(ctx, eigenDACert.ReferenceBlockNumber(), certBytes)
+		return e.certVerifier.CheckDACert(ctx, &eigenDACert)
 
 	default:
 		return fmt.Errorf("unsupported EigenDA cert version: %d", certVersion)
