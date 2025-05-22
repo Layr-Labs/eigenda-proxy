@@ -226,6 +226,7 @@ func createS3Config(storeConfig store.Config) store.Config {
 	return storeConfig
 }
 
+// nolint: funlen
 func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 	useMemory := testCfg.Backend == MemstoreBackend
 	pk := os.Getenv(privateKeyEnvVar)
@@ -345,7 +346,7 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 			PutTries:                         3,
 			MaxBlobSizeBytes:                 maxBlobLengthBytes,
 			EigenDALegacyCertVerifierAddress: legacyCertVerifierAddress,
-			EigenDACertVerifierAddress:       certVerifierAddress,
+			EigenDACertVerifierRouterAddress: certVerifierAddress,
 			BLSOperatorStateRetrieverAddr:    blsOperatorStateRetrieverAddress,
 			EigenDARegistryCoordinatorAddr:   registryCoordinatorAddress,
 			EigenDAServiceManagerAddr:        svcManagerAddress,

@@ -23,7 +23,7 @@ import (
 // to indicate that the cert should be discarded from rollups' derivation pipeline.
 // This should get converted by the proxy to an HTTP 418 TEAPOT error code.
 type RBNRecencyCheckFailedError struct {
-	certRBN              uint32
+	certRBN              uint64
 	certL1IBN            uint64
 	rbnRecencyWindowSize uint64
 }
@@ -111,7 +111,6 @@ func (e Store) Get(ctx context.Context, version coretypes.CertificateVersion, ke
 
 	default:
 		return nil, fmt.Errorf("unknown certificate version: %d", version)
-
 	}
 
 	// Try each retriever in sequence until one succeeds
@@ -195,7 +194,8 @@ func (e Store) BackendType() common.BackendType {
 //
 // Since v2 methods for fetching a payload are responsible for verifying the received bytes against the certificate,
 // this Verify method only needs to check the cert on chain. That is why the third parameter is ignored.
-func (e Store) Verify(ctx context.Context, certVersion coretypes.CertificateVersion, certBytes []byte, opts common.CertVerificationOpts) error {
+func (e Store) Verify(ctx context.Context, certVersion coretypes.CertificateVersion,
+	certBytes []byte, opts common.CertVerificationOpts) error {
 	var cert coretypes.EigenDACert
 	switch certVersion {
 	case coretypes.VersionTwoCert:
@@ -230,7 +230,7 @@ func (e Store) Verify(ctx context.Context, certVersion coretypes.CertificateVers
 		return fmt.Errorf("unsupported EigenDA cert version: %d", certVersion)
 	}
 
-	err := verifyCertRBNRecencyCheck(uint32(cert.ReferenceBlockNumber()), opts.L1InclusionBlockNum, e.rbnRecencyWindowSize)
+	err := verifyCertRBNRecencyCheck(cert.ReferenceBlockNumber(), opts.L1InclusionBlockNum, e.rbnRecencyWindowSize)
 	if err != nil {
 		return fmt.Errorf("rbn recency check failed: %w", err)
 	}
@@ -263,7 +263,7 @@ func (e Store) Verify(ctx context.Context, certVersion coretypes.CertificateVers
 //     in the batcher inbox (see https://github.com/ethereum-optimism/design-docs/pull/229)
 //  2. Optimistic approach: verify the check in op-program or hokulea (kona)'s derivation pipeline. See
 //     https://github.com/Layr-Labs/hokulea/blob/8c4c89bc4f/crates/eigenda/src/eigenda.rs#L90
-func verifyCertRBNRecencyCheck(certRBN uint32, certL1IBN uint64, rbnRecencyWindowSize uint64) error {
+func verifyCertRBNRecencyCheck(certRBN uint64, certL1IBN uint64, rbnRecencyWindowSize uint64) error {
 	// Input Validation
 	if certL1IBN == 0 || rbnRecencyWindowSize == 0 {
 		return nil
@@ -271,7 +271,7 @@ func verifyCertRBNRecencyCheck(certRBN uint32, certL1IBN uint64, rbnRecencyWindo
 	if certRBN == 0 {
 		return fmt.Errorf("certRBN should never be 0, this is likely a bug")
 	}
-	if certL1IBN <= uint64(certRBN) {
+	if certL1IBN <= certRBN {
 		return fmt.Errorf(
 			"cert's l1 inclusion block number (%d) <= cert reference block number (%d), but this is physically impossible "+
 				"since the cert has to be signed by all eigenda validators before being submitted to the batcher inbox, "+
@@ -283,7 +283,7 @@ func verifyCertRBNRecencyCheck(certRBN uint32, certL1IBN uint64, rbnRecencyWindo
 	}
 
 	// Actual Recency Check
-	if !(certL1IBN <= uint64(certRBN)+rbnRecencyWindowSize) {
+	if !(certL1IBN <= certRBN+rbnRecencyWindowSize) {
 		return RBNRecencyCheckFailedError{
 			certRBN:              certRBN,
 			certL1IBN:            certL1IBN,

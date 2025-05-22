@@ -9,7 +9,8 @@ const (
 	HoleskyPreprodEigenDANetwork EigenDANetwork = "holesky_preprod"
 )
 
-// GetLegacyCertVerifierAddress returns, as a string, the address of the LegacyEigenDACertVerifier contract for the network.
+// GetLegacyCertVerifierAddress returns, as a string, the address of the LegacyEigenDACertVerifier
+// contract for the network.
 func (n EigenDANetwork) GetLegacyCertVerifierAddress() (string, error) {
 	switch n {
 	case HoleskyTestnetEigenDANetwork:

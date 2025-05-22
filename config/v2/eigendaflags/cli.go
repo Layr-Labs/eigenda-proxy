@@ -25,7 +25,6 @@ var (
 	DisperseBlobTimeoutFlagName       = withFlagPrefix("disperse-blob-timeout")
 	BlobCertifiedTimeoutFlagName      = withFlagPrefix("blob-certified-timeout")
 	CertVerifierLegacyAddrFlagName    = withFlagPrefix("cert-verifier-addr")
-	CertVerifierAddrFlagName          = withFlagPrefix("cert-verifier-generic-addr")
 	CertVerifierRouterAddrFlagName    = withFlagPrefix("cert-verifier-router-addr")
 	ServiceManagerAddrFlagName        = withFlagPrefix("service-manager-addr")
 	BLSOperatorStateRetrieverFlagName = withFlagPrefix("bls-operator-state-retriever-addr")
@@ -118,14 +117,6 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Required: false,
 		},
 		&cli.StringFlag{
-			Name: CertVerifierAddrFlagName,
-			Usage: "Address of the generic EigenDACertVerifier contract. " +
-				"Required for performing eth_calls to verify EigenDA certificates.",
-			EnvVars:  []string{withEnvPrefix(envPrefix, "CERT_VERIFIER_ADDR")},
-			Category: category,
-			Required: false,
-		},
-		&cli.StringFlag{
 			Name: CertVerifierRouterAddrFlagName,
 			Usage: "Address of either the EigenDACertVerifierRouter or immutable EigenDACertVerifier contract. " +
 				"Required for performing eth_calls to verify EigenDA certificates.",
@@ -213,7 +204,7 @@ network flag may be omitted. If some or all of these fields are configured, and 
 is also configured, then the explicitly defined field values will take precedence. Permitted
 EigenDANetwork values include %s, and %s.`,
 				DisperserFlagName,
-				CertVerifierAddrFlagName,
+				CertVerifierLegacyAddrFlagName,
 				ServiceManagerAddrFlagName,
 				BLSOperatorStateRetrieverFlagName,
 				common.HoleskyTestnetEigenDANetwork,
@@ -303,7 +294,6 @@ func ReadClientConfigV2(ctx *cli.Context) (common.ClientConfigV2, error) {
 		PutTries:                         ctx.Int(PutRetriesFlagName),
 		MaxBlobSizeBytes:                 maxBlobLengthBytes,
 		EigenDALegacyCertVerifierAddress: legacyCertVerifierAddress,
-		EigenDACertVerifierAddress:       ctx.String(CertVerifierAddrFlagName),
 		// we don't expose this configuration to users, as all production use cases should have
 		// both retrieval methods enabled. This could be exposed in the future, if necessary.
 		// Note the order of these retrievers, which is significant: the relay retriever will be

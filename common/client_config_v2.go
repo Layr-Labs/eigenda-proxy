@@ -27,7 +27,6 @@ type ClientConfigV2 struct {
 	PutTries                         int
 	MaxBlobSizeBytes                 uint64
 	EigenDALegacyCertVerifierAddress string
-	EigenDACertVerifierAddress       string // V2 cert
 	EigenDACertVerifierRouterAddress string // >= V3 cert
 
 	// TODO: we should create an upstream VerifyingPayloadRetrievalClient upstream
@@ -66,12 +65,9 @@ func (cfg *ClientConfigV2) Check() error {
 		return fmt.Errorf("EigenDA disperser port is required for using EigenDA V2 backend")
 	}
 
-	if cfg.EigenDACertVerifierAddress == "" && cfg.EigenDACertVerifierRouterAddress == "" {
-		return fmt.Errorf("immutable cert verifier address or dynamic router address is required for using EigenDA V2 backend")
-	}
-
-	if cfg.EigenDACertVerifierAddress != "" && cfg.EigenDACertVerifierRouterAddress != "" {
-		return fmt.Errorf("both immutable cert verifier address and dynamic router address cannot be set at once when using EigenDA V2 backend")
+	if cfg.EigenDACertVerifierRouterAddress == "" {
+		return fmt.Errorf(`immutable v3 cert verifier address or dynamic router 
+		address is required for using EigenDA V2 backend`)
 	}
 
 	if cfg.MaxBlobSizeBytes == 0 {

@@ -51,15 +51,11 @@ func (c VersionedCert) Encode() []byte {
 
 func (c VersionedCert) ToCoreCertType() (coretypes.CertificateVersion, error) {
 	switch c.Version {
-	case V0VersionByte:
-		// TODO: Fix
-		return coretypes.VersionTwoCert, nil
-	case V1VersionByte:
+	case V0VersionByte, V1VersionByte:
 		return coretypes.VersionTwoCert, nil
 	case V2VersionByte:
 		return coretypes.VersionThreeCert, nil
-
 	default:
-		return coretypes.VersionTwoCert, fmt.Errorf("unknown EigenDA cert version: %d", c.Version)
+		return 0, fmt.Errorf("unsupported version byte %d", c.Version)
 	}
 }

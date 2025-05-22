@@ -26,6 +26,7 @@ import (
 	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
 	common_eigenda "github.com/Layr-Labs/eigenda/common"
 	"github.com/Layr-Labs/eigenda/common/geth"
+	binding "github.com/Layr-Labs/eigenda/contracts/bindings/EigenDACertVerifierRouter"
 
 	auth "github.com/Layr-Labs/eigenda/core/auth/v2"
 	"github.com/Layr-Labs/eigenda/core/eth"
@@ -35,6 +36,7 @@ import (
 	kzgverifier "github.com/Layr-Labs/eigenda/encoding/kzg/verifier"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/consensys/gnark-crypto/ecc/bn254"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	geth_common "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 )
@@ -240,10 +242,27 @@ func (smb *StorageManagerBuilder) buildEigenDAV2Backend(
 		return nil, fmt.Errorf("build eth client: %w", err)
 	}
 
+	routerOrImmutableVerifierAddr := geth_common.HexToAddress(smb.v2ClientCfg.EigenDACertVerifierRouterAddress)
+	caller, err := binding.NewContractEigenDACertVerifierRouterCaller(routerOrImmutableVerifierAddr, ethClient)
+	if err != nil {
+		return nil, fmt.Errorf("new cert verifier router caller: %w", err)
+	}
+
+	isRouter := true
+	// Check if the router address is actually a router. if method `getRouterAddress` fails, it means that the
+	// address is not a router, and we should treat it as an immutable cert verifier instead
+	_, err = caller.GetCertVerifierAt(&bind.CallOpts{Context: ctx}, 0)
+	if err != nil {
+		smb.log.Warn("EigenDA cert verifier router address was detected to not be a router, using it as an immutable cert verifier instead")
+		// if the address is not a router, we should use it as an immutable cert verifier
+		// and set the router address to the same address
+		isRouter = false
+	}
+
 	var provider clients_v2.CertVerifierAddressProvider
-	if smb.v2ClientCfg.EigenDACertVerifierAddress != "" {
+	if !isRouter {
 		provider = verification.NewStaticCertVerifierAddressProvider(
-			geth_common.HexToAddress(smb.v2ClientCfg.EigenDACertVerifierAddress))
+			geth_common.HexToAddress(smb.v2ClientCfg.EigenDACertVerifierRouterAddress))
 	} else {
 		provider, err = verification.BuildRouterAddressProvider(
 			geth_common.HexToAddress(smb.v2ClientCfg.EigenDACertVerifierRouterAddress),
@@ -306,7 +325,6 @@ func (smb *StorageManagerBuilder) buildEigenDAV2Backend(
 	var legacyCertVerifier *verification.LegacyCertVerifier
 
 	if smb.v2ClientCfg.EigenDALegacyCertVerifierAddress != "" {
-
 		provider := verification.NewStaticCertVerifierAddressProvider(
 			geth_common.HexToAddress(smb.v2ClientCfg.EigenDALegacyCertVerifierAddress))
 
