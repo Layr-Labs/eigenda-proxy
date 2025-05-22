@@ -253,7 +253,8 @@ func (smb *StorageManagerBuilder) buildEigenDAV2Backend(
 	// address is not a router, and we should treat it as an immutable cert verifier instead
 	_, err = caller.GetCertVerifierAt(&bind.CallOpts{Context: ctx}, 0)
 	if err != nil {
-		smb.log.Warn("EigenDA cert verifier router address was detected to not be a router, using it as an immutable cert verifier instead")
+		smb.log.Warn(`EigenDA cert verifier router address was detected to not be a router, using it as an
+			immutable cert verifier instead`)
 		// if the address is not a router, we should use it as an immutable cert verifier
 		// and set the router address to the same address
 		isRouter = false

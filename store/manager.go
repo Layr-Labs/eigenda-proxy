@@ -201,7 +201,7 @@ func (m *Manager) getVerifyMethod(commitmentType certs.VersionByte) (
 		if err != nil {
 			return fmt.Errorf("get core cert version: %w", err)
 		}
-		return m.eigendaV2.Verify(ctx, coreCertVersion, payload, opts)
+		return m.eigendaV2.Verify(ctx, coreCertVersion, cert, opts)
 	}
 
 	switch commitmentType {
