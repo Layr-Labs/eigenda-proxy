@@ -9,6 +9,18 @@ const (
 	HoleskyPreprodEigenDANetwork EigenDANetwork = "holesky_preprod"
 )
 
+// GetLegacyCertVerifierAddress returns, as a string, the address of the LegacyEigenDACertVerifier contract for the network.
+func (n EigenDANetwork) GetLegacyCertVerifierAddress() (string, error) {
+	switch n {
+	case HoleskyTestnetEigenDANetwork:
+		return "0xFe52fE1940858DCb6e12153E2104aD0fDFbE1162", nil
+	case HoleskyPreprodEigenDANetwork:
+		return "0xd973fA62E22BC2779F8489258F040C0344B03C21", nil
+	default:
+		return "", fmt.Errorf("unknown network type: %s", n)
+	}
+}
+
 // GetServiceManagerAddress returns, as a string, the address of the EigenDAServiceManager contract for the network.
 func (n EigenDANetwork) GetServiceManagerAddress() (string, error) {
 	switch n {

@@ -70,6 +70,21 @@ func StringToBackendType(s string) BackendType {
 	}
 }
 
+type CertVerificationOpts struct {
+	// L1 block number at which the cert was included in the rollup batcher inbox.
+	// This is optional, and should be set to 0 to mean to skip the RBN recency check.
+	// It is impossible for a batch inbox tx to have been included in the genesis block,
+	// so we are free to give this special meaning to the zero value.
+	//
+	// Used to determine the validity of the eigenDA batch.
+	// The eigenDA cert contains a reference block number (RBN) which is used
+	// to lookup the stake of the eigenda operators before verifying signature thresholds.
+	// The rollup commitment containing the eigenDA cert is only valid if it was included
+	// within a certain number of blocks after the RBN.
+	// validity condition is: certRBN < L1InclusionBlockNum < RBN + RBNRecencyWindowSize
+	L1InclusionBlockNum uint64
+}
+
 type Store interface {
 	// BackendType returns the backend type provider of the store.
 	BackendType() BackendType
@@ -84,7 +99,7 @@ type EigenDAStore interface {
 	// Get retrieves the given key if it's present in the key-value (serializedCert-payload) data store.
 	Get(ctx context.Context, serializedCert []byte) (payload []byte, err error)
 	// Verify verifies the given key-value pair.
-	Verify(ctx context.Context, serializedCert []byte, payload []byte) error
+	Verify(ctx context.Context, serializedCert []byte, payload []byte, opts CertVerificationOpts) error
 }
 
 type EigenDAV2Store interface {
@@ -94,7 +109,7 @@ type EigenDAV2Store interface {
 	// Get retrieves the given key if it's present in the key-value (serializedCert-payload) data store.
 	Get(ctx context.Context, version coretypes.CertificateVersion, serializedCert []byte) (payload []byte, err error)
 	// Verify verifies the given key-value pair.
-	Verify(ctx context.Context, version coretypes.CertificateVersion, serializedCert []byte) error
+	Verify(ctx context.Context, version coretypes.CertificateVersion, serializedCert []byte, opts CertVerificationOpts) error
 }
 
 // PrecomputedKeyStore is the interface for a key-value data store that uses keccak(value) as the key.
@@ -106,5 +121,5 @@ type PrecomputedKeyStore interface {
 	// Get retrieves the given key if it's present in the key-value data store.
 	Get(ctx context.Context, key []byte) ([]byte, error)
 	// Verify verifies the given key-value pair.
-	Verify(ctx context.Context, serializedCert []byte, payload []byte) error
+	Verify(ctx context.Context, key []byte, value []byte) error
 }
