@@ -10,8 +10,8 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/logging"
 	"github.com/Layr-Labs/eigenda-proxy/metrics"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore"
-	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/redis"
-	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
+	"github.com/Layr-Labs/eigenda-proxy/store/secondary/redis"
+	"github.com/Layr-Labs/eigenda-proxy/store/secondary/s3"
 	"github.com/urfave/cli/v2"
 )
 

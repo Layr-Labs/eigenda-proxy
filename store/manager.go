@@ -9,7 +9,8 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/common/types/certs"
 	"github.com/Layr-Labs/eigenda-proxy/common/types/commitments"
-	"github.com/Layr-Labs/eigenda-proxy/store/precomputed_key/s3"
+	"github.com/Layr-Labs/eigenda-proxy/store/secondary"
+	"github.com/Layr-Labs/eigenda-proxy/store/secondary/s3"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 )
 
@@ -43,7 +44,7 @@ type Manager struct {
 	dispersalBackend atomic.Value        // stores the EigenDABackend to write blobs to
 
 	// secondary storage backends (caching and fallbacks)
-	secondary ISecondary
+	secondary secondary.ISecondary
 }
 
 var _ IManager = &Manager{}
@@ -70,7 +71,7 @@ func NewManager(
 	eigenDAV2 common.EigenDAStore,
 	s3 *s3.Store,
 	l logging.Logger,
-	secondary ISecondary,
+	secondary secondary.ISecondary,
 	dispersalBackend common.EigenDABackend,
 ) (*Manager, error) {
 	// Enforce invariants
@@ -175,7 +176,7 @@ func (m *Manager) Put(ctx context.Context, cm commitments.CommitmentMode, key, v
 	if m.secondary.Enabled() &&
 		m.secondary.AsyncWriteEntry() { // publish put notification to secondary's subscription on PutNotify topic
 		m.log.Debug("Publishing data to async secondary stores")
-		m.secondary.Topic() <- PutNotify{
+		m.secondary.Topic() <- secondary.PutNotify{
 			Commitment: commit,
 			Value:      value,
 		}

@@ -208,7 +208,7 @@ func testKeccak256CommitmentRequestErrorsWhenS3NotSet(t *testing.T, dispersalBac
 	testCfg.UseKeccak256ModeS3 = true
 
 	tsConfig := testutils.BuildTestSuiteConfig(testCfg)
-	tsConfig.EigenDAConfig.StorageConfig.S3Config.Endpoint = "localhost:1234"
+	tsConfig.StoreBuilderConfig.S3Config.Endpoint = "localhost:1234"
 
 	ts, kill := testutils.CreateTestSuite(tsConfig)
 	defer kill()
