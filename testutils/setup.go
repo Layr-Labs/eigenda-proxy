@@ -47,7 +47,8 @@ const (
 	preprodBLSOperatorStateRetrieverAddress = "0x003497Dd77E5B73C40e8aCbB562C8bb0410320E7"
 	preprodRegistryCoordinatorAddress       = "0x2c61EA360D6500b58E7f481541A36B443Bc858c6"
 
-	disperserTestnetHostname                = "disperser-testnet-holesky.eigenda.xyz"
+	disperserTestnetHostname = "disperser-testnet-holesky.eigenda.xyz"
+	// TODO: update test to also use the cert verifier router contract
 	testnetCertVerifierAddress              = "0xd305aeBcdEc21D00fDF8796CE37d0e74836a6B6e"
 	testnetSvcManagerAddress                = "0xD4A7E1Bd8015057293f0D0A557088c286942e84b"
 	testnetBLSOperatorStateRetrieverAddress = "0x003497Dd77E5B73C40e8aCbB562C8bb0410320E7"
