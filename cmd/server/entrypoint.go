@@ -29,7 +29,7 @@ func StartProxySvr(cliCtx *cli.Context) error {
 
 	log.Info("Starting EigenDA Proxy Server", "version", Version, "date", Date, "commit", Commit)
 
-	cfg, err := config.ReadCLIConfig(cliCtx)
+	cfg, err := config.ReadAppConfig(cliCtx)
 	if err != nil {
 		return fmt.Errorf("read cli config: %w", err)
 	}
