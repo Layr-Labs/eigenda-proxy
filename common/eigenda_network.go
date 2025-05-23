@@ -70,6 +70,8 @@ func (n EigenDANetwork) String() string {
 	return string(n)
 }
 
+// TODO: Consider deriving network from chain ID via eth_getChainId or similar rpc call
+//       vs hardcoding the network names and forcing user specification
 func EigenDANetworkFromString(inputString string) (EigenDANetwork, error) {
 	network := EigenDANetwork(inputString)
 
