@@ -90,7 +90,13 @@ func (e Store) Get(ctx context.Context, version coretypes.CertificateVersion, ke
 
 	switch version {
 	case coretypes.VersionTwoCert:
-		return nil, fmt.Errorf("EigenDA V2 certs are not supported anymore")
+		var v2Cert coretypes.EigenDACertV2
+		err := rlp.DecodeBytes(key, &v2Cert)
+		if err != nil {
+			return nil, fmt.Errorf("RLP decoding EigenDA v3 cert: %w", err)
+		}
+
+		cert = &v2Cert
 
 	case coretypes.VersionThreeCert:
 		var v3Cert coretypes.EigenDACertV3
@@ -191,7 +197,8 @@ func (e Store) Verify(ctx context.Context, certVersion coretypes.CertificateVers
 	var cert coretypes.EigenDACert
 	switch certVersion {
 	case coretypes.VersionTwoCert:
-		return fmt.Errorf("EigenDA V2 certs are not supported anymore")
+		e.log.Warn("EigenDA V2 certs are not supported anymore more for verification. Defaulting to successful verification.")
+		return nil
 
 	case coretypes.VersionThreeCert:
 		var eigenDACert coretypes.EigenDACertV3
