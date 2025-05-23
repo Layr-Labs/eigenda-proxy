@@ -42,14 +42,17 @@ const (
 	disperserPort    = "443"
 
 	disperserPreprodHostname                = "disperser-preprod-holesky.eigenda.xyz"
-	preprodCertVerifierAddress              = "0xd973fA62E22BC2779F8489258F040C0344B03C21"
+	preprodCertVerifierAddress              = "0xCCFE3d87fB7D369f1eeE65221a29A83f1323043C"
 	preprodSvcManagerAddress                = "0x54A03db2784E3D0aCC08344D05385d0b62d4F432"
 	preprodBLSOperatorStateRetrieverAddress = "0x003497Dd77E5B73C40e8aCbB562C8bb0410320E7"
+	preprodRegistryCoordinatorAddress       = "0x2c61EA360D6500b58E7f481541A36B443Bc858c6"
 
-	disperserTestnetHostname                = "disperser-testnet-holesky.eigenda.xyz"
-	testnetCertVerifierAddress              = "0xFe52fE1940858DCb6e12153E2104aD0fDFbE1162"
+	disperserTestnetHostname = "disperser-testnet-holesky.eigenda.xyz"
+	// TODO: update test to also use the cert verifier router contract
+	testnetCertVerifierAddress              = "0xd305aeBcdEc21D00fDF8796CE37d0e74836a6B6e"
 	testnetSvcManagerAddress                = "0xD4A7E1Bd8015057293f0D0A557088c286942e84b"
 	testnetBLSOperatorStateRetrieverAddress = "0x003497Dd77E5B73C40e8aCbB562C8bb0410320E7"
+	testnetRegistryCoordinatorAddress       = "0x53012C69A189cfA2D9d29eb6F19B32e0A2EA3490"
 )
 
 var (
@@ -222,6 +225,7 @@ func createS3Config(storeConfig store.Config) store.Config {
 	return storeConfig
 }
 
+// nolint: funlen
 func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 	useMemory := testCfg.Backend == MemstoreBackend
 	pk := os.Getenv(privateKeyEnvVar)
@@ -254,6 +258,7 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 	var certVerifierAddress string
 	var svcManagerAddress string
 	var blsOperatorStateRetrieverAddress string
+	var registryCoordinatorAddress string
 	switch testCfg.Backend {
 	case MemstoreBackend:
 		break // no need to set these fields for local tests
@@ -262,11 +267,13 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 		certVerifierAddress = preprodCertVerifierAddress
 		svcManagerAddress = preprodSvcManagerAddress
 		blsOperatorStateRetrieverAddress = preprodBLSOperatorStateRetrieverAddress
+		registryCoordinatorAddress = preprodRegistryCoordinatorAddress
 	case TestnetBackend:
 		disperserHostname = disperserTestnetHostname
 		certVerifierAddress = testnetCertVerifierAddress
 		svcManagerAddress = testnetSvcManagerAddress
 		blsOperatorStateRetrieverAddress = testnetBLSOperatorStateRetrieverAddress
+		registryCoordinatorAddress = testnetRegistryCoordinatorAddress
 	default:
 		panic("Unsupported backend")
 	}
@@ -332,12 +339,13 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 				PayloadClientConfig: payloadClientConfig,
 				RelayTimeout:        5 * time.Second,
 			},
-			PutTries:                      3,
-			MaxBlobSizeBytes:              maxBlobLengthBytes,
-			EigenDACertVerifierAddress:    certVerifierAddress,
-			BLSOperatorStateRetrieverAddr: blsOperatorStateRetrieverAddress,
-			EigenDAServiceManagerAddr:     svcManagerAddress,
-			RetrieversToEnable:            testCfg.Retrievers,
+			PutTries:                         3,
+			MaxBlobSizeBytes:                 maxBlobLengthBytes,
+			EigenDACertVerifierRouterAddress: certVerifierAddress,
+			BLSOperatorStateRetrieverAddr:    blsOperatorStateRetrieverAddress,
+			EigenDARegistryCoordinatorAddr:   registryCoordinatorAddress,
+			EigenDAServiceManagerAddr:        svcManagerAddress,
+			RetrieversToEnable:               testCfg.Retrievers,
 		},
 		StorageConfig: store.Config{
 			AsyncPutWorkers:  testCfg.WriteThreadCount,

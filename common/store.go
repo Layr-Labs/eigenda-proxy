@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"strings"
+
+	"github.com/Layr-Labs/eigenda/api/clients/v2/coretypes"
 )
 
 // BackendType ... Storage backend type
@@ -98,6 +100,17 @@ type EigenDAStore interface {
 	Get(ctx context.Context, serializedCert []byte) (payload []byte, err error)
 	// Verify verifies the given key-value pair. opts is only used for EigenDA V2.
 	Verify(ctx context.Context, serializedCert []byte, payload []byte, opts CertVerificationOpts) error
+}
+
+type EigenDAV2Store interface {
+	Store
+	// Put inserts the given value into the key-value (serializedCert-payload) data store.
+	Put(ctx context.Context, payload []byte) (serializedCert []byte, err error)
+	// Get retrieves the given key if it's present in the key-value (serializedCert-payload) data store.
+	Get(ctx context.Context, version coretypes.CertificateVersion, serializedCert []byte) (payload []byte, err error)
+	// Verify verifies the given key-value pair.
+	Verify(ctx context.Context, version coretypes.CertificateVersion,
+		serializedCert []byte, opts CertVerificationOpts) error
 }
 
 // PrecomputedKeyStore is the interface for a key-value data store that uses keccak(value) as the key.

@@ -26,6 +26,8 @@ import (
 	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
 	common_eigenda "github.com/Layr-Labs/eigenda/common"
 	"github.com/Layr-Labs/eigenda/common/geth"
+	binding "github.com/Layr-Labs/eigenda/contracts/bindings/EigenDACertVerifierRouter"
+
 	auth "github.com/Layr-Labs/eigenda/core/auth/v2"
 	"github.com/Layr-Labs/eigenda/core/eth"
 	core_v2 "github.com/Layr-Labs/eigenda/core/v2"
@@ -34,6 +36,7 @@ import (
 	kzgverifier "github.com/Layr-Labs/eigenda/encoding/kzg/verifier"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/consensys/gnark-crypto/ecc/bn254"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	geth_common "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 )
@@ -94,7 +97,8 @@ func (smb *StorageManagerBuilder) Build(ctx context.Context) (*Manager, error) {
 	var err error
 	var s3Store *s3.Store
 	var redisStore *redis.Store
-	var eigenDAV1Store, eigenDAV2Store common.EigenDAStore
+	var eigenDAV1Store common.EigenDAStore
+	var eigenDAV2Store common.EigenDAV2Store
 
 	if smb.managerCfg.S3Config.Bucket != "" {
 		smb.log.Info("Using S3 storage backend")
@@ -216,7 +220,7 @@ func (smb *StorageManagerBuilder) buildSecondaries(
 func (smb *StorageManagerBuilder) buildEigenDAV2Backend(
 	ctx context.Context,
 	kzgVerifier *kzgverifier.Verifier,
-) (common.EigenDAStore, error) {
+) (common.EigenDAV2Store, error) {
 	// This is a bit of a hack. The kzg config is used by both v1 AND v2, but the `LoadG2Points` field has special
 	// requirements. For v1, it must always be false. For v2, it must always be true. Ideally, we would modify
 	// the underlying core library to be more flexible, but that is a larger change for another time. As a stopgap, we
@@ -238,18 +242,51 @@ func (smb *StorageManagerBuilder) buildEigenDAV2Backend(
 		return nil, fmt.Errorf("build eth client: %w", err)
 	}
 
-	certVerifierAddressProvider := verification.NewStaticCertVerifierAddressProvider(
-		geth_common.HexToAddress(smb.v2ClientCfg.EigenDACertVerifierAddress))
-
-	certVerifier, err := verification.NewCertVerifier(
-		smb.log, ethClient, certVerifierAddressProvider)
+	routerOrImmutableVerifierAddr := geth_common.HexToAddress(smb.v2ClientCfg.EigenDACertVerifierRouterAddress)
+	caller, err := binding.NewContractEigenDACertVerifierRouterCaller(routerOrImmutableVerifierAddr, ethClient)
 	if err != nil {
-		return nil, fmt.Errorf("new cert verifier: %w", err)
+		return nil, fmt.Errorf("new cert verifier router caller: %w", err)
+	}
+
+	isRouter := true
+	// Check if the router address is actually a router. if method `getRouterAddress` fails, it means that the
+	// address is not a router, and we should treat it as an immutable cert verifier instead
+	_, err = caller.GetCertVerifierAt(&bind.CallOpts{Context: ctx}, 0)
+	if err != nil {
+		smb.log.Warn(`EigenDA cert verifier router address was detected to not be a router, using it as an
+			immutable cert verifier instead`)
+		// if the address is not a router, we should use it as an immutable cert verifier
+		// and set the router address to the same address
+		isRouter = false
+	}
+
+	var provider clients_v2.CertVerifierAddressProvider
+	if !isRouter {
+		provider = verification.NewStaticCertVerifierAddressProvider(
+			geth_common.HexToAddress(smb.v2ClientCfg.EigenDACertVerifierRouterAddress))
+	} else {
+		provider, err = verification.BuildRouterAddressProvider(
+			geth_common.HexToAddress(smb.v2ClientCfg.EigenDACertVerifierRouterAddress),
+			ethClient,
+			smb.log,
+		)
+
+		if err != nil {
+			return nil, fmt.Errorf("build router address provider: %w", err)
+		}
 	}
 
 	ethReader, err := smb.buildEthReader(ethClient)
 	if err != nil {
 		return nil, fmt.Errorf("build eth reader: %w", err)
+	}
+	certVerifier, err := verification.NewCertVerifier(
+		smb.log,
+		ethClient,
+		provider,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("new generic cert verifier: %w", err)
 	}
 
 	var retrievers []clients_v2.PayloadRetriever
@@ -281,7 +318,7 @@ func (smb *StorageManagerBuilder) buildEigenDAV2Backend(
 		return nil, fmt.Errorf("no payload retrievers enabled, please enable at least one retriever type")
 	}
 
-	payloadDisperser, err := smb.buildPayloadDisperser(ctx, ethClient, kzgProver, certVerifier)
+	payloadDisperser, err := smb.buildPayloadDisperser(ctx, certVerifier, ethClient, kzgProver)
 	if err != nil {
 		return nil, fmt.Errorf("build payload disperser: %w", err)
 	}
@@ -292,7 +329,8 @@ func (smb *StorageManagerBuilder) buildEigenDAV2Backend(
 		smb.v2ClientCfg.RBNRecencyWindowSize,
 		payloadDisperser,
 		retrievers,
-		certVerifier)
+		certVerifier,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("create v2 store: %w", err)
 	}
@@ -456,9 +494,9 @@ func (smb *StorageManagerBuilder) buildEthReader(ethClient common_eigenda.EthCli
 
 func (smb *StorageManagerBuilder) buildPayloadDisperser(
 	ctx context.Context,
+	certVerifier *verification.CertVerifier,
 	ethClient common_eigenda.EthClient,
 	kzgProver *prover.Prover,
-	certVerifier *verification.CertVerifier,
 ) (*payloaddispersal.PayloadDisperser, error) {
 	signer, err := smb.buildLocalSigner(ctx, ethClient)
 	if err != nil {
@@ -470,10 +508,32 @@ func (smb *StorageManagerBuilder) buildPayloadDisperser(
 		return nil, fmt.Errorf("new disperser client: %w", err)
 	}
 
+	blockNumMonitor, err := verification.NewBlockNumberMonitor(
+		smb.log,
+		ethClient,
+		time.Second*3,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("new block number monitor: %w", err)
+	}
+
+	certBuilder, err := clients_v2.NewCertBuilder(
+		smb.log,
+		geth_common.HexToAddress(smb.v2ClientCfg.BLSOperatorStateRetrieverAddr),
+		geth_common.HexToAddress(smb.v2ClientCfg.EigenDARegistryCoordinatorAddr),
+		ethClient,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("new cert builder: %w", err)
+	}
+
 	payloadDisperser, err := payloaddispersal.NewPayloadDisperser(
 		smb.log,
 		smb.v2ClientCfg.PayloadDisperserCfg,
 		disperserClient,
+		blockNumMonitor,
+		certBuilder,
 		certVerifier,
 		nil)
 	if err != nil {

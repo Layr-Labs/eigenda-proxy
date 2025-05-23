@@ -24,9 +24,10 @@ var (
 	SignerPaymentKeyHexFlagName       = withFlagPrefix("signer-payment-key-hex")
 	DisperseBlobTimeoutFlagName       = withFlagPrefix("disperse-blob-timeout")
 	BlobCertifiedTimeoutFlagName      = withFlagPrefix("blob-certified-timeout")
-	CertVerifierAddrFlagName          = withFlagPrefix("cert-verifier-addr")
+	CertVerifierRouterAddrFlagName    = withFlagPrefix("cert-verifier-router-addr")
 	ServiceManagerAddrFlagName        = withFlagPrefix("service-manager-addr")
 	BLSOperatorStateRetrieverFlagName = withFlagPrefix("bls-operator-state-retriever-addr")
+	RegistryCoordinatorAddrFlagName   = withFlagPrefix("registry-coordinator-addr")
 	RelayTimeoutFlagName              = withFlagPrefix("relay-timeout")
 	ValidatorTimeoutFlagName          = withFlagPrefix("validator-timeout")
 	ContractCallTimeoutFlagName       = withFlagPrefix("contract-call-timeout")
@@ -107,10 +108,10 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Value:    time.Second * 30,
 		},
 		&cli.StringFlag{
-			Name: CertVerifierAddrFlagName,
-			Usage: "Address of the EigenDACertVerifier contract. " +
+			Name: CertVerifierRouterAddrFlagName,
+			Usage: "Address of either the EigenDACertVerifierRouter or immutable EigenDACertVerifier contract. " +
 				"Required for performing eth_calls to verify EigenDA certificates.",
-			EnvVars:  []string{withEnvPrefix(envPrefix, "CERT_VERIFIER_ADDR")},
+			EnvVars:  []string{withEnvPrefix(envPrefix, "CERT_VERIFIER_ROUTER_ADDR")},
 			Category: category,
 			Required: false,
 		},
@@ -125,6 +126,13 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Name:     BLSOperatorStateRetrieverFlagName,
 			Usage:    "Address of the BLS operator state retriever contract.",
 			EnvVars:  []string{withEnvPrefix(envPrefix, "BLS_OPERATOR_STATE_RETRIEVER_ADDR")},
+			Category: category,
+			Required: false,
+		},
+		&cli.StringFlag{
+			Name:     RegistryCoordinatorAddrFlagName,
+			Usage:    "Address of the registry coordinator contract.",
+			EnvVars:  []string{withEnvPrefix(envPrefix, "REGISTRY_COORDINATOR_ADDR")},
 			Category: category,
 			Required: false,
 		},
@@ -187,7 +195,7 @@ network flag may be omitted. If some or all of these fields are configured, and 
 is also configured, then the explicitly defined field values will take precedence. Permitted
 EigenDANetwork values include %s, and %s.`,
 				DisperserFlagName,
-				CertVerifierAddrFlagName,
+				CertVerifierRouterAddrFlagName,
 				ServiceManagerAddrFlagName,
 				BLSOperatorStateRetrieverFlagName,
 				common.HoleskyTestnetEigenDANetwork,
@@ -250,12 +258,13 @@ func ReadClientConfigV2(ctx *cli.Context) (common.ClientConfigV2, error) {
 		}
 	}
 
-	certVerifierAddress := ctx.String(CertVerifierAddrFlagName)
-	if certVerifierAddress == "" {
-		certVerifierAddress, err = eigenDANetwork.GetCertVerifierAddress()
+	registryCoordinatorAddress := ctx.String(RegistryCoordinatorAddrFlagName)
+	if registryCoordinatorAddress == "" {
+		registryCoordinatorAddress, err = eigenDANetwork.GetRegistryCoordinatorAddress()
 		if err != nil {
 			return common.ClientConfigV2{}, fmt.Errorf(
-				"cert verifier address wasn't specified, and failed to get it from the specified network: %w", err)
+				`registry coordinator address wasn't specified, and failed to get it from the
+							specified network : %w`, err)
 		}
 	}
 
@@ -266,15 +275,16 @@ func ReadClientConfigV2(ctx *cli.Context) (common.ClientConfigV2, error) {
 		ValidatorPayloadRetrieverCfg: readValidatorRetrievalConfig(ctx),
 		PutTries:                     ctx.Int(PutRetriesFlagName),
 		MaxBlobSizeBytes:             maxBlobLengthBytes,
-		EigenDACertVerifierAddress:   certVerifierAddress,
 		// we don't expose this configuration to users, as all production use cases should have
 		// both retrieval methods enabled. This could be exposed in the future, if necessary.
 		// Note the order of these retrievers, which is significant: the relay retriever will be
 		// tried first, and the validator retriever will only be tried if the relay retriever fails
-		RetrieversToEnable:            []common.RetrieverType{common.RelayRetrieverType, common.ValidatorRetrieverType},
-		BLSOperatorStateRetrieverAddr: blsOperatorStateRetrieverAddress,
-		EigenDAServiceManagerAddr:     serviceManagerAddress,
-		RBNRecencyWindowSize:          ctx.Uint64(RBNRecencyWindowSizeFlagName),
+		RetrieversToEnable:               []common.RetrieverType{common.RelayRetrieverType, common.ValidatorRetrieverType},
+		BLSOperatorStateRetrieverAddr:    blsOperatorStateRetrieverAddress,
+		EigenDARegistryCoordinatorAddr:   registryCoordinatorAddress,
+		EigenDACertVerifierRouterAddress: ctx.String(CertVerifierRouterAddrFlagName),
+		EigenDAServiceManagerAddr:        serviceManagerAddress,
+		RBNRecencyWindowSize:             ctx.Uint64(RBNRecencyWindowSizeFlagName),
 	}, nil
 }
 
