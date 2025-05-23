@@ -323,23 +323,6 @@ func (smb *StorageManagerBuilder) buildEigenDAV2Backend(
 		return nil, fmt.Errorf("build payload disperser: %w", err)
 	}
 
-	var legacyCertVerifier *verification.LegacyCertVerifier
-
-	if smb.v2ClientCfg.EigenDALegacyCertVerifierAddress != "" {
-		provider := verification.NewStaticCertVerifierAddressProvider(
-			geth_common.HexToAddress(smb.v2ClientCfg.EigenDALegacyCertVerifierAddress))
-
-		legacyCertVerifier, err = verification.NewLegacyCertVerifier(
-			smb.log,
-			ethClient,
-			provider,
-		)
-
-		if err != nil {
-			return nil, fmt.Errorf("new legacy cert verifier: %w", err)
-		}
-	}
-
 	eigenDAV2Store, err := eigenda_v2.NewStore(
 		smb.log,
 		smb.v2ClientCfg.PutTries,
@@ -347,7 +330,6 @@ func (smb *StorageManagerBuilder) buildEigenDAV2Backend(
 		payloadDisperser,
 		retrievers,
 		certVerifier,
-		legacyCertVerifier,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create v2 store: %w", err)
@@ -549,7 +531,6 @@ func (smb *StorageManagerBuilder) buildPayloadDisperser(
 	payloadDisperser, err := payloaddispersal.NewPayloadDisperser(
 		smb.log,
 		smb.v2ClientCfg.PayloadDisperserCfg,
-		ethClient,
 		disperserClient,
 		blockNumMonitor,
 		certBuilder,

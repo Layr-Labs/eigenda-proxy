@@ -52,10 +52,9 @@ type Store struct {
 	// This check is optional and will be skipped when rbnRecencyWindowSize is set to 0.
 	rbnRecencyWindowSize uint64
 
-	disperser          *payloaddispersal.PayloadDisperser
-	retrievers         []clients.PayloadRetriever
-	certVerifier       *verification.CertVerifier
-	legacyCertVerifier *verification.LegacyCertVerifier
+	disperser    *payloaddispersal.PayloadDisperser
+	retrievers   []clients.PayloadRetriever
+	certVerifier *verification.CertVerifier
 }
 
 var _ common.EigenDAV2Store = (*Store)(nil)
@@ -67,7 +66,6 @@ func NewStore(
 	disperser *payloaddispersal.PayloadDisperser,
 	retrievers []clients.PayloadRetriever,
 	certVerifier *verification.CertVerifier,
-	legacyCertVerifier *verification.LegacyCertVerifier,
 
 ) (*Store, error) {
 	if putTries == 0 {
@@ -82,7 +80,6 @@ func NewStore(
 		disperser:            disperser,
 		retrievers:           retrievers,
 		certVerifier:         certVerifier,
-		legacyCertVerifier:   legacyCertVerifier,
 	}, nil
 }
 
@@ -93,13 +90,8 @@ func (e Store) Get(ctx context.Context, version coretypes.CertificateVersion, ke
 
 	switch version {
 	case coretypes.VersionTwoCert:
-		var v2Cert coretypes.EigenDACertV2
-		err := rlp.DecodeBytes(key, &v2Cert)
-		if err != nil {
-			return nil, fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
-		}
+		return nil, fmt.Errorf("EigenDA V2 certs are not supported anymore")
 
-		cert = &v2Cert
 	case coretypes.VersionThreeCert:
 		var v3Cert coretypes.EigenDACertV3
 		err := rlp.DecodeBytes(key, &v3Cert)
@@ -199,18 +191,7 @@ func (e Store) Verify(ctx context.Context, certVersion coretypes.CertificateVers
 	var cert coretypes.EigenDACert
 	switch certVersion {
 	case coretypes.VersionTwoCert:
-		var eigenDACert coretypes.EigenDACertV2
-		err := rlp.DecodeBytes(certBytes, &eigenDACert)
-		if err != nil {
-			return fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
-		}
-
-		err = e.legacyCertVerifier.VerifyCertV2(ctx, &eigenDACert)
-		if err != nil {
-			return fmt.Errorf("verify v2 cert: %w", err)
-		}
-
-		cert = &eigenDACert
+		return fmt.Errorf("EigenDA V2 certs are not supported anymore")
 
 	case coretypes.VersionThreeCert:
 		var eigenDACert coretypes.EigenDACertV3
