@@ -19,7 +19,6 @@ func withEnvPrefix(prefix, s string) []string {
 }
 
 func CLIFlags(envPrefix string, category string) []cli.Flag {
-	// TODO: Decompose all flags into constituent parts based on their respective category / usage
 	flags := []cli.Flag{
 		&cli.StringFlag{
 			Name:     ListenAddrFlagName,
