@@ -39,13 +39,13 @@ func (c AppConfig) Check() error {
 }
 
 func ReadAppConfig(ctx *cli.Context) (AppConfig, error) {
-	proxyConfig, err := builder.ReadConfig(ctx)
+	storeBuilderConfig, err := builder.ReadConfig(ctx)
 	if err != nil {
 		return AppConfig{}, fmt.Errorf("read proxy config: %w", err)
 	}
 
 	return AppConfig{
-		StoreBuilderConfig:  proxyConfig,
+		StoreBuilderConfig:  storeBuilderConfig,
 		SecretConfig:        eigendaflags.ReadSecretConfigV2(ctx),
 		ServerConfig:        server.ReadConfig(ctx),
 		MetricsServerConfig: metrics.ReadConfig(ctx),
