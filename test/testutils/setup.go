@@ -273,7 +273,7 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 		BlobVersion:           0,
 	}
 	builderConfig := builder.Config{
-		ManagerConfig: store.Config{
+		StoreConfig: store.Config{
 			AsyncPutWorkers:  testCfg.WriteThreadCount,
 			BackendsToEnable: testCfg.BackendsToEnable,
 			DispersalBackend: testCfg.DispersalBackend,
@@ -348,13 +348,13 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 	case testCfg.UseKeccak256ModeS3:
 		builderConfig.S3Config = createS3Config()
 	case testCfg.UseS3Caching:
-		builderConfig.ManagerConfig.CacheTargets = []string{"S3"}
+		builderConfig.StoreConfig.CacheTargets = []string{"S3"}
 		builderConfig.S3Config = createS3Config()
 	case testCfg.UseS3Fallback:
-		builderConfig.ManagerConfig.FallbackTargets = []string{"S3"}
+		builderConfig.StoreConfig.FallbackTargets = []string{"S3"}
 		builderConfig.S3Config = createS3Config()
 	case testCfg.UseRedisCaching:
-		builderConfig.ManagerConfig.CacheTargets = []string{"redis"}
+		builderConfig.StoreConfig.CacheTargets = []string{"redis"}
 		builderConfig.RedisConfig = createRedisConfig()
 	}
 	secretConfig := common.SecretConfigV2{

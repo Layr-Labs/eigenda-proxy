@@ -49,7 +49,7 @@ func StartProxySvr(cliCtx *cli.Context) error {
 	ctx, ctxCancel := context.WithCancel(cliCtx.Context)
 	defer ctxCancel()
 
-	storageManager, err := builder.BuildStorageManager(
+	storeManager, err := builder.BuildStoreManager(
 		ctx,
 		log,
 		metrics,
@@ -60,7 +60,7 @@ func StartProxySvr(cliCtx *cli.Context) error {
 		return fmt.Errorf("build storage manager: %w", err)
 	}
 
-	proxyServer := server.NewServer(cfg.ServerConfig, storageManager, log, metrics)
+	proxyServer := server.NewServer(cfg.ServerConfig, storeManager, log, metrics)
 	router := mux.NewRouter()
 	proxyServer.RegisterRoutes(router)
 	if cfg.StoreBuilderConfig.MemstoreEnabled {

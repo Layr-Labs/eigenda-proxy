@@ -22,7 +22,7 @@ func validCfg() Config {
 		panic(err)
 	}
 	proxyCfg := Config{
-		ManagerConfig: store.Config{
+		StoreConfig: store.Config{
 			BackendsToEnable: []common.EigenDABackend{common.V1EigenDABackend, common.V2EigenDABackend},
 			DispersalBackend: common.V2EigenDABackend,
 		},

@@ -38,10 +38,10 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-// BuildStorageManager is the main builder for proxy's store.
+// BuildStoreManager is the main builder for proxy's store.
 // It builds all the different store clients, and injects them into
 // a new store manager, which it returns when successful.
-func BuildStorageManager(
+func BuildStoreManager(
 	ctx context.Context,
 	log logging.Logger,
 	metrics metrics.Metricer,
@@ -69,12 +69,12 @@ func BuildStorageManager(
 		}
 	}
 
-	v1Enabled := slices.Contains(config.ManagerConfig.BackendsToEnable, common.V1EigenDABackend)
-	v2Enabled := slices.Contains(config.ManagerConfig.BackendsToEnable, common.V2EigenDABackend)
+	v1Enabled := slices.Contains(config.StoreConfig.BackendsToEnable, common.V1EigenDABackend)
+	v2Enabled := slices.Contains(config.StoreConfig.BackendsToEnable, common.V2EigenDABackend)
 
-	if config.ManagerConfig.DispersalBackend == common.V2EigenDABackend && !v2Enabled {
+	if config.StoreConfig.DispersalBackend == common.V2EigenDABackend && !v2Enabled {
 		return nil, fmt.Errorf("dispersal backend is set to V2, but V2 backend is not enabled")
-	} else if config.ManagerConfig.DispersalBackend == common.V1EigenDABackend && !v1Enabled {
+	} else if config.StoreConfig.DispersalBackend == common.V1EigenDABackend && !v1Enabled {
 		return nil, fmt.Errorf("dispersal backend is set to V1, but V1 backend is not enabled")
 	}
 
@@ -113,14 +113,14 @@ func BuildStorageManager(
 		}
 	}
 
-	fallbacks := buildSecondaries(config.ManagerConfig.FallbackTargets, s3Store, redisStore)
-	caches := buildSecondaries(config.ManagerConfig.CacheTargets, s3Store, redisStore)
+	fallbacks := buildSecondaries(config.StoreConfig.FallbackTargets, s3Store, redisStore)
+	caches := buildSecondaries(config.StoreConfig.CacheTargets, s3Store, redisStore)
 	secondary := secondary.NewSecondaryManager(log, metrics, caches, fallbacks)
 
 	if secondary.Enabled() { // only spin-up go routines if secondary storage is enabled
-		log.Info("Starting secondary write loop(s)", "count", config.ManagerConfig.AsyncPutWorkers)
+		log.Info("Starting secondary write loop(s)", "count", config.StoreConfig.AsyncPutWorkers)
 
-		for i := 0; i < config.ManagerConfig.AsyncPutWorkers; i++ {
+		for i := 0; i < config.StoreConfig.AsyncPutWorkers; i++ {
 			go secondary.WriteSubscriptionLoop(ctx)
 		}
 	}
@@ -133,7 +133,7 @@ func BuildStorageManager(
 		"redis", redisStore != nil,
 		"read_fallback", len(fallbacks) > 0,
 		"caching", len(caches) > 0,
-		"async_secondary_writes", (secondary.Enabled() && config.ManagerConfig.AsyncPutWorkers > 0),
+		"async_secondary_writes", (secondary.Enabled() && config.StoreConfig.AsyncPutWorkers > 0),
 		"verify_v1_certs", config.VerifierConfigV1.VerifyCerts,
 	)
 
@@ -143,7 +143,7 @@ func BuildStorageManager(
 		s3Store,
 		log,
 		secondary,
-		config.ManagerConfig.DispersalBackend,
+		config.StoreConfig.DispersalBackend,
 	)
 }
 

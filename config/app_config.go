@@ -27,7 +27,7 @@ func (c AppConfig) Check() error {
 		return fmt.Errorf("check eigenDAConfig: %w", err)
 	}
 
-	v2Enabled := slices.Contains(c.StoreBuilderConfig.ManagerConfig.BackendsToEnable, common.V2EigenDABackend)
+	v2Enabled := slices.Contains(c.StoreBuilderConfig.StoreConfig.BackendsToEnable, common.V2EigenDABackend)
 	if v2Enabled && !c.StoreBuilderConfig.MemstoreEnabled {
 		err = c.SecretConfig.Check()
 		if err != nil {

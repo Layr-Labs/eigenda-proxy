@@ -21,7 +21,7 @@ import (
 // Config ... Higher order config which bundles all configs for building
 // the proxy store manager with necessary client context
 type Config struct {
-	ManagerConfig store.Config
+	StoreConfig store.Config
 
 	// main storage configs
 	ClientConfigV1   common.ClientConfigV1
@@ -39,14 +39,14 @@ type Config struct {
 
 // ReadConfig ... parses the Config from the provided flags or environment variables.
 func ReadConfig(ctx *cli.Context) (Config, error) {
-	storageConfig, err := store.ReadConfig(ctx)
+	storeConfig, err := store.ReadConfig(ctx)
 	if err != nil {
 		return Config{}, fmt.Errorf("read storage config: %w", err)
 	}
 
 	var clientConfigV1 common.ClientConfigV1
 	var verifierConfigV1 verify.Config
-	if slices.Contains(storageConfig.BackendsToEnable, common.V1EigenDABackend) {
+	if slices.Contains(storeConfig.BackendsToEnable, common.V1EigenDABackend) {
 		clientConfigV1, err = eigendaflags.ReadClientConfigV1(ctx)
 		if err != nil {
 			return Config{}, fmt.Errorf("read client config v1: %w", err)
@@ -56,7 +56,7 @@ func ReadConfig(ctx *cli.Context) (Config, error) {
 	}
 
 	var clientConfigV2 common.ClientConfigV2
-	if slices.Contains(storageConfig.BackendsToEnable, common.V2EigenDABackend) {
+	if slices.Contains(storeConfig.BackendsToEnable, common.V2EigenDABackend) {
 		clientConfigV2, err = eigendaflags_v2.ReadClientConfigV2(ctx)
 		if err != nil {
 			return Config{}, fmt.Errorf("read client config v2: %w", err)
@@ -64,14 +64,14 @@ func ReadConfig(ctx *cli.Context) (Config, error) {
 	}
 
 	var maxBlobSizeBytes uint64
-	switch storageConfig.DispersalBackend {
+	switch storeConfig.DispersalBackend {
 	case common.V1EigenDABackend:
 		maxBlobSizeBytes = clientConfigV1.MaxBlobSizeBytes
 	case common.V2EigenDABackend:
 		maxBlobSizeBytes = clientConfigV2.MaxBlobSizeBytes
 	default:
 		return Config{}, fmt.Errorf("unknown dispersal backend %s",
-			common.EigenDABackendToString(storageConfig.DispersalBackend))
+			common.EigenDABackendToString(storeConfig.DispersalBackend))
 	}
 
 	memstoreConfig, err := memstore.ReadConfig(ctx, maxBlobSizeBytes)
@@ -80,7 +80,7 @@ func ReadConfig(ctx *cli.Context) (Config, error) {
 	}
 
 	cfg := Config{
-		ManagerConfig:    storageConfig,
+		StoreConfig:      storeConfig,
 		ClientConfigV1:   clientConfigV1,
 		VerifierConfigV1: verifierConfigV1,
 		KzgConfig:        verify.ReadKzgConfig(ctx, maxBlobSizeBytes),
@@ -96,7 +96,7 @@ func ReadConfig(ctx *cli.Context) (Config, error) {
 
 // Check ... verifies that configuration values are adequately set
 func (cfg *Config) Check() error {
-	v1Enabled := slices.Contains(cfg.ManagerConfig.BackendsToEnable, common.V1EigenDABackend)
+	v1Enabled := slices.Contains(cfg.StoreConfig.BackendsToEnable, common.V1EigenDABackend)
 	if v1Enabled {
 		err := cfg.checkV1Config()
 		if err != nil {
@@ -104,7 +104,7 @@ func (cfg *Config) Check() error {
 		}
 	}
 
-	v2Enabled := slices.Contains(cfg.ManagerConfig.BackendsToEnable, common.V2EigenDABackend)
+	v2Enabled := slices.Contains(cfg.StoreConfig.BackendsToEnable, common.V2EigenDABackend)
 	if v2Enabled && !cfg.MemstoreEnabled {
 		err := cfg.ClientConfigV2.Check()
 		if err != nil {
@@ -125,7 +125,7 @@ func (cfg *Config) Check() error {
 		return fmt.Errorf("redis password is set, but endpoint is not")
 	}
 
-	return cfg.ManagerConfig.Check()
+	return cfg.StoreConfig.Check()
 }
 
 func (cfg *Config) checkV1Config() error {
