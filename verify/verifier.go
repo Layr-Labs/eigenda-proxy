@@ -25,8 +25,7 @@ const (
 type Config struct {
 	// Cert verification is optional, and verifies certs retrieved from eigenDA when turned on.
 	// It is optional because it requires making calls to the blockchain, which is not necessarily always possible.
-	// For eg, some rollups are running on sepolia testnet which doesn't have an eigenlayer/eigenda contracts
-	// deployment.
+	// One example is if using a settlement chain where eigenlayer/eigenda contracts are not deployed.
 	VerifyCerts bool
 	// below fields are only required if VerifyCerts is true
 	RPCURL               string
