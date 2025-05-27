@@ -21,16 +21,18 @@ func WithLogging(
 		scw := newStatusCaptureWriter(w)
 		err := handleFn(scw, r)
 
-		ctx := GetRequestContext(r)
-		if ctx == nil {
-			log.Error("logging middleware: request context not found")
-		}
-
 		args := []any{
 			"method", r.Method, "url", r.URL,
 			"status", scw.status, "duration", time.Since(start),
-			"commitment_mode", ctx.CommitmentMode, "cert_version", ctx.CertVersion,
 		}
+
+		ctx := GetRequestContext(r)
+		if ctx == nil {
+			log.Error("logging middleware: request context not found")
+		} else {
+			args = append(args, []any{"commitment_mode", ctx.CommitmentMode, "cert_version", ctx.CertVersion})
+		}
+
 		if err != nil {
 			args = append(args, "error", err.Error())
 			log.Error("request completed with error", args...)
