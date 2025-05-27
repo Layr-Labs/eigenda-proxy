@@ -8,6 +8,7 @@ import (
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/eigenda/verify"
+	"github.com/Layr-Labs/eigenda-proxy/common/proxyerrors"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/utils"
 	"github.com/Layr-Labs/eigenda/api/clients"
 	"github.com/Layr-Labs/eigenda/api/grpc/disperser"
@@ -116,7 +117,7 @@ func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 	if uint64(len(encodedBlob)) > e.cfg.MaxBlobSizeBytes {
 		return nil, fmt.Errorf(
 			"%w: blob length %d, max blob size %d",
-			common.ErrProxyOversizedBlob,
+			proxyerrors.ErrProxyOversizedBlob,
 			len(value),
 			e.cfg.MaxBlobSizeBytes,
 		)
