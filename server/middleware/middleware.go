@@ -19,7 +19,7 @@ func ChainMiddlewares(
 	return withRequestContext(
 		WithLogging(
 			withMetrics(
-				withErrorHandling(handler),
+				WithErrorHandling(handler),
 				m,
 				mode,
 			),

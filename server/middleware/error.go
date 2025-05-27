@@ -7,7 +7,7 @@ import (
 )
 
 // Error handling middleware (innermost) transforms internal errors to HTTP errors,
-func withErrorHandling(
+func WithErrorHandling(
 	handleFn func(http.ResponseWriter, *http.Request) error,
 ) func(http.ResponseWriter, *http.Request) error {
 	return func(w http.ResponseWriter, r *http.Request) error {

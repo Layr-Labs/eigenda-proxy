@@ -82,12 +82,12 @@ func (svr *Server) RegisterRoutes(r *mux.Router) {
 		middleware.ChainMiddlewares(svr.handlePostOPGenericCommitment, svr.log, svr.m, commitments.OptimismGenericCommitmentMode),
 	)
 
-	// TODO: should prob setup error and metrics middlewares to also work for the below routes...
+	// TODO: should prob setup metrics middlewares to also work for the below routes...
 	// right now they only work for the main GET/POST routes.
-	r.HandleFunc("/health", middleware.WithLogging(svr.handleHealth, svr.log)).Methods("GET")
+	r.HandleFunc("/health", middleware.WithLogging(middleware.WithErrorHandling(svr.handleHealth), svr.log)).Methods("GET")
 
 	// this is done to explicitly log capture potential redirect errors
-	r.HandleFunc("/put", middleware.WithLogging(svr.logDispersalGetError, svr.log)).Methods("GET")
+	r.HandleFunc("/put", middleware.WithLogging(middleware.WithErrorHandling(svr.logDispersalGetError), svr.log)).Methods("GET")
 
 	// Only register admin endpoints if explicitly enabled in configuration
 	//
@@ -98,9 +98,9 @@ func (svr *Server) RegisterRoutes(r *mux.Router) {
 		svr.log.Warn("Admin API endpoints are enabled")
 		// Admin endpoints to check and set EigenDA backend used for dispersal
 		r.HandleFunc("/admin/eigenda-dispersal-backend",
-			middleware.WithLogging(svr.handleGetEigenDADispersalBackend, svr.log)).Methods("GET")
+			middleware.WithLogging(middleware.WithErrorHandling(svr.handleGetEigenDADispersalBackend), svr.log)).Methods("GET")
 		r.HandleFunc("/admin/eigenda-dispersal-backend",
-			middleware.WithLogging(svr.handleSetEigenDADispersalBackend, svr.log)).Methods("PUT")
+			middleware.WithLogging(middleware.WithErrorHandling(svr.handleSetEigenDADispersalBackend), svr.log)).Methods("PUT")
 	}
 }
 
