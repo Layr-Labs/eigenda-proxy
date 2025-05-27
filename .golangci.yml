@@ -169,7 +169,7 @@ linters:
     - rowserrcheck # checks whether Err of rows is checked successfully
     - sqlclosecheck # checks that sql.Rows and sql.Stmt are closed
     - stylecheck # is a replacement for golint
-    - usetesting
+    - tenv  # using tenv instead of usetesting
     - testableexamples # checks if examples are testable (have an expected output)
     - testpackage # makes you use a separate _test package
     - tparallel # detects inappropriate usage of t.Parallel() method in your Go test codes
