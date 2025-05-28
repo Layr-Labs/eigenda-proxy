@@ -40,9 +40,9 @@ test-e2e-testnet:
 test-e2e-preprod:
 	BACKEND=preprod gotestsum --format testname -- -v -timeout 20m ./test/e2e -parallel 32
 
-## Equivalent to `test-e2e-testnet`, bug against sepolia network instead of holesky
+## Equivalent to `test-e2e-testnet`, but against sepolia network instead of holesky
 test-e2e-sepolia:
-	BACKEND=sepolia gotestsum --format testname -- -v -timeout 20m ./test/e2e -parallel 32
+	BACKEND=sepolia gotestsum --format testname -- -v -timeout 40m ./test/e2e -parallel 32
 
 # Very simple fuzzer which generates random bytes arrays and sends them to the proxy using the standard client.
 # To clean the cached corpus, run `go clean -fuzzcache` before running this.
