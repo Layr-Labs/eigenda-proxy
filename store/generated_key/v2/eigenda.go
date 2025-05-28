@@ -176,8 +176,21 @@ func (e Store) Put(ctx context.Context, value []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	// TODO: type filter on the cert version and prefix encoding byte
-	return cert.Serialize(coretypes.CertSerializationRLP)
+	switch cert.Version() {
+	case coretypes.VersionTwoCert:
+		return nil, fmt.Errorf("EigenDA V2 certs are not supported anymore, use V3 instead")
+
+	case coretypes.VersionThreeCert:
+		eigenDACertV3, ok := cert.(*coretypes.EigenDACertV3)
+		if !ok {
+			return nil, fmt.Errorf("expected EigenDACertV3, got %T", cert)
+		}
+
+		return eigenDACertV3.Serialize(coretypes.CertSerializationRLP)
+
+	default:
+		return nil, fmt.Errorf("unsupported EigenDA cert version: %d", cert.Version())
+	}
 }
 
 // BackendType returns the backend type for EigenDA Store
@@ -194,7 +207,6 @@ func (e Store) BackendType() common.BackendType {
 // this Verify method only needs to check the cert on chain. That is why the third parameter is ignored.
 func (e Store) Verify(ctx context.Context, certVersion coretypes.CertificateVersion,
 	certBytes []byte, opts common.CertVerificationOpts) error {
-	var cert coretypes.EigenDACert
 	switch certVersion {
 	case coretypes.VersionTwoCert:
 		e.log.Warn("EigenDA V2 certs are not supported anymore more for verification. Defaulting to successful verification.")
@@ -212,15 +224,12 @@ func (e Store) Verify(ctx context.Context, certVersion coretypes.CertificateVers
 			return fmt.Errorf("verify v3 cert: %w", err)
 		}
 
-		cert = &eigenDACert
-
+		err = verifyCertRBNRecencyCheck(eigenDACert.ReferenceBlockNumber(), opts.L1InclusionBlockNum, e.rbnRecencyWindowSize)
+		if err != nil {
+			return fmt.Errorf("rbn recency check failed: %w", err)
+		}
 	default:
 		return fmt.Errorf("unsupported EigenDA cert version: %d", certVersion)
-	}
-
-	err := verifyCertRBNRecencyCheck(cert.ReferenceBlockNumber(), opts.L1InclusionBlockNum, e.rbnRecencyWindowSize)
-	if err != nil {
-		return fmt.Errorf("rbn recency check failed: %w", err)
 	}
 
 	return nil
@@ -247,7 +256,7 @@ func (e Store) Verify(ctx context.Context, certVersion coretypes.CertificateVers
 //
 // Note that for a secure integration, this same check needs to be verified onchain.
 // There are 2 approaches to doing this:
-//  1. Pessimistic approach: use a smart batcher inbox to dissalow stale blobs from even beign included
+//  1. Pessimistic approach: use a smart batcher inbox to disallow stale blobs from even being included
 //     in the batcher inbox (see https://github.com/ethereum-optimism/design-docs/pull/229)
 //  2. Optimistic approach: verify the check in op-program or hokulea (kona)'s derivation pipeline. See
 //     https://github.com/Layr-Labs/hokulea/blob/8c4c89bc4f/crates/eigenda/src/eigenda.rs#L90

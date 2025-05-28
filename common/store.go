@@ -81,7 +81,7 @@ type CertVerificationOpts struct {
 	// to lookup the stake of the eigenda operators before verifying signature thresholds.
 	// The rollup commitment containing the eigenDA cert is only valid if it was included
 	// within a certain number of blocks after the RBN.
-	// validity condition is: certRBN < L1InclusionBlockNum < RBN + RBNRecencyWindowSize
+	// validity condition is: certRBN < L1InclusionBlockNum <= RBN + RBNRecencyWindowSize
 	L1InclusionBlockNum uint64
 }
 
@@ -115,7 +115,7 @@ type EigenDAV2Store interface {
 
 // PrecomputedKeyStore is the interface for a key-value data store that uses keccak(value) as the key.
 // It is used for Optimism altda keccak commitments, as well as for caching EigenDAStore entries.
-type PrecomputedKeyStore interface {
+type SecondaryStore interface {
 	Store
 	// Put inserts the given value into the key-value data store.
 	Put(ctx context.Context, key []byte, value []byte) error

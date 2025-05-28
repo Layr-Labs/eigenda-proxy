@@ -193,13 +193,15 @@ slightly exceeds 1GB.`,
 default values for %s, %s, %s, and %s. If all of these fields are explicitly configured, the
 network flag may be omitted. If some or all of these fields are configured, and the network
 is also configured, then the explicitly defined field values will take precedence. Permitted
-EigenDANetwork values include %s, and %s.`,
+EigenDANetwork values include %s, %s, & %s.`,
 				DisperserFlagName,
 				CertVerifierRouterAddrFlagName,
 				ServiceManagerAddrFlagName,
 				BLSOperatorStateRetrieverFlagName,
 				common.HoleskyTestnetEigenDANetwork,
-				common.HoleskyPreprodEigenDANetwork),
+				common.HoleskyPreprodEigenDANetwork,
+				common.SepoliaTestnetEigenDANetwork,
+			),
 			EnvVars:  []string{withEnvPrefix(envPrefix, "NETWORK")},
 			Category: category,
 		},
@@ -207,9 +209,9 @@ EigenDANetwork values include %s, and %s.`,
 			Name: RBNRecencyWindowSizeFlagName,
 			Usage: `Allowed distance (in L1 blocks) between the eigenDA cert's reference 
 block number (RBN) and the L1 block number at which the cert was included 
-in the rollup's batch inbox. If certL1InclusionBlock > cert.RBN + rbnRecencyWindowSize, 
-the cert is considered stale and verification will fail. This check is 
-optional and will be skipped when set to 0.`,
+in the rollup's batch inbox. A cert is valid when cert.RBN < certL1InclusionBlock <= cert.RBN + rbnRecencyWindowSize, 
+and otherwise is considered stale and verification will fail, and a 418 HTTP error will be returned.
+This check is optional and will be skipped when set to 0.`,
 			Value:    0,
 			EnvVars:  []string{withEnvPrefix(envPrefix, "RBN_RECENCY_WINDOW_SIZE")},
 			Category: category,
