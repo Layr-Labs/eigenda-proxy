@@ -21,7 +21,7 @@ func withMetrics(
 		scw := newStatusCaptureWriter(w)
 		err := handleFn(scw, r)
 
-		certVersion := GetCertVersion(r)
+		certVersion := getCertVersion(r)
 		// Prob should use different metric for POST and GET errors.
 		recordDur(strconv.Itoa(scw.status), string(mode), certVersion)
 

@@ -1,9 +1,10 @@
+// handlers_cert.go contains the main HTTP handlers for the Eigenda Proxy server.
+// These are the handlers that process POST (payload->commitment) and GET (commitment->payload) requests.
+// Handlers in this file SHOULD be wrapped in middlewares.
 package server
 
 import (
-	"context"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -20,25 +21,7 @@ import (
 const (
 	// limit requests to only 32 MiB to mitigate potential DoS attacks
 	maxPOSTRequestBodySize int64 = 1024 * 1024 * 32
-
-	// HTTP headers
-	headerContentType = "Content-Type"
-
-	// Content types
-	contentTypeJSON = "application/json"
 )
-
-func (svr *Server) handleHealth(w http.ResponseWriter, _ *http.Request) error {
-	w.WriteHeader(http.StatusOK)
-	return nil
-}
-
-func (svr *Server) logDispersalGetError(w http.ResponseWriter, _ *http.Request) error {
-	svr.log.Warn(`GET method invoked on /put/ endpoint.
-		This can occur due to 303 redirects when using incorrect slash ticks.`)
-	w.WriteHeader(http.StatusMethodNotAllowed)
-	return nil
-}
 
 // =================================================================================================
 // GET ROUTES
@@ -67,16 +50,15 @@ func (svr *Server) handleGetOPKeccakCommitment(w http.ResponseWriter, r *http.Re
 
 // handleGetOPGenericCommitment handles the GET request for optimism generic commitments.
 func (svr *Server) handleGetOPGenericCommitment(w http.ResponseWriter, r *http.Request) error {
-	return svr.handleGetShared(r.Context(), w, r, commitments.OptimismGenericCommitmentMode)
+	return svr.handleGetShared(w, r, commitments.OptimismGenericCommitmentMode)
 }
 
 // handleGetStdCommitment handles the GET request for std commitments.
 func (svr *Server) handleGetStdCommitment(w http.ResponseWriter, r *http.Request) error {
-	return svr.handleGetShared(r.Context(), w, r, commitments.StandardCommitmentMode)
+	return svr.handleGetShared(w, r, commitments.StandardCommitmentMode)
 }
 
 func (svr *Server) handleGetShared(
-	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
 	mode commitments.CommitmentMode,
@@ -104,7 +86,7 @@ func (svr *Server) handleGetShared(
 		return err
 	}
 	input, err := svr.sm.Get(
-		ctx,
+		r.Context(),
 		versionedCert,
 		mode,
 		common.CertVerificationOpts{L1InclusionBlockNum: l1InclusionBlockNum},
@@ -137,36 +119,9 @@ func parseCommitmentInclusionL1BlockNumQueryParam(r *http.Request) (uint64, erro
 	return 0, nil
 }
 
-// handleGetEigenDADispersalBackend handles the GET request to check the current EigenDA backend used for dispersal.
-// This endpoint returns which EigenDA backend version (v1 or v2) is currently being used for blob dispersal.
-func (svr *Server) handleGetEigenDADispersalBackend(w http.ResponseWriter, _ *http.Request) error {
-	w.Header().Set(headerContentType, contentTypeJSON)
-	w.WriteHeader(http.StatusOK)
-
-	backend := svr.sm.GetDispersalBackend()
-	backendString := common.EigenDABackendToString(backend)
-
-	response := struct {
-		EigenDADispersalBackend string `json:"eigenDADispersalBackend"`
-	}{
-		EigenDADispersalBackend: backendString,
-	}
-
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		return fmt.Errorf("failed to encode response: %w", err)
-	}
-
-	return nil
-}
-
 // =================================================================================================
 // POST ROUTES
 // =================================================================================================
-
-// handlePostStdCommitment handles the POST request for std commitments.
-func (svr *Server) handlePostStdCommitment(w http.ResponseWriter, r *http.Request) error {
-	return svr.handlePostShared(w, r, nil, commitments.StandardCommitmentMode)
-}
 
 // handlePostOPKeccakCommitment handles the POST request for optimism keccak commitments.
 func (svr *Server) handlePostOPKeccakCommitment(w http.ResponseWriter, r *http.Request) error {
@@ -192,6 +147,11 @@ func (svr *Server) handlePostOPKeccakCommitment(w http.ResponseWriter, r *http.R
 		return err
 	}
 	return nil
+}
+
+// handlePostStdCommitment handles the POST request for std commitments.
+func (svr *Server) handlePostStdCommitment(w http.ResponseWriter, r *http.Request) error {
+	return svr.handlePostShared(w, r, nil, commitments.StandardCommitmentMode)
 }
 
 // handlePostOPGenericCommitment handles the POST request for optimism generic commitments.
@@ -242,51 +202,5 @@ func (svr *Server) handlePostShared(
 	// See
 	// https://github.com/Layr-Labs/optimism/blob/89ac40d0fddba2e06854b253b9f0266f36350af2/op-alt-da/daclient.go#L151
 	svr.writeResponse(w, responseCommit)
-	return nil
-}
-
-// handleSetEigenDADispersalBackend handles the PUT request to set the EigenDA backend used for dispersal.
-// This endpoint configures which EigenDA backend version (v1 or v2) will be used for blob dispersal.
-func (svr *Server) handleSetEigenDADispersalBackend(w http.ResponseWriter, r *http.Request) error {
-	// Read request body to get the new value
-	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1024)) // Small limit since we only expect a string
-	if err != nil {
-		return proxyerrors.NewReadRequestBodyError(err, 1024)
-	}
-
-	// Parse the backend string value
-	var setRequest struct {
-		EigenDADispersalBackend string `json:"eigenDADispersalBackend"`
-	}
-
-	if err := json.Unmarshal(body, &setRequest); err != nil {
-		return proxyerrors.NewUnmarshalJSONError(fmt.Errorf("parsing eigenDADispersalBackend"))
-	}
-
-	// Convert the string to EigenDABackend enum
-	backend, err := common.StringToEigenDABackend(setRequest.EigenDADispersalBackend)
-	if err != nil {
-		return err // already a structured error that error middleware knows how to handle
-	}
-
-	svr.SetDispersalBackend(backend)
-
-	// Return the current value in the response
-	w.Header().Set(headerContentType, contentTypeJSON)
-	w.WriteHeader(http.StatusOK)
-
-	currentBackend := svr.sm.GetDispersalBackend()
-	backendString := common.EigenDABackendToString(currentBackend)
-
-	response := struct {
-		EigenDADispersalBackend string `json:"eigenDADispersalBackend"`
-	}{
-		EigenDADispersalBackend: backendString,
-	}
-
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		return fmt.Errorf("failed to encode response: %w", err)
-	}
-
 	return nil
 }
