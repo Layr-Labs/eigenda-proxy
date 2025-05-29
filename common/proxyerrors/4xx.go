@@ -17,14 +17,14 @@ func Is400(err error) bool {
 	var invalidBackendErr common.InvalidBackendError
 	var certHexDecodingError CertHexDecodingError
 	var l1InclusionBlockNumberParsingError L1InclusionBlockNumberParsingError
-	var s3KeccakkeyValueMismatchErr s3.Keccak256KeyValueMismatchError
+	var s3KeccakKeyValueMismatchErr s3.Keccak256KeyValueMismatchError
 	return errors.Is(err, ErrProxyOversizedBlob) ||
 		errors.As(err, &certHexDecodingError) ||
 		errors.As(err, &invalidBackendErr) ||
 		errors.As(err, &unmarshalJSONErr) ||
 		errors.As(err, &l1InclusionBlockNumberParsingError) ||
 		errors.As(err, &readRequestBodyErr) ||
-		errors.As(err, &s3KeccakkeyValueMismatchErr) ||
+		errors.As(err, &s3KeccakKeyValueMismatchErr) ||
 		errors.Is(err, s3.ErrKeccakKeyNotFound)
 }
 
