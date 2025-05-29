@@ -44,7 +44,7 @@ func unsafeRandInt(maxValue int64) *big.Int {
 	return randInt
 }
 
-func unsafeRandUint32() uint32 {
+func unsafeRandCeilAt32() uint32 {
 	// #nosec G115 - downcasting only on random value
 	return uint32(unsafeRandInt(32).Uint64())
 }
@@ -118,7 +118,7 @@ func (e *MemStore) generateRandomCert(blobContents []byte) (*coretypes.EigenDACe
 				PaymentHeaderHash: [32]byte(unsafeRandomBytes(32)),
 			},
 			Signature: unsafeRandomBytes(48), // 384 bits
-			RelayKeys: []uint32{unsafeRandUint32(), unsafeRandUint32()},
+			RelayKeys: []uint32{unsafeRandCeilAt32(), unsafeRandCeilAt32()},
 		},
 		// #nosec G115 - max value 1000 guaranteed to be safe for uint32
 		BlobIndex:      uint32(unsafeRandInt(1_000).Uint64()),
@@ -134,11 +134,11 @@ func (e *MemStore) generateRandomCert(blobContents []byte) (*coretypes.EigenDACe
 		// where the check is often done by checking the failure condition
 		// certL1InclusionBlock > RecencyWindowSize + cert.RBN
 		// once we increase the RBN, the above failure condition will never trigger
-		ReferenceBlockNumber: unsafeRandUint32() + 4294967200,
+		ReferenceBlockNumber: unsafeRandCeilAt32() + 4294967200,
 	}
 
 	randomNonSignerStakesAndSigs := cert_verifier_binding.EigenDATypesV1NonSignerStakesAndSignature{
-		NonSignerQuorumBitmapIndices: []uint32{unsafeRandUint32(), unsafeRandUint32()},
+		NonSignerQuorumBitmapIndices: []uint32{unsafeRandCeilAt32(), unsafeRandCeilAt32()},
 		NonSignerPubkeys: []cert_verifier_binding.BN254G1Point{
 			{
 				X: unsafeRandInt(1000),
@@ -155,11 +155,11 @@ func (e *MemStore) generateRandomCert(blobContents []byte) (*coretypes.EigenDACe
 			X: [2]*big.Int{unsafeRandInt(1000), unsafeRandInt(10000)},
 			Y: [2]*big.Int{unsafeRandInt(1000), unsafeRandInt(1000)},
 		},
-		QuorumApkIndices:  []uint32{unsafeRandUint32(), unsafeRandUint32()},
-		TotalStakeIndices: []uint32{unsafeRandUint32(), unsafeRandUint32(), unsafeRandUint32()},
+		QuorumApkIndices:  []uint32{unsafeRandCeilAt32(), unsafeRandCeilAt32()},
+		TotalStakeIndices: []uint32{unsafeRandCeilAt32(), unsafeRandCeilAt32(), unsafeRandCeilAt32()},
 		NonSignerStakeIndices: [][]uint32{
-			{unsafeRandUint32(), unsafeRandUint32()},
-			{unsafeRandUint32(), unsafeRandUint32()},
+			{unsafeRandCeilAt32(), unsafeRandCeilAt32()},
+			{unsafeRandCeilAt32(), unsafeRandCeilAt32()},
 		},
 		Sigma: cert_verifier_binding.BN254G1Point{
 			X: unsafeRandInt(1000),
