@@ -33,7 +33,7 @@ func WithErrorHandling(
 		default:
 			// Default to 500 for unexpected errors.
 			// Note that this includes grpc 4xx errors returned from the disperser server.
-			// because those are due to formatting bugs in proxy code, eg. badly
+			// because those are due to formatting bugs in proxy code, e.g. badly
 			// IFFT'ing or encoding the blob, so we shouldn't return a 400 to the client.
 			// See https://github.com/Layr-Labs/eigenda/blob/bee55ed9207f16153c3fd8ebf73c219e68685def/api/errors.go#L22
 			// for the 400s returned by the disperser server (currently only INVALID_ARGUMENT).
