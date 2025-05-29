@@ -131,7 +131,7 @@ func (e *MemStore) generateRandomCert(blobContents []byte) (coretypes.EigenDACer
 		// increase the rbn of cert to a high enough number 4294967200 < 2^32 = 4294967296
 		// where random part is chosen from 0 to 32. So there is no chance of overflow.
 		// a large RBN is useful to avoid failing the recency check when testing
-		// See https://github.com/Layr-Labs/eigenda/blob/master/docs/spec/src/integration/spec/6-secure-integration.md#1-rbn-recency-validation
+		// See https://github.com/Layr-Labs/eigenda/blob/master/docs/spec/src/integration/spec/6-secure-integration.md
 		// where the check is often done by checking the failure condition
 		// certL1InclusionBlock > RecencyWindowSize + cert.RBN
 		// once we increase the RBN, the above failure condition will never trigger
