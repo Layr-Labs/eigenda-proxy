@@ -141,10 +141,7 @@ func (svr *Server) handlePostOPKeccakCommitment(w http.ResponseWriter, r *http.R
 	}
 	err = svr.sm.PutOPKeccakPairInS3(r.Context(), keccakCommitment, payload)
 	if err != nil {
-		err = proxyerrors.NewPOSTError(
-			fmt.Errorf("keccak POST request failed for commitment %v: %w", keccakCommitmentHex, err),
-			commitments.OptimismKeccakCommitmentMode)
-		return err
+		return fmt.Errorf("keccak POST request failed for commitment %v: %w", keccakCommitmentHex, err)
 	}
 	return nil
 }
@@ -174,8 +171,7 @@ func (svr *Server) handlePostShared(
 
 	serializedCert, err := svr.sm.Put(r.Context(), mode, comm, payload)
 	if err != nil {
-		err = proxyerrors.NewPOSTError(fmt.Errorf("post request failed with commitment %v: %w", comm, err), mode)
-		return err
+		return fmt.Errorf("post request failed with commitment %v: %w", comm, err)
 	}
 
 	var certVersion certs.VersionByte
@@ -191,8 +187,8 @@ func (svr *Server) handlePostShared(
 
 	responseCommit, err := commitments.EncodeCommitment(versionedCert, mode)
 	if err != nil {
-		err = proxyerrors.NewPOSTError(fmt.Errorf("failed to encode serializedCert %v: %w", serializedCert, err), mode)
-		return err
+		// This error is only possible if we have a bug in the code.
+		return fmt.Errorf("failed to encode serializedCert %v: %w", serializedCert, err)
 	}
 
 	svr.log.Info(fmt.Sprintf("response commitment: %x\n", responseCommit))
