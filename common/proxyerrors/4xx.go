@@ -12,11 +12,11 @@ import (
 )
 
 func Is400(err error) bool {
-	var readRequestBodyErr ReadRequestBodyError
-	var unmarshalJSONErr UnmarshalJSONError
-	var invalidBackendErr common.InvalidBackendError
 	var certHexDecodingError CertHexDecodingError
+	var invalidBackendErr common.InvalidBackendError
+	var unmarshalJSONErr UnmarshalJSONError
 	var l1InclusionBlockNumberParsingError L1InclusionBlockNumberParsingError
+	var readRequestBodyErr ReadRequestBodyError
 	var s3KeccakKeyValueMismatchErr s3.Keccak256KeyValueMismatchError
 	return errors.Is(err, ErrProxyOversizedBlob) ||
 		errors.As(err, &certHexDecodingError) ||
