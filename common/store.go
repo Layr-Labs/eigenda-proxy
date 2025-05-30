@@ -85,8 +85,8 @@ type Store interface {
 	BackendType() BackendType
 }
 
-// EigenDAStore is the interface for an EigenDA V1 data store as well as V1 memstore.
-type EigenDAStore interface {
+// EigenDAV1Store is the interface for an EigenDA V1 data store as well as V1 memstore.
+type EigenDAV1Store interface {
 	Store
 	// Put inserts the given value into the key-value (serializedCert-payload) data store.
 	Put(ctx context.Context, payload []byte) (serializedCert []byte, err error)

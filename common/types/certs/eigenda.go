@@ -52,6 +52,8 @@ func (c VersionedCert) Encode() []byte {
 // ToCoreCertType converts the VersionedCert to a coretypes.CertificateVersion.
 func (c VersionedCert) ToCoreCertType() (coretypes.CertificateVersion, error) {
 	switch c.Version {
+	case V0VersionByte:
+		return coretypes.VersionTwoCert, fmt.Errorf("EigenDA V1 certs are not supported in coretypes")
 	case V1VersionByte:
 		return coretypes.VersionTwoCert, nil
 	case V2VersionByte:

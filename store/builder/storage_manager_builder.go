@@ -54,7 +54,7 @@ func BuildStoreManager(
 	var err error
 	var s3Store *s3.Store
 	var redisStore *redis.Store
-	var eigenDAV1Store common.EigenDAStore
+	var eigenDAV1Store common.EigenDAV1Store
 	var eigenDAV2Store common.EigenDAV2Store
 
 	if config.S3Config.Bucket != "" {
@@ -217,7 +217,7 @@ func buildEigenDAV2Backend(
 	}
 
 	isRouter := true
-	// Check if the router address is actually a router. if method `getRouterAddress` fails, it means that the
+	// Check if the router address is actually a router. if method `getCertVerifierAt` fails, it means that the
 	// address is not a router, and we should treat it as an immutable cert verifier instead
 	_, err = caller.GetCertVerifierAt(&bind.CallOpts{Context: ctx}, 0)
 	if err != nil {
@@ -320,7 +320,7 @@ func buildEigenDAV1Backend(
 	log logging.Logger,
 	config Config,
 	kzgVerifier *kzgverifier.Verifier,
-) (common.EigenDAStore, error) {
+) (common.EigenDAV1Store, error) {
 	verifier, err := verify.NewVerifier(&config.VerifierConfigV1, kzgVerifier, log)
 	if err != nil {
 		return nil, fmt.Errorf("new verifier: %w", err)

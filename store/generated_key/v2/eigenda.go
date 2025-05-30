@@ -262,8 +262,9 @@ func verifyCertRBNRecencyCheck(certRBN uint64, certL1IBN uint64, rbnRecencyWindo
 
 	// Actual Recency Check
 	if !(certL1IBN <= certRBN+rbnRecencyWindowSize) {
+		//nolint:gosec // disable G115 // We checked the length of thresholds above
 		return RBNRecencyCheckFailedError{
-			certRBN:              certRBN,
+			certRBN:              uint32(certRBN),
 			certL1IBN:            certL1IBN,
 			rbnRecencyWindowSize: rbnRecencyWindowSize,
 		}
