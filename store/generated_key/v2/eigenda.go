@@ -88,30 +88,26 @@ func NewStore(
 // against commitment to ensure data is valid and non-tampered.
 func (e Store) Get(ctx context.Context, versionedCert certs.VersionedCert) ([]byte, error) {
 	var cert coretypes.RetrievableEigenDACert
-	certBytes := versionedCert.Encode()
-	cerVersion := versionedCert.Version
 
-	switch cerVersion {
-	case coretypes.VersionTwoCert:
+	switch versionedCert.Version {
+	case certs.V0VersionByte, certs.V1VersionByte:
 		var v2Cert coretypes.EigenDACertV2
-		err := rlp.DecodeBytes(certBytes, &v2Cert)
+		err := rlp.DecodeBytes(versionedCert.SerializedCert, &v2Cert)
 		if err != nil {
-			return nil, fmt.Errorf("RLP decoding EigenDA v3 cert: %w", err)
+			return nil, fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
 		}
-
 		cert = &v2Cert
 
-	case coretypes.VersionThreeCert:
+	case certs.V2VersionByte:
 		var v3Cert coretypes.EigenDACertV3
-		err := rlp.DecodeBytes(certBytes, &v3Cert)
+		err := rlp.DecodeBytes(versionedCert.SerializedCert, &v3Cert)
 		if err != nil {
 			return nil, fmt.Errorf("RLP decoding EigenDA v3 cert: %w", err)
 		}
-
 		cert = &v3Cert
 
 	default:
-		return nil, fmt.Errorf("unknown certificate version: %d", cerVersion)
+		return nil, fmt.Errorf("unknown certificate version: %d", versionedCert.Version)
 	}
 
 	// Try each retriever in sequence until one succeeds
@@ -209,17 +205,14 @@ func (e Store) BackendType() common.BackendType {
 // Since v2 methods for fetching a payload are responsible for verifying the received bytes against the certificate,
 // this Verify method only needs to check the cert on chain. That is why the third parameter is ignored.
 func (e Store) Verify(ctx context.Context, versionedCert certs.VersionedCert, opts common.CertVerificationOpts) error {
-	certVersion := versionedCert.Version
-	certBytes := versionedCert.Encode()
-
-	switch certVersion {
-	case coretypes.VersionTwoCert:
+	switch versionedCert.Version {
+	case certs.V0VersionByte, certs.V1VersionByte:
 		e.log.Warn("EigenDA V2 certs are not supported anymore more for verification. Defaulting to successful verification.")
 		return nil
 
-	case coretypes.VersionThreeCert:
+	case certs.V2VersionByte:
 		var eigenDACert coretypes.EigenDACertV3
-		err := rlp.DecodeBytes(certBytes, &eigenDACert)
+		err := rlp.DecodeBytes(versionedCert.SerializedCert, &eigenDACert)
 		if err != nil {
 			return fmt.Errorf("RLP decoding EigenDA v3 cert: %w", err)
 		}
@@ -234,7 +227,7 @@ func (e Store) Verify(ctx context.Context, versionedCert certs.VersionedCert, op
 			return fmt.Errorf("rbn recency check failed: %w", err)
 		}
 	default:
-		return fmt.Errorf("unsupported EigenDA cert version: %d", certVersion)
+		return fmt.Errorf("unsupported EigenDA cert version: %d", versionedCert.Version)
 	}
 
 	return nil
