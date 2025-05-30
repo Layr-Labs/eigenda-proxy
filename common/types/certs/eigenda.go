@@ -49,9 +49,10 @@ func (c VersionedCert) Encode() []byte {
 	return append([]byte{byte(c.Version)}, c.SerializedCert...)
 }
 
+// ToCoreCertType converts the VersionedCert to a coretypes.CertificateVersion.
 func (c VersionedCert) ToCoreCertType() (coretypes.CertificateVersion, error) {
 	switch c.Version {
-	case V0VersionByte, V1VersionByte:
+	case V1VersionByte:
 		return coretypes.VersionTwoCert, nil
 	case V2VersionByte:
 		return coretypes.VersionThreeCert, nil
