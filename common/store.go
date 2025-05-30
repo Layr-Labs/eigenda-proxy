@@ -2,7 +2,6 @@ package common
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/Layr-Labs/eigenda-proxy/common/types/certs"
@@ -20,10 +19,6 @@ const (
 	RedisBackendType
 
 	UnknownBackendType
-)
-
-var (
-	ErrProxyOversizedBlob = fmt.Errorf("encoded blob is larger than max blob size")
 )
 
 func (b BackendType) String() string {
