@@ -231,10 +231,10 @@ func buildEigenDAV2Backend(
 	var provider clients_v2.CertVerifierAddressProvider
 	if !isRouter {
 		provider = verification.NewStaticCertVerifierAddressProvider(
-			geth_common.HexToAddress(config.ClientConfigV2.EigenDACertVerifierRouterAddress))
+			routerOrImmutableVerifierAddr)
 	} else {
 		provider, err = verification.BuildRouterAddressProvider(
-			geth_common.HexToAddress(config.ClientConfigV2.EigenDACertVerifierRouterAddress),
+			routerOrImmutableVerifierAddr,
 			ethClient,
 			log,
 		)

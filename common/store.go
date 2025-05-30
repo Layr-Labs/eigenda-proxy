@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Layr-Labs/eigenda/api/clients/v2/coretypes"
+	"github.com/Layr-Labs/eigenda-proxy/common/types/certs"
 )
 
 // BackendType ... Storage backend type
@@ -90,8 +90,7 @@ type Store interface {
 	BackendType() BackendType
 }
 
-// EigenDAStore is the interface for an EigenDA data store, which stores payloads that are retrievable
-// from a DACert. Implementations include EigenDA V1 and V2, as well as their memstore versions for testing.
+// EigenDAStore is the interface for an EigenDA V1 data store as well as V1 memstore.
 type EigenDAStore interface {
 	Store
 	// Put inserts the given value into the key-value (serializedCert-payload) data store.
@@ -102,15 +101,15 @@ type EigenDAStore interface {
 	Verify(ctx context.Context, serializedCert []byte, payload []byte, opts CertVerificationOpts) error
 }
 
+// EigenDAV2Store is the interface for an EigenDA V2 data store as well as V2 memstore.
 type EigenDAV2Store interface {
 	Store
 	// Put inserts the given value into the key-value (serializedCert-payload) data store.
 	Put(ctx context.Context, payload []byte) (serializedCert []byte, err error)
 	// Get retrieves the given key if it's present in the key-value (serializedCert-payload) data store.
-	Get(ctx context.Context, version coretypes.CertificateVersion, serializedCert []byte) (payload []byte, err error)
+	Get(ctx context.Context, versionedCert certs.VersionedCert) (payload []byte, err error)
 	// Verify verifies the given key-value pair.
-	Verify(ctx context.Context, version coretypes.CertificateVersion,
-		serializedCert []byte, opts CertVerificationOpts) error
+	Verify(ctx context.Context, versionedCert certs.VersionedCert, opts CertVerificationOpts) error
 }
 
 // PrecomputedKeyStore is the interface for a key-value data store that uses keccak(value) as the key.

@@ -64,6 +64,10 @@ func (cfg *ClientConfigV2) Check() error {
 		address is required for using EigenDA V2 backend`)
 	}
 
+	if cfg.EigenDARegistryCoordinatorAddr == "" {
+		return fmt.Errorf("EigenDA registry coordinator address is required for using EigenDA V2 backend")
+	}
+
 	if cfg.MaxBlobSizeBytes == 0 {
 		return fmt.Errorf("max blob size is required for using EigenDA V2 backend")
 	}

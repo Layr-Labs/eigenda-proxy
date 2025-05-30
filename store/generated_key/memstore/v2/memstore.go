@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
+	"github.com/Layr-Labs/eigenda-proxy/common/types/certs"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/ephemeraldb"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
 	"github.com/Layr-Labs/eigenda/api/clients/codecs"
@@ -168,8 +169,8 @@ func (e *MemStore) generateRandomCert(blobContents []byte) (coretypes.EigenDACer
 }
 
 // Get fetches a value from the store.
-func (e *MemStore) Get(_ context.Context, _ coretypes.CertificateVersion, commit []byte) ([]byte, error) {
-	encodedBlob, err := e.FetchEntry(crypto.Keccak256Hash(commit).Bytes())
+func (e *MemStore) Get(_ context.Context, versionedCert certs.VersionedCert) ([]byte, error) {
+	encodedBlob, err := e.FetchEntry(crypto.Keccak256Hash(versionedCert.Encode()).Bytes())
 	if err != nil {
 		return nil, fmt.Errorf("fetching entry via v2 memstore: %w", err)
 	}
@@ -205,7 +206,7 @@ func (e *MemStore) Put(_ context.Context, value []byte) ([]byte, error) {
 	return certBytes, nil
 }
 
-func (e *MemStore) Verify(_ context.Context, _ coretypes.CertificateVersion, _ []byte,
+func (e *MemStore) Verify(_ context.Context, _ certs.VersionedCert,
 	_ common.CertVerificationOpts) error {
 	return nil
 }

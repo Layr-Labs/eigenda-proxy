@@ -198,11 +198,7 @@ func (m *Manager) getVerifyMethod(commitmentType certs.VersionByte) (
 	error,
 ) {
 	v2VerifyWrapper := func(ctx context.Context, cert []byte, payload []byte, opts common.CertVerificationOpts) error {
-		coreCertVersion, err := certs.NewVersionedCert(cert, commitmentType).ToCoreCertType()
-		if err != nil {
-			return fmt.Errorf("get core cert version: %w", err)
-		}
-		return m.eigendaV2.Verify(ctx, coreCertVersion, cert, opts)
+		return m.eigendaV2.Verify(ctx, certs.NewVersionedCert(cert, commitmentType), opts)
 	}
 
 	switch commitmentType {
@@ -261,20 +257,16 @@ func (m *Manager) getFromCorrectEigenDABackend(
 		return nil, err
 
 	case certs.V1VersionByte, certs.V2VersionByte:
-		coreCertVersion, err := versionedCert.ToCoreCertType()
-		if err != nil {
-			return nil, fmt.Errorf("get core cert version: %w", err)
-		}
 
 		// The cert must be verified before attempting to get the data, since the GET logic
 		// assumes the cert is valid. Verify v2 doesn't require a payload.
-		err = m.eigendaV2.Verify(ctx, coreCertVersion, versionedCert.SerializedCert, verifyOpts)
+		err := m.eigendaV2.Verify(ctx, versionedCert, verifyOpts)
 		if err != nil {
 			return nil, fmt.Errorf("verify EigenDACert: %w", err)
 		}
 
 		m.log.Debug("Reading blob from EigenDAV2 backend")
-		data, err := m.eigendaV2.Get(ctx, coreCertVersion, versionedCert.SerializedCert)
+		data, err := m.eigendaV2.Get(ctx, versionedCert)
 		if err != nil {
 			return nil, fmt.Errorf("get data from V2 backend: %w", err)
 		}

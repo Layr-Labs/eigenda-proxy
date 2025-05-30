@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
+	"github.com/Layr-Labs/eigenda-proxy/common/types/certs"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/utils"
 	"github.com/Layr-Labs/eigenda/api/clients/v2"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/coretypes"
@@ -85,13 +86,15 @@ func NewStore(
 
 // Get fetches a blob from DA using certificate fields and verifies blob
 // against commitment to ensure data is valid and non-tampered.
-func (e Store) Get(ctx context.Context, version coretypes.CertificateVersion, key []byte) ([]byte, error) {
-	var cert coretypes.EigenDACert
+func (e Store) Get(ctx context.Context, versionedCert certs.VersionedCert) ([]byte, error) {
+	var cert coretypes.RetrievableEigenDACert
+	certBytes := versionedCert.Encode()
+	cerVersion := versionedCert.Version
 
-	switch version {
+	switch cerVersion {
 	case coretypes.VersionTwoCert:
 		var v2Cert coretypes.EigenDACertV2
-		err := rlp.DecodeBytes(key, &v2Cert)
+		err := rlp.DecodeBytes(certBytes, &v2Cert)
 		if err != nil {
 			return nil, fmt.Errorf("RLP decoding EigenDA v3 cert: %w", err)
 		}
@@ -100,7 +103,7 @@ func (e Store) Get(ctx context.Context, version coretypes.CertificateVersion, ke
 
 	case coretypes.VersionThreeCert:
 		var v3Cert coretypes.EigenDACertV3
-		err := rlp.DecodeBytes(key, &v3Cert)
+		err := rlp.DecodeBytes(certBytes, &v3Cert)
 		if err != nil {
 			return nil, fmt.Errorf("RLP decoding EigenDA v3 cert: %w", err)
 		}
@@ -108,7 +111,7 @@ func (e Store) Get(ctx context.Context, version coretypes.CertificateVersion, ke
 		cert = &v3Cert
 
 	default:
-		return nil, fmt.Errorf("unknown certificate version: %d", version)
+		return nil, fmt.Errorf("unknown certificate version: %d", cerVersion)
 	}
 
 	// Try each retriever in sequence until one succeeds
@@ -205,8 +208,10 @@ func (e Store) BackendType() common.BackendType {
 //
 // Since v2 methods for fetching a payload are responsible for verifying the received bytes against the certificate,
 // this Verify method only needs to check the cert on chain. That is why the third parameter is ignored.
-func (e Store) Verify(ctx context.Context, certVersion coretypes.CertificateVersion,
-	certBytes []byte, opts common.CertVerificationOpts) error {
+func (e Store) Verify(ctx context.Context, versionedCert certs.VersionedCert, opts common.CertVerificationOpts) error {
+	certVersion := versionedCert.Version
+	certBytes := versionedCert.Encode()
+
 	switch certVersion {
 	case coretypes.VersionTwoCert:
 		e.log.Warn("EigenDA V2 certs are not supported anymore more for verification. Defaulting to successful verification.")
