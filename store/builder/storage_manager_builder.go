@@ -2,8 +2,10 @@ package builder
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
+	"regexp"
 	"slices"
 	"time"
 
@@ -39,6 +41,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	geth_common "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/rpc"
 )
 
 // BuildStoreManager is the main builder for proxy's store.
@@ -181,6 +184,22 @@ func buildSecondaries(
 	return stores
 }
 
+// A regexp matching "execution reverted" errors returned from the parent chain RPC.
+var executionRevertedRegexp = regexp.MustCompile(`(?i)execution reverted|VM execution error\.?`)
+
+// IsExecutionReverted returns true if the error is an "execution reverted" error or if the error is a rpc.Error with ErrorCode 3.
+func isExecutionReverted(err error) bool {
+	if executionRevertedRegexp.MatchString(err.Error()) {
+		return true
+	}
+	var rpcError rpc.Error
+	ok := errors.As(err, &rpcError)
+	if ok && rpcError.ErrorCode() == 3 {
+		return true
+	}
+	return false
+}
+
 // buildEigenDAV2Backend ... Builds EigenDA V2 storage backend
 func buildEigenDAV2Backend(
 	ctx context.Context,
@@ -220,12 +239,14 @@ func buildEigenDAV2Backend(
 	// Check if the router address is actually a router. if method `getCertVerifierAt` fails, it means that the
 	// address is not a router, and we should treat it as an immutable cert verifier instead
 	_, err = caller.GetCertVerifierAt(&bind.CallOpts{Context: ctx}, 0)
-	if err != nil {
+	if err != nil && isExecutionReverted(err) {
 		log.Warn(`EigenDA cert verifier router address was detected to not be a router, using it as an
 			immutable cert verifier instead`)
 		// if the address is not a router, we should use it as an immutable cert verifier
 		// and set the router address to the same address
 		isRouter = false
+	} else if err != nil {
+		return nil, fmt.Errorf("failed to determine whether cert verifier is immutable or deployed behind a router: %w", err)
 	}
 
 	var provider clients_v2.CertVerifierAddressProvider
