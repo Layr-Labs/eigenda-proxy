@@ -210,7 +210,7 @@ func buildEigenDAV2Backend(
 		return nil, fmt.Errorf("build eth client: %w", err)
 	}
 
-	routerOrImmutableVerifierAddr := geth_common.HexToAddress(config.ClientConfigV2.EigenDACertVerifierRouterAddress)
+	routerOrImmutableVerifierAddr := geth_common.HexToAddress(config.ClientConfigV2.EigenDACertVerifierOrRouterAddress)
 	caller, err := binding.NewContractEigenDACertVerifierRouterCaller(routerOrImmutableVerifierAddr, ethClient)
 	if err != nil {
 		return nil, fmt.Errorf("new cert verifier router caller: %w", err)

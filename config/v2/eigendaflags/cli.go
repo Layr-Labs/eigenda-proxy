@@ -281,12 +281,12 @@ func ReadClientConfigV2(ctx *cli.Context) (common.ClientConfigV2, error) {
 		// both retrieval methods enabled. This could be exposed in the future, if necessary.
 		// Note the order of these retrievers, which is significant: the relay retriever will be
 		// tried first, and the validator retriever will only be tried if the relay retriever fails
-		RetrieversToEnable:               []common.RetrieverType{common.RelayRetrieverType, common.ValidatorRetrieverType},
-		BLSOperatorStateRetrieverAddr:    blsOperatorStateRetrieverAddress,
-		EigenDARegistryCoordinatorAddr:   registryCoordinatorAddress,
-		EigenDACertVerifierRouterAddress: ctx.String(CertVerifierRouterAddrFlagName),
-		EigenDAServiceManagerAddr:        serviceManagerAddress,
-		RBNRecencyWindowSize:             ctx.Uint64(RBNRecencyWindowSizeFlagName),
+		RetrieversToEnable:                 []common.RetrieverType{common.RelayRetrieverType, common.ValidatorRetrieverType},
+		BLSOperatorStateRetrieverAddr:      blsOperatorStateRetrieverAddress,
+		EigenDARegistryCoordinatorAddr:     registryCoordinatorAddress,
+		EigenDACertVerifierOrRouterAddress: ctx.String(CertVerifierRouterAddrFlagName),
+		EigenDAServiceManagerAddr:          serviceManagerAddress,
+		RBNRecencyWindowSize:               ctx.Uint64(RBNRecencyWindowSizeFlagName),
 	}, nil
 }
 

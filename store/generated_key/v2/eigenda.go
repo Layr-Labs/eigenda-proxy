@@ -200,15 +200,16 @@ func (e Store) Verify(ctx context.Context, versionedCert certs.VersionedCert, op
 			return fmt.Errorf("RLP decoding EigenDA v3 cert: %w", err)
 		}
 
+		err = verifyCertRBNRecencyCheck(eigenDACert.ReferenceBlockNumber(), opts.L1InclusionBlockNum, e.rbnRecencyWindowSize)
+		if err != nil {
+			return fmt.Errorf("rbn recency check failed: %w", err)
+		}
+
 		err = e.certVerifier.CheckDACert(ctx, &eigenDACert)
 		if err != nil {
 			return fmt.Errorf("verify v3 cert: %w", err)
 		}
 
-		err = verifyCertRBNRecencyCheck(eigenDACert.ReferenceBlockNumber(), opts.L1InclusionBlockNum, e.rbnRecencyWindowSize)
-		if err != nil {
-			return fmt.Errorf("rbn recency check failed: %w", err)
-		}
 	default:
 		return fmt.Errorf("unsupported EigenDA cert version: %d", versionedCert.Version)
 	}
