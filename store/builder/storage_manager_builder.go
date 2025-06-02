@@ -187,7 +187,9 @@ func buildSecondaries(
 // A regexp matching "execution reverted" errors returned from the parent chain RPC.
 var executionRevertedRegexp = regexp.MustCompile(`(?i)execution reverted|VM execution error\.?`)
 
-// IsExecutionReverted returns true if the error is an "execution reverted" error or if the error is a rpc.Error with ErrorCode 3.
+// IsExecutionReverted returns true if the error is an "execution reverted" error
+// or if the error is a rpc.Error with ErrorCode 3.
+// Taken from
 func isExecutionReverted(err error) bool {
 	if executionRevertedRegexp.MatchString(err.Error()) {
 		return true
