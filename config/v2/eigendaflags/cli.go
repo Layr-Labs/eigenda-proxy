@@ -252,7 +252,6 @@ func ReadClientConfigV2(ctx *cli.Context) (common.ClientConfigV2, error) {
 		}
 	}
 
-
 	return common.ClientConfigV2{
 		DisperserClientCfg:           disperserConfig,
 		PayloadDisperserCfg:          readPayloadDisperserCfg(ctx),

@@ -35,8 +35,8 @@ type ClientConfigV2 struct {
 	RetrieversToEnable []RetrieverType
 
 	// Fields required for validator payload retrieval
-	BLSOperatorStateRetrieverAddr  string
-	EigenDAServiceManagerAddr      string
+	BLSOperatorStateRetrieverAddr string
+	EigenDAServiceManagerAddr     string
 
 	// Allowed distance (in L1 blocks) between the eigenDA cert's reference block number (RBN)
 	// and the L1 block number at which the cert was included in the rollup's batch inbox.
@@ -62,7 +62,6 @@ func (cfg *ClientConfigV2) Check() error {
 		return fmt.Errorf(`immutable v3 cert verifier address or dynamic router 
 		address is required for using EigenDA V2 backend`)
 	}
-
 
 	if cfg.MaxBlobSizeBytes == 0 {
 		return fmt.Errorf("max blob size is required for using EigenDA V2 backend")
