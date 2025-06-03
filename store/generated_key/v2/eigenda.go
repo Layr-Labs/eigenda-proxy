@@ -50,7 +50,6 @@ func NewStore(
 	disperser *payloaddispersal.PayloadDisperser,
 	retrievers []clients.PayloadRetriever,
 	certVerifier *verification.CertVerifier,
-
 ) (*Store, error) {
 	if putTries == 0 {
 		return nil, fmt.Errorf(
@@ -202,11 +201,14 @@ func (e Store) Verify(ctx context.Context, versionedCert certs.VersionedCert, op
 
 		err = verifyCertRBNRecencyCheck(eigenDACert.ReferenceBlockNumber(), opts.L1InclusionBlockNum, e.rbnRecencyWindowSize)
 		if err != nil {
-			return fmt.Errorf("rbn recency check failed: %w", err)
+			// Already a structured error converted to a 418 HTTP error by the error middleware.
+			return err
 		}
 
 		err = e.certVerifier.CheckDACert(ctx, &eigenDACert)
 		if err != nil {
+			// CheckDACert also returns a structured error that is converted to a 418 HTTP error by the error middleware.
+			// We still wrap it to provide more context.
 			return fmt.Errorf("verify v3 cert: %w", err)
 		}
 
