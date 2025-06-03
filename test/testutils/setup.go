@@ -50,14 +50,13 @@ const (
 	preprodRegistryCoordinatorAddress       = "0x2c61EA360D6500b58E7f481541A36B443Bc858c6"
 
 	disperserTestnetHostname = "disperser-testnet-holesky.eigenda.xyz"
-	// TODO: update test to also use the cert verifier router contract
 	testnetCertVerifierAddress              = "0xd305aeBcdEc21D00fDF8796CE37d0e74836a6B6e"
 	testnetSvcManagerAddress                = "0xD4A7E1Bd8015057293f0D0A557088c286942e84b"
 	testnetBLSOperatorStateRetrieverAddress = "0x003497Dd77E5B73C40e8aCbB562C8bb0410320E7"
 	testnetRegistryCoordinatorAddress       = "0x53012C69A189cfA2D9d29eb6F19B32e0A2EA3490"
 
 	disperserSepoliaHostname                = "disperser-testnet-sepolia.eigenda.xyz"
-	sepoliaCertVerifierAddress              = "0x73818fed0743085c4557a736a7630447fb57c662"
+	sepoliaCertVerifierAddress              = "0x58D2B844a894f00b7E6F9F492b9F43aD54Cd4429"
 	sepoliaSvcManagerAddress                = "0x3a5acf46ba6890B8536420F4900AC9BC45Df4764"
 	sepoliaBLSOperatorStateRetrieverAddress = "0x22478d082E9edaDc2baE8443E4aC9473F6E047Ff"
 	sepoliaRegistryCoordinatorAddress       = "0xAF21d3811B5d23D5466AC83BA7a9c34c261A8D81"
