@@ -11,6 +11,7 @@ import (
 	"github.com/Layr-Labs/eigenda/api/clients/v2"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/coretypes"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/payloaddispersal"
+	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/avast/retry-go/v4"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -34,9 +35,9 @@ type Store struct {
 	// This check is optional and will be skipped when rbnRecencyWindowSize is set to 0.
 	rbnRecencyWindowSize uint64
 
-	disperser  *payloaddispersal.PayloadDisperser
-	retrievers []clients.PayloadRetriever
-	verifier   clients.ICertVerifier
+	disperser    *payloaddispersal.PayloadDisperser
+	retrievers   []clients.PayloadRetriever
+	certVerifier *verification.CertVerifier
 }
 
 var _ common.EigenDAStore = (*Store)(nil)
@@ -47,7 +48,7 @@ func NewStore(
 	rbnRecencyWindowSize uint64,
 	disperser *payloaddispersal.PayloadDisperser,
 	retrievers []clients.PayloadRetriever,
-	verifier clients.ICertVerifier,
+	certVerifier *verification.CertVerifier,
 ) (*Store, error) {
 	if putTries == 0 {
 		return nil, fmt.Errorf(
@@ -60,7 +61,7 @@ func NewStore(
 		rbnRecencyWindowSize: rbnRecencyWindowSize,
 		disperser:            disperser,
 		retrievers:           retrievers,
-		verifier:             verifier,
+		certVerifier:         certVerifier,
 	}, nil
 }
 
@@ -163,10 +164,11 @@ func (e Store) Verify(ctx context.Context, certBytes []byte, _ []byte, opts comm
 	err = verifyCertRBNRecencyCheck(eigenDACert.BatchHeader.ReferenceBlockNumber,
 		opts.L1InclusionBlockNum, e.rbnRecencyWindowSize)
 	if err != nil {
-		return fmt.Errorf("rbn recency check failed: %w", err)
+		// Already a structured error converted to a 418 HTTP error by the error middleware.
+		return err
 	}
-
-	return e.verifier.VerifyCertV2(ctx, &eigenDACert)
+	// CheckDACert also returns a structured error that is converted to a 418 HTTP error by the error middleware.
+	return e.certVerifier.CheckDACert(ctx, &eigenDACert)
 }
 
 // verifyCertRBNRecencyCheck arguments:

@@ -7,6 +7,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/common"
 	eigendav2store "github.com/Layr-Labs/eigenda-proxy/store/generated_key/v2"
 	"github.com/Layr-Labs/eigenda-proxy/store/secondary/s3"
+	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -36,7 +37,8 @@ func Is400(err error) bool {
 // used in optimism's derivation pipeline.
 func Is418(err error) bool {
 	var rbnRecencyCheckFailedErr eigendav2store.RBNRecencyCheckFailedError
-	return errors.As(err, &rbnRecencyCheckFailedErr)
+	var invalidCertErr verification.CertVerificationFailedError
+	return errors.As(err, &rbnRecencyCheckFailedErr) || errors.As(err, &invalidCertErr)
 }
 
 // 429 TOO_MANY_REQUESTS is returned to the client to inform them that they are getting rate-limited
