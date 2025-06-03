@@ -52,21 +52,6 @@ func (n EigenDANetwork) GetBLSOperatorStateRetrieverAddress() (string, error) {
 	}
 }
 
-// GetRegistryCoordinatorAddress returns, as a string, the address of the RegistryCoordinator contract for the
-// network
-func (n EigenDANetwork) GetRegistryCoordinatorAddress() (string, error) {
-	switch n {
-	case HoleskyTestnetEigenDANetwork:
-		return "0x53012C69A189cfA2D9d29eb6F19B32e0A2EA3490", nil
-	case HoleskyPreprodEigenDANetwork:
-		return "0x2c61EA360D6500b58E7f481541A36B443Bc858c6", nil
-	case SepoliaTestnetEigenDANetwork:
-		return "0xAF21d3811B5d23D5466AC83BA7a9c34c261A8D81", nil
-	default:
-		return "", fmt.Errorf("unknown network: %s", n)
-	}
-}
-
 func (n EigenDANetwork) String() string {
 	return string(n)
 }

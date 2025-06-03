@@ -39,8 +39,8 @@ type Manager struct {
 
 	s3 *s3.Store // for op keccak256 commitment
 	// For op generic commitments & standard commitments
-	eigenda          common.EigenDAV1Store // v0 da commitment version
-	eigendaV2        common.EigenDAV2Store // v1 da commitment version
+	eigenda          common.EigenDAV1Store // v0 version byte
+	eigendaV2        common.EigenDAV2Store // >= v1 version bytes
 	dispersalBackend atomic.Value          // stores the EigenDABackend to write blobs to
 
 	// secondary storage backends (caching and fallbacks)

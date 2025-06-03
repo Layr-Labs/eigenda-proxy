@@ -526,7 +526,8 @@ func buildPayloadDisperser(
 	blockNumMonitor, err := verification.NewBlockNumberMonitor(
 		log,
 		ethClient,
-		time.Second*3,
+		time.Second*1, // NOTE: this polling interval works for e.g Ethereum but is too slow for L2 chains
+		//       which have block times of 2 seconds or less.
 	)
 	if err != nil {
 		return nil, fmt.Errorf("new block number monitor: %w", err)
