@@ -317,6 +317,7 @@ func buildEigenDAV2Backend(
 		ethClient,
 		kzgProver,
 		certVerifier,
+		ethReader,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("build payload disperser: %w", err)
@@ -510,6 +511,7 @@ func buildPayloadDisperser(
 	ethClient common_eigenda.EthClient,
 	kzgProver *prover.Prover,
 	certVerifier *verification.CertVerifier,
+	ethReader *eth.Reader,
 ) (*payloaddispersal.PayloadDisperser, error) {
 	signer, err := buildLocalSigner(ctx, log, secrets, ethClient)
 	if err != nil {
@@ -533,7 +535,7 @@ func buildPayloadDisperser(
 	certBuilder, err := clients_v2.NewCertBuilder(
 		log,
 		geth_common.HexToAddress(clientConfigV2.BLSOperatorStateRetrieverAddr),
-		geth_common.HexToAddress(clientConfigV2.EigenDARegistryCoordinatorAddr),
+		ethReader.GetRegistryCoordinatorAddress(),
 		ethClient,
 	)
 

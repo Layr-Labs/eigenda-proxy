@@ -36,7 +36,6 @@ type ClientConfigV2 struct {
 
 	// Fields required for validator payload retrieval
 	BLSOperatorStateRetrieverAddr  string
-	EigenDARegistryCoordinatorAddr string
 	EigenDAServiceManagerAddr      string
 
 	// Allowed distance (in L1 blocks) between the eigenDA cert's reference block number (RBN)
@@ -64,9 +63,6 @@ func (cfg *ClientConfigV2) Check() error {
 		address is required for using EigenDA V2 backend`)
 	}
 
-	if cfg.EigenDARegistryCoordinatorAddr == "" {
-		return fmt.Errorf("EigenDA registry coordinator address is required for using EigenDA V2 backend")
-	}
 
 	if cfg.MaxBlobSizeBytes == 0 {
 		return fmt.Errorf("max blob size is required for using EigenDA V2 backend")

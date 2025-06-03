@@ -27,7 +27,6 @@ var (
 	CertVerifierRouterOrImmutableVerifierAddrFlagName = withFlagPrefix("cert-verifier-router-or-immutable-verifier-addr")
 	ServiceManagerAddrFlagName                        = withFlagPrefix("service-manager-addr")
 	BLSOperatorStateRetrieverFlagName                 = withFlagPrefix("bls-operator-state-retriever-addr")
-	RegistryCoordinatorAddrFlagName                   = withFlagPrefix("registry-coordinator-addr")
 	RelayTimeoutFlagName                              = withFlagPrefix("relay-timeout")
 	ValidatorTimeoutFlagName                          = withFlagPrefix("validator-timeout")
 	ContractCallTimeoutFlagName                       = withFlagPrefix("contract-call-timeout")
@@ -126,13 +125,6 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			Name:     BLSOperatorStateRetrieverFlagName,
 			Usage:    "Address of the BLS operator state retriever contract.",
 			EnvVars:  []string{withEnvPrefix(envPrefix, "BLS_OPERATOR_STATE_RETRIEVER_ADDR")},
-			Category: category,
-			Required: false,
-		},
-		&cli.StringFlag{
-			Name:     RegistryCoordinatorAddrFlagName,
-			Usage:    "Address of the registry coordinator contract.",
-			EnvVars:  []string{withEnvPrefix(envPrefix, "REGISTRY_COORDINATOR_ADDR")},
 			Category: category,
 			Required: false,
 		},
@@ -260,15 +252,6 @@ func ReadClientConfigV2(ctx *cli.Context) (common.ClientConfigV2, error) {
 		}
 	}
 
-	registryCoordinatorAddress := ctx.String(RegistryCoordinatorAddrFlagName)
-	if registryCoordinatorAddress == "" {
-		registryCoordinatorAddress, err = eigenDANetwork.GetRegistryCoordinatorAddress()
-		if err != nil {
-			return common.ClientConfigV2{}, fmt.Errorf(
-				`registry coordinator address wasn't specified, and failed to get it from the
-							specified network : %w`, err)
-		}
-	}
 
 	return common.ClientConfigV2{
 		DisperserClientCfg:           disperserConfig,
@@ -283,7 +266,6 @@ func ReadClientConfigV2(ctx *cli.Context) (common.ClientConfigV2, error) {
 		// tried first, and the validator retriever will only be tried if the relay retriever fails
 		RetrieversToEnable:                 []common.RetrieverType{common.RelayRetrieverType, common.ValidatorRetrieverType},
 		BLSOperatorStateRetrieverAddr:      blsOperatorStateRetrieverAddress,
-		EigenDARegistryCoordinatorAddr:     registryCoordinatorAddress,
 		EigenDACertVerifierOrRouterAddress: ctx.String(CertVerifierRouterOrImmutableVerifierAddrFlagName),
 		EigenDAServiceManagerAddr:          serviceManagerAddress,
 		RBNRecencyWindowSize:               ctx.Uint64(RBNRecencyWindowSizeFlagName),

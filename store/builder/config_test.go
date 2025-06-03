@@ -70,7 +70,6 @@ func validCfg() Config {
 			MaxBlobSizeBytes:                   maxBlobLengthBytes,
 			BLSOperatorStateRetrieverAddr:      "0x000000000004324311",
 			EigenDAServiceManagerAddr:          "0x000000000005324322",
-			EigenDARegistryCoordinatorAddr:     "0x000000000006324323",
 			RetrieversToEnable: []common.RetrieverType{
 				common.RelayRetrieverType,
 				common.ValidatorRetrieverType,
