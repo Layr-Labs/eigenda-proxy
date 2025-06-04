@@ -107,7 +107,7 @@ type EigenDAV2Store interface {
 	Verify(ctx context.Context, versionedCert certs.VersionedCert, opts CertVerificationOpts) error
 }
 
-// PrecomputedKeyStore is the interface for a key-value data store that uses keccak(value) as the key.
+// SecondaryStore is the interface for a key-value data store that uses keccak(value) as the key.
 // It is used for Optimism altda keccak commitments, as well as for caching EigenDAStore entries.
 type SecondaryStore interface {
 	Store

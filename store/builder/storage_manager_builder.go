@@ -277,7 +277,7 @@ func buildEigenDAV2Backend(
 		provider,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("new generic cert verifier: %w", err)
+		return nil, fmt.Errorf("new cert verifier: %w", err)
 	}
 
 	var retrievers []clients_v2.PayloadRetriever
