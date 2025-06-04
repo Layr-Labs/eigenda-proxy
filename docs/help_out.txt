@@ -64,7 +64,7 @@ governance and is injected in the BlobHeader before dispersing. Currently only s
 loaded into memory for KZG commitments. Example units: '30MiB', '4Kb', '30MB'. Maximum size
 slightly exceeds 1GB. (default: "16MiB") [$EIGENDA_PROXY_EIGENDA_V2_MAX_BLOB_LENGTH]
    --eigenda.v2.network value  The EigenDA network that is being used. This is an optional flag, to configure
-default values for eigenda.v2.disperser-rpc, eigenda.v2.cert-verifier-router-or-immutable-verifier-addr, eigenda.v2.service-manager-addr, and eigenda.v2.bls-operator-state-retriever-addr. If all of these fields are explicitly configured, the
+default values for eigenda.v2.disperser-rpc, eigenda.v2.service-manager-addr, and eigenda.v2.bls-operator-state-retriever-addr. If all of these fields are explicitly configured, the
 network flag may be omitted. If some or all of these fields are configured, and the network
 is also configured, then the explicitly defined field values will take precedence. Permitted
 EigenDANetwork values include holesky_testnet, holesky_preprod, & sepolia_testnet. [$EIGENDA_PROXY_EIGENDA_V2_NETWORK]
