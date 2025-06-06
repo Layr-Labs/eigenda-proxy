@@ -241,14 +241,15 @@ func buildEigenDAV2Backend(
 	// Check if the router address is actually a router. if method `getCertVerifierAt` fails, it means that the
 	// address is not a router, and we should treat it as an immutable cert verifier instead
 	_, err = caller.GetCertVerifierAt(&bind.CallOpts{Context: ctx}, 0)
-	if err != nil && isExecutionReverted(err) {
+	switch {
+	case err != nil && isExecutionReverted(err):
 		log.Warn(`EigenDA cert verifier router address was detected to not be a router, using it as an
 			immutable cert verifier instead`)
-		// if the address is not a router, we should use it as an immutable cert verifier
-		// and set the router address to the same address
 		isRouter = false
-	} else if err != nil {
+	case err != nil:
 		return nil, fmt.Errorf("failed to determine whether cert verifier is immutable or deployed behind a router: %w", err)
+	default:
+		log.Info("EigenDA cert verifier address was detected as an EigenDACertVerifierRouter, using it as such")
 	}
 
 	var provider clients_v2.CertVerifierAddressProvider
