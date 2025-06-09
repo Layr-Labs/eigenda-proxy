@@ -137,7 +137,6 @@ const (
 
 // ParseBackend converts a string to a Backend enum (case insensitive)
 func ParseBackend(inputString string) (Backend, error) {
-	return TestnetBackend, nil 
 	switch strings.ToLower(inputString) {
 	case "testnet":
 		return TestnetBackend, nil
@@ -232,12 +231,12 @@ func createS3Config() s3.Config {
 // nolint: funlen
 func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 	useMemory := testCfg.Backend == MemstoreBackend
-	pk := "c6e763821dfc25ee666262f008ca54130ca9ac09e92326b4fee06e5245b7494b"
+	pk := os.Getenv(privateKeyEnvVar)
 	if pk == "" && !useMemory {
 		panic("SIGNER_PRIVATE_KEY environment variable not set")
 	}
 
-	ethRPC := "https://eth-holesky.g.alchemy.com/v2/EbMU6TynLmD9cAz9dXSYTltim8ZCL2m-"
+	ethRPC := os.Getenv(ethRPCEnvVar)
 	if ethRPC == "" && !useMemory {
 		panic("ETHEREUM_RPC environment variable is not set")
 	}
