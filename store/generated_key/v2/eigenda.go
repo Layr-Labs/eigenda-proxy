@@ -179,13 +179,14 @@ func (e Store) BackendType() common.BackendType {
 	return common.EigenDAV2BackendType
 }
 
-// TODO: this whole function should be upstreamed to a new eigenda VerifyingPayloadRetrieval client
-// that would verify certs, and then retrieve the payloads (from relay with fallback to eigenda validators if needed).
-// Then proxy could remain a very thing server wrapper around eigenda clients.
 // Verify verifies an EigenDACert by calling the verifyEigenDACertV2 view function
 //
 // Since v2 methods for fetching a payload are responsible for verifying the received bytes against the certificate,
 // this Verify method only needs to check the cert on chain. That is why the third parameter is ignored.
+//
+// TODO: this whole function should be upstreamed to a new eigenda VerifyingPayloadRetrieval client
+// that would verify certs, and then retrieve the payloads (from relay with fallback to eigenda validators if needed).
+// Then proxy could remain a very thing server wrapper around eigenda clients.
 func (e Store) Verify(ctx context.Context, versionedCert certs.VersionedCert, opts common.CertVerificationOpts) error {
 	switch versionedCert.Version {
 	case certs.V0VersionByte, certs.V1VersionByte:
@@ -210,7 +211,7 @@ func (e Store) Verify(ctx context.Context, versionedCert certs.VersionedCert, op
 
 		err = e.certVerifier.CheckDACert(ctx, &eigenDACert)
 		if err != nil {
-			// CheckDACert also returns a structured error that is converted to a 418 HTTP error by the error middleware.
+			// CheckDACert already returns a structured error that is converted to a 418 HTTP error by the error middleware.
 			// We still wrap it to provide more context.
 			return fmt.Errorf("verify v3 cert: %w", err)
 		}
