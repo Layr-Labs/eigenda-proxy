@@ -247,7 +247,8 @@ func buildEigenDAV2Backend(
 			"using it as an immutable cert verifier instead", routerOrImmutableVerifierAddr.Hex())
 		isRouter = false
 	case err != nil:
-		return nil, fmt.Errorf("failed to determine whether cert verifier is immutable or deployed behind a router at address (%s) : %w", routerOrImmutableVerifierAddr.Hex(), err)
+		return nil, fmt.Errorf("failed to determine whether cert verifier is immutable or"+
+			"deployed behind a router at address (%s) : %w", routerOrImmutableVerifierAddr.Hex(), err)
 	default:
 		log.Infof("EigenDA cert verifier address was detected as an EigenDACertVerifierRouter"+
 			"at address (%s), using it as such", routerOrImmutableVerifierAddr.Hex())
