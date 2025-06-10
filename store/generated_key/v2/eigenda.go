@@ -196,6 +196,9 @@ func (e Store) Verify(ctx context.Context, versionedCert certs.VersionedCert, op
 		var eigenDACert coretypes.EigenDACertV3
 		err := rlp.DecodeBytes(versionedCert.SerializedCert, &eigenDACert)
 		if err != nil {
+			// TODO: we need to figure out how to treat this error... should we return a TEAPOT
+			// like the other cert errors? Hokulea might need to still receive the blob to prove
+			// that is was badly encoded, which is the main complexity here.
 			return fmt.Errorf("RLP decoding EigenDA v3 cert: %w", err)
 		}
 
