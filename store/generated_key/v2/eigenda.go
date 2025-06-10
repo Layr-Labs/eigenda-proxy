@@ -188,7 +188,6 @@ func (e Store) BackendType() common.BackendType {
 // Since v2 methods for fetching a payload are responsible for verifying the received bytes against the certificate,
 // this Verify method only needs to check the cert on chain. That is why the third parameter is ignored.
 func (e Store) Verify(ctx context.Context, versionedCert certs.VersionedCert, opts common.CertVerificationOpts) error {
-
 	var retrievableDACert coretypes.RetrievableEigenDACert
 	var sumDACert coretypes.EigenDACert
 
@@ -223,7 +222,8 @@ func (e Store) Verify(ctx context.Context, versionedCert certs.VersionedCert, op
 	}
 
 	// check recency first since it requires less processing and no IO vs verifying the cert
-	err := verifyCertRBNRecencyCheck(retrievableDACert.ReferenceBlockNumber(), opts.L1InclusionBlockNum, e.rbnRecencyWindowSize)
+	err := verifyCertRBNRecencyCheck(retrievableDACert.ReferenceBlockNumber(),
+		opts.L1InclusionBlockNum, e.rbnRecencyWindowSize)
 	if err != nil {
 		return fmt.Errorf("rbn recency check failed: %w", err)
 	}
