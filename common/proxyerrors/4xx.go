@@ -37,7 +37,7 @@ func Is400(err error) bool {
 // used in optimism's derivation pipeline.
 func Is418(err error) bool {
 	var rbnRecencyCheckFailedErr eigendav2store.RBNRecencyCheckFailedError
-	var invalidCertErr verification.CertVerificationFailedError
+	var invalidCertErr *verification.CertVerificationFailedError
 	return errors.As(err, &rbnRecencyCheckFailedErr) ||
 		errors.As(err, &invalidCertErr)
 }
