@@ -1,9 +1,13 @@
 package middleware
 
 import (
+	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/Layr-Labs/eigenda-proxy/common/proxyerrors"
+	eigendav2store "github.com/Layr-Labs/eigenda-proxy/store/generated_key/v2"
+	_ "github.com/Layr-Labs/eigenda/api/clients/v2/verification" // needed for docstring links
 )
 
 // Error handling middleware (innermost) transforms internal errors to HTTP errors,
@@ -24,7 +28,27 @@ func withErrorHandling(
 		case proxyerrors.Is400(err):
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		case proxyerrors.Is418(err):
-			http.Error(w, err.Error(), http.StatusTeapot)
+			var rbnRecencyCheckFailedErr eigendav2store.RBNRecencyCheckFailedError
+			if errors.As(err, &rbnRecencyCheckFailedErr) {
+				w.WriteHeader(http.StatusTeapot)
+				// We convert to a [verification.CertVerificationFailedError] like error,
+				// such that clients can always pass the same json body to understand the error.
+				// All positive uint8 StatusCodes are reserved for errors coming from the CertVerifier contract,
+				// so we use negative errors to indicate other errors (of which we only have RBNRecencyCheck right now).
+				var statusCodeAndMsg = struct {
+					StatusCode int
+					Msg        string
+				}{
+					StatusCode: -1,
+					Msg:        rbnRecencyCheckFailedErr.Error(),
+				}
+				_ = json.NewEncoder(w).Encode(statusCodeAndMsg)
+			}
+			// otherwise the error is a [verification.CertVerificationFailedError]
+			// so we json marshal it into the body to give access to the status code
+			// and message.
+			w.WriteHeader(http.StatusTeapot)
+			_ = json.NewEncoder(w).Encode(err)
 		case proxyerrors.Is429(err):
 			http.Error(w, err.Error(), http.StatusTooManyRequests)
 		case proxyerrors.Is503(err):

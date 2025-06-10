@@ -38,7 +38,8 @@ func Is400(err error) bool {
 func Is418(err error) bool {
 	var rbnRecencyCheckFailedErr eigendav2store.RBNRecencyCheckFailedError
 	var invalidCertErr verification.CertVerificationFailedError
-	return errors.As(err, &rbnRecencyCheckFailedErr) || errors.As(err, &invalidCertErr)
+	return errors.As(err, &rbnRecencyCheckFailedErr) ||
+		errors.As(err, &invalidCertErr)
 }
 
 // 429 TOO_MANY_REQUESTS is returned to the client to inform them that they are getting rate-limited
