@@ -44,7 +44,7 @@ type CertVerifier struct {
 
 	securityParamReader SecurityParamReader
 	ethClient           *ethclient.Client
-	// The two fields below are fetched from the EigenDAServiceManager contract in the constructor.
+	// The two fields below are fetched from the EigenDAServiceManager contract or the EigenDACertVerifierV1 (if configured) in the constructor.
 	// They are used to verify the quorums in the received certificates.
 	// See getQuorumParametersAtLatestBlock for more details.
 	quorumsRequired           []uint8
