@@ -28,11 +28,11 @@ func withErrorHandling(
 		case proxyerrors.Is400(err):
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		case proxyerrors.Is418(err):
+			w.WriteHeader(http.StatusTeapot)
 			var rbnRecencyCheckFailedErr eigendav2store.RBNRecencyCheckFailedError
 			if errors.As(err, &rbnRecencyCheckFailedErr) {
-				w.WriteHeader(http.StatusTeapot)
 				// We convert to a [verification.CertVerificationFailedError] like error,
-				// such that clients can always pass the same json body to understand the error.
+				// such that 418s always contain the same json body with StatusCode and Msg fields.
 				// All positive uint8 StatusCodes are reserved for errors coming from the CertVerifier contract,
 				// so we use negative errors to indicate other errors (of which we only have RBNRecencyCheck right now).
 				var statusCodeAndMsg = struct {
@@ -43,12 +43,12 @@ func withErrorHandling(
 					Msg:        rbnRecencyCheckFailedErr.Error(),
 				}
 				_ = json.NewEncoder(w).Encode(statusCodeAndMsg)
+			} else {
+				// else the error is a [verification.CertVerificationFailedError]
+				// so we json marshal it into the body to give access to the status code
+				// and message.
+				_ = json.NewEncoder(w).Encode(err)
 			}
-			// otherwise the error is a [verification.CertVerificationFailedError]
-			// so we json marshal it into the body to give access to the status code
-			// and message.
-			w.WriteHeader(http.StatusTeapot)
-			_ = json.NewEncoder(w).Encode(err)
 		case proxyerrors.Is429(err):
 			http.Error(w, err.Error(), http.StatusTooManyRequests)
 		case proxyerrors.Is503(err):
