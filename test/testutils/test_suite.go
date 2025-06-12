@@ -38,7 +38,6 @@ func CreateTestSuite(
 	appConfig config.AppConfig,
 	options ...func(*TestSuite),
 ) (TestSuite, func()) {
-
 	ts := &TestSuite{
 		Ctx:     context.Background(),
 		Log:     logging.NewTextSLogger(os.Stdout, &logging.SLoggerOptions{}),
