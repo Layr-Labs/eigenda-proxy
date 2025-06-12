@@ -18,6 +18,7 @@ GLOBAL OPTIONS:
 
    Cert Verifier (V1 only)
 
+   --cert-verifier-v1 value              Address of EigenDACertVerifierV1 contract. Only necessary if using custom quorums/thresholds for certificate verification. [$EIGENDA_PROXY_EIGENDA_CERT_VERIFIER_V1]
    --eigenda.cert-verification-disabled  Whether to verify certificates received from EigenDA disperser. (default: false) [$EIGENDA_PROXY_EIGENDA_CERT_VERIFICATION_DISABLED]
 
    EigenDA V1 Client
