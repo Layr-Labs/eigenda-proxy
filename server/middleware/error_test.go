@@ -79,7 +79,7 @@ func TestWithErrorHandling_HTTPStatusCodes(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			handler := withErrorHandling(tc.handleFn)
-			req := httptest.NewRequest("GET", "/", nil)
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			rr := httptest.NewRecorder()
 			err := handler(rr, req)
 			if err == nil {
@@ -123,7 +123,7 @@ func TestWithErrorHandling_418TeapotErrors(t *testing.T) {
 			handler := withErrorHandling(func(w http.ResponseWriter, r *http.Request) error {
 				return tc.err
 			})
-			req := httptest.NewRequest("GET", "/", nil)
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			rr := httptest.NewRecorder()
 			err := handler(rr, req)
 			if err == nil {

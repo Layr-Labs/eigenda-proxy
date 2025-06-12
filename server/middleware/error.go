@@ -9,7 +9,6 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/common/proxyerrors"
 	eigendav2store "github.com/Layr-Labs/eigenda-proxy/store/generated_key/v2"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
-	_ "github.com/Layr-Labs/eigenda/api/clients/v2/verification" // needed for docstring links
 )
 
 // Error handling middleware (innermost) transforms internal errors to HTTP errors,
