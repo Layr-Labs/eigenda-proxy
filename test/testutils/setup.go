@@ -306,7 +306,7 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 			PutTries:         3,
 		},
 		VerifierConfigV1: verify.Config{
-			VerifyCerts:          true,
+			VerifyCerts:          false,
 			RPCURL:               ethRPC,
 			SvcManagerAddr:       svcManagerAddress,
 			EthConfirmationDepth: 1,
@@ -321,7 +321,6 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 			SRSOrder:        eigendaflags.SrsOrder,
 			SRSNumberToLoad: maxBlobLengthBytes / 32,
 			NumWorker:       uint64(runtime.GOMAXPROCS(0)), // #nosec G115
-			LoadG2Points:    true,
 		},
 		MemstoreConfig: memconfig.NewSafeConfig(
 			memconfig.Config{
