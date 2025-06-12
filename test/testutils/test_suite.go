@@ -38,6 +38,7 @@ func CreateTestSuite(
 	appConfig config.AppConfig,
 	options ...func(*TestSuite),
 ) (TestSuite, func()) {
+
 	ts := &TestSuite{
 		Ctx:     context.Background(),
 		Log:     logging.NewTextSLogger(os.Stdout, &logging.SLoggerOptions{}),
@@ -49,6 +50,16 @@ func CreateTestSuite(
 	}
 
 	ctx, logger, metrics := ts.Ctx, ts.Log, ts.Metrics
+
+	if err := appConfig.Check(); err != nil {
+		panic(err)
+	}
+	configString, err := appConfig.StoreBuilderConfig.ToString()
+	if err != nil {
+		panic(fmt.Sprintf("convert config json to string: %v", err))
+	}
+
+	logger.Infof("Creating EigenDA proxy server for testSuite with config (\"*****\" fields are hidden): %v", configString)
 
 	storeManager, err := builder.BuildStoreManager(
 		ctx,
