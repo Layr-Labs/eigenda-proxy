@@ -188,14 +188,28 @@ func (e Store) BackendType() common.BackendType {
 // that would verify certs, and then retrieve the payloads (from relay with fallback to eigenda validators if needed).
 // Then proxy could remain a very thing server wrapper around eigenda clients.
 func (e Store) Verify(ctx context.Context, versionedCert certs.VersionedCert, opts common.CertVerificationOpts) error {
+	var referenceBlockNumber uint64
+	var sumDACert coretypes.EigenDACert
+
 	switch versionedCert.Version {
-	case certs.V0VersionByte, certs.V1VersionByte:
-		e.log.Warn("EigenDA V2 certs are not supported anymore more for verification. Defaulting to successful verification.")
-		return nil
+	case certs.V0VersionByte:
+		return fmt.Errorf("version 0 byte certs should never be verified by the EigenDA V2 store")
+
+	case certs.V1VersionByte:
+		// convert v2 eigenda cert to v3 cert type for verification against the forward compatible
+		// cert verifier
+		var eigenDACertV2 coretypes.EigenDACertV2
+		err := rlp.DecodeBytes(versionedCert.SerializedCert, &eigenDACertV2)
+		if err != nil {
+			return fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
+		}
+
+		referenceBlockNumber = eigenDACertV2.ReferenceBlockNumber()
+		sumDACert = &eigenDACertV2
 
 	case certs.V2VersionByte:
-		var eigenDACert coretypes.EigenDACertV3
-		err := rlp.DecodeBytes(versionedCert.SerializedCert, &eigenDACert)
+		var eigenDACertV3 coretypes.EigenDACertV3
+		err := rlp.DecodeBytes(versionedCert.SerializedCert, &eigenDACertV3)
 		if err != nil {
 			// TODO: we need to figure out how to treat this error... should we return a TEAPOT
 			// like the other cert errors? Hokulea might need to still receive the blob to prove
@@ -203,21 +217,27 @@ func (e Store) Verify(ctx context.Context, versionedCert certs.VersionedCert, op
 			return fmt.Errorf("RLP decoding EigenDA v3 cert: %w", err)
 		}
 
-		err = verifyCertRBNRecencyCheck(eigenDACert.ReferenceBlockNumber(), opts.L1InclusionBlockNum, e.rbnRecencyWindowSize)
-		if err != nil {
-			// Already a structured error converted to a 418 HTTP error by the error middleware.
-			return err
-		}
-
-		err = e.certVerifier.CheckDACert(ctx, &eigenDACert)
-		if err != nil {
-			// CheckDACert already returns a structured error that is converted to a 418 HTTP error by the error middleware.
-			// We still wrap it to provide more context.
-			return fmt.Errorf("verify v3 cert: %w", err)
-		}
+		referenceBlockNumber = eigenDACertV3.ReferenceBlockNumber()
+		sumDACert = &eigenDACertV3
 
 	default:
 		return fmt.Errorf("unsupported EigenDA cert version: %d", versionedCert.Version)
+	}
+
+	// check recency first since it requires less processing and no IO vs verifying the cert
+	err := verifyCertRBNRecencyCheck(referenceBlockNumber,
+		opts.L1InclusionBlockNum, e.rbnRecencyWindowSize)
+	if err != nil {
+		// Already a structured error converted to a 418 HTTP error by the error middleware.
+		return err
+	}
+
+	// verify cert via simulation call to verifier contract
+	err = e.certVerifier.CheckDACert(ctx, sumDACert)
+	if err != nil {
+		// CheckDACert already returns a structured error that is converted to a 418 HTTP error by the error middleware.
+		// We still wrap it to provide more context.
+		return fmt.Errorf("verify v3 cert: %w", err)
 	}
 
 	return nil
