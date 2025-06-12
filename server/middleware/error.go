@@ -3,10 +3,12 @@ package middleware
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/Layr-Labs/eigenda-proxy/common/proxyerrors"
 	eigendav2store "github.com/Layr-Labs/eigenda-proxy/store/generated_key/v2"
+	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
 	_ "github.com/Layr-Labs/eigenda/api/clients/v2/verification" // needed for docstring links
 )
 
@@ -24,31 +26,40 @@ func withErrorHandling(
 		// commitment mode, cert version, etc. to the error?
 		// Or maybe we should just add a requestID to the error, and log the request-specific information
 		// in the logging middleware, so that we can correlate the error with the request?
+		var rbnRecencyCheckFailedErr eigendav2store.RBNRecencyCheckFailedError
+		var certVerificationFailedErr *verification.CertVerificationFailedError
 		switch {
 		case proxyerrors.Is400(err):
 			http.Error(w, err.Error(), http.StatusBadRequest)
-		case proxyerrors.Is418(err):
+		// 418 TEAPOT errors don't follow the pattern proxyerrors.Is418(err),
+		// because we have 2 very different errors that we need to marshal into the body of the 418 TEAPOT response.
+		case errors.As(err, &certVerificationFailedErr):
+			errBytes, _ := json.Marshal(certVerificationFailedErr)
+			fmt.Println("err", err)
+			fmt.Println(string(errBytes))
+			// else the error is a [verification.CertVerificationFailedError]
+			// so we json marshal it into the body to give access to the status code
+			// and message.
 			w.WriteHeader(http.StatusTeapot)
-			var rbnRecencyCheckFailedErr eigendav2store.RBNRecencyCheckFailedError
-			if errors.As(err, &rbnRecencyCheckFailedErr) {
-				// We convert to a [verification.CertVerificationFailedError] like error,
-				// such that 418s always contain the same json body with StatusCode and Msg fields.
-				// All positive uint8 StatusCodes are reserved for errors coming from the CertVerifier contract,
-				// so we use negative errors to indicate other errors (of which we only have RBNRecencyCheck right now).
-				var statusCodeAndMsg = struct {
-					StatusCode int
-					Msg        string
-				}{
-					StatusCode: -1,
-					Msg:        rbnRecencyCheckFailedErr.Error(),
-				}
-				_ = json.NewEncoder(w).Encode(statusCodeAndMsg)
-			} else {
-				// else the error is a [verification.CertVerificationFailedError]
-				// so we json marshal it into the body to give access to the status code
-				// and message.
-				_ = json.NewEncoder(w).Encode(err)
+			encodingErr := json.NewEncoder(w).Encode(certVerificationFailedErr)
+			if encodingErr != nil {
+				panic(encodingErr)
 			}
+		case errors.As(err, &rbnRecencyCheckFailedErr):
+			// We convert to a [verification.CertVerificationFailedError] like error,
+			// such that 418s always contain the same json body with StatusCode and Msg fields.
+			// All positive uint8 StatusCodes are reserved for errors coming from the CertVerifier contract,
+			// so we use negative errors to indicate other errors (of which we only have RBNRecencyCheck right now).
+			// TODO: we should probably fit the RBNRecencyCheckFailed errors into CertVerificationFailedErrors?
+			var statusCodeAndMsg = struct {
+				StatusCode int
+				Msg        string
+			}{
+				StatusCode: -1,
+				Msg:        rbnRecencyCheckFailedErr.Error(),
+			}
+			w.WriteHeader(http.StatusTeapot)
+			_ = json.NewEncoder(w).Encode(statusCodeAndMsg)
 		case proxyerrors.Is429(err):
 			http.Error(w, err.Error(), http.StatusTooManyRequests)
 		case proxyerrors.Is503(err):
