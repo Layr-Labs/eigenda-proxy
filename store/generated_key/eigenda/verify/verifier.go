@@ -83,6 +83,7 @@ func NewVerifier(cfg *Config, kzgVerifier *kzgverifier.Verifier, l logging.Logge
 	return &Verifier{
 		kzgVerifier: kzgVerifier,
 		cv:          cv,
+		verifyCerts: cfg.VerifyCerts,
 		holesky:     isHolesky(cfg.SvcManagerAddr),
 	}, nil
 }
