@@ -1,12 +1,9 @@
 package ephemeraldb
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"sync"
 	"time"
 
@@ -31,18 +28,20 @@ type DB struct {
 	log    logging.Logger
 
 	// mu guards the below fields
-	mu        sync.RWMutex
-	keyStarts map[string]time.Time // used for managing expiration
-	store     map[string][]byte    // db
+	mu                   sync.RWMutex
+	keyStarts            map[string]time.Time // used for managing expiration
+	store                map[string][]byte    // db
+	instructedStatusCode map[string]int       // a map storing keys with instructed status code
 }
 
 // New ... constructor
 func New(ctx context.Context, cfg *memconfig.SafeConfig, log logging.Logger) *DB {
 	db := &DB{
-		config:    cfg,
-		keyStarts: make(map[string]time.Time),
-		store:     make(map[string][]byte),
-		log:       log,
+		config:               cfg,
+		keyStarts:            make(map[string]time.Time),
+		store:                make(map[string][]byte),
+		instructedStatusCode: make(map[string]int),
+		log:                  log,
 	}
 
 	// if no expiration set then blobs will be persisted indefinitely
@@ -74,28 +73,20 @@ func (db *DB) InsertEntry(key []byte, value []byte) error {
 	strKey := string(key)
 
 	statusCode := db.config.GetReturnsStatusCode()
-	db.log.Info("InsertEntry ephemeral db", "statusCode", statusCode)
 	if statusCode != int(coretypes.StatusSuccess) {
-		// TODO we should group all the error into a single error type
-		if statusCode == -1 {
-			return eigenda.RBNRecencyCheckFailedError{}
+		db.log.Info("InsertEntry to memstore with special status code", "statusCode", statusCode)
+		// If instructed to return a non Success Status, the memstore stores the error message
+		// on return. TODO we should group all the error into a single error type
+		// StatusRequiredQuorumsNotSubset is the highest iota. -1 is recency error
+		if statusCode < -1 || statusCode > int(coretypes.StatusRequiredQuorumsNotSubset) {
+			return fmt.Errorf("memstore is configured to return an unknown status code. Unable to serve the request")
 		}
 
-		if statusCode < 0 || statusCode > int(coretypes.StatusRequiredQuorumsNotSubset) {
-			return fmt.Errorf("memstore is configured to use an unknown status code error")
+		_, exists := db.instructedStatusCode[strKey]
+		if exists {
+			return fmt.Errorf("memstore is configured to return instructed status code, payload key already exists in ephemeral db: %s", strKey)
 		}
-
-		err := verification.CertVerificationFailedError{
-			StatusCode: coretypes.VerificationStatusCode(statusCode),
-			Msg:        fmt.Sprintf("cert verification failed: status code (%d)", statusCode),
-		}
-
-		marshelledCertVerificationFailedError, jsonErr := json.Marshal(&err)
-		if jsonErr != nil {
-			return fmt.Errorf("cannot json marshal CertVerificationFailedError")
-		}
-
-		db.store[strKey] = marshelledCertVerificationFailedError
+		db.instructedStatusCode[strKey] = statusCode
 	} else {
 		_, exists := db.store[strKey]
 		if exists {
@@ -109,7 +100,7 @@ func (db *DB) InsertEntry(key []byte, value []byte) error {
 			db.keyStarts[strKey] = time.Now()
 		}
 	}
-	// write always succeed
+	// write always succeed even instructed to return error on Get
 	return nil
 }
 
@@ -119,33 +110,33 @@ func (db *DB) FetchEntry(key []byte) ([]byte, error) {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 
+	statusCode, instructedExists := db.instructedStatusCode[string(key)]
+	if instructedExists {
+		if statusCode < -1 || statusCode > int(coretypes.StatusRequiredQuorumsNotSubset) {
+			return nil, fmt.Errorf("memstore is configured to return an unknown status code. Unable to serve the get")
+		}
+
+		if statusCode == -1 {
+			return nil, eigenda.RBNRecencyCheckFailedError{}
+		}
+
+		// the error msg the retriever would receive on the get path
+		err := verification.CertVerificationFailedError{
+			StatusCode: coretypes.VerificationStatusCode(statusCode),
+			Msg:        fmt.Sprintf("cert verification failed: status code (%d)", statusCode),
+		}
+
+		return nil, &err
+
+	}
+
 	payload, exists := db.store[string(key)]
 
 	if !exists {
 		return nil, fmt.Errorf("payload not found for key: %s", string(key))
 	}
 
-	var certVerificationFailedError verification.CertVerificationFailedError
-
-	isInstructedStatusCode := true
-	dec := json.NewDecoder(bytes.NewReader(payload))
-	dec.DisallowUnknownFields()
-
-	if err := dec.Decode(&certVerificationFailedError); err != nil {
-		// bad syntax, type mismatch, or unknown field
-		isInstructedStatusCode = false
-	}
-
-	if err := dec.Decode(new(struct{})); err != io.EOF {
-		isInstructedStatusCode = false
-	}
-
-	if isInstructedStatusCode {
-		db.log.Info("FetchEntry ephemeral db", "encounter a instructed statusCode", certVerificationFailedError)
-		return nil, &certVerificationFailedError
-	} else {
-		return payload, nil
-	}
+	return payload, nil
 }
 
 // pruningLoop ... runs a background goroutine to prune expired blobs from the store on a regular interval.
