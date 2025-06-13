@@ -112,7 +112,11 @@ func (db *DB) FetchEntry(key []byte) ([]byte, error) {
 	if instructedExists {
 		// should have been defended in the SET http router path
 		if statusCode < -1 || statusCode > int(coretypes.StatusRequiredQuorumsNotSubset) {
-			panic("memstore is configured to return an unknown status code in FetchEntry. Unable to serve the get")
+			panic("memstore is configured to return an unknown status code in FetchEntry")
+		}
+
+		if statusCode == int(coretypes.StatusSuccess) {
+			panic("memstore cannot return error for SuccessStatusCode in the instructed mode")
 		}
 
 		if statusCode == -1 {
