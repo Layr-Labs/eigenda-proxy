@@ -17,6 +17,7 @@ type ConfigUpdate struct {
 	GetLatency              *string `json:"GetLatency,omitempty"`
 	PutReturnsFailoverError *bool   `json:"PutReturnsFailoverError,omitempty"`
 	BlobExpiration          *string `json:"BlobExpiration,omitempty"`
+	GetReturnsStatusCode    *int    `json:"GetReturnsStatusCode,omitempty"`
 }
 
 // HandlerHTTP is an admin HandlerHTTP for GETting and PATCHing the memstore configuration.
@@ -96,6 +97,10 @@ func (api HandlerHTTP) handleUpdateConfig(w http.ResponseWriter, r *http.Request
 			return
 		}
 		api.safeConfig.SetBlobExpiration(duration)
+	}
+
+	if update.GetReturnsStatusCode != nil {
+		api.safeConfig.SetGETReturnsStatusCode(*update.GetReturnsStatusCode)
 	}
 
 	// Return the current configuration

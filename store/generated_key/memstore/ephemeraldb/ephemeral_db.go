@@ -1,15 +1,21 @@
 package ephemeraldb
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"sync"
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/common/proxyerrors"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
+	eigenda "github.com/Layr-Labs/eigenda-proxy/store/generated_key/v2"
 	"github.com/Layr-Labs/eigenda/api"
+	"github.com/Layr-Labs/eigenda/api/clients/v2/coretypes"
+	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 )
 
@@ -67,18 +73,43 @@ func (db *DB) InsertEntry(key []byte, value []byte) error {
 
 	strKey := string(key)
 
-	_, exists := db.store[strKey]
-	if exists {
-		return fmt.Errorf("payload key already exists in ephemeral db: %s", strKey)
+	statusCode := db.config.GetReturnsStatusCode()
+	db.log.Info("InsertEntry ephemeral db", "statusCode", statusCode)
+	if statusCode != int(coretypes.StatusSuccess) {
+		// TODO we should group all the error into a single error type
+		if statusCode == -1 {
+			return eigenda.RBNRecencyCheckFailedError{}
+		}
+
+		if statusCode < 0 || statusCode > int(coretypes.StatusRequiredQuorumsNotSubset) {
+			return fmt.Errorf("memstore is configured to use an unknown status code error")
+		}
+
+		err := verification.CertVerificationFailedError{
+			StatusCode: coretypes.VerificationStatusCode(statusCode),
+			Msg:        fmt.Sprintf("cert verification failed: status code (%d)", statusCode),
+		}
+
+		marshelledCertVerificationFailedError, jsonErr := json.Marshal(&err)
+		if jsonErr != nil {
+			return fmt.Errorf("cannot json marshal CertVerificationFailedError")
+		}
+
+		db.store[strKey] = marshelledCertVerificationFailedError
+	} else {
+		_, exists := db.store[strKey]
+		if exists {
+			return fmt.Errorf("payload key already exists in ephemeral db: %s", strKey)
+		}
+
+		db.store[strKey] = value
+		// add expiration if applicable
+
+		if db.config.BlobExpiration() > 0 {
+			db.keyStarts[strKey] = time.Now()
+		}
 	}
-
-	db.store[strKey] = value
-	// add expiration if applicable
-
-	if db.config.BlobExpiration() > 0 {
-		db.keyStarts[strKey] = time.Now()
-	}
-
+	// write always succeed
 	return nil
 }
 
@@ -94,7 +125,27 @@ func (db *DB) FetchEntry(key []byte) ([]byte, error) {
 		return nil, fmt.Errorf("payload not found for key: %s", string(key))
 	}
 
-	return payload, nil
+	var certVerificationFailedError verification.CertVerificationFailedError
+
+	isInstructedStatusCode := true
+	dec := json.NewDecoder(bytes.NewReader(payload))
+	dec.DisallowUnknownFields()
+
+	if err := dec.Decode(&certVerificationFailedError); err != nil {
+		// bad syntax, type mismatch, or unknown field
+		isInstructedStatusCode = false
+	}
+
+	if err := dec.Decode(new(struct{})); err != io.EOF {
+		isInstructedStatusCode = false
+	}
+
+	if isInstructedStatusCode {
+		db.log.Info("FetchEntry ephemeral db", "encounter a instructed statusCode", certVerificationFailedError)
+		return nil, &certVerificationFailedError
+	} else {
+		return payload, nil
+	}
 }
 
 // pruningLoop ... runs a background goroutine to prune expired blobs from the store on a regular interval.
