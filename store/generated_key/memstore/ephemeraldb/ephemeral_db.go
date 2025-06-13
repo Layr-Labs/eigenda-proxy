@@ -28,20 +28,20 @@ type DB struct {
 	log    logging.Logger
 
 	// mu guards the below fields
-	mu                   sync.RWMutex
-	keyStarts            map[string]time.Time // used for managing expiration
-	store                map[string][]byte    // db
-	instructedStatusCode map[string]int       // a map storing keys with instructed status code
+	mu                             sync.RWMutex
+	keyStarts                      map[string]time.Time // used for managing expiration
+	store                          map[string][]byte    // db
+	instructedNonSuccessStatusCode map[string]int       // a map storing keys with instructed status code
 }
 
 // New ... constructor
 func New(ctx context.Context, cfg *memconfig.SafeConfig, log logging.Logger) *DB {
 	db := &DB{
-		config:               cfg,
-		keyStarts:            make(map[string]time.Time),
-		store:                make(map[string][]byte),
-		instructedStatusCode: make(map[string]int),
-		log:                  log,
+		config:                         cfg,
+		keyStarts:                      make(map[string]time.Time),
+		store:                          make(map[string][]byte),
+		instructedNonSuccessStatusCode: make(map[string]int),
+		log:                            log,
 	}
 
 	// if no expiration set then blobs will be persisted indefinitely
@@ -72,23 +72,11 @@ func (db *DB) InsertEntry(key []byte, value []byte) error {
 
 	strKey := string(key)
 
-	statusCode := db.config.GetReturnsStatusCode()
-	if statusCode != int(coretypes.StatusSuccess) {
-		db.log.Info("InsertEntry to memstore with special status code", "statusCode", statusCode)
-		// If instructed to return a non Success Status(1), the memstore stores the error message
-		// on return. TODO we should group all the error into a single error type
-		// StatusRequiredQuorumsNotSubset is the highest iota. -1 is recency error
-		if statusCode < -1 || statusCode > int(coretypes.StatusRequiredQuorumsNotSubset) {
-			return fmt.Errorf("memstore is configured to return an unknown status code. Unable to serve the request")
-		}
+	activated, statusCode := db.config.GetInstructedMode()
+	// if isActivatedNormalOps, the data is stored in
+	isActivatedNormalOps := activated && statusCode == int(coretypes.StatusSuccess)
 
-		_, exists := db.instructedStatusCode[strKey]
-		if exists {
-			return fmt.Errorf("memstore is configured to return instructed status code, payload key already exists in ephemeral db: %s", strKey)
-		}
-		// not BlobExpiration
-		db.instructedStatusCode[strKey] = statusCode
-	} else {
+	if !activated || isActivatedNormalOps {
 		_, exists := db.store[strKey]
 		if exists {
 			return fmt.Errorf("payload key already exists in ephemeral db: %s", strKey)
@@ -100,7 +88,16 @@ func (db *DB) InsertEntry(key []byte, value []byte) error {
 		if db.config.BlobExpiration() > 0 {
 			db.keyStarts[strKey] = time.Now()
 		}
+	} else {
+		db.log.Info("InsertEntry to memstore with special status code", "statusCode", statusCode)
+		_, exists := db.instructedNonSuccessStatusCode[strKey]
+		if exists {
+			return fmt.Errorf("memstore returns instructed status code, but key already exists: %s", strKey)
+		}
+		// not BlobExpiration
+		db.instructedNonSuccessStatusCode[strKey] = statusCode
 	}
+
 	// write always succeed even instructed to return error on Get
 	return nil
 }
@@ -111,10 +108,11 @@ func (db *DB) FetchEntry(key []byte) ([]byte, error) {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 
-	statusCode, instructedExists := db.instructedStatusCode[string(key)]
+	statusCode, instructedExists := db.instructedNonSuccessStatusCode[string(key)]
 	if instructedExists {
+		// should have been defended in the SET http router path
 		if statusCode < -1 || statusCode > int(coretypes.StatusRequiredQuorumsNotSubset) {
-			return nil, fmt.Errorf("memstore is configured to return an unknown status code. Unable to serve the get")
+			panic("memstore is configured to return an unknown status code in FetchEntry. Unable to serve the get")
 		}
 
 		if statusCode == -1 {
@@ -123,12 +121,12 @@ func (db *DB) FetchEntry(key []byte) ([]byte, error) {
 
 		// the error msg the retriever would receive on the get path
 		err := verification.CertVerificationFailedError{
-			StatusCode: coretypes.VerificationStatusCode(statusCode),
+			// #nosec G115 - statusCode already checked within range
+			StatusCode: coretypes.VerificationStatusCode(uint8(statusCode)),
 			Msg:        fmt.Sprintf("cert verification failed: status code (%d)", statusCode),
 		}
 
 		return nil, &err
-
 	}
 
 	payload, exists := db.store[string(key)]

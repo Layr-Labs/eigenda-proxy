@@ -16,7 +16,6 @@ var (
 	PutLatencyFlagName              = withFlagPrefix("put-latency")
 	GetLatencyFlagName              = withFlagPrefix("get-latency")
 	PutReturnsFailoverErrorFlagName = withFlagPrefix("put-returns-failover-error")
-	GetReturnsStatusCodeFlagName    = withFlagPrefix("get-returns-status-code")
 )
 
 func withFlagPrefix(s string) string {
@@ -103,16 +102,6 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 			EnvVars:  []string{withEnvPrefix(envPrefix, "PUT_RETURNS_FAILOVER_ERROR")},
 			Category: category,
 		},
-		&cli.IntFlag{
-			Name: GetReturnsStatusCodeFlagName,
-			Usage: fmt.Sprintf(
-				"When set to other than 1, Put requests will return an application status code error, after sleeping for --%s duration.",
-				PutLatencyFlagName,
-			),
-			Value:    1,
-			EnvVars:  []string{withEnvPrefix(envPrefix, "GET_RETURNS_STATUS_CODE")},
-			Category: category,
-		},
 	}
 }
 
@@ -124,6 +113,5 @@ func ReadConfig(ctx *cli.Context, maxBlobSizeBytes uint64) (*memconfig.SafeConfi
 			PutLatency:              ctx.Duration(PutLatencyFlagName),
 			GetLatency:              ctx.Duration(GetLatencyFlagName),
 			PutReturnsFailoverError: ctx.Bool(PutReturnsFailoverErrorFlagName),
-			GetReturnsStatusCode:    ctx.Int(GetReturnsStatusCodeFlagName),
 		}), nil
 }

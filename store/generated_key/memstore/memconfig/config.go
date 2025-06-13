@@ -2,9 +2,22 @@ package memconfig
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
+
+	"github.com/Layr-Labs/eigenda/api/clients/v2/coretypes"
 )
+
+type InstructedMode struct {
+	// error injection
+	// TODO this should have been an error type, currently we have recency error -1
+	// coretypes.VerificationStatusCode taking 0..5 (inclusive), where only 1 is deemed
+	// as normal
+	GetReturnsStatusCode int
+	// if activated, GetReturnsStatusCode can be set to 1 to ensure normal operation
+	IsActivated bool
+}
 
 // Config contains properties that are used to configure the MemStore's behavior.
 type Config struct {
@@ -17,11 +30,7 @@ type Config struct {
 	// after sleeping PutLatency duration.
 	// This can be used to simulate eigenda being down.
 	PutReturnsFailoverError bool
-	// error injection
-	// TODO this should have been an error type, currently we have recency error -1
-	// coretypes.VerificationStatusCode taking 0..5 inclusive, where only 1 is deemed
-	// as normal
-	GetReturnsStatusCode int
+	currMode                InstructedMode
 }
 
 // MarshalJSON implements custom JSON marshaling for Config.
@@ -37,14 +46,14 @@ func (c Config) MarshalJSON() ([]byte, error) {
 		PutLatency              string
 		GetLatency              string
 		PutReturnsFailoverError bool
-		GetReturnsStatusCode    int
+		currMode                InstructedMode
 	}{
 		MaxBlobSizeBytes:        c.MaxBlobSizeBytes,
 		BlobExpiration:          c.BlobExpiration.String(),
 		PutLatency:              c.PutLatency.String(),
 		GetLatency:              c.GetLatency.String(),
 		PutReturnsFailoverError: c.PutReturnsFailoverError,
-		GetReturnsStatusCode:    c.GetReturnsStatusCode,
+		currMode:                c.currMode,
 	})
 }
 
@@ -125,15 +134,30 @@ func (sc *SafeConfig) SetMaxBlobSizeBytes(maxBlobSizeBytes uint64) {
 	sc.config.MaxBlobSizeBytes = maxBlobSizeBytes
 }
 
-func (sc *SafeConfig) GetReturnsStatusCode() int {
+func (sc *SafeConfig) GetInstructedMode() (bool, int) {
 	sc.mu.RLock()
 	defer sc.mu.RUnlock()
-	return sc.config.GetReturnsStatusCode
+
+	return sc.config.currMode.IsActivated, sc.config.currMode.GetReturnsStatusCode
 }
-func (sc *SafeConfig) SetGETReturnsStatusCode(statusCode int) {
+
+func (sc *SafeConfig) SetGETReturnsStatusCode(statusCode int) error {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
-	sc.config.GetReturnsStatusCode = statusCode
+
+	// If instructed to return a non Success Status(1), the memstore stores the error message
+	// on return. TODO we should group all the error into a single error type
+	// StatusRequiredQuorumsNotSubset is the highest iota. -1 is recency error
+	if statusCode < -1 || statusCode > int(coretypes.StatusRequiredQuorumsNotSubset) {
+		return fmt.Errorf("memstore set to an unknown status code. Unable to serve the request")
+	}
+
+	// after it is activated, statusCode can be set to 1 to ensure normal operation
+	sc.config.currMode = InstructedMode{
+		IsActivated:          true,
+		GetReturnsStatusCode: statusCode,
+	}
+	return nil
 }
 
 func (sc *SafeConfig) Config() Config {
