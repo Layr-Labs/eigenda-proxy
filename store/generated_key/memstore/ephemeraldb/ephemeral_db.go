@@ -75,7 +75,7 @@ func (db *DB) InsertEntry(key []byte, value []byte) error {
 	statusCode := db.config.GetReturnsStatusCode()
 	if statusCode != int(coretypes.StatusSuccess) {
 		db.log.Info("InsertEntry to memstore with special status code", "statusCode", statusCode)
-		// If instructed to return a non Success Status, the memstore stores the error message
+		// If instructed to return a non Success Status(1), the memstore stores the error message
 		// on return. TODO we should group all the error into a single error type
 		// StatusRequiredQuorumsNotSubset is the highest iota. -1 is recency error
 		if statusCode < -1 || statusCode > int(coretypes.StatusRequiredQuorumsNotSubset) {
@@ -86,6 +86,7 @@ func (db *DB) InsertEntry(key []byte, value []byte) error {
 		if exists {
 			return fmt.Errorf("memstore is configured to return instructed status code, payload key already exists in ephemeral db: %s", strKey)
 		}
+		// not BlobExpiration
 		db.instructedStatusCode[strKey] = statusCode
 	} else {
 		_, exists := db.store[strKey]
@@ -94,8 +95,8 @@ func (db *DB) InsertEntry(key []byte, value []byte) error {
 		}
 
 		db.store[strKey] = value
-		// add expiration if applicable
 
+		// add expiration if applicable
 		if db.config.BlobExpiration() > 0 {
 			db.keyStarts[strKey] = time.Now()
 		}

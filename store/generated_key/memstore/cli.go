@@ -16,7 +16,7 @@ var (
 	PutLatencyFlagName              = withFlagPrefix("put-latency")
 	GetLatencyFlagName              = withFlagPrefix("get-latency")
 	PutReturnsFailoverErrorFlagName = withFlagPrefix("put-returns-failover-error")
-	GetReturnsStatusCodeFlagName    = withFlagPrefix("get-returnsstatus-code-error")
+	GetReturnsStatusCodeFlagName    = withFlagPrefix("get-returns-status-code")
 )
 
 func withFlagPrefix(s string) string {
@@ -106,11 +106,11 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		&cli.IntFlag{
 			Name: GetReturnsStatusCodeFlagName,
 			Usage: fmt.Sprintf(
-				"When set to other than 1, Put requests will return a application status code error, after sleeping for --%s duration.",
+				"When set to other than 1, Put requests will return an application status code error, after sleeping for --%s duration.",
 				PutLatencyFlagName,
 			),
 			Value:    1,
-			EnvVars:  []string{withEnvPrefix(envPrefix, "GET_RETURNS_STATUS_CODE_ERROR")},
+			EnvVars:  []string{withEnvPrefix(envPrefix, "GET_RETURNS_STATUS_CODE")},
 			Category: category,
 		},
 	}
