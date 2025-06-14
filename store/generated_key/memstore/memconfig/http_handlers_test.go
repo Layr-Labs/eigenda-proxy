@@ -137,6 +137,28 @@ func TestHandlersHTTP_PatchConfig(t *testing.T) {
 			},
 		},
 		{
+			name:            "update instructed mode",
+			initialConfig:   Config{},
+			requestBodyJSON: `{"InstructedMode": {"GetReturnsStatusCode": 3, "IsActivated": true }}`,
+			expectedStatus:  http.StatusOK,
+			validate: func(t *testing.T, inputConfig Config, sc *SafeConfig) {
+				outputConfig := sc.Config()
+				inputConfig.InstructedMode.IsActivated = true
+				inputConfig.InstructedMode.GetReturnsStatusCode = 3
+				require.Equal(t, inputConfig, outputConfig)
+			},
+		},
+		{
+			name:            "invalid update to instructed mode (status code 100 does not exist)",
+			initialConfig:   Config{},
+			requestBodyJSON: `{"InstructedMode": {"GetReturnsStatusCode": 100, "IsActivated": true }}`,
+			expectedStatus:  http.StatusBadRequest,
+			validate: func(t *testing.T, inputConfig Config, sc *SafeConfig) {
+				outputConfig := sc.Config()
+				require.Equal(t, inputConfig, outputConfig)
+			},
+		},
+		{
 			name: "update multiple fields",
 			initialConfig: Config{
 				MaxBlobSizeBytes:        1024,
@@ -162,7 +184,8 @@ func TestHandlersHTTP_PatchConfig(t *testing.T) {
 				"BlobExpiration": "1h",
 				"PutLatency": "1s",
 				"GetLatency": "2s",
-				"PutReturnsFailoverError": true
+				"PutReturnsFailoverError": true,
+				"InstructedMode": {"GetReturnsStatusCode": 3, "IsActivated": true }
 			}`,
 			expectedStatus: http.StatusOK,
 			validate: func(t *testing.T, inputConfig Config, sc *SafeConfig) {
@@ -172,6 +195,8 @@ func TestHandlersHTTP_PatchConfig(t *testing.T) {
 				inputConfig.PutLatency = 1 * time.Second
 				inputConfig.GetLatency = 2 * time.Second
 				inputConfig.PutReturnsFailoverError = true
+				inputConfig.InstructedMode.GetReturnsStatusCode = 3
+				inputConfig.InstructedMode.IsActivated = true
 				require.Equal(t, inputConfig, outputConfig)
 			},
 		},

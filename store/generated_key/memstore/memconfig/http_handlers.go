@@ -17,6 +17,7 @@ type ConfigUpdate struct {
 	GetLatency              *string `json:"GetLatency,omitempty"`
 	PutReturnsFailoverError *bool   `json:"PutReturnsFailoverError,omitempty"`
 	BlobExpiration          *string `json:"BlobExpiration,omitempty"`
+	InstructedMode          *InstructedMode
 }
 
 // HandlerHTTP is an admin HandlerHTTP for GETting and PATCHing the memstore configuration.
@@ -96,6 +97,15 @@ func (api HandlerHTTP) handleUpdateConfig(w http.ResponseWriter, r *http.Request
 			return
 		}
 		api.safeConfig.SetBlobExpiration(duration)
+	}
+
+	// This activates the instructive mode in mem store and set the proper status code
+	if update.InstructedMode != nil {
+		err := api.safeConfig.SetInstructedMode(*update.InstructedMode)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 	}
 
 	// Return the current configuration

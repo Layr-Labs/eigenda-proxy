@@ -19,6 +19,13 @@ type Config struct {
 	URL string // EigenDA proxy REST API URL
 }
 
+type InstructedMode struct {
+	// return status code
+	GetReturnsStatusCode int
+	// if activated, GetReturnsStatusCode can be set to 1 to ensure normal operation
+	IsActivated bool
+}
+
 // MemConfig ... contains properties that are used to configure the MemStore's behavior.
 // this is copied directly from /store/generated_key/memstore/memconfig.
 // importing the struct isn't possible since it'd create cyclic dependency loop
@@ -29,6 +36,7 @@ type MemConfig struct {
 	PutLatency              time.Duration
 	GetLatency              time.Duration
 	PutReturnsFailoverError bool
+	InstructedMode          InstructedMode
 }
 
 // MarshalJSON implements custom JSON marshaling for Config.
@@ -41,6 +49,7 @@ func (c MemConfig) MarshalJSON() ([]byte, error) {
 		PutLatency:              c.PutLatency.String(),
 		GetLatency:              c.GetLatency.String(),
 		PutReturnsFailoverError: c.PutReturnsFailoverError,
+		InstructedMode:          c.InstructedMode,
 	})
 }
 
@@ -52,6 +61,7 @@ type intermediaryCfg struct {
 	PutLatency              string
 	GetLatency              string
 	PutReturnsFailoverError bool
+	InstructedMode          InstructedMode
 }
 
 // IntoMemConfig ... converts an intermediary config into a memconfig
@@ -72,12 +82,18 @@ func (cfg *intermediaryCfg) IntoMemConfig() (*MemConfig, error) {
 		return nil, fmt.Errorf("failed to parse blobExpiration: %w", err)
 	}
 
+	InstructedMode := InstructedMode{
+		IsActivated:          cfg.InstructedMode.IsActivated,
+		GetReturnsStatusCode: cfg.InstructedMode.GetReturnsStatusCode,
+	}
+
 	return &MemConfig{
 		MaxBlobSizeBytes:        cfg.MaxBlobSizeBytes,
 		BlobExpiration:          blobExpiration,
 		PutLatency:              putLatency,
 		GetLatency:              getLatency,
 		PutReturnsFailoverError: cfg.PutReturnsFailoverError,
+		InstructedMode:          InstructedMode,
 	}, nil
 }
 

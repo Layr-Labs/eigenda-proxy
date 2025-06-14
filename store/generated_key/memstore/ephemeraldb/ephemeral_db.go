@@ -9,13 +9,23 @@ import (
 
 	"github.com/Layr-Labs/eigenda-proxy/common/proxyerrors"
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
+	eigenda "github.com/Layr-Labs/eigenda-proxy/store/generated_key/v2"
 	"github.com/Layr-Labs/eigenda/api"
+	"github.com/Layr-Labs/eigenda/api/clients/v2/coretypes"
+	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 )
 
 const (
 	DefaultPruneInterval = 500 * time.Millisecond
 )
+
+// a wrapper around payload with status code
+// if instructed mode is not enabled, the status code is 1
+type payloadWithStatus struct {
+	payload    []byte
+	statusCode int
+}
 
 // DB ... An ephemeral && simple in-memory database used to emulate
 // an EigenDA network for dispersal/retrieval operations.
@@ -26,8 +36,8 @@ type DB struct {
 
 	// mu guards the below fields
 	mu        sync.RWMutex
-	keyStarts map[string]time.Time // used for managing expiration
-	store     map[string][]byte    // db
+	keyStarts map[string]time.Time         // used for managing expiration
+	store     map[string]payloadWithStatus // db
 }
 
 // New ... constructor
@@ -35,7 +45,7 @@ func New(ctx context.Context, cfg *memconfig.SafeConfig, log logging.Logger) *DB
 	db := &DB{
 		config:    cfg,
 		keyStarts: make(map[string]time.Time),
-		store:     make(map[string][]byte),
+		store:     make(map[string]payloadWithStatus),
 		log:       log,
 	}
 
@@ -67,18 +77,27 @@ func (db *DB) InsertEntry(key []byte, value []byte) error {
 
 	strKey := string(key)
 
+	activated, statusCode := db.config.GetInstructedMode()
+
+	// disallow any overwrite
 	_, exists := db.store[strKey]
 	if exists {
 		return fmt.Errorf("payload key already exists in ephemeral db: %s", strKey)
 	}
 
-	db.store[strKey] = value
-	// add expiration if applicable
+	// force status code for all valid inputs
+	if !activated {
+		statusCode = 1
+	}
 
+	db.store[strKey] = payloadWithStatus{payload: value, statusCode: statusCode}
+
+	// add expiration if applicable
 	if db.config.BlobExpiration() > 0 {
 		db.keyStarts[strKey] = time.Now()
 	}
 
+	// write always succeed, the instructed status code show up on read path
 	return nil
 }
 
@@ -88,13 +107,33 @@ func (db *DB) FetchEntry(key []byte) ([]byte, error) {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
 
-	payload, exists := db.store[string(key)]
-
+	payloadWithStatus, exists := db.store[string(key)]
 	if !exists {
 		return nil, fmt.Errorf("payload not found for key: %s", string(key))
 	}
 
-	return payload, nil
+	statusCode := payloadWithStatus.statusCode
+	if statusCode != int(coretypes.StatusSuccess) {
+		// should have been defended in the SET http router path
+		if statusCode < -1 || statusCode > int(coretypes.StatusRequiredQuorumsNotSubset) {
+			panic("memstore is configured to return an unknown status code in FetchEntry")
+		}
+
+		if statusCode == -1 {
+			return nil, &eigenda.RBNRecencyCheckFailedError{}
+		}
+
+		// the error msg the retriever would receive on the get path
+		err := verification.CertVerificationFailedError{
+			// #nosec G115 - statusCode already checked within range
+			StatusCode: coretypes.VerificationStatusCode(uint8(statusCode)),
+			Msg:        fmt.Sprintf("cert verification failed: status code (%d)", statusCode),
+		}
+
+		return nil, &err
+	}
+
+	return payloadWithStatus.payload, nil
 }
 
 // pruningLoop ... runs a background goroutine to prune expired blobs from the store on a regular interval.
