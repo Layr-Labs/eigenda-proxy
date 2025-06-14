@@ -17,7 +17,7 @@ type ConfigUpdate struct {
 	GetLatency              *string `json:"GetLatency,omitempty"`
 	PutReturnsFailoverError *bool   `json:"PutReturnsFailoverError,omitempty"`
 	BlobExpiration          *string `json:"BlobExpiration,omitempty"`
-	GetReturnsStatusCode    *int    `json:"GetReturnsStatusCode,omitempty"`
+	InstructedMode          *InstructedMode
 }
 
 // HandlerHTTP is an admin HandlerHTTP for GETting and PATCHing the memstore configuration.
@@ -40,7 +40,6 @@ func (api HandlerHTTP) RegisterMemstoreConfigHandlers(r *mux.Router) {
 	memstore := r.PathPrefix("/memstore").Subrouter()
 	memstore.HandleFunc("/config", api.handleGetConfig).Methods("GET")
 	memstore.HandleFunc("/config", api.handleUpdateConfig).Methods("PATCH")
-	memstore.HandleFunc("/config/status-code", api.handleGetStatusCode).Methods("GET")
 }
 
 // Returns the config of the memstore in json format.
@@ -49,28 +48,6 @@ func (api HandlerHTTP) RegisterMemstoreConfigHandlers(r *mux.Router) {
 func (api HandlerHTTP) handleGetConfig(w http.ResponseWriter, _ *http.Request) {
 	// Return the current configuration
 	err := json.NewEncoder(w).Encode(api.safeConfig.Config())
-	if err != nil {
-		api.log.Error("failed to encode config", "error", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-
-// Returns the status code in the instructed mode of the memstore in json format.
-// If instructed mode is not activated, return an error
-func (api HandlerHTTP) handleGetStatusCode(w http.ResponseWriter, _ *http.Request) {
-	// Return the current configuration
-	config := api.safeConfig.Config()
-	if !config.currMode.IsActivated {
-		http.Error(w, "memstore is not configured with the instructed mode", http.StatusInternalServerError)
-	}
-
-	payload := struct {
-		GetReturnsStatusCode int
-	}{
-		GetReturnsStatusCode: config.currMode.GetReturnsStatusCode,
-	}
-
-	err := json.NewEncoder(w).Encode(payload)
 	if err != nil {
 		api.log.Error("failed to encode config", "error", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -123,8 +100,8 @@ func (api HandlerHTTP) handleUpdateConfig(w http.ResponseWriter, r *http.Request
 	}
 
 	// This activates the instructive mode in mem store and set the proper status code
-	if update.GetReturnsStatusCode != nil {
-		err := api.safeConfig.SetGETReturnsStatusCode(*update.GetReturnsStatusCode)
+	if update.InstructedMode != nil {
+		err := api.safeConfig.SetInstructedMode(*update.InstructedMode)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
