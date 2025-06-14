@@ -97,7 +97,7 @@ func (db *DB) InsertEntry(key []byte, value []byte) error {
 		db.keyStarts[strKey] = time.Now()
 	}
 
-	// write always succeed even instructed to return error on Get
+	// write always succeed, the instructed status code show up on read path
 	return nil
 }
 

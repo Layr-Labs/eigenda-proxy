@@ -10,10 +10,7 @@ import (
 )
 
 type InstructedMode struct {
-	// error injection
-	// TODO this should have been an error type, currently we have recency error -1
-	// coretypes.VerificationStatusCode taking 0..5 (inclusive), where only 1 is deemed
-	// as normal
+	// return status code
 	GetReturnsStatusCode int `json:"GetReturnsStatusCode,omitempty"`
 	// if activated, GetReturnsStatusCode can be set to 1 to ensure normal operation
 	IsActivated bool `json:"IsActivated,omitempty"`
