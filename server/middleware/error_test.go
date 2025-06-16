@@ -103,8 +103,9 @@ func TestWithErrorHandling_418TeapotErrors(t *testing.T) {
 		expectVerificationStatusCode coretypes.VerificationStatusCode
 	}{
 		{
-			name:                         "CertVerificationFailedError",
-			err:                          &verification.CertVerificationFailedError{StatusCode: 42, Msg: "cert verification failed"},
+			name: "CertVerificationFailedError",
+			err: &verification.CertVerificationFailedError{
+				StatusCode: 42, Msg: "cert verification failed"},
 			expectHTTPStatus:             http.StatusTeapot,
 			expectVerificationStatusCode: 42, // 42 is arbitrarily chosen for this test
 		},
