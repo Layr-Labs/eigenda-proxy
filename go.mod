@@ -32,7 +32,7 @@ replace github.com/Layr-Labs/eigenda-proxy/clients => ./clients/
 
 // Pointing to latest eigenda-develop commit that contains https://github.com/Layr-Labs/optimism/pull/49
 // TODO: update to a proper version once we make the next release.
-replace github.com/ethereum-optimism/optimism => github.com/Layr-Labs/optimism v1.13.1-0.20250612165905-33c750dd3e7b
+replace github.com/ethereum-optimism/optimism => github.com/Layr-Labs/optimism v1.13.1-0.20250616152614-59132dd56ae5
 
 // This is copied over from op's go.mod file.
 // https://github.com/ethereum-optimism/optimism/blob/5662448279e4fb16e073e00baeb6e458b12a59b2/go.mod#L253C90-L253C106
