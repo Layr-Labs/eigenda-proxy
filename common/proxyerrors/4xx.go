@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Layr-Labs/eigenda-proxy/common"
+	_ "github.com/Layr-Labs/eigenda-proxy/store/generated_key/v2"
 	"github.com/Layr-Labs/eigenda-proxy/store/secondary/s3"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
 	"google.golang.org/grpc/codes"
@@ -129,7 +130,8 @@ func (me UnmarshalJSONError) Error() string {
 
 // ParsingError is a very coarse-grained error that's used as a catch-all for any parsing errors
 // like parsing a hex string, or parsing a version byte from the request path, reading a query param, etc.
-// TODO: should all of these be returned as []
+// TODO: should all of these be returned as [eigenda.StatusCertParsingFailed] errors instead,
+// to return TEAPOTs instead of 400s?
 type ParsingError struct {
 	err error
 }
