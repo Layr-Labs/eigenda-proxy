@@ -2,6 +2,7 @@ package eigenda
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"time"
@@ -193,15 +194,18 @@ func (e Store) Verify(ctx context.Context, versionedCert certs.VersionedCert, op
 
 	switch versionedCert.Version {
 	case certs.V0VersionByte:
-		return fmt.Errorf("version 0 byte certs should never be verified by the EigenDA V2 store")
+		return NewCertParsingFailedError(
+			hex.EncodeToString(versionedCert.SerializedCert),
+			"version 0 byte certs should never be verified by the EigenDA V2 store",
+		)
 
 	case certs.V1VersionByte:
-		// convert v2 eigenda cert to v3 cert type for verification against the forward compatible
-		// cert verifier
+		// convert v2 eigenda cert to v3 cert type for verification against the forward compatible cert verifier
 		var eigenDACertV2 coretypes.EigenDACertV2
 		err := rlp.DecodeBytes(versionedCert.SerializedCert, &eigenDACertV2)
 		if err != nil {
-			return fmt.Errorf("RLP decoding EigenDA v2 cert: %w", err)
+			return NewCertParsingFailedError(
+				hex.EncodeToString(versionedCert.SerializedCert), fmt.Sprintf("RLP decoding EigenDA v1 cert: %v", err))
 		}
 
 		referenceBlockNumber = eigenDACertV2.ReferenceBlockNumber()
@@ -211,22 +215,21 @@ func (e Store) Verify(ctx context.Context, versionedCert certs.VersionedCert, op
 		var eigenDACertV3 coretypes.EigenDACertV3
 		err := rlp.DecodeBytes(versionedCert.SerializedCert, &eigenDACertV3)
 		if err != nil {
-			// TODO: we need to figure out how to treat this error... should we return a TEAPOT
-			// like the other cert errors? Hokulea might need to still receive the blob to prove
-			// that is was badly encoded, which is the main complexity here.
-			return fmt.Errorf("RLP decoding EigenDA v3 cert: %w", err)
+			return NewCertParsingFailedError(
+				hex.EncodeToString(versionedCert.SerializedCert), fmt.Sprintf("RLP decoding EigenDA v3 cert: %v", err))
 		}
 
 		referenceBlockNumber = eigenDACertV3.ReferenceBlockNumber()
 		sumDACert = &eigenDACertV3
 
 	default:
-		return fmt.Errorf("unsupported EigenDA cert version: %d", versionedCert.Version)
+		return NewCertParsingFailedError(
+			hex.EncodeToString(versionedCert.SerializedCert),
+			fmt.Sprintf("unknown EigenDA cert version: %d", versionedCert.Version))
 	}
 
 	// check recency first since it requires less processing and no IO vs verifying the cert
-	err := verifyCertRBNRecencyCheck(referenceBlockNumber,
-		opts.L1InclusionBlockNum, e.rbnRecencyWindowSize)
+	err := verifyCertRBNRecencyCheck(referenceBlockNumber, opts.L1InclusionBlockNum, e.rbnRecencyWindowSize)
 	if err != nil {
 		// Already a structured error converted to a 418 HTTP error by the error middleware.
 		return err
@@ -237,7 +240,7 @@ func (e Store) Verify(ctx context.Context, versionedCert certs.VersionedCert, op
 	if err != nil {
 		// CheckDACert already returns a structured error that is converted to a 418 HTTP error by the error middleware.
 		// We still wrap it to provide more context.
-		return fmt.Errorf("verify v3 cert: %w", err)
+		return fmt.Errorf("eth-call to CertVerifier.checkDACert: %w", err)
 	}
 
 	return nil
@@ -289,12 +292,7 @@ func verifyCertRBNRecencyCheck(certRBN uint64, certL1IBN uint64, rbnRecencyWindo
 
 	// Actual Recency Check
 	if !(certL1IBN <= certRBN+rbnRecencyWindowSize) {
-		//nolint:gosec // disable G115 // We checked the length of thresholds above
-		return RBNRecencyCheckFailedError{
-			certRBN:              uint32(certRBN),
-			certL1IBN:            certL1IBN,
-			rbnRecencyWindowSize: rbnRecencyWindowSize,
-		}
+		return NewRBNRecencyCheckFailedError(certRBN, certL1IBN, rbnRecencyWindowSize)
 	}
 	return nil
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/Layr-Labs/eigenda-proxy/common/proxyerrors"
 	eigendav2store "github.com/Layr-Labs/eigenda-proxy/store/generated_key/v2"
 	"github.com/Layr-Labs/eigenda/api"
+	"github.com/Layr-Labs/eigenda/api/clients/v2/coretypes"
 	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -47,7 +48,7 @@ func TestWithErrorHandling_HTTPStatusCodes(t *testing.T) {
 		{
 			name: "418 RBNRecencyCheckFailedError",
 			handleFn: func(w http.ResponseWriter, r *http.Request) error {
-				return eigendav2store.RBNRecencyCheckFailedError{}
+				return eigendav2store.NewRBNRecencyCheckFailedError(1, 2, 3)
 			},
 			expectStatus: http.StatusTeapot,
 		},
@@ -96,25 +97,22 @@ func TestWithErrorHandling_HTTPStatusCodes(t *testing.T) {
 // contains the StatusCode, which is used by rollup derivation pipelines.
 func TestWithErrorHandling_418TeapotErrors(t *testing.T) {
 	tests := []struct {
-		name         string
-		err          error
-		expectStatus int
-		expectCode   int
+		name                         string
+		err                          error
+		expectHTTPStatus             int
+		expectVerificationStatusCode coretypes.VerificationStatusCode
 	}{
 		{
-			name:         "CertVerificationFailedError",
-			err:          &verification.CertVerificationFailedError{StatusCode: 42, Msg: "cert verification failed"},
-			expectStatus: http.StatusTeapot,
-			expectCode:   42, // 42 is arbitrarily chosen for this test
+			name:                         "CertVerificationFailedError",
+			err:                          &verification.CertVerificationFailedError{StatusCode: 42, Msg: "cert verification failed"},
+			expectHTTPStatus:             http.StatusTeapot,
+			expectVerificationStatusCode: 42, // 42 is arbitrarily chosen for this test
 		},
 		{
-			name:         "RBNRecencyCheckFailedError",
-			err:          eigendav2store.RBNRecencyCheckFailedError{},
-			expectStatus: http.StatusTeapot,
-			// -1 is used to indicate a RBN recency check failure
-			// TODO: we need to define this in a spec somewhere, and we should also integrate the RBNRecencyCheckFailedError
-			// into the verification.CertVerificationFailedError to avoid this special case.
-			expectCode: -1,
+			name:                         "RBNRecencyCheckFailedError",
+			err:                          eigendav2store.NewRBNRecencyCheckFailedError(1, 2, 3),
+			expectHTTPStatus:             http.StatusTeapot,
+			expectVerificationStatusCode: eigendav2store.StatusRBNRecencyCheckFailed,
 		},
 	}
 
@@ -129,19 +127,19 @@ func TestWithErrorHandling_418TeapotErrors(t *testing.T) {
 			if err == nil {
 				t.Fatalf("expected error, got nil")
 			}
-			if rr.Code != tc.expectStatus {
-				t.Errorf("expected status %d, got %d", tc.expectStatus, rr.Code)
+			if rr.Code != tc.expectHTTPStatus {
+				t.Errorf("expected status %d, got %d", tc.expectHTTPStatus, rr.Code)
 			}
 			var resp struct {
-				StatusCode int    `json:"StatusCode"`
-				Msg        string `json:"Msg"`
+				StatusCode coretypes.VerificationStatusCode `json:"StatusCode"`
+				Msg        string                           `json:"Msg"`
 			}
 			dec := json.NewDecoder(strings.NewReader(rr.Body.String()))
 			if err := dec.Decode(&resp); err != nil {
 				t.Fatalf("failed to decode response: %v", err)
 			}
-			if resp.StatusCode != tc.expectCode {
-				t.Errorf("expected StatusCode %d, got %d", tc.expectCode, resp.StatusCode)
+			if resp.StatusCode != tc.expectVerificationStatusCode {
+				t.Errorf("expected StatusCode %d, got %d", tc.expectVerificationStatusCode, resp.StatusCode)
 			}
 		})
 	}
