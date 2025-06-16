@@ -40,7 +40,7 @@ func withErrorHandling(
 			w.WriteHeader(http.StatusTeapot)
 			encodingErr := json.NewEncoder(w).Encode(certVerificationFailedErr)
 			if encodingErr != nil {
-				panic(encodingErr)
+				panic(fmt.Errorf("failed to encode cert verification failed error: %w", encodingErr))
 			}
 		case errors.As(err, &rbnRecencyCheckFailedErr):
 			// We convert to a [verification.CertVerificationFailedError] like error,
@@ -56,7 +56,10 @@ func withErrorHandling(
 				Msg:        rbnRecencyCheckFailedErr.Error(),
 			}
 			w.WriteHeader(http.StatusTeapot)
-			_ = json.NewEncoder(w).Encode(statusCodeAndMsg)
+			encodingErr := json.NewEncoder(w).Encode(statusCodeAndMsg)
+			if encodingErr != nil {
+				panic(fmt.Errorf("failed to encode RBNRecencyCheckFailedError: %w", encodingErr))
+			}
 		case proxyerrors.Is429(err):
 			http.Error(w, err.Error(), http.StatusTooManyRequests)
 		case proxyerrors.Is503(err):
