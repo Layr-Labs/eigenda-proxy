@@ -7,7 +7,4 @@
     "references": true,
     "runtest": true
   },
-  "go.testEnvVars": {
-    "GO_ENV": "test"
-  }
 }
