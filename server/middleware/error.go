@@ -33,12 +33,10 @@ func withErrorHandling(
 		// 418 TEAPOT errors don't follow the pattern proxyerrors.Is418(err),
 		// because we have 2 very different errors that we need to marshal into the body of the 418 TEAPOT response.
 		case errors.As(err, &certVerificationFailedErr):
-			errBytes, _ := json.Marshal(certVerificationFailedErr)
-			fmt.Println("err", err)
-			fmt.Println(string(errBytes))
-			// else the error is a [verification.CertVerificationFailedError]
-			// so we json marshal it into the body to give access to the status code
-			// and message.
+			_, errMarshal := json.Marshal(certVerificationFailedErr)
+			if errMarshal != nil {
+				panic(fmt.Errorf("failed to marshal cert verification failed error: %w", errMarshal))
+			}
 			w.WriteHeader(http.StatusTeapot)
 			encodingErr := json.NewEncoder(w).Encode(certVerificationFailedErr)
 			if encodingErr != nil {
