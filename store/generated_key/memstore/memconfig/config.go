@@ -146,7 +146,7 @@ func (sc *SafeConfig) SetInstructedStatusCodeReturn(mode InstructedStatusCodeRet
 	// If instructed to return a non Success Status(1), the memstore stores the error message
 	// on return.
 	if !eigenda.CheckValidStatusCode(mode.GetReturnsStatusCode) {
-		return fmt.Errorf("memstore set to an unknown status code. Unable to serve the request")
+		return fmt.Errorf("undefined status code, unable to configure memstore")
 	}
 
 	// reset to default value
