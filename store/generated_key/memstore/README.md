@@ -48,6 +48,23 @@ $ curl http://localhost:3100/memstore/config | \
   curl -X PATCH http://localhost:3100/memstore/config -d @-
 ```
 
+### Instructed Status Code Return
+The instructed status code return allows users to set a desired returned status code for some payloads the user is about to write. The next time when a user requests to get the payloads with keys, the proxy returns the result corresponding to the status code set earlier. The status code is sticky, and
+can affect all subsequent writes. By default, the memstore isinitialized without the instructed status code return.
 
+```bash
+ curl -X PATCH http://localhost:3100/memstore/config -d '{"InstructedStatusCodeReturn": {"GetReturnsStatusCode": 3, "IsActivated": true }}'
+ {"MaxBlobSizeBytes":2048,"BlobExpiration":"45m0s","PutLatency":"0s","GetLatency":"0s","PutReturnsFailoverError":false,"InstructedStatusCodeReturn":{"GetReturnsStatusCode":3,"IsActivated":true}}
+```
+
+A user can only activate the instructed mode via http PATCH method above. A user can switch to other status code by sending a new `PATCH`
+request, the GET for subsequent writes contains the new status code. There are currently seven available status codes
+```
+-1: Recency error. The proxy returns 418 with json string containing status code -1
+1: Success. The proxy returns 200 with user payload, as if it is not using the instructed mode
+0,2,3,4,5: Invalid Cert. The proxy returns 418 with json string containing the corresponding status code
+```
+
+A very important invariant which the instructed mode hold is that no key can ever be overwritten. This is important for all rollup use cases.
 ### Golang client
 A simple HTTP client implementation lives in `/clients/memconfig_client/` and can be imported for manipulating the config using more structured types.
