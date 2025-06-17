@@ -10,7 +10,7 @@ import (
 	"github.com/Layr-Labs/eigenda/api/clients/v2/coretypes"
 )
 
-type InstructedStatusCodeReturn struct {
+type GetReturnsInstructedStatusCode struct {
 	// return status code
 	GetReturnsStatusCode coretypes.VerificationStatusCode `json:"GetReturnsStatusCode,omitempty"`
 	// if activated, GetReturnsStatusCode can be set to 1 to ensure normal operation
@@ -27,8 +27,8 @@ type Config struct {
 	// when true, put requests will return an errorFailover error,
 	// after sleeping PutLatency duration.
 	// This can be used to simulate eigenda being down.
-	PutReturnsFailoverError    bool
-	InstructedStatusCodeReturn InstructedStatusCodeReturn
+	PutReturnsFailoverError        bool
+	GetReturnsInstructedStatusCode GetReturnsInstructedStatusCode
 }
 
 // MarshalJSON implements custom JSON marshaling for Config.
@@ -39,19 +39,19 @@ type Config struct {
 // Patches are reads as ConfigUpdates instead to handle omitted fields.
 func (c Config) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		MaxBlobSizeBytes           uint64
-		BlobExpiration             string
-		PutLatency                 string
-		GetLatency                 string
-		PutReturnsFailoverError    bool
-		InstructedStatusCodeReturn InstructedStatusCodeReturn
+		MaxBlobSizeBytes               uint64
+		BlobExpiration                 string
+		PutLatency                     string
+		GetLatency                     string
+		PutReturnsFailoverError        bool
+		GetReturnsInstructedStatusCode GetReturnsInstructedStatusCode
 	}{
-		MaxBlobSizeBytes:           c.MaxBlobSizeBytes,
-		BlobExpiration:             c.BlobExpiration.String(),
-		PutLatency:                 c.PutLatency.String(),
-		GetLatency:                 c.GetLatency.String(),
-		PutReturnsFailoverError:    c.PutReturnsFailoverError,
-		InstructedStatusCodeReturn: c.InstructedStatusCodeReturn,
+		MaxBlobSizeBytes:               c.MaxBlobSizeBytes,
+		BlobExpiration:                 c.BlobExpiration.String(),
+		PutLatency:                     c.PutLatency.String(),
+		GetLatency:                     c.GetLatency.String(),
+		PutReturnsFailoverError:        c.PutReturnsFailoverError,
+		GetReturnsInstructedStatusCode: c.GetReturnsInstructedStatusCode,
 	})
 }
 
@@ -132,14 +132,15 @@ func (sc *SafeConfig) SetMaxBlobSizeBytes(maxBlobSizeBytes uint64) {
 	sc.config.MaxBlobSizeBytes = maxBlobSizeBytes
 }
 
-func (sc *SafeConfig) GetInstructedStatusCodeReturn() (bool, coretypes.VerificationStatusCode) {
+func (sc *SafeConfig) GetGETReturnsInstructedStatusCode() (bool, coretypes.VerificationStatusCode) {
 	sc.mu.RLock()
 	defer sc.mu.RUnlock()
 
-	return sc.config.InstructedStatusCodeReturn.IsActivated, sc.config.InstructedStatusCodeReturn.GetReturnsStatusCode
+	return sc.config.GetReturnsInstructedStatusCode.IsActivated,
+		sc.config.GetReturnsInstructedStatusCode.GetReturnsStatusCode
 }
 
-func (sc *SafeConfig) SetInstructedStatusCodeReturn(mode InstructedStatusCodeReturn) error {
+func (sc *SafeConfig) SetGETReturnsInstructedStatusCode(mode GetReturnsInstructedStatusCode) error {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 
@@ -155,7 +156,7 @@ func (sc *SafeConfig) SetInstructedStatusCodeReturn(mode InstructedStatusCodeRet
 	}
 
 	// after it is activated, statusCode can be set to 1 to ensure normal operation
-	sc.config.InstructedStatusCodeReturn = mode
+	sc.config.GetReturnsInstructedStatusCode = mode
 	return nil
 }
 

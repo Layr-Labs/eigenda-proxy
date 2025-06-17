@@ -29,7 +29,7 @@ $ curl http://localhost:3100/memstore/config | jq
   "PutLatency": "0s",
   "GetLatency": "0s",
   "PutReturnsFailoverError": false,
-  "InstructedStatusCodeReturn": {}
+  "GetReturnsInstructedStatusCode": {}
 }
 ```
 
@@ -39,7 +39,7 @@ The PATCH request allows to patch the configuration. This allows only sending a 
 
 ```bash
 $ curl -X PATCH http://localhost:3100/memstore/config -d '{"PutReturnsFailoverError": true}'
-{"MaxBlobSizeBytes":2048,"BlobExpiration":"45m0s","PutLatency":"0s","GetLatency":"0s","PutReturnsFailoverError":true,"InstructedStatusCodeReturn":{}}
+{"MaxBlobSizeBytes":2048,"BlobExpiration":"45m0s","PutLatency":"0s","GetLatency":"0s","PutReturnsFailoverError":true,"GetReturnsInstructedStatusCode":{}}
 ```
 
 One can of course still build a jq pipe to produce the same result (although still using PATCH instead of PUT since that is the only method available):
@@ -54,8 +54,8 @@ The instructed status code return allows users to set a desired returned status 
 can affect all subsequent writes. By default, the memstore isinitialized without the instructed status code return.
 
 ```bash
- curl -X PATCH http://localhost:3100/memstore/config -d '{"InstructedStatusCodeReturn": {"GetReturnsStatusCode": 3, "IsActivated": true }}'
- {"MaxBlobSizeBytes":2048,"BlobExpiration":"45m0s","PutLatency":"0s","GetLatency":"0s","PutReturnsFailoverError":false,"InstructedStatusCodeReturn":{"GetReturnsStatusCode":3,"IsActivated":true}}
+ curl -X PATCH http://localhost:3100/memstore/config -d '{"GetReturnsInstructedStatusCode": {"GetReturnsStatusCode": 3, "IsActivated": true }}'
+ {"MaxBlobSizeBytes":2048,"BlobExpiration":"45m0s","PutLatency":"0s","GetLatency":"0s","PutReturnsFailoverError":false,"GetReturnsInstructedStatusCode":{"GetReturnsStatusCode":3,"IsActivated":true}}
 ```
 
 A user can only activate the instructed status code via http PATCH method above. A user can switch to other status code from an existing activated status code

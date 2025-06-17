@@ -124,7 +124,7 @@ func TestPutReturnsFailoverErrorConfig(t *testing.T) {
 	require.ErrorIs(t, err, &api.ErrorFailover{})
 }
 
-func TestInstructedStatusCodeReturnConfig(t *testing.T) {
+func TestGetReturnsInstructedStatusCodeConfig(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -135,11 +135,11 @@ func TestInstructedStatusCodeReturnConfig(t *testing.T) {
 	testKey := []byte("som-key")
 
 	// status code 3 corresponds to coretypes.VerificationStatusCode
-	statusCodeReturn := memconfig.InstructedStatusCodeReturn{
+	statusCodeReturn := memconfig.GetReturnsInstructedStatusCode{
 		IsActivated:          true,
 		GetReturnsStatusCode: coretypes.StatusSecurityAssumptionsNotMet,
 	}
-	err := config.SetInstructedStatusCodeReturn(statusCodeReturn)
+	err := config.SetGETReturnsInstructedStatusCode(statusCodeReturn)
 	require.NoError(t, err)
 
 	// write is not affected
@@ -154,11 +154,11 @@ func TestInstructedStatusCodeReturnConfig(t *testing.T) {
 	require.Equal(t, expectedError.StatusCode, coretypes.StatusSecurityAssumptionsNotMet)
 
 	// status code corresponds to recency error
-	instructedStatusCodeMode := memconfig.InstructedStatusCodeReturn{
+	instructedStatusCodeMode := memconfig.GetReturnsInstructedStatusCode{
 		IsActivated:          true,
 		GetReturnsStatusCode: eigenda.StatusRBNRecencyCheckFailed,
 	}
-	err = config.SetInstructedStatusCodeReturn(instructedStatusCodeMode)
+	err = config.SetGETReturnsInstructedStatusCode(instructedStatusCodeMode)
 	require.NoError(t, err)
 
 	// cannot overwrite any value even in instructed mode
@@ -175,8 +175,8 @@ func TestInstructedStatusCodeReturnConfig(t *testing.T) {
 	require.ErrorAs(t, err, &recencyError)
 
 	// now deactivate Instruction mode
-	err = config.SetInstructedStatusCodeReturn(
-		memconfig.InstructedStatusCodeReturn{
+	err = config.SetGETReturnsInstructedStatusCode(
+		memconfig.GetReturnsInstructedStatusCode{
 			IsActivated:          false,
 			GetReturnsStatusCode: 3,
 		},

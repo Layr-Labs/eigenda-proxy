@@ -77,7 +77,7 @@ func (db *DB) InsertEntry(key []byte, value []byte) error {
 
 	strKey := string(key)
 
-	activated, statusCode := db.config.GetInstructedStatusCodeReturn()
+	activated, statusCode := db.config.GetGETReturnsInstructedStatusCode()
 
 	// disallow any overwrite
 	_, exists := db.store[strKey]

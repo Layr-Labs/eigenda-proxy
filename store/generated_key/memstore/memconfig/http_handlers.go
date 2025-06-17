@@ -12,12 +12,12 @@ import (
 // JSON bodies received by the PATCH /memstore/config endpoint are deserialized into this struct,
 // which is then used to update the memstore configuration.
 type ConfigUpdate struct {
-	MaxBlobSizeBytes           *uint64 `json:"MaxBlobSizeBytes,omitempty"`
-	PutLatency                 *string `json:"PutLatency,omitempty"`
-	GetLatency                 *string `json:"GetLatency,omitempty"`
-	PutReturnsFailoverError    *bool   `json:"PutReturnsFailoverError,omitempty"`
-	BlobExpiration             *string `json:"BlobExpiration,omitempty"`
-	InstructedStatusCodeReturn *InstructedStatusCodeReturn
+	MaxBlobSizeBytes               *uint64 `json:"MaxBlobSizeBytes,omitempty"`
+	PutLatency                     *string `json:"PutLatency,omitempty"`
+	GetLatency                     *string `json:"GetLatency,omitempty"`
+	PutReturnsFailoverError        *bool   `json:"PutReturnsFailoverError,omitempty"`
+	BlobExpiration                 *string `json:"BlobExpiration,omitempty"`
+	GetReturnsInstructedStatusCode *GetReturnsInstructedStatusCode
 }
 
 // HandlerHTTP is an admin HandlerHTTP for GETting and PATCHing the memstore configuration.
@@ -99,9 +99,8 @@ func (api HandlerHTTP) handleUpdateConfig(w http.ResponseWriter, r *http.Request
 		api.safeConfig.SetBlobExpiration(duration)
 	}
 
-	// This activates the instructive mode in mem store and set the proper status code
-	if update.InstructedStatusCodeReturn != nil {
-		err := api.safeConfig.SetInstructedStatusCodeReturn(*update.InstructedStatusCodeReturn)
+	if update.GetReturnsInstructedStatusCode != nil {
+		err := api.safeConfig.SetGETReturnsInstructedStatusCode(*update.GetReturnsInstructedStatusCode)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
