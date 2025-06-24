@@ -23,6 +23,8 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+// SecurityParamReader is an interface used reading quorums and thresholds from either
+// the EigenDAServiceManager or EigenDACertVerifierV1 contracts
 type SecurityParamReader interface {
 	QuorumAdversaryThresholdPercentages(opts *bind.CallOpts) ([]byte, error)
 	QuorumNumbersRequired(opts *bind.CallOpts) ([]uint8, error)
