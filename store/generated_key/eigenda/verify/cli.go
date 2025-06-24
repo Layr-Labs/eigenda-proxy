@@ -47,8 +47,9 @@ func VerifierCLIFlags(envPrefix, category string) []cli.Flag {
 		},
 		&cli.StringFlag{
 			Name: EigenDACertVerifierV1FlagName,
-			Usage: `Address of EigenDACertVerifierV1 contract. Only necessary if using custom quorums/thresholds for certificate verification.
-						If no address is provided then the default EigenDAServiceManager parameters will be uesd.`,
+			Usage: `Address of EigenDACertVerifierV1 contract. Only necessary if using custom quorums/thresholds 
+					for certificate verification. If no address is provided then the default 
+					EigenDAServiceManager parameters will be uesd.`,
 			EnvVars:  []string{withEnvPrefix(envPrefix, "CERT_VERIFIER_V1")},
 			Category: category,
 		},
