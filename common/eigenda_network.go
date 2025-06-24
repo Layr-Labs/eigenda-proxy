@@ -56,9 +56,21 @@ func (n EigenDANetwork) String() string {
 	return string(n)
 }
 
-// TODO: Consider deriving network from chain ID via eth_getChainId or similar rpc call
-//
-//	vs hardcoding the network names and forcing user specification
+// chainToNetworkMap maps chain IDs to EigenDA networks
+var chainToNetworkMap = map[string]EigenDANetwork{
+	"17000":    HoleskyTestnetEigenDANetwork,
+	"11155111": SepoliaTestnetEigenDANetwork,
+}
+
+// GetNetworkFromChainID returns the EigenDA network for a given chain ID
+func GetNetworkFromChainID(chainID string) (EigenDANetwork, error) {
+	network, ok := chainToNetworkMap[chainID]
+	if !ok {
+		return "", fmt.Errorf("unknown chain ID: %s", chainID)
+	}
+	return network, nil
+}
+
 func EigenDANetworkFromString(inputString string) (EigenDANetwork, error) {
 	network := EigenDANetwork(inputString)
 
