@@ -389,7 +389,8 @@ func buildEigenDAV1Backend(
 	)
 }
 
-func buildEthClient(log logging.Logger, secretConfigV2 common.SecretConfigV2, expectedNetwork common.EigenDANetwork) (common_eigenda.EthClient, error) {
+func buildEthClient(log logging.Logger, secretConfigV2 common.SecretConfigV2, expectedNetwork common.EigenDANetwork) 
+	(common_eigenda.EthClient, error) {
 	gethCfg := geth.EthClientConfig{
 		RPCURLs: []string{secretConfigV2.EthRPCURL},
 	}
@@ -412,7 +413,8 @@ func buildEthClient(log logging.Logger, secretConfigV2 common.SecretConfigV2, ex
 			return nil, fmt.Errorf("unknown chain ID %s: %w", chainID.String(), err)
 		}
 		if actualNetwork != expectedNetwork {
-			return nil, fmt.Errorf("network mismatch: expected %s (based on configuration), but ETH RPC returned chain ID %s which corresponds to %s", expectedNetwork, chainID.String(), actualNetwork)
+			return nil, fmt.Errorf("network mismatch: expected %s (based on configuration), but ETH RPC returned chain ID %s which corresponds to %s",
+				 expectedNetwork, chainID.String(), actualNetwork)
 		}
 	}
 
