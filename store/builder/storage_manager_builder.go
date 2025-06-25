@@ -413,7 +413,8 @@ func buildEthClient(log logging.Logger, secretConfigV2 common.SecretConfigV2, ex
 			return nil, fmt.Errorf("unknown chain ID %s: %w", chainID.String(), err)
 		}
 		if actualNetwork != expectedNetwork {
-			return nil, fmt.Errorf("network mismatch: expected %s (based on configuration), but ETH RPC returned chain ID %s which corresponds to %s",
+			return nil, fmt.Errorf("network mismatch: expected %s (based on configuration), but ETH RPC"+
+				"returned chain ID %s which corresponds to %s",
 				expectedNetwork, chainID.String(), actualNetwork)
 		}
 	}
