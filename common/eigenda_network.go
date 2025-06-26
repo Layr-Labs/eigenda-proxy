@@ -56,15 +56,15 @@ func (n EigenDANetwork) String() string {
 	return string(n)
 }
 
-// chainToNetworkMap maps chain IDs to EigenDA networks
-var chainToNetworkMap = map[string]EigenDANetwork{
+// chainIDToNetworkMap maps chain IDs to EigenDA networks
+var chainIDToNetworkMap = map[string]EigenDANetwork{
 	"17000":    HoleskyTestnetEigenDANetwork,
 	"11155111": SepoliaTestnetEigenDANetwork,
 }
 
-// GetNetworkFromChainID returns the EigenDA network for a given chain ID
-func GetNetworkFromChainID(chainID string) (EigenDANetwork, error) {
-	network, ok := chainToNetworkMap[chainID]
+// EigenDANetworkFromChainID returns the EigenDA network for a given chain ID
+func EigenDANetworkFromChainID(chainID string) (EigenDANetwork, error) {
+	network, ok := chainIDToNetworkMap[chainID]
 	if !ok {
 		return "", fmt.Errorf("unknown chain ID: %s", chainID)
 	}
