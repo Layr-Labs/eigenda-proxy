@@ -399,15 +399,17 @@ func buildEthClient(ctx context.Context, log logging.Logger, secretConfigV2 comm
 	if err != nil {
 		return nil, fmt.Errorf("create geth client: %w", err)
 	}
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	chainID, err := ethClient.ChainID(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get chain ID from ETH RPC: %w", err)
+	}
+
+	log.Info("Using chain id: %d", chainID.Uint64())
 
 	// Validate that the chain ID matches the expected network
 	if expectedNetwork != "" {
-		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		defer cancel()
-		chainID, err := ethClient.ChainID(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get chain ID from ETH RPC: %w", err)
-		}
 		actualNetwork, err := common.EigenDANetworkFromChainID(chainID.String())
 		if err != nil {
 			return nil, fmt.Errorf("unknown chain ID %s: %w", chainID.String(), err)
