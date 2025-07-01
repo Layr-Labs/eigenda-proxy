@@ -28,7 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	"golang.org/x/exp/rand"
 
 	miniotc "github.com/testcontainers/testcontainers-go/modules/minio"
 	redistc "github.com/testcontainers/testcontainers-go/modules/redis"
@@ -167,6 +166,7 @@ type TestConfig struct {
 	Expiration       time.Duration
 	MaxBlobLength    string
 	WriteThreadCount int
+	WriteOnCacheMiss bool
 	// at most one of the below options should be true
 	UseKeccak256ModeS3 bool
 	UseS3Caching       bool
@@ -200,6 +200,7 @@ func NewTestConfig(
 		UseRedisCaching:    false,
 		UseS3Fallback:      false,
 		WriteThreadCount:   0,
+		WriteOnCacheMiss:   false,
 	}
 }
 
@@ -291,6 +292,7 @@ func BuildTestSuiteConfig(testCfg TestConfig) config.AppConfig {
 			AsyncPutWorkers:  testCfg.WriteThreadCount,
 			BackendsToEnable: testCfg.BackendsToEnable,
 			DispersalBackend: testCfg.DispersalBackend,
+			WriteOnCacheMiss: testCfg.WriteOnCacheMiss,
 		},
 		ClientConfigV1: common.ClientConfigV1{
 			EdaClientCfg: clients.EigenDAClientConfig{
@@ -416,15 +418,4 @@ func createS3Bucket(bucketName string) {
 	} else {
 		log.Info(fmt.Sprintf("Successfully created %s\n", bucketName))
 	}
-}
-func RandStr(n int) string {
-	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz")
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
-	}
-	return string(b)
-}
-func RandBytes(n int) []byte {
-	return []byte(RandStr(n))
 }
