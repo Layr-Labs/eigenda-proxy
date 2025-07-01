@@ -68,7 +68,7 @@ func CLIFlags(envPrefix, category string) []cli.Flag {
 		},
 		&cli.BoolFlag{
 			Name:     WriteOnCacheMissFlagName,
-			Usage:    "While doing a GET, write to the cache if a blob is not found in the cache but is found in EigenDA.",
+			Usage:    "While doing a GET, write to the secondary storage if the cert/blob is not found in the cache but is found in EigenDA.",
 			Value:    false,
 			EnvVars:  withEnvPrefix(envPrefix, "WRITE_ON_CACHE_MISS"),
 			Category: category,
