@@ -7,7 +7,10 @@ import (
 	"time"
 
 	"github.com/Layr-Labs/eigenda-proxy/store/generated_key/memstore/memconfig"
+	eigenda "github.com/Layr-Labs/eigenda-proxy/store/generated_key/v2"
 	"github.com/Layr-Labs/eigenda/api"
+	"github.com/Layr-Labs/eigenda/api/clients/v2/coretypes"
+	"github.com/Layr-Labs/eigenda/api/clients/v2/verification"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/stretchr/testify/require"
 )
@@ -119,4 +122,74 @@ func TestPutReturnsFailoverErrorConfig(t *testing.T) {
 
 	err = db.InsertEntry(testKey, []byte("some-value"))
 	require.ErrorIs(t, err, &api.ErrorFailover{})
+}
+
+func TestGetReturnsInstructedStatusCodeConfig(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	config := testConfig()
+	db := New(ctx, config, testLogger)
+	testKey := []byte("som-key")
+
+	// status code 3 corresponds to coretypes.VerificationStatusCode
+	statusCodeReturn := memconfig.GetReturnsInstructedStatusCode{
+		IsActivated:          true,
+		GetReturnsStatusCode: coretypes.StatusSecurityAssumptionsNotMet,
+	}
+	err := config.SetGETReturnsInstructedStatusCode(statusCodeReturn)
+	require.NoError(t, err)
+
+	// write is not affected
+	err = db.InsertEntry(testKey, []byte("some-value"))
+	require.NoError(t, err)
+
+	// read returns an error
+	var expectedError *verification.CertVerificationFailedError
+	_, err = db.FetchEntry(testKey)
+	require.ErrorAs(t, err, &expectedError)
+
+	require.Equal(t, expectedError.StatusCode, coretypes.StatusSecurityAssumptionsNotMet)
+
+	// status code corresponds to recency error
+	instructedStatusCodeMode := memconfig.GetReturnsInstructedStatusCode{
+		IsActivated:          true,
+		GetReturnsStatusCode: eigenda.StatusRBNRecencyCheckFailed,
+	}
+	err = config.SetGETReturnsInstructedStatusCode(instructedStatusCodeMode)
+	require.NoError(t, err)
+
+	// cannot overwrite any value even in instructed mode
+	err = db.InsertEntry(testKey, []byte("another-value"))
+	require.ErrorContains(t, err, "key already exists")
+
+	anotherTestKey := []byte("som-other-key")
+	err = db.InsertEntry(anotherTestKey, []byte("another-value"))
+	require.NoError(t, err)
+
+	// read returns an error
+	var recencyError *verification.CertVerificationFailedError
+	_, err = db.FetchEntry(anotherTestKey)
+	require.ErrorAs(t, err, &recencyError)
+
+	// now deactivate Instruction mode
+	err = config.SetGETReturnsInstructedStatusCode(
+		memconfig.GetReturnsInstructedStatusCode{
+			IsActivated:          false,
+			GetReturnsStatusCode: 3,
+		},
+	)
+	require.NoError(t, err)
+
+	yetTestKey := []byte("yet-another-som-key")
+	err = db.InsertEntry(yetTestKey, []byte("another-value"))
+	require.NoError(t, err)
+	_, err = db.FetchEntry(yetTestKey)
+	require.NoError(t, err)
+
+	// but still you cannot overwrite anything
+	err = db.InsertEntry(anotherTestKey, []byte("another-value"))
+	require.ErrorContains(t, err, "key already exists")
 }
