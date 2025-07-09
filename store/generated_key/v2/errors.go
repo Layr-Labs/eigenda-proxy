@@ -49,3 +49,15 @@ func NewCertParsingFailedError(serializedCertHex string, err string) *verificati
 		),
 	}
 }
+
+// Helper function to check if status code is defined
+func CheckValidStatusCode(sc coretypes.VerificationStatusCode) bool {
+	return (sc == StatusRBNRecencyCheckFailed ||
+		sc == StatusCertParsingFailed ||
+		sc == coretypes.StatusNullError ||
+		sc == coretypes.StatusSuccess ||
+		sc == coretypes.StatusInvalidInclusionProof ||
+		sc == coretypes.StatusSecurityAssumptionsNotMet ||
+		sc == coretypes.StatusBlobQuorumsNotSubset ||
+		sc == coretypes.StatusRequiredQuorumsNotSubset)
+}
