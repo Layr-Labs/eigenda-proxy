@@ -1,4 +1,10 @@
-# EigenDA Proxy <!-- omit from toc -->
+# EigenDA Proxy - Archived <!-- omit from toc -->
+
+> [!WARNING] This repository is deprecated.
+> 
+> The proxy codebase is now maintained under [api/proxy](https://github.com/Layr-Labs/eigenda/tree/master/api/proxy) in the EigenDA monorepo.
+>
+> Docker images will continue to be published to [ghcr.io/layr-labs/eigenda-proxy](https://github.com/Layr-Labs/eigenda/pkgs/container/eigenda-proxy).
 
 A basic REST proxy server to interact with the EigenDA network:
 - POST routes: submit a payload (rollup txs, state-diffs, or anything really) that will be encoded 
