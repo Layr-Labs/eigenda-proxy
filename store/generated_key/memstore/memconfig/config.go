@@ -2,9 +2,20 @@ package memconfig
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 	"time"
+
+	eigenda "github.com/Layr-Labs/eigenda-proxy/store/generated_key/v2"
+	"github.com/Layr-Labs/eigenda/api/clients/v2/coretypes"
 )
+
+type GetReturnsInstructedStatusCode struct {
+	// return status code
+	GetReturnsStatusCode coretypes.VerificationStatusCode `json:"GetReturnsStatusCode,omitempty"`
+	// if activated, GetReturnsStatusCode can be set to 1 to ensure normal operation
+	IsActivated bool `json:"IsActivated,omitempty"`
+}
 
 // Config contains properties that are used to configure the MemStore's behavior.
 type Config struct {
@@ -16,7 +27,8 @@ type Config struct {
 	// when true, put requests will return an errorFailover error,
 	// after sleeping PutLatency duration.
 	// This can be used to simulate eigenda being down.
-	PutReturnsFailoverError bool
+	PutReturnsFailoverError        bool
+	GetReturnsInstructedStatusCode GetReturnsInstructedStatusCode
 }
 
 // MarshalJSON implements custom JSON marshaling for Config.
@@ -27,17 +39,19 @@ type Config struct {
 // Patches are reads as ConfigUpdates instead to handle omitted fields.
 func (c Config) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
-		MaxBlobSizeBytes        uint64
-		BlobExpiration          string
-		PutLatency              string
-		GetLatency              string
-		PutReturnsFailoverError bool
+		MaxBlobSizeBytes               uint64
+		BlobExpiration                 string
+		PutLatency                     string
+		GetLatency                     string
+		PutReturnsFailoverError        bool
+		GetReturnsInstructedStatusCode GetReturnsInstructedStatusCode
 	}{
-		MaxBlobSizeBytes:        c.MaxBlobSizeBytes,
-		BlobExpiration:          c.BlobExpiration.String(),
-		PutLatency:              c.PutLatency.String(),
-		GetLatency:              c.GetLatency.String(),
-		PutReturnsFailoverError: c.PutReturnsFailoverError,
+		MaxBlobSizeBytes:               c.MaxBlobSizeBytes,
+		BlobExpiration:                 c.BlobExpiration.String(),
+		PutLatency:                     c.PutLatency.String(),
+		GetLatency:                     c.GetLatency.String(),
+		PutReturnsFailoverError:        c.PutReturnsFailoverError,
+		GetReturnsInstructedStatusCode: c.GetReturnsInstructedStatusCode,
 	})
 }
 
@@ -116,6 +130,34 @@ func (sc *SafeConfig) SetMaxBlobSizeBytes(maxBlobSizeBytes uint64) {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
 	sc.config.MaxBlobSizeBytes = maxBlobSizeBytes
+}
+
+func (sc *SafeConfig) GetGETReturnsInstructedStatusCode() (bool, coretypes.VerificationStatusCode) {
+	sc.mu.RLock()
+	defer sc.mu.RUnlock()
+
+	return sc.config.GetReturnsInstructedStatusCode.IsActivated,
+		sc.config.GetReturnsInstructedStatusCode.GetReturnsStatusCode
+}
+
+func (sc *SafeConfig) SetGETReturnsInstructedStatusCode(mode GetReturnsInstructedStatusCode) error {
+	sc.mu.Lock()
+	defer sc.mu.Unlock()
+
+	// If instructed to return a non Success Status(1), the memstore stores the error message
+	// on return.
+	if !eigenda.CheckValidStatusCode(mode.GetReturnsStatusCode) {
+		return fmt.Errorf("undefined status code, unable to configure memstore")
+	}
+
+	// reset to default value
+	if !mode.IsActivated {
+		mode.GetReturnsStatusCode = 0
+	}
+
+	// after it is activated, statusCode can be set to 1 to ensure normal operation
+	sc.config.GetReturnsInstructedStatusCode = mode
+	return nil
 }
 
 func (sc *SafeConfig) Config() Config {

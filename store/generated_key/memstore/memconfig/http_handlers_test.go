@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Layr-Labs/eigenda/api/clients/v2/coretypes"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
@@ -137,6 +138,28 @@ func TestHandlersHTTP_PatchConfig(t *testing.T) {
 			},
 		},
 		{
+			name:            "update instructed status code return",
+			initialConfig:   Config{},
+			requestBodyJSON: `{"GetReturnsInstructedStatusCode": {"GetReturnsStatusCode": 3, "IsActivated": true }}`,
+			expectedStatus:  http.StatusOK,
+			validate: func(t *testing.T, inputConfig Config, sc *SafeConfig) {
+				outputConfig := sc.Config()
+				inputConfig.GetReturnsInstructedStatusCode.IsActivated = true
+				inputConfig.GetReturnsInstructedStatusCode.GetReturnsStatusCode = coretypes.StatusSecurityAssumptionsNotMet
+				require.Equal(t, inputConfig, outputConfig)
+			},
+		},
+		{
+			name:            "invalid update to instructed status code return (status code 100 does not exist)",
+			initialConfig:   Config{},
+			requestBodyJSON: `{"GetReturnsInstructedStatusCode": {"GetReturnsStatusCode": 100, "IsActivated": true }}`,
+			expectedStatus:  http.StatusBadRequest,
+			validate: func(t *testing.T, inputConfig Config, sc *SafeConfig) {
+				outputConfig := sc.Config()
+				require.Equal(t, inputConfig, outputConfig)
+			},
+		},
+		{
 			name: "update multiple fields",
 			initialConfig: Config{
 				MaxBlobSizeBytes:        1024,
@@ -162,7 +185,8 @@ func TestHandlersHTTP_PatchConfig(t *testing.T) {
 				"BlobExpiration": "1h",
 				"PutLatency": "1s",
 				"GetLatency": "2s",
-				"PutReturnsFailoverError": true
+				"PutReturnsFailoverError": true,
+				"GetReturnsInstructedStatusCode": {"GetReturnsStatusCode": 3, "IsActivated": true }
 			}`,
 			expectedStatus: http.StatusOK,
 			validate: func(t *testing.T, inputConfig Config, sc *SafeConfig) {
@@ -172,6 +196,8 @@ func TestHandlersHTTP_PatchConfig(t *testing.T) {
 				inputConfig.PutLatency = 1 * time.Second
 				inputConfig.GetLatency = 2 * time.Second
 				inputConfig.PutReturnsFailoverError = true
+				inputConfig.GetReturnsInstructedStatusCode.GetReturnsStatusCode = coretypes.StatusSecurityAssumptionsNotMet
+				inputConfig.GetReturnsInstructedStatusCode.IsActivated = true
 				require.Equal(t, inputConfig, outputConfig)
 			},
 		},

@@ -28,7 +28,8 @@ $ curl http://localhost:3100/memstore/config | jq
   "BlobExpiration": "25m0s",
   "PutLatency": "0s",
   "GetLatency": "0s",
-  "PutReturnsFailoverError": false
+  "PutReturnsFailoverError": false,
+  "GetReturnsInstructedStatusCode": {}
 }
 ```
 
@@ -38,7 +39,7 @@ The PATCH request allows to patch the configuration. This allows only sending a 
 
 ```bash
 $ curl -X PATCH http://localhost:3100/memstore/config -d '{"PutReturnsFailoverError": true}'
-{"MaxBlobSizeBytes":16777216,"BlobExpiration":"25m0s","PutLatency":"0s","GetLatency":"0s","PutReturnsFailoverError":true}
+{"MaxBlobSizeBytes":2048,"BlobExpiration":"45m0s","PutLatency":"0s","GetLatency":"0s","PutReturnsFailoverError":true,"GetReturnsInstructedStatusCode":{}}
 ```
 
 One can of course still build a jq pipe to produce the same result (although still using PATCH instead of PUT since that is the only method available):
@@ -48,6 +49,18 @@ $ curl http://localhost:3100/memstore/config | \
   curl -X PATCH http://localhost:3100/memstore/config -d @-
 ```
 
+### Instructed Status Code Return
+The instructed status code return allows users to set a desired returned status code for some payloads the user is about to write. The next time when a user requests to get the payloads with keys, the proxy returns the result corresponding to the status code set earlier. The status code is sticky, and
+can affect all subsequent writes. By default, the memstore isinitialized without the instructed status code return.
 
+```bash
+ curl -X PATCH http://localhost:3100/memstore/config -d '{"GetReturnsInstructedStatusCode": {"GetReturnsStatusCode": 3, "IsActivated": true }}'
+ {"MaxBlobSizeBytes":2048,"BlobExpiration":"45m0s","PutLatency":"0s","GetLatency":"0s","PutReturnsFailoverError":false,"GetReturnsInstructedStatusCode":{"GetReturnsStatusCode":3,"IsActivated":true}}
+```
+
+A user can only activate the instructed status code via http PATCH method above. A user can switch to other status code from an existing activated status code
+by sending a new `PATCH` request, the GET for subsequent writes contains the new status code.
+
+A very important invariant is that no key can ever be overwritten. This is important for all rollup use cases.
 ### Golang client
 A simple HTTP client implementation lives in `/clients/memconfig_client/` and can be imported for manipulating the config using more structured types.
